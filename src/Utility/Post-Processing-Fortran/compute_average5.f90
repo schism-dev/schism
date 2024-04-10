@@ -184,7 +184,7 @@
           if(.not.(iday==iday1.and.irec<irec_start.or.iday==iday2.and.irec>irec_end)) then
             do i=1,np
               icounter(i)=icounter(i)+1
-              residual(i,:)=residual(i,:)+outvar(1,i,:)
+              residual(i,1:ivs)=residual(i,1:ivs)+outvar(1,i,1:ivs)
             enddo !i
           endif
         else !3D
@@ -232,14 +232,14 @@
                 if(z00<=-1.e8) then !depth average
                    wild=0.
                    do k=kbp(i),nvrt-1
-                     wild(1:2)=wild(1:2)+(outvar(k,i,:)+outvar(k+1,i,:))*0.5*(ztmp(k+1,i)-ztmp(k,i))
+                     wild(1:ivs)=wild(1:ivs)+(outvar(k,i,1:ivs)+outvar(k+1,i,1:ivs))*0.5*(ztmp(k+1,i)-ztmp(k,i))
                    enddo !k
                    toth=ztmp(nvrt,i)-ztmp(kbp(i),i)
                    if(toth<=0.) then
                      write(*,*)'Negative depth at node:',i,toth
                      stop
                    endif
-                   residual(i,:)=residual(i,:)+wild(1:2)/toth
+                   residual(i,1:ivs)=residual(i,1:ivs)+wild(1:ivs)/toth
                 else !not depth average
                   do m=1,ivs
                     tmp=outvar(k0,i,m)*(1-rat)+outvar(k0+1,i,m)*rat
