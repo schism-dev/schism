@@ -497,6 +497,7 @@
       iprecip_off_bnd=0
       model_type_pahm=10
       stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
+      RADFLAG='VOR'
 
       !Output elev, hvel by detault
       nc_out=1
@@ -1508,7 +1509,7 @@
      &call parallel_abort('INIT: mass correction needs itr_met=3 or 4')
 
 !     Wave model arrays
-#ifdef  USE_WWM
+#if defined USE_WWM || defined USE_WW3
       if(iorder==0) then
         allocate(out_wwm(npa,35),out_wwm_windpar(npa,10),   &
                & out_wwm_rol(npa,35),taub_wc(npa), &
@@ -1522,7 +1523,7 @@
       out_wwm=0.d0; out_wwm_windpar=0.d0; out_wwm_rol=0.d0; eps_w=0.d0; eps_r=0.d0; eps_br=0.d0
       jpress=0.d0; sbr=0.d0; sbf=0.d0; srol=0.d0; sds=0.d0; sveg=0.d0; taub_wc=0.d0
       stokes_hvel=0.d0; stokes_wvel=0.d0; stokes_hvel_side=0.d0; stokes_wvel_side=0.d0
-      roller_stokes_hvel=0.d0; roller_stokes_hvel_side=0.d0; delta_wbl=0.D0
+      roller_stokes_hvel=0.d0; roller_stokes_hvel_side=0.d0; delta_wbl=1.d0
       wave_sbrtot=0.0D0; wave_sbftot=0.0D0; wave_sintot=0.0D0; wave_sdstot=0.0D0; wave_svegtot = 0.0D0
       !BM: coupling current for WWM
       allocate(curx_wwm(npa),cury_wwm(npa),stat=istat)
@@ -1625,6 +1626,19 @@
         elnode_wwm(1:3,:)=elnode(1:3,:)
       endif !lhas_quad
 #endif /*USE_WWM*/
+
+!Additional WW3 arrays
+#ifdef  USE_WW3
+      if(iorder==0) then
+        allocate(wave_hs(npa),wave_wnm(npa),wave_pres(npa),wave_stokes_x(npa), &
+     &wave_stokes_y(npa),wave_ocean_flux_x(npa),wave_ocean_flux_y(npa), &
+     &wave_flux_friction_x(npa),wave_flux_friction_y(npa),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: alloc WW3')
+        wave_hs=0.d0; wave_wnm=0.d0; wave_pres=0.d0; wave_stokes_x=0.d0
+        wave_stokes_y=0.d0; wave_ocean_flux_x=0.d0; wave_ocean_flux_y=0.d0
+        wave_flux_friction_x=0.d0; wave_flux_friction_y=0.d0
+      endif !iorder=0
+#endif /*USE_WW3*/
 
 #ifdef USE_TIMOR
 !     Allocate TIMOR arrays
@@ -2190,8 +2204,8 @@
       enddo !i
 #endif      
 
-!... Read lat/lon for spectral spatial interpolation  in WWM
-#ifdef USE_WWM
+!... Read lat/lon for spectral spatial interpolation in WWM or WW3
+#if defined USE_WWM || defined USE_WW3
       if(myrank==0) then
         inquire(file=in_dir(1:len_in_dir)//'hgrid.ll',exist=lexist)
         if(lexist) then
@@ -6142,7 +6156,7 @@
       enddo
 
 ! MP from KM
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
       ! Computation of the bed slope at nodes
       allocate(tanbeta_x(npa),tanbeta_y(npa),stat=istat)
       call compute_bed_slope !iof(198) = 1

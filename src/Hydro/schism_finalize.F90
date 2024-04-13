@@ -43,7 +43,7 @@
 !'
 
 !...  Output max. # of iterations for all ranks for WBL (Grant-Madsen formulation)
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
         if(iwbl==1) then
            call mpi_reduce(iwbl_itmax,iwbl_itmax_gb,1,itype,MPI_MAX,0,comm,ierr)
            if(myrank==0) write(16,*)'Max. iteration for Grant-Madsen = ',iwbl_itmax_gb

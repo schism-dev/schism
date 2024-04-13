@@ -592,8 +592,8 @@ module schism_glbl
 ! vertical flux diversion closure fraction applied at surface
 !  real(rkind) :: vclose_surf_frac   ! 1.0:flux applied at surface, 0.5:half at top half at bottom
 
-! WWM
-!#ifdef USE_WWM
+! WWM & WW3
+  CHARACTER(LEN=3) :: RADFLAG
   integer,save :: msc2,mdc2
   real(rkind),save,allocatable :: wwave_force(:,:,:), jpress(:), sbr(:,:), sbf(:,:), srol(:,:), sds(:,:), sveg(:,:), eps_w(:), eps_r(:),eps_br(:)
   real(rkind),save,allocatable :: stokes_hvel(:,:,:), stokes_wvel(:,:), stokes_hvel_side(:,:,:), stokes_wvel_side(:,:)
@@ -610,7 +610,9 @@ module schism_glbl
   real(rkind),save,allocatable :: wave_sintot(:)
   real(rkind),save,allocatable :: wave_sdstot(:)
   real(rkind),save,allocatable :: wave_svegtot(:)
-!#endif
+  real(rkind),save,allocatable :: wave_hs(:),wave_wnm(:),wave_pres(:),wave_stokes_x(:), &
+ &wave_stokes_y(:),wave_ocean_flux_x(:),wave_ocean_flux_y(:),wave_flux_friction_x(:), &
+ &wave_flux_friction_y(:)
 
 ! TIMOR
 !#ifdef USE_TIMOR
