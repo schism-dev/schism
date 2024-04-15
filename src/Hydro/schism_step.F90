@@ -2387,13 +2387,28 @@
 !              endif
               !WBL
 #if defined USE_WWM || defined USE_WW3
-              ! Quantities used in both formulations for the WBL
-              ubm = out_wwm(i,22)    ! orbital vel.
+#ifdef USE_WWM
+              ubm = out_wwm(i,22)  !orbital vel. [m/s]
+              aorb = out_wwm(i,23) !orbital amp=U_orb/ <angular freq> [m]
+              wdir = out_wwm(i,18) !wave direction [deg]
               if(out_wwm(i,12)==0.d0) then
                 wfr=0.d0
               else
                 wfr = 2.d0*pi/out_wwm(i,12)  ! angular freq.; out_wwm is not real*8
               endif
+#endif /*USE_WWM*/
+
+#ifdef USE_WW3
+              ubm=sqrt(wave_orbu(i)**2.d0+wave_orbv(i)**2.d0) !orbital vel. [m/s]
+              aorb=ubm*wave_tm1(i)/2.d0/pi !orbital amp [m]
+              wdir=wave_dir(i)
+              if(wave_tm1(i)==0.d0) then
+                wfr=0.d0
+              else
+                wfr=2.d0*pi/wave_tm1(i) !angular freq
+              endif
+#endif /*USE_WW3*/
+
               vmag = sqrt(uu2(kbp(i)+1,i)**2.d0+vv2(kbp(i)+1,i)**2.d0) !current magnitude
 
               ! Wave boundary layer
@@ -2402,7 +2417,6 @@
               else if(iwbl == 1) then ! Grant and Madsen type of WBL
                 taubx = Cdp(i)*vmag*uu2(kbp(i)+1,i)
                 tauby = Cdp(i)*vmag*vv2(kbp(i)+1,i)
-                wdir = out_wwm(i,18) !wave direction
                 !call wbl_GM(taubx,tauby,rough_p(i),ubm,wfr,wdir,z0b,fw,delta_wc,iter,ifl)
                 call wbl_GM(taubx,tauby,rough_p(i),ubm,wfr,wdir,z0b,fw,delta_wbl(i),iter,ifl)
                 !z0b_save(i) = z0b ! (z0b, T. Guérin) 
@@ -2414,7 +2428,6 @@
                 taub_wc(i) = Cdp(i)*vmag*vmag !(uu2(kbp(i)+1,i)**2.d0+vv2(kbp(i)+1,i)**2.d0) 
               else if(iwbl == 2) then! Soulsby (1997) type of WBL
                 call wbl_Soulsby97(uu2(kbp(i)+1,i),vv2(kbp(i)+1,i),rough_p(i),wfr,ubm,bthick,Cdp(i),taub_wc(i))
-                aorb = out_wwm(i,23) ! orbital amp.
                 delta_wbl(i) = 0.09D0*30.D0*rough_p(i)*(aorb/(30.D0*rough_p(i)))**0.82D0
               endif !iwbl             
 

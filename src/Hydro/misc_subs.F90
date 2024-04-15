@@ -6376,33 +6376,40 @@
 !=========================================================================
 #ifdef USE_WW3
 !     Grab necessary arrays from WW3 and save into SCHISM global arrays
-      SUBROUTINE get_WW3_arrays(WW3__OHS,WW3__WNM,WW3__BHD,WW3_USSX,WW3_USSY, &
-     &WW3_TWOX,WW3_TWOY,WW3_TBBX,WW3_TBBY)
-        USE schism_glbl, ONLY: rkind,errmsg,np,npa,wave_hs,wave_wnm,wave_pres,wave_stokes_x, &
-     &wave_stokes_y,wave_ocean_flux_x,wave_ocean_flux_y,wave_flux_friction_x, &
-     &wave_flux_friction_y
+      SUBROUTINE get_WW3_arrays(WW3__OHS,WW3__DIR,WW3_T0M1,WW3__WNM,WW3__BHD,WW3_USSX,WW3_USSY, &
+     &WW3_TWOX,WW3_TWOY,WW3_TBBX,WW3_TBBY,WW3_UBRX,WW3_UBRY)
+        USE schism_glbl, ONLY: rkind,errmsg,np,npa,wave_hs,wave_dir,wave_tm1, &
+     &wave_wnm,wave_pres,wave_stokes_x,wave_stokes_y,wave_ocean_flux_x, &
+     &wave_ocean_flux_y,wave_flux_friction_x,wave_flux_friction_y, &
+     &wave_orbu,wave_orbv
         USE schism_msgp
         IMPLICIT NONE
 
         !No ghost
-        REAL(rkind),intent(in) :: WW3__OHS(np),WW3__WNM(np),WW3__BHD(np), &
-     &WW3_USSX(np),WW3_USSY(np),WW3_TWOX(np),WW3_TWOY(np),WW3_TBBX(np), &
-     &WW3_TBBY(np)
+        REAL(rkind),intent(in) :: WW3__OHS(np),WW3__DIR(np),WW3_T0M1(np), &
+     &WW3__WNM(np),WW3__BHD(np),WW3_USSX(np),WW3_USSY(np),WW3_TWOX(np), &
+     &WW3_TWOY(np),WW3_TBBX(np),WW3_TBBY(np),WW3_UBRX,WW3_UBRY
 
         REAL(rkind) :: tmp
 
         wave_hs(1:np)=WW3__OHS !Sig wave height [m]
+        wave_dir(1:np)=WW3__DIR !mean wave dir [deg]
+        wave_tm1(1:np)=WW3_T0M1 !mean wave period [s]
         wave_wnm(1:np)=WW3__WNM !mean wave number [1/m]
-        wave_pres(1:np)=WW3__BHD !wave-induced Bernoulli head pressure [N/m]
+        wave_pres(1:np)=WW3__BHD !wave-induced Bernoulli head pressure [N/m or Pa?]
         wave_stokes_x(1:np)=WW3_USSX !Stokes drift [m/s]
         wave_stokes_y(1:np)=WW3_USSY 
         wave_ocean_flux_x(1:np)=WW3_TWOX !wave-ocean mom flux [m2/s2]
         wave_ocean_flux_y(1:np)=WW3_TWOY
         wave_flux_friction_x(1:np)=WW3_TBBX !Momentum flux due to bottom friction [m2/s2]
         wave_flux_friction_y(1:np)=WW3_TBBY
+        wave_orbu(1:np)=WW3_UBRX !near bed orbital vel [m/s]
+        wave_orbv(1:np)=WW3_UBRY 
 
         !Exchange
         call exchange_p2d(wave_hs)
+        call exchange_p2d(wave_dir)
+        call exchange_p2d(wave_tm1)
         call exchange_p2d(wave_wnm)
         call exchange_p2d(wave_pres)
         call exchange_p2d(wave_stokes_x)
@@ -6411,9 +6418,12 @@
         call exchange_p2d(wave_ocean_flux_y)
         call exchange_p2d(wave_flux_friction_x)
         call exchange_p2d(wave_flux_friction_y)
+        call exchange_p2d(wave_orbu)
+        call exchange_p2d(wave_orbv)
 
-        tmp=sum(wave_hs+wave_wnm+wave_pres+wave_stokes_x+wave_stokes_y+ &
-     &wave_ocean_flux_x+wave_ocean_flux_y+wave_flux_friction_x+wave_flux_friction_y)
+        tmp=sum(wave_hs+wave_dir+wave_tm1+wave_wnm+wave_pres+wave_stokes_x+wave_stokes_y+ &
+     &wave_ocean_flux_x+wave_ocean_flux_y+wave_flux_friction_x+wave_flux_friction_y+ &
+     &wave_orbu+wave_orbv)
         if(tmp/=tmp) then
           write(errmsg,*)'WW3 input has nan:',tmp
           call parallel_abort(errmsg)
@@ -6454,7 +6464,7 @@
           D_loc = max(znl(nvrt,ip)-znl(kbp(ip),ip),hmin_radstress) !>0
 
           !new40
-          jpress(ip)=wave_pres(ip)/rho0 ![m2/s2]
+          jpress(ip)=wave_pres(ip)/rho0 !needs to be [m2/s2]
 
           k_loc=wave_wnm(ip) !MIN(KDMAX/DEP(IP),WK(IS,IP))
           kD_loc=k_loc*D_loc !MIN(KDMAX,WK(IS,IP)*D_loc)
@@ -6699,7 +6709,7 @@
             STCOR_x_loc = cori(is)*Vst_loc
             STCOR_y_loc = -cori(is)*Ust_loc
             
-            ! Saving wave forces
+            ! Saving wave forces [m/s/s]
             wwave_force(1,k,is)=wwave_force(1,k,is)+VF_x_loc+STCOR_x_loc-dJ_dx_loc
             wwave_force(2,k,is)=wwave_force(2,k,is)+VF_y_loc+STCOR_y_loc-dJ_dy_loc
           END DO !k
@@ -6869,7 +6879,7 @@
    
           IF(kbs(is)+1 == nvrt) THEN !2D
             ! N.B. average between the two adjacent nodes
-            !new40: WW3_TBBX [m2/s2] devided by delta_wbl to get m/s/s
+            !new40: WW3_TBBX [m2/s2] devided by delta_wbl or htot to get m/s/s
             Fws_x_loc=-(wave_flux_friction_x(n1)+wave_flux_friction_x(n2))/2.d0/htot !m/s/s
             Fws_y_loc=-(wave_flux_friction_y(n1)+wave_flux_friction_y(n2))/2.d0/htot
             ! Saving wave streaming

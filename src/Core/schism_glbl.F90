@@ -610,9 +610,10 @@ module schism_glbl
   real(rkind),save,allocatable :: wave_sintot(:)
   real(rkind),save,allocatable :: wave_sdstot(:)
   real(rkind),save,allocatable :: wave_svegtot(:)
-  real(rkind),save,allocatable :: wave_hs(:),wave_wnm(:),wave_pres(:),wave_stokes_x(:), &
- &wave_stokes_y(:),wave_ocean_flux_x(:),wave_ocean_flux_y(:),wave_flux_friction_x(:), &
- &wave_flux_friction_y(:)
+  real(rkind),save,allocatable :: wave_hs(:),wave_dir(:),wave_tm1(:),wave_wnm(:), &
+ &wave_pres(:),wave_stokes_x(:),wave_stokes_y(:),wave_ocean_flux_x(:), &
+ &wave_ocean_flux_y(:),wave_flux_friction_x(:),wave_flux_friction_y(:), &
+ &wave_orbu(:),wave_orbv(:)
 
 ! TIMOR
 !#ifdef USE_TIMOR

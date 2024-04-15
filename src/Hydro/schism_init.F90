@@ -1630,13 +1630,14 @@
 !Additional WW3 arrays
 #ifdef  USE_WW3
       if(iorder==0) then
-        allocate(wave_hs(npa),wave_wnm(npa),wave_pres(npa),wave_stokes_x(npa), &
+        allocate(wave_hs(npa),wave_dir(npa),wave_tm1(npa),wave_wnm(npa),wave_pres(npa),wave_stokes_x(npa), &
      &wave_stokes_y(npa),wave_ocean_flux_x(npa),wave_ocean_flux_y(npa), &
-     &wave_flux_friction_x(npa),wave_flux_friction_y(npa),stat=istat)
+     &wave_flux_friction_x(npa),wave_flux_friction_y(npa),wave_orbu(npa), &
+     &wave_orbv(npa),stat=istat)
         if(istat/=0) call parallel_abort('INIT: alloc WW3')
-        wave_hs=0.d0; wave_wnm=0.d0; wave_pres=0.d0; wave_stokes_x=0.d0
-        wave_stokes_y=0.d0; wave_ocean_flux_x=0.d0; wave_ocean_flux_y=0.d0
-        wave_flux_friction_x=0.d0; wave_flux_friction_y=0.d0
+        wave_hs=0.d0; wave_dir=0.d0; wave_tm1=0.d0; wave_wnm=0.d0; wave_pres=0.d0
+        wave_stokes_x=0.d0; wave_stokes_y=0.d0; wave_ocean_flux_x=0.d0; wave_ocean_flux_y=0.d0
+        wave_flux_friction_x=0.d0; wave_flux_friction_y=0.d0; wave_orbu=0.d0; wave_orbv=0.d0
       endif !iorder=0
 #endif /*USE_WW3*/
 
