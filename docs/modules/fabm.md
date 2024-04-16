@@ -3,7 +3,7 @@ The `fabm` module is the SCHISM host implementation for the separatly available 
 
 ## Obtaining the FABM framework code
 
-The FABM framework code is hosted separately, as are some of the ecosystem model codes. The SCHISM host provided here is compatible with both the deprecated `version 0` of the FABM framework and the current `version 1`. 
+The FABM framework code is hosted separately, as are some of the ecosystem model codes. The SCHISM host provided here is compatible with both the deprecated `version 0` of the FABM framework and the current versions `version 1` and `version 2`. 
 
 The required FABM code can be downloaded from 
 1. the official repository https://github.com/fabm-model/fabm 
@@ -15,7 +15,7 @@ The required FABM code can be downloaded from
 The FABM framework and its contained models are compiled within the SCHISM build when using `cmake`
 
 ```
-cmake  [...] -DUSE_FABM=ON -DFABM_BASEDIR=/your/path/to/fabm/ 
+cmake  [...] -DUSE_FABM=ON -DFABM_BASE=/your/path/to/fabm/ 
 ```
 
 ## Developing a FABM biogeochemical model 
