@@ -6,10 +6,11 @@
 !             (2) gen_tvd_WENO.in:
 !                   hmin_estu: cut-off depth for estuaries (e.g. same as h_tvd)
 !                   nreg: # of regions (nearshore + estuaries; >=1)
-!                   list of region names: 1st one is nearshore (e.g. using 20m isobath); the rest
-!                        are optional estuaries. Inside nearshore region,
+!                   list of region names: 1st region is coastal region (e.g. using 20m isobath); the rest
+!                        are optional estuaries. Inside coastal region,
 !                        upwind is used except in estuaries. Make sure estuaries
-!                        overlap with nearshore (so no gap in TVD/WENO zone).
+!                        overlap with nearshore (so no gap in TVD/WENO zone). Outside coastal region,
+!                        upwind/WENO is controlled by h_tvd only.
 !     Output: tvd.prop.0 (may be further edited, e.g. look for very skew elem nearby,
 !              and connectivity)
 
