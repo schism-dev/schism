@@ -1656,14 +1656,14 @@
 
 <p>The <code>fabm</code> module is the SCHISM host implementation for the separatly available Framework for Aquatic Biogeochemical models (FABM).  Within the FABM framework, a number of host-agnostic ecosystem models have been implemented, such that they work within many different hydrodynamic host models, including a <code>python</code> host and <code>Fortran</code> hosts from zero to three-dimensional, and now including SCHISM.  For these hosts, FABM's internal loops are arranged for optimal numerical performance. </p>
 <h2 id="obtaining-the-fabm-framework-code">Obtaining the FABM framework code<a class="headerlink" href="#obtaining-the-fabm-framework-code" title="Permanent link">&para;</a></h2>
-<p>The FABM framework code is hosted separately, as are some of the ecosystem model codes. The SCHISM host provided here is compatible with both the deprecated <code>version 0</code> of the FABM framework and the current <code>version 1</code>. </p>
+<p>The FABM framework code is hosted separately, as are some of the ecosystem model codes. The SCHISM host provided here is compatible with both the deprecated <code>version 0</code> of the FABM framework and the current versions <code>version 1</code> and <code>version 2</code>. </p>
 <p>The required FABM code can be downloaded from 
 1. the official repository https://github.com/fabm-model/fabm 
 2. our development fork that closely follows the official repository, and includes modularization of some the existing SCHISM modules refactored within FABM.
 3. any fork of FABM as of their  <code>SHA:048673</code> (2017-09-15).</p>
 <h2 id="compiling-with-fabm">Compiling with FABM<a class="headerlink" href="#compiling-with-fabm" title="Permanent link">&para;</a></h2>
 <p>The FABM framework and its contained models are compiled within the SCHISM build when using <code>cmake</code></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cmake  [...] -DUSE_FABM=ON -DFABM_BASEDIR=/your/path/to/fabm/ 
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cmake  [...] -DUSE_FABM=ON -DFABM_BASE=/your/path/to/fabm/ 
 </code></pre></div>
 <h2 id="developing-a-fabm-biogeochemical-model">Developing a FABM biogeochemical model<a class="headerlink" href="#developing-a-fabm-biogeochemical-model" title="Permanent link">&para;</a></h2>
 <p>Documentation on how to implement an ecosystem model in FABM is provided on the FABM wiki page https://github.com/fabm-model/fabm/wiki/Developing-a-new-biogeochemical-model</p>
