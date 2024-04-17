@@ -2,7 +2,8 @@
 Usage: python generate_adcirc.py --input_filename ./outputs/out2d_?.nc --input_city_identifier_file ./city_poly.shp --output_dir ./extract/
 
 For example:
-(on WCOSS2) python generate_adcirc.py --input_filename ./outputs/out2d_1.nc --input_city_identifier_file ./city_poly.node_id.txt --output_dir ./extract/
+
+(on WCOSS2) python generate_adcirc.py --input_filename t12z.fields.out2d_nowcast.nc --input_city_identifier_file ./Shapefiles/city_poly.node_id.txt --output_dir .
 (on other clusters) python generate_adcirc.py --input_filename ./outputs/out2d_1.nc --input_city_identifier_file ./city_poly.shp --output_dir ./extract/
 will generate
 ./extract/schout_adcirc_1.nc, which is in ADCIRC's format
@@ -143,29 +144,50 @@ def split_quads(elements=None):  # modified by FY
     This script can be made much faster by using vector operation instead of the for-loop;
     just append additional elements to the end.
     '''
+    from copy import deepcopy
+
     if elements is None:
         raise Exception('elements should be a numpy array of (np,4)')
 
-    tris = []
-    elements=np.ma.masked_values(elements, -1)  # modified by FY
-    for ele in elements:
-        ele=ele[~ele.mask]
-        if len(ele) == 3:
-            tris.append([ele[0], ele[1], ele[2]])
-        elif len(ele) == 4:
-            tris.append([ele[0], ele[1], ele[3]])
-            tris.append([ele[1], ele[2], ele[3]])
-    return tris
+    if elements.shape[1] == 3: # already triangles
+        return elements
+    elif elements.shape[1] != 4:
+        raise Exception('elements should be a numpy array of (n,3) or (n,4)')
+
+    triangles = deepcopy(elements)
+    quad_idx = ~elements[:, -1].mask
+    quads = elements[quad_idx]
+    upper_triangle = np.c_[quads[:, 0], quads[:, 1], quads[:, 2], -np.ones((quads.shape[0], 1))]  # last node is masked
+    lower_triangle = np.c_[quads[:, 0], quads[:, 1], quads[:, 2], -np.ones((quads.shape[0], 1))]  # last node is masked
+
+    # replace quads with upper triangle
+    triangles[quad_idx, :] = upper_triangle
+    # append lower triangle a the end
+    triangles = np.ma.concatenate([triangles, lower_triangle], axis=0)
+    # mask the last node, because all quads have been changed to triangles
+    triangles.mask[:, -1] = True
+
+    # tris = []
+    # elements=np.ma.masked_values(elements, -1)  # modified by FY
+    # for ele in elements:
+    #     ele=ele[~ele.mask]
+    #     if len(ele) == 3:
+    #         tris.append([ele[0], ele[1], ele[2]])
+    #     elif len(ele) == 4:
+    #         tris.append([ele[0], ele[1], ele[3]])
+    #         tris.append([ele[1], ele[2], ele[3]])
+
+    return triangles[:, :3]  # only return the first 3 nodes of each element
 
 if __name__ == '__main__':
     # Check host and make special arrangement for WCOSS2
     myhost = os.uname()[1]
-    if "sciclone" in myhost or "frontera" in myhost:
-        static_city_mask = False  # search for city mask within polygons of shapefile
+    if myhost in ["viz", "femto", "vortex", "frontera"]:
+        static_city_mask = True  # search for city mask within polygons of shapefile
+        print(f'myhost: {myhost}, not using static_city_mask')
     else:
         static_city_mask = True  # use static mask because it does not have mpl.path
-    print(f"running on {myhost}")
-
+        print(f'myhost: {myhost}, using static_city_mask')
 
     # ---------------------------
     my_fillvalue = -99999.0  # used for dry nodes and small disturbance on land/city
@@ -249,10 +271,10 @@ if __name__ == '__main__':
 
     #find city nodes
     if static_city_mask:
-        city_node_idx = np.loadtxt(input_city_identifier_file).astype(bool)
+        city_node_idx = np.loadtxt(input_city_identifier_file, encoding='utf-8').astype(bool)
     else:
         city_node_idx = find_points_in_polyshp(pt_xy=np.c_[x, y], shapefile_names=[input_city_identifier_file])
-        np.savetxt(output_nodeId_fname, city_node_idx)
+        np.savetxt(output_nodeId_fname, city_node_idx.astype(int), fmt='%i', encoding='utf-8')
 
     #set mask for dry nodes
     idry=np.zeros(NP)
@@ -316,22 +338,22 @@ if __name__ == '__main__':
         fout['element'][:]=np.array(tris)
 
         fout.createVariable('depth', 'f8', ('node',))
-        fout['depth'].long_name="distance below NAVD88"
-        fout['depth'].standard_name="depth below NAVD88"
+        fout['depth'].long_name="distance below XGEOID20B"
+        fout['depth'].standard_name="depth below XGEOID20B"
         fout['depth'].coordinates="time y x"
         fout['depth'].location="node"
         fout['depth'].units="m"
         fout['depth'][:]=depth
 
         fout.createVariable('zeta_max','f8', ('node',), fill_value=my_fillvalue)
-        fout['zeta_max'].standard_name="maximum_sea_surface_height_above_navd88"
+        fout['zeta_max'].standard_name="maximum_sea_surface_height_above_xgeoid20b"
         fout['zeta_max'].coordinates="y x"
         fout['zeta_max'].location="node"
         fout['zeta_max'].units="m"
         fout['zeta_max'][:]=maxelev
 
         fout.createVariable('time_of_zeta_max','f8', ('node',), fill_value=my_fillvalue)
-        fout['time_of_zeta_max'].standard_name="time_of_maximum_sea_surface_height_above_navd88"
+        fout['time_of_zeta_max'].standard_name="time_of_maximum_sea_surface_height_above_xgeoid20b"
         fout['time_of_zeta_max'].coordinates="y x"
         fout['time_of_zeta_max'].location="node"
         fout['time_of_zeta_max'].units="sec"
@@ -345,7 +367,7 @@ if __name__ == '__main__':
         fout['disturbance_max'][:]=maxdist
 
         fout.createVariable('zeta','f8', ('time', 'node',), fill_value=my_fillvalue)
-        fout['zeta'].standard_name="sea_surface_height_above_navd88"
+        fout['zeta'].standard_name="sea_surface_height_above_xgeoid20b"
         fout['zeta'].coordinates="time y x"
         fout['zeta'].location="node"
         fout['zeta'].units="m"
@@ -371,4 +393,4 @@ if __name__ == '__main__':
         fout.source = 'SCHISM model output version v10'
         fout.references = 'http://ccrm.vims.edu/schismweb/'
 
-    print(f'It took {time()-t0} to interpolate')
+    print(f'Extraction took {time()-t0} seconds')

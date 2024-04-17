@@ -1,0 +1,23 @@
+
+
+# echo 'task goes here' | cat - todo.txt > temp && mv temp todo.txt
+
+
+
+A=`ls *.py`
+
+for a in $A;  do 
+echo $a;
+
+mv  $a tmp_${a}
+
+# echo '#!/usr/bin/env python3' >> $a
+
+echo '#!/usr/bin/env python3' | cat - tmp_${a} > $a 
+
+
+diff $a tmp_${a}
+echo '-----------------------------'; echo 
+
+ done
+

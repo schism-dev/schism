@@ -1,10 +1,11 @@
+#!/usr/bin/env python3
 import sys
-from datetime import datetime
-from time import time 
+from datetime import datetime, timedelta
+from time import time
 import argparse
+from dateutil import parser
 
 import numpy as np
-import numpy.ma as ma
 from netCDF4 import Dataset
 
 from generate_adcirc import split_quads  # modified by FY
@@ -19,7 +20,7 @@ def get_zcor_interp_coefficient(zcor, zinter, kbp):
         -k1[np]: integer, k-level at each node
         -coeff[np]: interpolation coefficient
     '''
-    #surface 
+    #surface
     idxs=zinter>=zcor[:,-1]
     k1[idxs]=nvrt-2
     coeff[idxs]=1.0
@@ -43,7 +44,7 @@ if __name__ == '__main__':
 
     '''
     Usage: python extract_slab_fcst_netcdf4.py stack
-    Input: 
+    Input:
         1. Assign work directory path (for example: fpath='.')
 
         2. All netcdf files are under {fpath}/outputs/:
@@ -80,13 +81,24 @@ if __name__ == '__main__':
     ds_v = Dataset(f"{fpath}/outputs/horizontalVelY_{sid}.nc")
     ds_s = Dataset(f"{fpath}/outputs/salinity_{sid}.nc")
     ds_t = Dataset(f"{fpath}/outputs/temperature_{sid}.nc")
-    #units=ds['time'].units
-    #base_date=ds['time'].base_date
+
+    base_date_str = ds_2d['time'].base_date.split()
+    base_datetime = datetime(int(base_date_str[0]), int(base_date_str[1]), int(base_date_str[2]), 0, 0, 0)
+    base_date_str = base_datetime.strftime('%Y-%m-%d %H:%M:%S UTC')
+
+    time_units_str = ds_2d['time'].units.split("since")[1]
+    time_units_datetime = parser.parse(time_units_str)
+    # check time zone is UTC
+    if time_units_datetime.tzinfo is None or time_units_datetime.tzinfo.utcoffset(time_units_datetime) != timedelta(0):
+        raise ValueError("Time zone is not UTC")
+
+    time_units_str = f"seconds since {time_units_datetime.strftime('%Y-%m-%d %H:%M:%S UTC')}"
 
     #3. output directory
     outdir= './extract'
 
     #4. get kbp and sigma from vgrid.in
+    time_start = time()
     fid=open(f'{fpath}/vgrid.in','r')
     lines=fid.readlines()
     fid.close()
@@ -108,6 +120,7 @@ if __name__ == '__main__':
         sigma=np.array([line.split()[1:] for line in lines[1:]]).T.astype('float')
         fpm=sigma<-1
         sigma[fpm]=-1
+    print(f"read vgrid took {time()-time_start}")
 
     #print(np.unique(kbp))
 
@@ -117,13 +130,10 @@ if __name__ == '__main__':
     depth=ds_2d['depth'][:]
 
     #get wetdry nodes
-    #wd_nodes=ds['wetdry_node'][:,:]
     elev2d=ds_2d['elevation'][:,:]
-    #maxelevation
-    maxelev=np.max(elev2d,axis=0)
     #get mask
-    idry=np.where(maxelev+depth <= 1e-6)
-    elev2d[:,idry]=-99999
+    idry = np.array(elev2d) + np.array(depth).reshape(1, -1) <= 1e-6  # inundation <= 1e-6 m is considered dry
+    elev2d[idry]=-99999
 
     #get elements and split quads into tris
     elements=ds_2d['SCHISM_hgrid_face_nodes'][:,:]
@@ -158,7 +168,7 @@ if __name__ == '__main__':
     for it in np.arange(ntimes):
         print(it)
         elev=ds_2d['elevation'][it,:]
-        
+
         #surface
         temp_sur[it,:]=ds_t['temperature'][it,:,-1]
         salt_sur[it,:]=ds_s['salinity'][it,:,-1]
@@ -174,7 +184,7 @@ if __name__ == '__main__':
 
         #compute z#cor
         zcor=(depth[:,None]+elev[:,None])*sigma
-    
+
         level=[-4.5]
 
         k1=np.full((NP), np.nan)
@@ -187,8 +197,8 @@ if __name__ == '__main__':
         temp_bot[it, :]=temp_tmp[np.arange(NP), kbp]
         salt_bot[it, :]=salt_tmp[np.arange(NP), kbp]
 
-        uvel_bot[it, :]=uvel[np.arange(NP), kbp-1]
-        vvel_bot[it, :]=vvel[np.arange(NP), kbp-1]
+        uvel_bot[it, :]=uvel[np.arange(NP), kbp+1]
+        vvel_bot[it, :]=vvel[np.arange(NP), kbp+1]
 
         #tmp=np.array(salt[np.arange(NP),k1]*(1-coeff)+salt[np.arange(NP),k1+1]*coeff)
         #salt_inter[it, :]=np.squeeze(tmp)
@@ -202,18 +212,18 @@ if __name__ == '__main__':
         #print(f'It took {time()-t0} to interpolate')
 
     #Mask dry nodes
-    temp_sur[:,idry]=-99999
-    salt_sur[:,idry]=-99999
-    uvel_sur[:,idry]=-99999
-    vvel_sur[:,idry]=-99999
-    temp_bot[:,idry]=-99999
-    salt_bot[:,idry]=-99999
-    uvel_bot[:,idry]=-99999
-    vvel_bot[:,idry]=-99999
+    temp_sur[idry]=-99999
+    salt_sur[idry]=-99999
+    uvel_sur[idry]=-99999
+    vvel_sur[idry]=-99999
+    temp_bot[idry]=-99999
+    salt_bot[idry]=-99999
+    uvel_bot[idry]=-99999
+    vvel_bot[idry]=-99999
 
     #u/v at 4.5m
-    uvel_inter[:,idry]=-99999
-    vvel_inter[:,idry]=-99999
+    uvel_inter[idry]=-99999
+    vvel_inter[idry]=-99999
 
     #change fill_values
     elev2d[np.where(elev2d>10000)]=-99999
@@ -241,8 +251,8 @@ if __name__ == '__main__':
         #variables
         fout.createVariable('time', 'f', ('time',))
         fout['time'].long_name="Time"
-        #fout['time'].units = units #f'seconds since {date.year}-{date.month}-{date.day} 00:00:00 UTC'
-        #fout['time'].base_date=base_date #(date.year, date.month, date.day, 0)
+        fout['time'].units = time_units_str #f'seconds since {date.year}-{date.month}-{date.day} 00:00:00 UTC'
+        fout['time'].base_date=base_date_str #(date.year, date.month, date.day, 0)
         fout['time'].standard_name="time"
         fout['time'][:] = times
 
@@ -339,7 +349,7 @@ if __name__ == '__main__':
         fout['vvel4.5'].units="m/s"
         #fout['vvel'].missing_value=np.nan
         fout['vvel4.5'][:,:]=vvel_inter
-        
+
         fout.title = 'SCHISM Model output'
         fout.source = 'SCHISM model output version v10'
         fout.references = 'http://ccrm.vims.edu/schismweb/'

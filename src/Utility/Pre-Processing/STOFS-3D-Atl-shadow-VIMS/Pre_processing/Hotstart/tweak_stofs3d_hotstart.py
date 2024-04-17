@@ -12,40 +12,62 @@ import schism_py_pre_post  # this is needed for the __file__ attribute
 
 # pip install git+https://github.com/wzhengui/pylibs.git
 from pylib import schism_grid
+from replace_eta2_aviso import interp_to_points_2d, transform_ll_to_cpp
 
 
-def gen_elev_ic(hgrid=None, h0=0.1, city_shape_fnames=None):
+def gen_elev_ic(hgrid=None, h0=0.1, city_shape_fnames=None, aviso_file=None):
     '''
     set initial elevation: 0 in the ocean, h0 below ground on higher grounds and in cities
     city_shape_fname: the shapefile must be in the same projection as the hgrid
+    in this case lon/lat (because aviso data is in lon/lat)
     '''
     if city_shape_fnames is None:
         in_city = np.ones(hgrid.dp.shape, dtype=bool)
     else:
         in_city = find_points_in_polyshp(pt_xy=np.c_[hgrid.x, hgrid.y], shapefile_names=city_shape_fnames)
 
-    above_NAVD88_0 = hgrid.dp < 0
+    high_ground = hgrid.dp < 0
 
     elev_ic = np.zeros(hgrid.dp.shape, dtype=float)
 
-    ind = np.logical_or(above_NAVD88_0, in_city)
-    elev_ic[ind] = - hgrid.dp[ind] - h0
+    # set coastal points
+    land = np.logical_or(high_ground, in_city)
+    elev_ic[land] = - hgrid.dp[land] - h0
+
+    # set ocean points
+    import xarray as xr
+    ocean = np.logical_not(land)
+    x1, y1 = transform_ll_to_cpp(hgrid.x, hgrid.y)
+    # read aviso data
+    ds = xr.open_dataset(aviso_file)
+    lon2 = ds.longitude.values
+    lat2 = ds.latitude.values
+    x2, y2=transform_ll_to_cpp(lon2, lat2)
+    ssh = np.squeeze(ds.adt.values[0, :, :])
+    ds.close()
+    # interpolate aviso data onto model grid
+    ssh_int = interp_to_points_2d(y2, x2, np.c_[y1, x1], ssh)
+
+    elev_ic[ocean] = ssh_int[ocean]
 
     return elev_ic
-    
+
+
 def tweak_stofs3d_hotstart(
-    wdir ='./', hotstart_date_str='2021-05-01', city_shapefile_names=[],
-    hycom_TS_file='TS_1.nc', hycom_hot_file='hotstart.nc.hycom'
+    wdir ='./', hotstart_date_str='2021-05-01', city_shapefile_names=[], aviso_file=None,
+    hycom_TS_file='TS_1.nc', hycom_hot_file='hotstart.nc.hycom',
 ):
     '''
     The "wdir" should contain the following files:
         hgrid.gr3 (should be the same as hgrid.ll for STOFS3D), vgrid.in
         TS_1.nc: Temperature and Salinity from HYCOM, the first time in the nc file should match model start time.
-                 This file should already be prepared in the previous step of hotstart.nc generation 
+                 This file should already be prepared in the previous step of hotstart.nc generation
         hotstart.nc.hycom: hotstart.nc based on HYCOM only, renamed with the '.hycom' suffix.
 
     You may select pre-defined city polygons to force the water level to be below ground;
     only specify the file basename, the script will copy these files to your wdir.
+
+    The "aviso_file" is the sea surface height above geoid, in lon/lat
     '''
 
     griddir = wdir
@@ -74,12 +96,17 @@ def tweak_stofs3d_hotstart(
         os.system(f"rm {my_hot_file}")
     os.system(f"cp {hycom_hot_file} {my_hot_file}")
 
-    # tweak coastal values based on obs
     my_hot = Hotstart(
         grid_info=griddir,
         hot_file=my_hot_file
     )
 
+    # increase T by 1 oC
+    # my_hot.tr_nd.val[:, :, 0] += 1.0
+    # my_hot.tr_nd0.val[:, :, 0] += 1.0
+    # my_hot.tr_el.val[:, :, 0] += 1.0
+
+    # tweak coastal values based on obs
     for i, var in enumerate(['tem', 'sal']):
         hg = schism_grid(f'{wdir}/ecgc_coastal_{var}.gr3')  # this file is from get*_obs_for_stofs3d
         idx = hg.dp > -9998
@@ -91,24 +118,18 @@ def tweak_stofs3d_hotstart(
     my_hot.tr_nd.val[:, :, 1] *= np.transpose(np.tile(rat, (my_hot.grid.vgrid.nvrt, 1)))
     my_hot.trnd_propogate()  # propogate trnd values to trnd0 and tr_el
 
-    # set initial elevation: 0 in the ocean, just below ground on higher grounds and in cities
-    my_hot.eta2.val[:] = gen_elev_ic(hgrid=my_hot.grid.hgrid, h0=0.1, city_shape_fnames=[f'{wdir}/{x}' for x in city_shapefile_names])
+    # set initial elevation: aviso values in the ocean, just below ground on higher grounds and in cities
+    my_hot.eta2.val[:] = gen_elev_ic(hgrid=my_hot.grid.hgrid, h0=0.1, city_shape_fnames=[f'{wdir}/{x}' for x in city_shapefile_names], aviso_file=aviso_file)  # no shift based on R11, R24, R11a
 
     # write
     my_hot.writer(fname=my_hot_file)
 
 if __name__ == "__main__":
-    '''
-    Modify hycom-based hotstart.nc.hycom with coastal observation values
-    '''
-
-    # Sample usage:
-    # The "wdir" should be the dir where the original hotstart.nc from hycom is generated.
-    # It should include hgrid.gr3 and vgrid.in, TS_1.nc;
-    # in addition, rename the original hotstart.nc from hycom to hotstart.nc.hycom
+    # Modify hycom-based hotstart.nc.hycom with coastal observation values of T and S, and a better initial elevation
     tweak_stofs3d_hotstart(
-        wdir='/sciclone/schism10/feiye/Test/RUN02b_JZ/Hotstart/',
-        hotstart_date_str='2018-07-01',
-        city_shapefile_names = ["city_polys_from_v10_lonlat.shp"],  # polygon shapefile specifying cities
+        wdir='/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I14c/Hotstart/',
+        hotstart_date_str='2021-08-01',
+        city_shapefile_names = ["LA_urban_polys_lonlat.shp"],  # polygon shapefile specifying cities
+        aviso_file = 'aviso.nc'
     )
-    
+
