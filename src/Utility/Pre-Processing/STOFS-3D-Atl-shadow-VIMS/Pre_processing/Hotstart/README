@@ -5,3 +5,5 @@
 3) make estuary.gr3 and fill with 0; run "./gen_hot*" and rename the product hotstart.nc to hotstart.nc.hycom
 
 4) run "python tweak*.py" to introduce observation in the watershed and initialize watershed/urban elevation to 0.1 meters below ground.
+
+  4.1) Note that aviso has been incorporated into eta2 in hotstart; need aviso.nc as an additional input
