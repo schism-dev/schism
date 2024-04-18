@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 import sys
 from datetime import datetime, timedelta
-from time import time
+from time import time 
 import argparse
 from dateutil import parser
 
@@ -10,96 +9,9 @@ from netCDF4 import Dataset
 
 from generate_adcirc import split_quads  # modified by FY
 
-def get_zcor_interp_coefficient(zcor, zinter, kbp):
-    '''
-    inputs:
-        -zcor: zcor[np,nvrt] for each time record.
-        -zinter: zinter[np] depth where currents will be interpolated at
-        -kbp
-    outputs:
-        -k1[np]: integer, k-level at each node
-        -coeff[np]: interpolation coefficient
-    '''
-    #surface
-    idxs=zinter>=zcor[:,-1]
-    k1[idxs]=nvrt-2
-    coeff[idxs]=1.0
-
-    #bottom
-    idxs=zinter<zcor[:,0]
-    k1[idxs]=kbp[idxs]
-    coeff[idxs]=0.0
-
-    for k in np.arange(nvrt-1):
-        idxs=(zinter>=zcor[:,k])*(zinter<zcor[:,k+1])
-        k1[idxs]=k
-        coeff[idxs]=(zinter[idxs]-zcor[idxs,k])/(zcor[idxs,k+1]-zcor[idxs,k])
-
-    if sum(np.isnan(np.r_[k1,coeff])) != 0:
-        sys.exit('Check vertical interpolation')
-    return np.array(k1).astype('int'), np.array(coeff)
-
-
-if __name__ == '__main__':
-
-    '''
-    Usage: python extract_slab_fcst_netcdf4.py stack
-    Input:
-        1. Assign work directory path (for example: fpath='.')
-
-        2. All netcdf files are under {fpath}/outputs/:
-           {fpath}/outputs/out2d_*.nc
-           {fpath}/outputs/horizontalVelX_*.nc
-           {fpath}/outputs/horizontalVelY_*.nc
-           {fpath}/outputs/salinity_*.nc
-           {fpath}/outputs/temperature_*.nc
-
-        3. output directory:
-           outdir = '{fpath}/extract'
-
-        4. vgrid:
-           {fpath}/vgrid.in
-
-
-    Output:
-        schout_UV4.5m_{stack}.nc
-    '''
-
-    t0=time()
-
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('stack', help='input stack id')
-    args = argparser.parse_args()
-    sid = args.stack
-
-    #1. work directory
-    fpath = "."
-
-    #2. netcdf files
-    ds_2d = Dataset(f"{fpath}/outputs/out2d_{sid}.nc")
-    ds_u = Dataset(f"{fpath}/outputs/horizontalVelX_{sid}.nc")
-    ds_v = Dataset(f"{fpath}/outputs/horizontalVelY_{sid}.nc")
-    ds_s = Dataset(f"{fpath}/outputs/salinity_{sid}.nc")
-    ds_t = Dataset(f"{fpath}/outputs/temperature_{sid}.nc")
-
-    base_date_str = ds_2d['time'].base_date.split()
-    base_datetime = datetime(int(base_date_str[0]), int(base_date_str[1]), int(base_date_str[2]), 0, 0, 0)
-    base_date_str = base_datetime.strftime('%Y-%m-%d %H:%M:%S UTC')
-
-    time_units_str = ds_2d['time'].units.split("since")[1]
-    time_units_datetime = parser.parse(time_units_str)
-    # check time zone is UTC
-    if time_units_datetime.tzinfo is None or time_units_datetime.tzinfo.utcoffset(time_units_datetime) != timedelta(0):
-        raise ValueError("Time zone is not UTC")
-
-    time_units_str = f"seconds since {time_units_datetime.strftime('%Y-%m-%d %H:%M:%S UTC')}"
-
-    #3. output directory
-    outdir= './extract'
-
-    #4. get kbp and sigma from vgrid.in
+def read_vgrid(vgrid_file):
     time_start = time()
-    fid=open(f'{fpath}/vgrid.in','r')
+    fid=open(vgrid_file,'r')
     lines=fid.readlines()
     fid.close()
     ivcor=int(lines[0].strip().split()[0])
@@ -122,131 +34,264 @@ if __name__ == '__main__':
         sigma[fpm]=-1
     print(f"read vgrid took {time()-time_start}")
 
-    #print(np.unique(kbp))
+    return nvrt, sigma
+
+def vertical_interp(var, zcor, zinter, bottom_index):
+    '''
+    inputs:
+        -var: var[np,nvrt] for each time record.
+        -zcor: zcor[np,nvrt] for each time record.
+        -zinter[np, ]: zinter depth where currents will be interpolated at
+        -bottom_index[np, ]: bottom level, 0-based index
+    '''
+
+    NP, nvrt = zcor.shape
+    row_indices = np.arange(NP)
+
+    target_level = np.zeros(NP, dtype=int)  # zinter should be between zcor[:, target_level] and zcor[:, target_level+1]
+    lower_level_weight = np.zeros(NP, dtype=float)  # linear interpolation, i.e., lower_level_weight + upper_level_weight = 1.0
+
+    # get all points where zinter is above the surface 
+    idx = zinter >= zcor[:,-1]
+    if sum(~idx) == 0:  # all are surface, no need to interpolate, return the surface values
+        return var[:, -1]
+    else:  # record vertical index and weight for points where zinter is above surface
+        target_level[idx] = nvrt-2  # i.e., surface level (nvr-1) is the upper level
+        lower_level_weight[idx] = 0.0  # weight of the upper level is 1.0
+
+    # get all points where zinter is below the bottom
+    idx = zinter < zcor[row_indices,bottom_index]
+    if sum(~idx) == 0:  # all are bottom, no need to interpolate, return the bottom values
+        return var[row_indices, bottom_index]
+    else: # record vertical index and weight for points where zinter is below the bottom
+        target_level[idx] = bottom_index[idx]
+        lower_level_weight[idx] = 1.0  # weight of the lower level is 1.0
+
+    #intermediate
+    for k in np.arange(nvrt-1):
+        idx=(zinter>=zcor[:,k])*(zinter<zcor[:,k+1])
+        target_level[idx] = k
+        lower_level_weight[idx] = (zcor[idx,k+1] - zinter[idx]) /(zcor[idx,k+1] - zcor[idx,k])
+
+    if any(np.isnan(lower_level_weight)) or any(np.isnan(target_level)):
+        raise ValueError('NaN values in target_level or lower_level_weight')
+    
+    var_interp = var[row_indices, target_level] * lower_level_weight + var[row_indices, target_level + 1] * (1.0 - lower_level_weight)
+    
+    return var_interp   
+
+# a dictionary of the data to be extracted
+var_dict = {
+    'temp_surface': {
+        'file_prefix': 'temperature',
+        'var_name': 'temperature',
+        'long name': 'sea surface temperature',
+        'units': 'deg C',
+        'level': 'surface'
+    },
+    'temp_bottom': {
+        'file_prefix': 'temperature',
+        'var_name': 'temperature',
+        'long name': 'Bottom temperature',
+        'units': 'deg C',
+        'level': 'bottom'
+    },
+    'salt_surface': {
+        'file_prefix': 'salinity',
+        'var_name': 'salinity',
+        'long name': 'sea surface salinity',
+        'units': 'psu',
+        'level': 'surface'
+    },
+    'salt_bottom': {
+        'file_prefix': 'salinity',
+        'var_name': 'salinity',
+        'long name': 'Bottom salinity',
+        'units': 'psu',
+        'level': 'bottom'
+    },
+    'uvel_surface': {
+        'file_prefix': 'horizontalVelX',
+        'var_name': 'horizontalVelX',
+        'long name': 'U-component at the surface',
+        'units': 'm/s',
+        'level': 'surface'
+    },
+    'vvel_surface': {
+        'file_prefix': 'horizontalVelY',
+        'var_name': 'horizontalVelY',
+        'long name': 'V-component at the surface',
+        'units': 'm/s',
+        'level': 'surface'
+    },
+    'uvel_bottom': {
+        'file_prefix': 'horizontalVelX',
+        'var_name': 'horizontalVelX',
+        'long name': 'U-component at the bottom',
+        'units': 'm/s',
+        'level': 'near bottom'
+    },
+    'vvel_bottom': {
+        'file_prefix': 'horizontalVelY',
+        'var_name': 'horizontalVelY',
+        'long name': 'V-component at the bottom',
+        'units': 'm/s',
+        'level': 'near bottom'
+    },
+    'uvel4.5': {
+        'file_prefix': 'horizontalVelX',
+        'var_name': 'horizontalVelX',
+        'long name': 'U-component at 4.5m below free surface',
+        'units': 'm/s',
+        'level': -4.5  # 4.5 m below the surface
+    },
+    'vvel4.5': {
+        'file_prefix': 'horizontalVelY',
+        'var_name': 'horizontalVelY',
+        'long name': 'V-component at 4.5m below free surface',
+        'units': 'm/s',
+        'level': -4.5  # 4.5 m below the surface
+    }
+}
+
+if __name__ == '__main__':
+
+    '''
+    Usage: python extract_slab_fcst_netcdf4.py N
+    , where N is stack id
+
+    Input: 
+        1. Assign work directory path (for example: fpath='.')
+           fpath is default to the current directory, because this script is intended for operational use and
+           the input files are in the same directory as the script.
+
+        2. All netcdf files are under {fpath}/outputs/:
+           {fpath}/outputs/out2d_*.nc
+           {fpath}/outputs/horizontalVelX_*.nc
+           {fpath}/outputs/horizontalVelY_*.nc
+           {fpath}/outputs/salinity_*.nc
+           {fpath}/outputs/temperature_*.nc
+
+        3. output directory:
+           outdir = '{fpath}/extract'
+
+    Output:
+        schout_UV4.5m_{stack}.nc
+    '''
+
+
+    # hardwired path for operational use
+    fpath = "./"
+    outdir= './extract'
+
+    t0=time()
+
+    # parse input arguments
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('stack', help='input stack id')
+    args = argparser.parse_args()
+    sid = args.stack
+
+    # import pickle
+    # schism_output = pickle.load(open(f"{outdir}/schism_output_{sid}.pkl", "rb"))
+
+    # open 3D schism outputs
+    schism_output = {
+        'temperature': np.array(Dataset(f"{fpath}/outputs/temperature_{sid}.nc")['temperature']),
+        'salinity': np.array(Dataset(f"{fpath}/outputs/salinity_{sid}.nc")['salinity']),
+        'horizontalVelX': np.array(Dataset(f"{fpath}/outputs/horizontalVelX_{sid}.nc")['horizontalVelX']),
+        'horizontalVelY': np.array(Dataset(f"{fpath}/outputs/horizontalVelY_{sid}.nc")['horizontalVelY']),
+        'zCoordinates': np.array(Dataset(f'{fpath}/outputs/zCoordinates_{sid}.nc')['zCoordinates'])
+    }
+
+    # pickle save the schism output
+    # import pickle
+    # with open(f"{outdir}/schism_output_{sid}.pkl", "wb") as f:
+    #     pickle.dump(schism_output, f)
+
+    # process time information from out2d_*.nc; the time info is the same for all files
+    ds = Dataset(f"{fpath}/outputs/out2d_{sid}.nc")
+    base_date_str = ds['time'].base_date.split()
+    base_datetime = datetime(int(base_date_str[0]), int(base_date_str[1]), int(base_date_str[2]), 0, 0, 0)
+    base_date_str = base_datetime.strftime('%Y-%m-%d %H:%M:%S UTC')
+
+    time_units_str = ds['time'].units.split("since")[1]
+    time_units_datetime = parser.parse(time_units_str)
+
+    # check time zone is UTC
+    if time_units_datetime.tzinfo is None or time_units_datetime.tzinfo.utcoffset(time_units_datetime) != timedelta(0):
+        raise ValueError("Time zone is not UTC")
+
+    time_units_str = f"seconds since {time_units_datetime.strftime('%Y-%m-%d %H:%M:%S UTC')}"
 
     #get coordinates
-    x=ds_2d['SCHISM_hgrid_node_x'][:]
-    y=ds_2d['SCHISM_hgrid_node_y'][:]
-    depth=ds_2d['depth'][:]
+    depth = np.array(ds['depth'])
+    elev2d = np.array(ds['elevation'])
 
-    #get wetdry nodes
-    elev2d=ds_2d['elevation'][:,:]
-    #get mask
-    idry = np.array(elev2d) + np.array(depth).reshape(1, -1) <= 1e-6  # inundation <= 1e-6 m is considered dry
-    elev2d[idry]=-99999
+    # nvrt, sigma = read_vgrid(f'{fpath}/vgrid.in')
+    # zcor = sigma[np.newaxis,: ,:] * inun_depth[:, :, np.newaxis]  # wrong, should add + elev2d[:, :, np.newaxis]
+    inun_depth = elev2d + depth.reshape(1,-1)
+    zcor = schism_output['zCoordinates']
+
+    x=ds['SCHISM_hgrid_node_x'][:]
+    y=ds['SCHISM_hgrid_node_y'][:]
+    NP = len(x)
+    bottom_index_node = np.array(ds['bottom_index_node']) - 1  # minus 1 to convert to 0-based index
+
+    # set dry mask
+    idry = elev2d + depth.reshape(1, -1) <= 1e-6  # inundation <= 1e-6 m is considered dry
+    elev2d[idry]=-99999  # mask dry nodes with -99999
 
     #get elements and split quads into tris
-    elements=ds_2d['SCHISM_hgrid_face_nodes'][:,:]
+    elements=ds['SCHISM_hgrid_face_nodes'][:,:]
     tris = split_quads(elements=elements)  # modified by FY
     NE=len(tris)
-    NV=3
-    print(f'NE is {NE}')
+    max_ele_nodes = 3  # max number of nodes per element
+    print(f'number of elements increased from {len(elements)} to {NE} after splitting quads to triangles')
 
-    #get times
-    times = ds_2d['time'][:]
-    #print(times)
+    # extract data
+    times = ds['time'][:]
     ntimes = len(times)
-    #ntimes = 2
+    time_indices, node_indices = np.ogrid[0:ntimes, 0:NP]
+    # initialize arrays to store extracted data
+    extracted_data = {}
+    for var_name, var_info in var_dict.items():
+        print(f"Extracting {var_name}")
+        # nc_file = f"{fpath}/outputs/{var_info['file_prefix']}_{sid}.nc"
+        data = schism_output[var_info['var_name']]
 
-    #variables for surface salt/temp/u/v
-    temp_sur = np.full((ntimes, NP), np.nan)
-    salt_sur = np.full((ntimes, NP), np.nan)
+        # output data is always 2D
+        output_data = np.zeros((ntimes, NP))
 
-    uvel_sur = np.full((ntimes, NP), np.nan)
-    vvel_sur = np.full((ntimes, NP), np.nan)
+        # vertical interpolation
+        if var_info['level'] == 'surface':
+            output_data = data[:, :, -1]
+        elif var_info['level'] == 'bottom':
+            output_data = data[time_indices, node_indices, bottom_index_node]  # numpy fancy indexing
+        elif var_info['level'] == 'near bottom':
+            output_data = data[time_indices, node_indices, bottom_index_node+1]  # 1 level above the bottom
+        else:
+            if type(var_info['level']) not in [int, float]:
+                raise ValueError('Invalid level value')
+            for it in np.arange(ntimes):
+                zinter = np.zeros(NP, dtype=float)
+                zinter[~idry[it, :]] = var_info['level'] + elev2d[it, ~idry[it, :]]  # zinter is relative to the free surface
+                output_data[it, :] = vertical_interp(data[it, :, :], zcor[it, :, :], zinter[:], bottom_index_node[:])
 
-    #variables for u/v at 4.5m below the surface
-    uvel_inter = np.full((ntimes, NP), np.nan)
-    vvel_inter = np.full((ntimes, NP), np.nan)
+        # Mask dry nodes
+        output_data[idry]=-99999
+        output_data[output_data>10000]=-99999  # mask large values, to be consistent with older version of the script
 
-    #variables for bottom salt/temp/u/v
-    temp_bot = np.full((ntimes, NP), np.nan)
-    salt_bot = np.full((ntimes, NP), np.nan)
-    uvel_bot = np.full((ntimes, NP), np.nan)
-    vvel_bot = np.full((ntimes, NP), np.nan)
+        # store extracted data
+        extracted_data[var_name] = output_data.copy()
 
-    for it in np.arange(ntimes):
-        print(it)
-        elev=ds_2d['elevation'][it,:]
 
-        #surface
-        temp_sur[it,:]=ds_t['temperature'][it,:,-1]
-        salt_sur[it,:]=ds_s['salinity'][it,:,-1]
-        uvel_sur[it,:]=np.squeeze(ds_u['horizontalVelX'][it,:,-1])
-        vvel_sur[it,:]=np.squeeze(ds_v['horizontalVelY'][it,:,-1])
-
-        #all levels
-        salt_tmp = np.squeeze(ds_s['salinity'][it,:,:])
-        temp_tmp = np.squeeze(ds_t['temperature'][it,:,:])
-
-        uvel=np.squeeze(ds_u['horizontalVelX'][it,:,:])
-        vvel=np.squeeze(ds_v['horizontalVelY'][it,:,:])
-
-        #compute z#cor
-        zcor=(depth[:,None]+elev[:,None])*sigma
-
-        level=[-4.5]
-
-        k1=np.full((NP), np.nan)
-        coeff=np.full((NP), np.nan)
-        zinter=np.ones(NP)*level+elev
-
-        k1, coeff = get_zcor_interp_coefficient(zcor, zinter, kbp)
-
-        #bottom salt/temp/u/v
-        temp_bot[it, :]=temp_tmp[np.arange(NP), kbp]
-        salt_bot[it, :]=salt_tmp[np.arange(NP), kbp]
-
-        uvel_bot[it, :]=uvel[np.arange(NP), kbp+1]
-        vvel_bot[it, :]=vvel[np.arange(NP), kbp+1]
-
-        #tmp=np.array(salt[np.arange(NP),k1]*(1-coeff)+salt[np.arange(NP),k1+1]*coeff)
-        #salt_inter[it, :]=np.squeeze(tmp)
-
-        #interpolate at level
-        tmp=np.array(uvel[np.arange(NP),k1]*(1-coeff)+uvel[np.arange(NP),k1+1]*coeff)
-        uvel_inter[it, :]=np.squeeze(tmp)
-
-        tmp=np.array(vvel[np.arange(NP),k1]*(1-coeff)+vvel[np.arange(NP),k1+1]*coeff)
-        vvel_inter[it, :]=np.squeeze(tmp)
-        #print(f'It took {time()-t0} to interpolate')
-
-    #Mask dry nodes
-    temp_sur[idry]=-99999
-    salt_sur[idry]=-99999
-    uvel_sur[idry]=-99999
-    vvel_sur[idry]=-99999
-    temp_bot[idry]=-99999
-    salt_bot[idry]=-99999
-    uvel_bot[idry]=-99999
-    vvel_bot[idry]=-99999
-
-    #u/v at 4.5m
-    uvel_inter[idry]=-99999
-    vvel_inter[idry]=-99999
-
-    #change fill_values
-    elev2d[np.where(elev2d>10000)]=-99999
-    temp_sur[np.where(temp_sur>10000)]=-99999
-    salt_sur[np.where(salt_sur>10000)]=-99999
-    uvel_sur[np.where(uvel_sur>10000)]=-99999
-    vvel_sur[np.where(vvel_sur>10000)]=-99999
-
-    temp_bot[np.where(temp_bot>10000)]=-99999
-    salt_bot[np.where(salt_bot>10000)]=-99999
-    uvel_bot[np.where(uvel_bot>10000)]=-99999
-    vvel_bot[np.where(vvel_bot>10000)]=-99999
-
-    uvel_inter[np.where(uvel_inter>10000)]=-99999
-    vvel_inter[np.where(vvel_inter>10000)]=-99999
-
-#   outdir= '/home1/06923/hyu05/work/oper_3D/run/extract'
     with Dataset(f"{outdir}/schout_UV4.5m_{sid}.nc", "w", format="NETCDF4") as fout:
         #dimensions
         fout.createDimension('time', None)
         fout.createDimension('nSCHISM_hgrid_node', NP)
         fout.createDimension('nSCHISM_hgrid_face', NE)
-        fout.createDimension('nMaxSCHISM_hgrid_face_nodes', NV)
+        fout.createDimension('nMaxSCHISM_hgrid_face_nodes', max_ele_nodes)
 
         #variables
         fout.createVariable('time', 'f', ('time',))
@@ -290,68 +335,14 @@ if __name__ == '__main__':
         #fout['elev'].missing_value=np.nan
         fout['elev'][:,:]=elev2d
 
-        fout.createVariable('temp_surface','f8', ('time', 'nSCHISM_hgrid_node',),fill_value=-99999)
-        fout['temp_surface'].long_name="sea surface temperature"
-        fout['temp_surface'].units="deg C"
-        #fout['temp'].missing_value=np.nan
-        fout['temp_surface'][:,:]=temp_sur
-
-        fout.createVariable('temp_bottom','f8', ('time', 'nSCHISM_hgrid_node',),fill_value=-99999)
-        fout['temp_bottom'].long_name="Bottom temperature"
-        fout['temp_bottom'].units="deg C"
-        #fout['temp'].missing_value=np.nan
-        fout['temp_bottom'][:,:]=temp_bot
-
-        fout.createVariable('salt_surface','f8', ('time', 'nSCHISM_hgrid_node',), fill_value=-99999)
-        fout['salt_surface'].long_name="sea surface salinity"
-        fout['salt_surface'].units="psu"
-        #fout['salt'].missing_value=np.nan
-        fout['salt_surface'][:,:]=salt_sur
-
-        fout.createVariable('salt_bottom','f8', ('time', 'nSCHISM_hgrid_node',), fill_value=-99999)
-        fout['salt_bottom'].long_name="Bottom salinity"
-        fout['salt_bottom'].units="psu"
-        #fout['salt'].missing_value=np.nan
-        fout['salt_bottom'][:,:]=salt_bot
-
-        fout.createVariable('uvel_surface','f8', ('time', 'nSCHISM_hgrid_node',), fill_value=-99999)
-        fout['uvel_surface'].long_name="U-component at the surface"
-        fout['uvel_surface'].units="m/s"
-        #fout['uvel'].missing_value=np.nan
-        fout['uvel_surface'][:,:]=uvel_sur
-
-        fout.createVariable('vvel_surface','f8', ('time', 'nSCHISM_hgrid_node',), fill_value=-99999)
-        fout['vvel_surface'].long_name="V-component at the surface"
-        fout['vvel_surface'].units="m/s"
-        #fout['vvel'].missing_value=np.nan
-        fout['vvel_surface'][:,:]=vvel_sur
-
-        fout.createVariable('uvel_bottom','f8', ('time', 'nSCHISM_hgrid_node',), fill_value=-99999)
-        fout['uvel_bottom'].long_name="U-component at the bottom"
-        fout['uvel_bottom'].units="m/s"
-        #fout['uvel'].missing_value=np.nan
-        fout['uvel_bottom'][:,:]=uvel_bot
-
-        fout.createVariable('vvel_bottom','f8', ('time', 'nSCHISM_hgrid_node',), fill_value=-99999)
-        fout['vvel_bottom'].long_name="V-component at the bottom"
-        fout['vvel_bottom'].units="m/s"
-        #fout['vvel'].missing_value=np.nan
-        fout['vvel_bottom'][:,:]=vvel_bot
-
-        fout.createVariable('uvel4.5','f8', ('time', 'nSCHISM_hgrid_node',), fill_value=-99999)
-        fout['uvel4.5'].long_name="U-component at 4.5m below free surface"
-        fout['uvel4.5'].units="m/s"
-        #fout['uvel'].missing_value=np.nan
-        fout['uvel4.5'][:,:]=uvel_inter
-
-        fout.createVariable('vvel4.5','f8', ('time', 'nSCHISM_hgrid_node',), fill_value=-99999)
-        fout['vvel4.5'].long_name="V-component at 4.5m below free surface"
-        fout['vvel4.5'].units="m/s"
-        #fout['vvel'].missing_value=np.nan
-        fout['vvel4.5'][:,:]=vvel_inter
+        for var_name, var_info in var_dict.items():
+            fout.createVariable(var_name, 'f8', ('time', 'nSCHISM_hgrid_node',), fill_value=-99999)
+            fout[var_name].long_name=var_info['long name']
+            fout[var_name].units=var_info['units']
+            fout[var_name][:, :] = extracted_data[var_name]
 
         fout.title = 'SCHISM Model output'
         fout.source = 'SCHISM model output version v10'
         fout.references = 'http://ccrm.vims.edu/schismweb/'
 
-    print(f'It took {time()-t0} to interpolate')
+    print(f'Extraction took {time()-t0} seconds')
