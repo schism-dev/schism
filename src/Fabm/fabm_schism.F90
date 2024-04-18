@@ -7,21 +7,22 @@
 !
 !> @author Richard Hofmeister
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
-!> @author Deborah Benkort <deborah.benkort@hereon.de>
+!> @author Deborah Benkort
 !> @author Jan Kossack <jan.kossack@hereon.de>
 !> @author Wang Zhenggui
 
 !> @copyright Copyright 2021-2022 Virginia Institute of Marine Science
-!> @copyright Copyright 2021-2022 Helmholtz-Zentrum Hereon
-!> @copyright Copyright 2017-2021 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2021-2024 Helmholtz-Zentrum hereon GmbH
+!> @copyright Copyright 2017-2021 Helmholtz-Zentrum Geesthacht GmbH
 !
-! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
-! Public License Version 3.0
+! @license dual-licensed under the Apache License, Version 2.0
+! and the GNU Public License Version 3.0
 !
-#include "fabm_version.h"
 
+! The cmake system should make sure that _FABM_API_VERSION_ is defined 
+! to 0 if it does not find $FABM_BASE/include/fabm_version.h 
 #ifndef _FABM_API_VERSION_
-#define _FABM_API_VERSION_ 0
+#include "fabm_version.h"
 #endif
 
 #ifdef USE_ICEBGC
