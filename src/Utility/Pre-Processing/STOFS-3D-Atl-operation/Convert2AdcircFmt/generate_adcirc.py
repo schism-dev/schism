@@ -11,6 +11,7 @@ will generate
 '''
 from time import time
 import argparse
+from pathlib import Path
 import copy
 import os
 import errno
@@ -182,12 +183,6 @@ def split_quads(elements=None):  # modified by FY
 if __name__ == '__main__':
     # Check host and make special arrangement for WCOSS2
     myhost = os.uname()[1]
-    if myhost in ["viz", "femto", "vortex", "frontera"]:
-        static_city_mask = True  # search for city mask within polygons of shapefile
-        print(f'myhost: {myhost}, not using static_city_mask')
-    else:
-        static_city_mask = True  # use static mask because it does not have mpl.path
-        print(f'myhost: {myhost}, using static_city_mask')
 
     # ---------------------------
     my_fillvalue = -99999.0  # used for dry nodes and small disturbance on land/city
@@ -208,17 +203,24 @@ if __name__ == '__main__':
     input_fileindex=os.path.basename(input_filename).replace("_", ".").split(".")[1]  # get the file index only
 
     input_city_identifier_file = args.input_city_identifier_file
-    if input_city_identifier_file is None:
-        if static_city_mask:
-            input_city_identifier_file = './Shapefiles/city_poly.node_id.txt'
-        else:
-            input_city_identifier_file = './Shapefiles/city_poly.shp'
 
-    if not os.path.exists(input_city_identifier_file):
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), input_city_identifier_file)
-    print(f"using {input_city_identifier_file} to identify urban area")
-    if not static_city_mask:
-        output_nodeId_fname = os.path.splitext(input_city_identifier_file)[0] + '.node_id.txt'  # save static ids instead of searching (because WCOSS2 has no mpl.path)
+    # decide on the need for a static city mask, sanity checks on the input_city_identifier_file
+    if input_city_identifier_file is not None:
+        if not os.path.exists(input_city_identifier_file):
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), input_city_identifier_file)
+
+        if any(tested_host in myhost for tested_host in ["frontera", "viz", "femto", "vortex"]):
+            static_city_mask = False  # search for city mask within polygons of shapefile
+            if Path(input_city_identifier_file).suffix != '.shp':
+                raise ValueError("When not using static_city_mask, input_city_identifier_file must be a shapefile containing city polygons")   
+        else:
+            static_city_mask = True  # On WCOSS2 or any untested machine, use static mask because it may not have mpl.path
+            if Path(input_city_identifier_file).suffix != '.txt':
+                raise ValueError("When using static_city_mask, input_city_identifier_file must be a txt file containing node indices inside city")
+        print(f'myhost: {myhost}, static_city_mask: {static_city_mask}, city identifier input: {input_city_identifier_file}')
+    else:
+        print('No city identifier file provided, no city mask will be applied')
+
 
     output_dir = args.output_dir
     print(f"outputting to {output_dir}")
@@ -270,11 +272,15 @@ if __name__ == '__main__':
     maxdist[land_node_idx]=np.maximum(0, maxelev[land_node_idx]+depth[land_node_idx])
 
     #find city nodes
-    if static_city_mask:
-        city_node_idx = np.loadtxt(input_city_identifier_file, encoding='utf-8').astype(bool)
+    if input_city_identifier_file is None:
+        city_node_idx = np.zeros(NP, dtype=bool)  # no city mask
     else:
-        city_node_idx = find_points_in_polyshp(pt_xy=np.c_[x, y], shapefile_names=[input_city_identifier_file])
-        np.savetxt(output_nodeId_fname, city_node_idx.astype(int), fmt='%i', encoding='utf-8')
+        if static_city_mask:  # read existing city mask
+            city_node_idx = np.loadtxt(input_city_identifier_file, encoding='utf-8').astype(bool)
+        else:  # search for city mask within polygons of shapefile, then output to a static file
+            output_nodeId_fname = Path(input_city_identifier_file).with_suffix('.node_id.txt')  # save static ids instead of searching (because WCOSS2 has no mpl.path)
+            city_node_idx = find_points_in_polyshp(pt_xy=np.c_[x, y], shapefile_names=[input_city_identifier_file])
+            np.savetxt(output_nodeId_fname, city_node_idx.astype(int), fmt='%i', encoding='utf-8')
 
     #set mask for dry nodes
     idry=np.zeros(NP)
