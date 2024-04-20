@@ -1,0 +1,5 @@
+city_poly.shp filter=lfs diff=lfs merge=lfs -text
+city_poly.node_id.txt filter=lfs diff=lfs merge=lfs -text
+city_poly.dbf filter=lfs diff=lfs merge=lfs -text
+city_poly.prj filter=lfs diff=lfs merge=lfs -text
+city_poly.shx filter=lfs diff=lfs merge=lfs -text
