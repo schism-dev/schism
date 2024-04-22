@@ -1,8 +1,9 @@
+import os
 import sys
 from datetime import datetime, timedelta
-from time import time 
-import argparse
+from time import time
 from dateutil import parser
+import argparse
 
 import numpy as np
 from netCDF4 import Dataset
@@ -51,7 +52,7 @@ def vertical_interp(var, zcor, zinter, bottom_index):
     target_level = np.zeros(NP, dtype=int)  # zinter should be between zcor[:, target_level] and zcor[:, target_level+1]
     lower_level_weight = np.zeros(NP, dtype=float)  # linear interpolation, i.e., lower_level_weight + upper_level_weight = 1.0
 
-    # get all points where zinter is above the surface 
+    # get all points where zinter is above the surface
     idx = zinter >= zcor[:,-1]
     if sum(~idx) == 0:  # all are surface, no need to interpolate, return the surface values
         return var[:, -1]
@@ -75,10 +76,10 @@ def vertical_interp(var, zcor, zinter, bottom_index):
 
     if any(np.isnan(lower_level_weight)) or any(np.isnan(target_level)):
         raise ValueError('NaN values in target_level or lower_level_weight')
-    
+
     var_interp = var[row_indices, target_level] * lower_level_weight + var[row_indices, target_level + 1] * (1.0 - lower_level_weight)
-    
-    return var_interp   
+
+    return var_interp
 
 # a dictionary of the data to be extracted
 var_dict = {
@@ -157,40 +158,41 @@ var_dict = {
 if __name__ == '__main__':
 
     '''
-    Usage: python extract_slab_fcst_netcdf4.py N
-    , where N is stack id
+    Usage:
+        python extract_slab_fcst_netcdf4.py --stack N
+    , where N is the stack id
 
-    Input: 
-        1. Assign work directory path (for example: fpath='.')
-           fpath is default to the current directory, because this script is intended for operational use and
-           the input files are in the same directory as the script.
+    The outputs of this script are saved under './extract/', or
+    you can set it with an optional argument:
+        python extract_slab_fcst_netcdf4.py --stack N  --output_dir some_dir/
 
-        2. All netcdf files are under {fpath}/outputs/:
-           {fpath}/outputs/out2d_*.nc
-           {fpath}/outputs/horizontalVelX_*.nc
-           {fpath}/outputs/horizontalVelY_*.nc
-           {fpath}/outputs/salinity_*.nc
-           {fpath}/outputs/temperature_*.nc
-
-        3. output directory:
-           outdir = '{fpath}/extract'
+    Run this script under a schism run directory that has an outputs/ folder.
+    All SCHISM netcdf files should be under {current_dir}/outputs/, including:
+     {fpath}/outputs/out2d_*.nc
+     {fpath}/outputs/horizontalVelX_*.nc
+     {fpath}/outputs/horizontalVelY_*.nc
+     {fpath}/outputs/salinity_*.nc
+     {fpath}/outputs/temperature_*.nc
 
     Output:
-        schout_UV4.5m_{stack}.nc
+        {output_dir}/schout_UV4.5m_{stack}.nc
     '''
 
 
     # hardwired path for operational use
-    fpath = "./"
-    outdir= './extract'
-
     t0=time()
 
     # parse input arguments
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('stack', help='input stack id')
+    argparser.add_argument('--stack', required=True, help='input stack id')
+    argparser.add_argument('--output_dir', default='./extract/', help='A SCHISM run folder that has outputs/')
     args = argparser.parse_args()
+
     sid = args.stack
+    outdir= args.output_dir
+    os.makedirs(outdir, exist_ok=True)
+
+    fpath = './'  # should be a SCHISM run directory that contains outputs/
 
     # import pickle
     # schism_output = pickle.load(open(f"{outdir}/schism_output_{sid}.pkl", "rb"))

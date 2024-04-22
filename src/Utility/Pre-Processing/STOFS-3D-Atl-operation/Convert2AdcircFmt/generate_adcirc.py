@@ -1,12 +1,13 @@
 '''
-Usage: python generate_adcirc.py --input_filename ./outputs/out2d_?.nc --input_city_identifier_file ./city_poly.shp --output_dir ./extract/
+Usage: python generate_adcirc.py -h
 
 For example:
 
 (on WCOSS2) python generate_adcirc.py --input_filename t12z.fields.out2d_nowcast.nc --input_city_identifier_file ./Shapefiles/city_poly.node_id.txt --output_dir .
-(on other clusters) python generate_adcirc.py --input_filename ./outputs/out2d_1.nc --input_city_identifier_file ./city_poly.shp --output_dir ./extract/
-will generate
-./extract/schout_adcirc_1.nc, which is in ADCIRC's format
+(on other clusters) python generate_adcirc.py --input_filename ./outputs/out2d_1.nc --input_city_identifier_file ./Shapefiles/city_poly.shp --output_dir ./extract/  --datum "xGEOID20B"
+
+Outputs:
+./extract/schout_adcirc_*.nc, which are in ADCIRC's format
 
 '''
 from time import time
@@ -192,17 +193,20 @@ if __name__ == '__main__':
 
     # ----------- input arguments ----------------------
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--input_filename', help='input file in SCHISM format')
-    argparser.add_argument('--input_city_identifier_file', help='input shapefile defining the urban region, or (on WCOSS2) a txt file containing node ids inside city, where small disturbance will be masked out')
-    argparser.add_argument('--output_dir')
+    argparser.add_argument('--input_filename', required=True, help='input file in SCHISM format')
+    argparser.add_argument('--input_city_identifier_file', help='optional input shapefile defining the urban region, or (on WCOSS2) a txt file containing node ids inside city, where small disturbance will be masked out')
+    argparser.add_argument('--datum', default='xGEOID20B', help='Vertical datum of the schism run, defaulting to xGEOID20B.')
+    argparser.add_argument('--output_dir', required=True, help='folder holding the outputs of this script.')
     args=argparser.parse_args()
     # ----------- end input arguments ----------------------
 
     # ----------- process input arguments ----------------------
     input_filename=args.input_filename
-    input_fileindex=os.path.basename(input_filename).replace("_", ".").split(".")[1]  # get the file index only
-
     input_city_identifier_file = args.input_city_identifier_file
+    datum = args.datum
+    output_dir = args.output_dir
+
+    input_fileindex=os.path.basename(input_filename).replace("_", ".").split(".")[1]  # get the file index only
 
     # decide on the need for a static city mask, sanity checks on the input_city_identifier_file
     if input_city_identifier_file is not None:
@@ -212,7 +216,7 @@ if __name__ == '__main__':
         if any(tested_host in myhost for tested_host in ["frontera", "viz", "femto", "vortex"]):
             static_city_mask = False  # search for city mask within polygons of shapefile
             if Path(input_city_identifier_file).suffix != '.shp':
-                raise ValueError("When not using static_city_mask, input_city_identifier_file must be a shapefile containing city polygons")   
+                raise ValueError("When not using static_city_mask, input_city_identifier_file must be a shapefile containing city polygons")
         else:
             static_city_mask = True  # On WCOSS2 or any untested machine, use static mask because it may not have mpl.path
             if Path(input_city_identifier_file).suffix != '.txt':
@@ -222,7 +226,6 @@ if __name__ == '__main__':
         print('No city identifier file provided, no city mask will be applied')
 
 
-    output_dir = args.output_dir
     print(f"outputting to {output_dir}")
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -344,22 +347,22 @@ if __name__ == '__main__':
         fout['element'][:]=np.array(tris)
 
         fout.createVariable('depth', 'f8', ('node',))
-        fout['depth'].long_name="distance below XGEOID20B"
-        fout['depth'].standard_name="depth below XGEOID20B"
+        fout['depth'].long_name=f"distance below {datum}"
+        fout['depth'].standard_name=f"depth below {datum}"
         fout['depth'].coordinates="time y x"
         fout['depth'].location="node"
         fout['depth'].units="m"
         fout['depth'][:]=depth
 
         fout.createVariable('zeta_max','f8', ('node',), fill_value=my_fillvalue)
-        fout['zeta_max'].standard_name="maximum_sea_surface_height_above_xgeoid20b"
+        fout['zeta_max'].standard_name=f"maximum_sea_surface_height_above_{datum}"
         fout['zeta_max'].coordinates="y x"
         fout['zeta_max'].location="node"
         fout['zeta_max'].units="m"
         fout['zeta_max'][:]=maxelev
 
         fout.createVariable('time_of_zeta_max','f8', ('node',), fill_value=my_fillvalue)
-        fout['time_of_zeta_max'].standard_name="time_of_maximum_sea_surface_height_above_xgeoid20b"
+        fout['time_of_zeta_max'].standard_name=f"time_of_maximum_sea_surface_height_above_{datum}"
         fout['time_of_zeta_max'].coordinates="y x"
         fout['time_of_zeta_max'].location="node"
         fout['time_of_zeta_max'].units="sec"
@@ -373,7 +376,7 @@ if __name__ == '__main__':
         fout['disturbance_max'][:]=maxdist
 
         fout.createVariable('zeta','f8', ('time', 'node',), fill_value=my_fillvalue)
-        fout['zeta'].standard_name="sea_surface_height_above_xgeoid20b"
+        fout['zeta'].standard_name=f"sea_surface_height_above_{datum}"
         fout['zeta'].coordinates="time y x"
         fout['zeta'].location="node"
         fout['zeta'].units="m"
