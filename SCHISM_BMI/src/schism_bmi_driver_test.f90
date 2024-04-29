@@ -59,6 +59,7 @@ program schism_driver_test
     double precision, allocatable                    :: grid_x_mesh(:), grid_x_wlbnd(:), grid_x_qbnd(:) ! X coordinate of grid nodes (change dims if multiple nodes)
     double precision, allocatable                    :: grid_y_mesh(:), grid_y_wlbnd(:), grid_y_qbnd(:) ! Y coordinate of grid nodes (change dims if multiple nodes)
     double precision, allocatable                    :: grid_z_mesh(:), grid_z_wlbnd(:), grid_z_qbnd(:) ! Z coordinate of grid nodes (change dims if multiple nodes)
+    double precision, allocatable                    :: grid_x_rain(:), grid_y_rain(:)
     integer                                           :: grid_node_count ! Get the number of nodes in the grid 
     integer                                           :: grid_edge_count ! Get the number of edges in the grid
     integer                                           :: grid_face_count ! Get the number of faces in the grid
@@ -70,10 +71,13 @@ program schism_driver_test
     integer                                           :: a, b             ! Loop counters 
     real, pointer                                 :: var_value_get_ptr(:) ! value of a variable for get_value_ptr
 
-    double precision, allocatable            :: Q_bnd(:), ETA2_bnd(:) ! Boundary condition terms
-    double precision, allocatable            :: SFCPRS(:), TMP2m(:) ! Surface pressure and temperature terms
-    double precision, allocatable            :: UU10m(:), VV10m(:) ! Wind vector component velocity terms
-    double precision, allocatable            :: SPFH2m(:), RAINRATE(:) ! Specific humidity and rainfall rate terms
+    integer, allocatable, target             :: get_var_Q_bnd_ind(:) ! get indices of source terms
+    integer, allocatable, target             :: get_var_ETA2_bnd_ind(:) ! get indices of source terms
+    double precision, allocatable            :: Q_bnd_source_t0(:), Q_bnd_source_t1(:),  Q_bnd_sink_t0(:), Q_bnd_sink_t1(:) ! Source and sink boundary terms
+    double precision, allocatable            :: ETA2_bnd_t0(:), ETA2_bnd_t1(:) ! Open water level Boundary condition terms
+    double precision, allocatable            :: SFCPRS_t0(:), SFCPRS_t1(:), TMP2m_t0(:), TMP2m_t1(:)
+    double precision, allocatable            :: UU10m_t0(:), UU10m_t1(:), VV10m_t0(:), VV10m_t1(:)
+    double precision, allocatable            :: SPFH2m_t0(:), SPFH2m_t1(:), RAINRATE_t0(:), RAINRATE_t1(:)
 
 
     integer, dimension(3)                             :: grid_indices       ! grid indices (change dims as needed)
@@ -162,81 +166,115 @@ program schism_driver_test
 
   ! Set water level boundaries with allocated 
   ! dummy data after model has been initialized
-  allocate(ETA2_bnd(size(ath2(1,1,:,1,1))))
+  allocate(ETA2_bnd_t0(size(ath2(1,1,:,1,1))))
+  allocate(ETA2_bnd_t1(size(ath2(1,1,:,1,1))))
 
-  ETA2_bnd(:) = 2.0
-  status = m%set_value('ETA2_bnd', ETA2_bnd)
+  ETA2_bnd_t0(:) = 1.0
+  status = m%set_value('ETA2_bnd_t0', ETA2_bnd_t0)
+  ETA2_bnd_t1(:) = 2.0
+  status = m%set_value('ETA2_bnd_t1', ETA2_bnd_t1)
 
-  print*, 'ETA2_bnd t0 new data', ath2(1,1,1,1,1)
-  print*, 'ETA2_bnd t1 new data', ath2(1,1,1,2,1)
+  print*, 'ETA2_bnd_t0 new data', ath2(1,1,1,1,1)
+  print*, 'ETA2_bnd_t1 new data', ath2(1,1,1,2,1)
 
   ! Set discharge boundaries from "t-route data" with 
   ! allocated dummy data after model has been initialized
-  allocate(Q_bnd(size(ieg_source)))
+  allocate(Q_bnd_source_t0(size(ieg_source_ngen)))
+  allocate(Q_bnd_source_t1(size(ieg_source_ngen)))
+  if(nsinks > 0) then
+    allocate(Q_bnd_sink_t0(size(ieg_sink)))
+    allocate(Q_bnd_sink_t1(size(ieg_sink)))
+  endif
   ! Set discharge boundaries from "precipitation data" with
   ! allocated dummy data after model has been initialized
   ! AND T-Route data has been first set to discharge t0
   ! source boundary arrays. This must be the workflow order
-  allocate(RAINRATE(size(ieg_source)))
+  allocate(RAINRATE_t0(size(ieg_source)))
+  allocate(RAINRATE_t1(size(ieg_source)))
 
-  Q_bnd(:) = 0.25
-  status = m%set_value('Q_bnd', Q_bnd)
-  print*, 'Q_bnd_t0 new data', ath3(1,1,1,1)
-  print*, 'Q_bnd_t1 new data', ath3(1,1,2,1)
+  Q_bnd_source_t0(:) = 0.25
+  status = m%set_value('Q_bnd_source_t0', Q_bnd_source_t0)
+  print*, 'Q_bnd_source_t0 new data', ath3(ieg_source_ngen(1),1,1,1)
 
-  RAINRATE(:) = 0.1
-  status = m%set_value('RAINRATE', RAINRATE)
-  print*, 'Q_bnd_t0 new data after RAINFALL added', ath3(1,1,1,1)
-  print*, 'Q_bnd_t1 new data after RAINFALL added', ath3(1,1,2,1)
+  RAINRATE_t0(:) = 0.1
+  status = m%set_value('RAINRATE_t0', RAINRATE_t0)
+  print*, 'Q_bnd_source_t0 new data after RAINFALL added', ath3(ieg_source_ngen(1),1,1,1)
+
+  Q_bnd_source_t1(:) = 0.5
+  status = m%set_value('Q_bnd_source_t1', Q_bnd_source_t1)
+  print*, 'Q_bnd_source_t1 new data', ath3(ieg_source_ngen(1),1,2,1)
+
+  RAINRATE_t1(:) = 0.2
+  status = m%set_value('RAINRATE_t1', RAINRATE_t1)
+  print*, 'Q_bnd_source_t1 new data after RAINFALL added', ath3(ieg_source_ngen(1),1,2,1)
+
+
+  if(nsinks > 0) then
+    Q_bnd_sink_t0(:) = 0.25
+    status = m%set_value('Q_bnd_sink_t0', Q_bnd_sink_t0)
+    print*, 'Q_bnd_sink_t0 new data', ath3(1,1,1,2)
+    Q_bnd_sink_t1(:) = 0.5
+    status = m%set_value('Q_bnd_sink_t1', Q_bnd_sink_t1)
+    print*, 'Q_bnd_sink_t1 new data', ath3(1,1,2,2)
+  endif
 
   ! Set u wind velocity component with allocated 
   ! dummy data after model has been initialized
-  allocate(UU10m(npa))
+  allocate(UU10m_t0(npa))
+  allocate(UU10m_t1(npa))
 
 
 
-  UU10m(:) = 2.0
-  status = m%set_value('UU10m', UU10m)
+  UU10m_t0(:) = 2.0
+  status = m%set_value('UU10m_t0', UU10m_t0)
+  UU10m_t1(:) = 3.0
+  status = m%set_value('UU10m_t1', UU10m_t1)
 
   print*, 'UU10m_t0 new data', windx1(1)
   print*, 'UU10m_t1 new data', windx2(1)
 
   ! Set v wind velocity component with allocated 
   ! dummy data after model has been initialized
-  allocate(VV10m(npa))
+  allocate(VV10m_t0(npa))
+  allocate(VV10m_t1(npa))
 
-  VV10m(:) = 2.0
-  status = m%set_value('VV10m', VV10m)
+  VV10m_t0(:) = 2.0
+  status = m%set_value('VV10m_t0', VV10m_t0)
+  VV10m_t1(:) = 3.0
+  status = m%set_Value('VV10m_t1', VV10m_t1)
 
   print*, 'VV10m_t0 new data', windy1(1)
   print*, 'VV10m_t1 new data', windy2(1)
 
-  ! Set surface pressure component with allocated 
-  ! dummy data after model has been initialized
-  allocate(SFCPRS(npa))
-  
-  SFCPRS(:) = 101325.0
-  status = m%set_value('SFCPRS', SFCPRS)
+  allocate(SFCPRS_t0(npa))
+  allocate(SFCPRS_t1(npa))
+
+  SFCPRS_t0(:) = 101325.0
+  status = m%set_value('SFCPRS_t0', SFCPRS_t0)
+  SFCPRS_t1(:) = 101025.0
+  status = m%set_value('SFCPRS_t1', SFCPRS_t1)
 
   print*, 'SFCPRS_t0 new data', pr1(1)
   print*, 'SFCPRS_t1 new data', pr2(1)
 
-  ! Set 2m air temperature component with allocated 
-  ! dummy data after model has been initialized
-  allocate(TMP2m(npa))
+  allocate(TMP2m_t0(npa))
+  allocate(TMP2m_t1(npa))
 
-  TMP2m(:) = 348.0
-  status = m%set_value('TMP2m', TMP2m)
+  TMP2m_t0(:) = 348.0
+  status = m%set_value('TMP2m_t0', TMP2m_t0)
+  TMP2m_t1(:) = 350.0
+  status = m%set_value('TMP2m_t1', TMP2m_t1)
 
   print*, 'TMP2m_t0 new data', airt1(1)
   print*, 'TMP2m_t1 new data', airt2(1)
 
-  ! Set 2m specific humidity component with allocated 
-  ! dummy data after model has been initialized
-  allocate(SPFH2m(npa))
+  allocate(SPFH2m_t0(npa))
+  allocate(SPFH2m_t1(npa))
 
-  SPFH2m(:) = 0.0140
-  status = m%set_value('SPFH2m', SPFH2m)
+  SPFH2m_t0(:) = 0.0140
+  status = m%set_value('SPFH2m_t0', SPFH2m_t0)
+  SPFH2m_t1(:) = 0.0145
+  status = m%set_value('SPFH2m_t1', SPFH2m_t1)
 
   print*, 'SPFH2m_t0 new data', shum1(1)
   print*, 'SPFH2m_t1 new data', shum2(1)
@@ -254,6 +292,63 @@ program schism_driver_test
     status = m%get_current_time(current_time)
     status = m%get_end_time(end_time)
 
+
+
+  !---------------------------------------------------------------------
+  ! SCHISM debugging of internal variables, ignore for now 
+  !---------------------------------------------------------------------
+
+    !print*, "np_global"
+    !print*, np_global
+    !print*, "np"
+    !print*, np
+    !print*, "npa"
+    !print*, npa
+    !print*, "npg"
+    !print*, npg
+    !print*, "size of eta2"
+    !print*, size(eta2)
+    !print*, "size of uu2"
+    !print*, size(uu2)
+    !print*, "uu2 for vertical layer"
+    !print*, uu2(1,100)
+    !print*, uu2(2,100)
+    !print*, "vv2 for vertical layer"
+    !print*, vv2(1,500)
+    !print*, vv2(2,500)
+    !print*, "size of met variables pr2, airt2, shum2, windx2"
+    !print*, size(pr2)
+    !print*, size(airt2)
+    !print*, size(shum2)
+    !print*, size(windx2)
+    !print*, "neta_global"
+    !print*, neta_global
+    !print*, "neta"
+    !print*, neta
+    !print*, "nthfiles 2 and 3"
+    !print*, nthfiles2
+    !print*, nthfiles3
+    !print*, "nsources"
+    !print*, nsources
+    !print*, "ntracers"
+    !print*, ntracers
+    !print*, "nvrt"
+    !print*, nvrt
+    !print*, "iond global shape"
+    !print*, shape(iond_global)
+    !print*, "ath2 open bnd shape"
+    !print*, size(ath2(1,1,:,1,1))
+    !print*, "ath3 diff"
+    !print*, ath3(10,1,1,1)
+    !print*, ath3(10,1,2,1)
+    !print*, "ath2 diff"
+    !print*, ath2(1,1,10,1,1)
+    !print*, ath2(1,1,10,2,1)
+    !print*, "iond global shape 1"
+    !print*, iond_global(1,:)
+    !print*, "iond global shape 2"
+    !print*, iond_global(2,:)
+
   !---------------------------------------------------------------------
   ! Test the get/set_value functionality with BMI
   ! and update the following timestep one more time
@@ -270,59 +365,78 @@ program schism_driver_test
  
     deallocate(var_value_get)
 
-    ! Now test the get value functionality again after
-    ! SCHISM has ran through one hour of its simulation
-    ! in order to ensure the BMI functionality now starts
-    ! to dynamically set "t0" and "t1" moving forward
 
-    ETA2_bnd(:) = 2.5
-    status = m%set_value('ETA2_bnd', ETA2_bnd)
+    ETA2_bnd_t1(:) = 2.5
+    status = m%set_value('ETA2_bnd_t1', ETA2_bnd_t1)
 
     print*, 'ETA2_bnd_t0 new data', ath2(1,1,1,1,1)
     print*, 'ETA2_bnd_t1 new data', ath2(1,1,1,2,1)
 
-    Q_bnd(:) = 0.75
-    status = m%set_value('Q_bnd', Q_bnd)
+    Q_bnd_source_t1(:) = 0.75
+    status = m%set_value('Q_bnd_source_t1', Q_bnd_source_t1)
 
-    print*, 'Q_bnd_t0 new data', ath3(1,1,1,1)
-    print*, 'Q_bnd_t1 new data', ath3(1,1,2,1) 
+    print*, 'Q_bnd_source_t0 new data', ath3(1,1,1,1)
+    print*, 'Q_bnd_source_t1 new data', ath3(1,1,2,1) 
 
-    RAINRATE(:) = 0.1
-    status = m%set_value('RAINRATE', RAINRATE)
+    RAINRATE_t1(:) = 0.1
+    status = m%set_value('RAINRATE_t1', RAINRATE_t1)
 
     print*, 'Q_bnd_t0 new data after RAINFALL added', ath3(1,1,1,1)
     print*, 'Q_bnd_t1 new data after RAINFALL added', ath3(1,1,2,1)
 
-    UU10m(:) = 3.5
-    status = m%set_value('UU10m', UU10m)
+    if(nsinks > 0) then
+      Q_bnd_sink_t1(:) = 0.7
+      status = m%set_value('Q_bnd_sink_t1', Q_bnd_sink_t1)
+      print*, 'Q_bnd_sink_t0 new data', ath3(1,1,1,2)
+      print*, 'Q_bnd_sink_t1 new data', ath3(1,1,2,2)
+    endif
+
+    UU10m_t1(:) = 3.5
+    status = m%set_value('UU10m_t1', UU10m_t1)
 
     print*, 'UU10m_t0 new data', windx1(1)
     print*, 'UU10m_t1 new data', windx2(1)
 
-    VV10m(:) = 3.5
-    status = m%set_value('VV10m', VV10m)
+    VV10m_t1(:) = 3.5
+    status = m%set_value('VV10m_t1', VV10m_t1)
 
     print*, 'VV10m_t0 new data', windy1(1)
     print*, 'VV10m_t1 new data', windy2(1)
 
-    SFCPRS(:) = 101010.0
-    status = m%set_value('SFCPRS', SFCPRS)
+    SFCPRS_t1(:) = 101010.0
+    status = m%set_value('SFCPRS_t1', SFCPRS_t1)
 
     print*, 'SFCPRS_t0 new data', pr1(1)
     print*, 'SFCPRS_t1 new data', pr2(1)
 
-    TMP2m(:) = 355.0
-    status = m%set_value('TMP2m', TMP2m)
+    TMP2m_t1(:) = 355.0
+    status = m%set_value('TMP2m_t1', TMP2m_t1)
 
     print*, 'TMP2m_t0 new data', airt1(1)
     print*, 'TMP2m_t1 new data', airt2(1)
 
-    SPFH2m(:) = 0.0150
-    status = m%set_value('SPFH2m', SPFH2m)
+    SPFH2m_t1(:) = 0.0150
+    status = m%set_value('SPFH2m_t1', SPFH2m_t1)
 
     print*, 'SPFH2m_t0 new data', shum1(1)
     print*, 'SPFH2m_t1 new data', shum2(1)
 
+
+    ! Deallocate forcing field arrays for memory use
+    deallocate(RAINRATE_t0)
+    deallocate(RAINRATE_t1)
+    deallocate(SFCPRS_t0)
+    deallocate(SFCPRS_t1)
+    deallocate(SPFH2m_t0)
+    deallocate(SPFH2m_t1)
+    deallocate(UU10m_t0)
+    deallocate(UU10m_t1)
+    deallocate(VV10m_t0)
+    deallocate(VV10m_t1)
+    deallocate(ETA2_bnd_t0)
+    deallocate(ETA2_bnd_t1)
+    deallocate(Q_bnd_source_t0)
+    deallocate(Q_bnd_source_t1)
 
 
     !------------------------------------------
@@ -514,17 +628,20 @@ program schism_driver_test
     deallocate(grid_face_nodes)
     deallocate(grid_nodes_per_face)
 
+    deallocate(grid_x_mesh)
+    deallocate(grid_y_mesh)
+    deallocate(grid_z_mesh)
     !!!!!!!!!!!!!!!! Now Evalute the water level open boundary point grid !!!!!!!!!!
-    status = m%get_var_grid('ETA2_bnd', grid_int)
-    print*, "The integer value for the ", 'ETA2_bnd', " grid is ", grid_int
+    status = m%get_var_grid('ETA2_bnd_t1', grid_int)
+    print*, "The integer value for the ", 'ETA2_bnd1_t1', " grid is ", grid_int
 
     ! get_grid_type
     status = m%get_grid_type(grid_int, grid_type)
-    print*, "The grid type for ", 'ETA2_bnd', " is ", trim(grid_type)
+    print*, "The grid type for ", 'ETA2_bnd1_t1', " is ", trim(grid_type)
 
     ! get_grid_rank
     status = m%get_grid_rank(grid_int, grid_rank)
-    print*, "The grid rank for ", 'ETA2_bnd', " is ", grid_rank
+    print*, "The grid rank for ", 'ETA2_bnd1_t1', " is ", grid_rank
 
     ! allocate water level point coords arrays
     allocate(grid_x_wlbnd(size(ath2(1,1,:,1,1))))
@@ -540,33 +657,60 @@ program schism_driver_test
     print*, "The Y coord for grid ", grid_int, " is ", grid_y_wlbnd(1:5)
     print*, "The Z coord for grid ", grid_int, " is ", grid_z_wlbnd(1:5)
 
-    !!!!!!!!!!!!!!!! Now Evalute the discharge boundary point grid !!!!!!!!!!
-    status = m%get_var_grid('Q_bnd', grid_int)
-    print*, "The integer value for the ", 'Q_bnd', " grid is ", grid_int
+    deallocate(grid_x_wlbnd)
+    deallocate(grid_y_wlbnd)
+    deallocate(grid_z_wlbnd)
+    !!!!!!!!!!!!!!!! Now Evalute the total source boundary point grid !!!!!!!!!!
+    status = m%get_var_grid('RAINRATE_t1', grid_int)
+    print*, "The integer value for the ", 'RAINRATE_t1', " grid is ", grid_int
 
     ! get_grid_type
     status = m%get_grid_type(grid_int, grid_type)
-    print*, "The grid type for ", 'Q_bnd', " is ", trim(grid_type)
+    print*, "The grid type for ", 'RAINRATE_t1', " is ", trim(grid_type)
 
     ! get_grid_rank
     status = m%get_grid_rank(grid_int, grid_rank)
-    print*, "The grid rank for ", 'Q_bnd', " is ", grid_rank
+    print*, "The grid rank for ", 'RAINRATE_t1', " is ", grid_rank
+    print*, nsources
+    ! allocate source discharge point coords arrays
+    allocate(grid_x_rain(nsources))
+    allocate(grid_y_rain(nsources))
+    !allocate(grid_z_qbnd(size(ieg_source_ngen)))
+    ! get_grid_x/y/z
+    ! should return 0 for a 1 node "grid" because not currently spatially
+    ! explicit
+    status = m%get_grid_x(grid_int, grid_x_rain)
+    status = m%get_grid_y(grid_int, grid_y_rain)
+    !status = m%get_grid_z(grid_int, grid_z_qbnd)
+    print*, "The X coord for grid ", grid_int, " is ", grid_x_rain(1:5)
+    print*, "The Y coord for grid ", grid_int, " is ", grid_y_rain(1:5)
+    !!!!!!!!!!!!!!!! Now Evalute the discharge boundary point grid !!!!!!!!!!
+    status = m%get_var_grid('Q_bnd_source_t1', grid_int)
+    print*, "The integer value for the ", 'Q_bnd_source_t1', " grid is ", grid_int
+
+    ! get_grid_type
+    status = m%get_grid_type(grid_int, grid_type)
+    print*, "The grid type for ", 'Q_bnd_source_t1', " is ", trim(grid_type)
+
+    ! get_grid_rank
+    status = m%get_grid_rank(grid_int, grid_rank)
+    print*, "The grid rank for ", 'Q_bnd_source_t1', " is ", grid_rank
 
     ! allocate source discharge point coords arrays
-    allocate(grid_x_qbnd(size(ieg_source)))
-    allocate(grid_y_qbnd(size(ieg_source)))
-    allocate(grid_z_qbnd(size(ieg_source)))
+    allocate(grid_x_qbnd(nsources_ngen))
+    allocate(grid_y_qbnd(nsources_ngen))
+    !allocate(grid_z_qbnd(size(ieg_source_ngen)))
     ! get_grid_x/y/z
     ! should return 0 for a 1 node "grid" because not currently spatially
     ! explicit
     status = m%get_grid_x(grid_int, grid_x_qbnd)
     status = m%get_grid_y(grid_int, grid_y_qbnd)
-    status = m%get_grid_z(grid_int, grid_z_qbnd)
+    !status = m%get_grid_z(grid_int, grid_z_qbnd)
     print*, "The X coord for grid ", grid_int, " is ", grid_x_qbnd(1:5)
     print*, "The Y coord for grid ", grid_int, " is ", grid_y_qbnd(1:5)
-    print*, "The Z coord for grid ", grid_int, " is ", grid_z_qbnd(1:5)
-
-    
+    !print*, "The Z coord for grid ", grid_int, " is ", grid_z_qbnd(1:5)
+    deallocate(grid_x_qbnd)
+    deallocate(grid_y_qbnd)
   !---------------------------------------------------------------------
   ! The following functions are not implemented/only return BMI_FAILURE
   ! Change if your model implements them

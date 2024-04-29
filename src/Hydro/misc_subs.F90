@@ -713,17 +713,21 @@
 
 !...  Source/sinks: read by rank 0 first
 #ifdef USE_NWM_BMI
-      ninv=time/th_dt3(1)
-      th_time3(1,1)=ninv*th_dt3(1)
-      th_time3(2,1)=th_time3(1,1)+th_dt3(1)
 
-      ninv=time/th_dt3(2)
-      th_time3(1,2)=ninv*th_dt3(2)
-      th_time3(2,2)=th_time3(1,2)+th_dt3(2)
+      if(nsources>0) then
+        ninv=time/th_dt3(1)
+        th_time3(1,1)=dble(ninv)*th_dt3(1)
+        th_time3(2,1)=th_time3(1,1)+th_dt3(1)
+        ninv=time/th_dt3(3)
+        th_time3(1,3)=dble(ninv)*th_dt3(3)
+        th_time3(2,3)=th_time3(1,3)+th_dt3(3)
+      endif
 
-      ninv=time/th_dt3(3)
-      th_time3(1,3)=ninv*th_dt3(3)
-      th_time3(2,3)=th_time3(1,3)+th_dt3(3)
+      if(nsinks>0) then
+        ninv=time/th_dt3(2)
+        th_time3(1,2)=dble(ninv)*th_dt3(2)
+        th_time3(2,2)=th_time3(1,2)+th_dt3(2)
+      endif
 
       ath3(:,1,1,1:2)=0.d0
       ath3(:,1,1,3)=-9999.d0

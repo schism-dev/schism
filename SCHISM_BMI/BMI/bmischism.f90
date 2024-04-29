@@ -10,9 +10,11 @@ module bmischism
   use schism_glbl, only: ns_global, isidenode, elside
   use schism_glbl, only: iplg, ielg, idry_e, idry, ynd, xnd
   use schism_glbl, only: ylat, xlon, npa, np, nea, ne, ics
-  use schism_glbl, only: xel, yel
-  use schism_glbl, only: ne_global, xlon_el, ylat_el
-  use schism_glbl, only: np_global, xnd, ynd, znd, area, dp
+  use schism_glbl, only: xel, yel, nnode_et, nsources, nsinks
+  use schism_glbl, only: nsources_ngen, ieg_source_ngen, ieg_sink
+  use schism_glbl, only: ieg_source_flowpath_ids, ieg_sink_flowpath_ids
+  use schism_glbl, only: ne_global, rkind
+  use schism_glbl, only: np_global, xnd, ynd, znd, area
   use schism_glbl, only: nope_global, nond_global, iond_global, nsources
   use schism_glbl, only: fluxsu, fluxlu, ieg_source, ath2, ath3
   use schism_glbl, only: windx1, windy1, pr1, airt1, shum1
@@ -112,8 +114,8 @@ module bmischism
        component_name = "SCHISM"
 
   ! Exchange items
-  integer, parameter :: input_item_count = 8
-  integer, parameter :: output_item_count = 4
+  integer, parameter :: input_item_count = 18
+  integer, parameter :: output_item_count = 5
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -148,8 +150,8 @@ subroutine read_init_config(this, config_file, bmi_status)
   character (len=*), intent(in) :: config_file
   integer, intent(out) :: bmi_status
   !namelist inputs
-  integer :: num_time_steps
-  double precision :: model_start_time, model_end_time, time_step_size
+  integer :: num_time_steps, time_step_size
+  double precision :: model_start_time, model_end_time
   character(len=1000) :: SCHISM_dir
   !locals
   integer :: rc, fu
@@ -162,7 +164,7 @@ subroutine read_init_config(this, config_file, bmi_status)
   model_end_time = 0
   num_time_steps = 0
   time_step_size = 3600.0
-  SCHISM_dir = './'
+  SCHISM_dir = ''
 
   ! Check whether file exists.
   inquire (file=config_file, iostat=rc)
@@ -240,14 +242,24 @@ end subroutine read_init_config
     character (*), pointer, intent(out) :: names(:)
     integer :: bmi_status
 
-    input_items(1) = 'Q_bnd'    ! Discharge land boundary sources (m^3/s)
-    input_items(2) = 'ETA2_bnd' ! Open boundary water levels (m)
-    input_items(3) = 'SFCPRS'   ! Surface pressure (Pa)
-    input_items(4) = 'TMP2m'    ! 2m air temperature (K)
-    input_items(5) = 'UU10m'    ! 10m wind speed in eastward direction (m/s)
-    input_items(6) = 'VV10m'    ! 10m wind speed in northward direction (m/s)
-    input_items(7) = 'SPFH2m'   ! Specific humidity (kg/kg)
-    input_items(8) = 'RAINRATE' ! Precipitation rate (kg/m^2s)
+    input_items(1) = 'Q_bnd_source_t0'    ! Discharge land boundary sources at t0 (m^3/s)
+    input_items(2) = 'Q_bnd_source_t1'    ! Discharge land boundary sources at t1 (m^3/s)
+    input_items(3) = 'Q_bnd_sink_t0'    ! Discharge land boundary sinks at t0 (m^3/s)
+    input_items(4) = 'Q_bnd_sink_t1'    ! Discharge land boundary sinks at t1 (m^3/s)
+    input_items(5) = 'ETA2_bnd_t0' ! Open boundary water levels at t0 (m)
+    input_items(6) = 'ETA2_bnd_t1' ! Open boundary water levels at t1 (m)
+    input_items(7) = 'SFCPRS_t0'   ! Surface pressure at t0 (Pa)
+    input_items(8) = 'SFCPRS_t1'   ! Surface pressure at t1 (Pa)
+    input_items(9) = 'TMP2m_t0'    ! 2m air temperature at t0 (K)
+    input_items(10) = 'TMP2m_t1'    ! 2m air temperature at t1 (K)
+    input_items(11) = 'UU10m_t0'    ! 10m wind speed in eastward direction at t0 (m/s)
+    input_items(12) = 'UU10m_t1'    ! 10m wind speed in eastward direction at t1 (m/s)
+    input_items(13) = 'VV10m_t0'    ! 10m wind speed in northward direction at t0 (m/s)
+    input_items(14) = 'VV10m_t1'    ! 10m wind speed in northward direction at t1 (m/s)
+    input_items(15) = 'SPFH2m_t0'   ! Specific humidity at t0 (kg/kg)
+    input_items(16) = 'SPFH2m_t1'   ! Specific humidity at t1 (kg/kg)
+    input_items(17) = 'RAINRATE_t0' ! Precipitation rate at t0 (kg/m^2s)
+    input_items(18) = 'RAINRATE_t1' ! Precipitation rate at t1 (kg/m^2s)
     
 
     names => input_items
@@ -263,8 +275,8 @@ end subroutine read_init_config
     output_items(1) = 'ETA2'    ! Total water level (m)
     output_items(2) = 'VY'      ! current vector velocity in northward direction (m/s)
     output_items(3) = 'VX'      ! current vector velocity in eastward direction (m/s)
-    output_items(4) = 'BEDLEVEL'! Node bedlevel of the SCHISM mesh (m)
-  
+    output_items(4) = 'Q_bnd_ind'   ! Source (discharge and rainfall) boundary condition indices (N/A)
+    output_items(5) = 'ETA2_bnd_ind'! Water level open boundary condition indices (N/A)
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -281,10 +293,6 @@ function schism_initialize(this, config_file) result (bmi_status)
 
   if (len(config_file) > 0) then
      call read_init_config(this, config_file, bmi_status)
-     if  (bmi_status == BMI_FAILURE) then
-        return
-     end if
-
      this%model%current_model_time = 0.0
      if ( this%model%num_time_steps == 0 .and. this%model%model_end_time == 0) then
         this%model%num_time_steps = 24
@@ -367,8 +375,11 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2','ETA2_bnd', 'Q_bnd', 'RAINRATE','SFCPRS','SPFH2m','TMP2m','UU10m','VV10m','VX','VY','BEDLEVEL')
+    case('ETA2','VX','VY','Q_bnd_source_t0','Q_bnd_sink_t0','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','RAINRATE_t0','Q_bnd_source_t1','Q_bnd_sink_t1','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','RAINRATE_t1')
        type = "double precision"
+       bmi_status = BMI_SUCCESS
+    case('Q_bnd_ind','ETA2_bnd_ind')
+       type = "integer"
        bmi_status = BMI_SUCCESS
     case default
        type = "-"
@@ -385,29 +396,32 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case("SFCPRS")
+    case("SFCPRS_t0", "SFCPRS_t1")
        units = "Pa"
        bmi_status = BMI_SUCCESS
-    case("TMP2m")
+    case("TMP2m_t0","TMP2m_t1")
        units = "K"
        bmi_status = BMI_SUCCESS
-    case("BEDLEVEL")
-       units = "m"
-       bmi_status = BMI_SUCCESS       
-    case("RAINRATE")
+    case("RAINRATE_t0","RAINRATE_t1")
        units = "kg m-2 s-1"
        bmi_status = BMI_SUCCESS
-    case("UU10m", "VV10m",'VX','VY')
+    case("UU10m_t0", "VV10m_t0","UU10m_t1", "VV10m_t1",'VX','VY')
        units = "m s-1"
        bmi_status = BMI_SUCCESS
-    case("SPFH2m")
+    case("SPFH2m_t0","SPFH2m_t1")
        units = "kg kg-1"
        bmi_status = BMI_SUCCESS
-    case("ETA2",'ETA2_bnd')
+    case("ETA2",'ETA2_bnd_t0','ETA2_bnd_t1')
        units = "m"
        bmi_status = BMI_SUCCESS
-    case('Q_bnd')
+    case('Q_bnd_source_t0','Q_bnd_source_t1','Q_bnd_sink_t0','Q_bnd_sink_t1')
        units = "m3 s-1"
+       bmi_status = BMI_SUCCESS
+    case('ETA2_bnd_ind')
+       units = ""
+       bmi_status = BMI_SUCCESS
+    case('Q_bnd_ind')
+       units = ""
        bmi_status = BMI_SUCCESS
     case default
        units = "-"
@@ -424,10 +438,10 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2','VX','VY','ETA2_bnd','SFCPRS','TMP2m','UU10m','VV10m','SPFH2m','BEDLEVEL')
+    case('ETA2_bnd_ind','ETA2','VX','VY','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1')
        location = "node"
        bmi_status = BMI_SUCCESS
-    case('Q_bnd','RAINRATE')
+    case('Q_bnd_ind','RAINRATE_t0','RAINRATE_t1','Q_bnd_source_t0','Q_bnd_source_t1','Q_bnd_sink_t0','Q_bnd_sink_t1')
        location = "element"
        bmi_status = BMI_SUCCESS
     case default
@@ -445,14 +459,20 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2','VX','VY','SFCPRS','TMP2m','UU10m','VV10m','SPFH2m','BEDLEVEL')
+    case('ETA2_bnd_ind','Q_bnd_ind','ETA2','VX','VY','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1')
        grid = 1
        bmi_status = BMI_SUCCESS
-    case('Q_bnd','RAINRATE')
+    case('RAINRATE_t0','RAINRATE_t1')
        grid = 2
        bmi_status = BMI_SUCCESS
-    case('ETA2_bnd')
+    case('ETA2_bnd_t0','ETA2_bnd_t1')
        grid = 3
+       bmi_status = BMI_SUCCESS
+    case('Q_bnd_source_t0','Q_bnd_source_t1')
+       grid = 4
+       bmi_status = BMI_SUCCESS
+    case('Q_bnd_sink_t0','Q_bnd_sink_t1')
+       grid = 5
        bmi_status = BMI_SUCCESS
     case default
        grid = -1
@@ -469,10 +489,10 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(grid)
-    case(1)
+    case(1,2,3)
        rank = 2
        bmi_status = BMI_SUCCESS
-    case(2,3)
+    case(4,5)
        rank = 1
        bmi_status = BMI_SUCCESS
     case default
@@ -490,7 +510,19 @@ end function schism_finalizer
 
     select case(grid)
     case(1)
-       size = np_global
+       size = npa!np_global
+       bmi_status = BMI_SUCCESS
+    case(2)
+       size = nsources
+       bmi_status = BMI_SUCCESS
+    case(3)
+       size = nnode_et
+       bmi_status = BMI_SUCCESS
+    case(4)
+       size = nsources_ngen
+       bmi_status = BMI_SUCCESS
+    case(5)
+       size = nsinks
        bmi_status = BMI_SUCCESS
     case default
        size = -1
@@ -584,19 +616,11 @@ end function schism_finalizer
        x(:) = grid_x(:)
        bmi_status = BMI_SUCCESS
     case(2)
-      ! Allocate bnd_ind array to ingest
-      ! global element indices for source boundaries
-      allocate(grid_x(size(ieg_source)))
-      ! loop over all user sources for mesh
-      do i = 1, nsources
-        if (ics==2) then
-           ! if geographical coordinates present
-           grid_x(i) = SUM(rad2deg*xlon(elnode(1:i34(ieg_source(i)),ieg_source(i))))/i34(ieg_source(i))
-         else
-           ! use cartesian coordinates
-           grid_x(i) = SUM(xnd(elnode(1:i34(ieg_source(i)),ieg_source(i))))/i34(ieg_source(i))
-         end if
+      allocate(grid_x(nea))
+      do j=1, nea
+        grid_x(j) = sum(xlon(elnode(1:i34(j),j)))/real(i34(j),rkind)*180.d0/pi
       enddo
+      ! Assigne global element centroid coordinates
       x(:) = grid_x(:)
       bmi_status = BMI_SUCCESS
     case(3)
@@ -627,6 +651,34 @@ end function schism_finalizer
       enddo outer
        x(:) = grid_x(:)
        bmi_status = BMI_SUCCESS
+    case(4)
+      ! Allocate bnd_ind array to ingest
+      ! global element indices for source boundaries
+      allocate(grid_x(nsources_ngen))
+      ! loop over all user sources for mesh and append T-Route 
+      ! flow path ids from hydrofabric to array
+      do i = 1, nsources
+         grid_x(i) = ieg_source_flowpath_ids(i)
+      enddo
+      x(:) = grid_x(:)
+      bmi_status = BMI_SUCCESS
+    case(5)
+      ! Flag to inquire whether or not SCHISM domain has sinks
+      if(nsinks > 0) then
+        ! Allocate bnd_ind array to ingest
+        ! global element indices for source boundaries
+        allocate(grid_x(nsinks))
+        ! loop over all user sources for mesh and append T-Route
+        ! flow path ids from hydrofabric to array
+        do i = 1, nsinks
+           grid_x(i) = ieg_sink_flowpath_ids(i)
+        enddo
+        x(:) = grid_x(:)
+        bmi_status = BMI_SUCCESS
+      else
+        x(:) = -1.d0
+        bmi_status = BMI_FAILURE
+      endif
     case default
        x(:) = -1.d0
        bmi_status = BMI_FAILURE
@@ -657,19 +709,11 @@ end function schism_finalizer
        y(:) = grid_y(:)
        bmi_status = BMI_SUCCESS
     case(2)
-      ! Allocate bnd_ind array to ingest
-      ! global element indices for source boundaries
-      allocate(grid_y(size(ieg_source)))
-      ! loop over all user sources for mesh
-      do i = 1, nsources
-        if (ics==2) then
-           ! if geographical coordinates present
-           grid_y(i) = SUM(rad2deg*ylat(elnode(1:i34(ieg_source(i)),ieg_source(i))))/i34(ieg_source(i))
-         else
-           ! use cartesian coordinates
-           grid_y(i) = SUM(ynd(elnode(1:i34(ieg_source(i)),ieg_source(i))))/i34(ieg_source(i))
-         end if
+      allocate(grid_y(nea))
+      do j=1, nea
+        grid_y(j) = sum(ylat(elnode(1:i34(j),j)))/real(i34(j),rkind)*180.d0/pi
       enddo
+      ! Assign global element centroid coordinates
       y(:) = grid_y(:)
       bmi_status = BMI_SUCCESS
     case(3)
@@ -700,6 +744,34 @@ end function schism_finalizer
       enddo outer
        y(:) = grid_y(:)
        bmi_status = BMI_SUCCESS
+    case(4)
+      ! Allocate bnd_ind array to ingest
+      ! global element indices for source boundaries
+      allocate(grid_y(nsources_ngen))
+      ! loop over all user sources for mesh and append T-Route
+      ! flow path ids from hydrofabric to array
+      do i = 1, nsources
+         grid_y(i) = ieg_source_flowpath_ids(i)
+      enddo
+      y(:) = grid_y(:)
+      bmi_status = BMI_SUCCESS
+    case(5)
+      ! Flag to inquire whether or not SCHISM domain has sinks
+      if(nsinks > 0) then
+        ! Allocate bnd_ind array to ingest
+        ! global element indices for source boundaries
+        allocate(grid_y(nsinks))
+        ! loop over all user sources for mesh and append T-Route
+        ! flow path ids from hydrofabric to array
+        do i = 1, nsinks
+           grid_y(i) = ieg_sink_flowpath_ids(i)
+        enddo
+        y(:) = grid_y(:)
+        bmi_status = BMI_SUCCESS
+      else
+        y(:) = -1.d0
+        bmi_status = BMI_FAILURE
+      endif
     case default
        y(:) = -1.d0
        bmi_status = BMI_FAILURE
@@ -954,7 +1026,7 @@ end function schism_finalizer
     case(1)
        type = "unstructured"
        bmi_status = BMI_SUCCESS
-    case(2,3)
+    case(2,3,4,5)
        type = "points"
        bmi_status = BMI_SUCCESS
     case default
@@ -975,28 +1047,37 @@ end function schism_finalizer
     case("ETA2")
        size = sizeof(eta2)
        bmi_status = BMI_SUCCESS
-    case("ETA2_bnd")
+    case("ETA2_bnd_t0","ETA2_bnd_t1")
        size = sizeof(ath2(1,1,:,1,1))
        bmi_status = BMI_SUCCESS
-    case("Q_bnd")
+    case("Q_bnd_source_t0","Q_bnd_source_t1")
+       size = sizeof(ieg_source_ngen)
+       bmi_status = BMI_SUCCESS
+    case("Q_bnd_sink_t0","Q_bnd_sink_t1")
+       size = sizeof(ieg_sink)
+       bmi_status = BMI_SUCCESS
+    case("ETA2_bnd_ind")
+       size = sizeof(ath2(1,1,:,1,1))
+       bmi_status = BMI_SUCCESS
+    case("Q_bnd_ind")
        size = sizeof(ieg_source)
        bmi_status = BMI_SUCCESS
-    case("SFCPRS")
+    case("SFCPRS_t0","SFCPRS_t1")
        size = sizeof(pr2)
        bmi_status = BMI_SUCCESS
-    case("TMP2m")
+    case("TMP2m_t0","TMP2m_t1")
        size = sizeof(airt2)
        bmi_status = BMI_SUCCESS
-    case("RAINRATE")
+    case("RAINRATE_t0","RAINRATE_t1")
        size = sizeof(ieg_source)
        bmi_status = BMI_SUCCESS
-    case("UU10m")
+    case("UU10m_t0","UU10m_t1")
        size = sizeof(windx2)
        bmi_status = BMI_SUCCESS
-    case("VV10m")
+    case("VV10m_t0","VV10m_t1")
        size = sizeof(windy2)
        bmi_status = BMI_SUCCESS
-    case("SPFH2m")
+    case("SPFH2m_t0","SPFH2m_t1")
        size = sizeof(shum2)
        bmi_status = BMI_SUCCESS
     case("VX")
@@ -1005,9 +1086,6 @@ end function schism_finalizer
     case("VY")
        size = sizeof(vv2(1,:))
        bmi_status = BMI_SUCCESS
-    case("BEDLEVEL")
-       size = sizeof(dp)
-       bmi_status = BMI_SUCCESS       
     case default
        size = -1
        bmi_status = BMI_FAILURE
@@ -1081,7 +1159,19 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case("ETA2_bnd")
+    case("ETA2_bnd_t0")
+      if(SUM(ath2(1,1,:,1,1)) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! after model initialization phase
+        ath2(1,1,:,1,1) = src(:)
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+        bmi_status = BMI_FAILURE
+      endif
+    case("ETA2_bnd_t1")
       if(SUM(ath2(1,1,:,2,1)) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1089,12 +1179,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation
-        ath2(1,1,:,1,1) = src(1)   
-        ath2(1,1,:,2,1) = src(1)
+        ath2(1,1,:,2,1) = src(:)
         bmi_status=BMI_SUCCESS
       else
         ! Since this is now after first model iteration
@@ -1102,10 +1187,22 @@ end function schism_finalizer
         ! of "t1" and then update "t1" from the following
         ! values given by the model engine coupler
         ath2(1,1,:,1,1) = ath2(1,1,:,2,1)
-        ath2(1,1,:,2,1) = src(1)
+        ath2(1,1,:,2,1) = src(:)
         bmi_status=BMI_SUCCESS
       endif
-    case("Q_bnd")
+    case("Q_bnd_source_t0")
+      if(SUM(ath3(:,1,1,1)) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! after model initialization phase
+        ath3(ieg_source_ngen(:),1,1,1) = src(:)
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+        bmi_status = BMI_FAILURE
+      endif
+    case("Q_bnd_source_t1")
       if(SUM(ath3(:,1,2,1)) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1113,23 +1210,61 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation
-   	ath3(:,1,1,1) = src(1)
-   	ath3(:,1,2,1) = src(1)    
+        ath3(ieg_source_ngen(:),1,2,1) = src(:)
         bmi_status=BMI_SUCCESS
       else
         ! Since this is now after first model iteration
         ! we will now update "t0" from the initial value
         ! of "t1" and then update "t1" from the following
         ! values given by the model engine coupler
-        ath3(:,1,1,1) = ath3(:,1,2,1)
-        ath3(:,1,2,1) = src(1)
+        ath3(ieg_source_ngen(:),1,1,1) = ath3(ieg_source_ngen(:),1,2,1)
+        ath3(ieg_source_ngen(:),1,2,1) = src(:)
         bmi_status=BMI_SUCCESS
       endif
-    case("SFCPRS")
+    case("Q_bnd_sink_t0")
+      if(SUM(ath3(:,1,1,2)) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! after model initialization phase
+        ath3(:,1,1,2) = src(:)
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+        bmi_status = BMI_FAILURE
+      endif
+    case("Q_bnd_sink_t1")
+      if(SUM(ath3(:,1,2,2)) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! for first model iteration
+        ! but do not update "t0" here since
+        ! this was completed by the model
+        ! engine during the model initializaion
+        ! phase where "t0" was forced by hot start
+        ath3(:,1,2,2) = src(:)
+        bmi_status=BMI_SUCCESS
+      else
+        ! Since this is now after first model iteration
+        ! we will now update "t0" from the initial value
+        ! of "t1" and then update "t1" from the following
+        ! values given by the model engine coupler
+        ath3(:,1,1,2) = ath3(:,1,2,2)
+        ath3(:,1,2,2) = src(:)
+        bmi_status=BMI_SUCCESS
+      endif
+    case("SFCPRS_t0")
+      if(SUM(pr1) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! after model initialization phase
+        pr1(:) = src(:)
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+        bmi_status = BMI_FAILURE
+      endif
+    case("SFCPRS_t1")
       if(SUM(pr2) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1137,12 +1272,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation
-        pr1(:) = src(1)   
-        pr2(:) = src(1)
+        pr2(:) = src(:)
         bmi_status=BMI_SUCCESS
       else
         ! Since this is now after first model iteration
@@ -1150,10 +1280,22 @@ end function schism_finalizer
         ! of "t1" and then update "t1" from the following
         ! values given by the model engine coupler
         pr1(:) = pr2(:)
-        pr2(:) = src(1)
+        pr2(:) = src(:)
         bmi_status=BMI_SUCCESS
       endif
-    case("TMP2m")
+    case("TMP2m_t0")
+      if(SUM(airt1) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! after model initialization phase
+        airt1(:) = src(:)
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+        bmi_status = BMI_FAILURE
+      endif
+    case("TMP2m_t1")
       if(SUM(airt2) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1161,12 +1303,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation
-        airt1(:) = src(1)   
-        airt2(:) = src(1)
+        airt2(:) = src(:)
         bmi_status=BMI_SUCCESS
       else
         ! Since this is now after first model iteration
@@ -1174,33 +1311,56 @@ end function schism_finalizer
         ! of "t1" and then update "t1" from the following
         ! values given by the model engine coupler
         airt1(:) = airt2(:)
-        airt2(:) = src(1)
+        airt2(:) = src(:)
         bmi_status=BMI_SUCCESS
       endif
-    case("RAINRATE")
-      if(SUM(ath3(:,1,2,1)) .eq. 0.0 .OR. this%model%iths .eq. 0.0) then
+    case("RAINRATE_t0")
+      if(SUM(ath3(:,1,2,1)) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
         ! but do not update "t0" here since
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation
-        ath3(:,1,1,1) = ath3(:,1,1,1) + (src(1) * area(:)/1000.0)
-        ath3(:,1,2,1) = ath3(:,1,2,1) + (src(1) * area(:)/1000.0)
-        bmi_status=BMI_SUCCESS
-      else 
-        ! Since Q_bnd is called first to set the source
-        ! term, we only just need to update the "t1" 
-        ! source term and add the rain flux contribution
         ! Convert rainrate data to discharge flux
-        ath3(:,1,2,1) = ath3(:,1,2,1) + (src(1) * area(:)/1000.0)
+        ath3(:,1,1,1) = ath3(:,1,1,1) + (src(:) * area(:)/1000.0)
         bmi_status=BMI_SUCCESS
-      endif	
-    case("UU10m")
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+	! and in this case, Q_bnd is called first
+	! and therefore updates the source term
+	! first instead of here
+        bmi_status = BMI_FAILURE
+      endif
+    case("RAINRATE_t1")
+      ! Since Q_bnd is called first to set the source
+      ! term, we only just need to update the "t1" 
+      ! source term and add the rain flux contribution
+      ! Convert rainrate data to discharge flux
+      ath3(:,1,2,1) = ath3(:,1,2,1) + (src(:) * area(:)/1000.0)
+      bmi_status=BMI_SUCCESS
+    case("UU10m_t0")
+      if(SUM(windx1) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! for first model iteration
+        ! but do not update "t0" here since
+        ! this was completed by the model
+        ! engine during the model initializaion
+        ! phase where "t0" was forced by hot start
+        windx1(:) = src(:)
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+	! and in this case, Q_bnd is called first
+	! and therefore updates the source term
+	! first instead of here
+        bmi_status = BMI_FAILURE
+      endif
+    case("UU10m_t1")
       if(SUM(windx2) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1208,12 +1368,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation
-        windx1(:) = src(1)   
-        windx2(:) = src(1)
+        windx2(:) = src(:)
         bmi_status=BMI_SUCCESS
       else
         ! Since this is now after first model iteration
@@ -1221,10 +1376,29 @@ end function schism_finalizer
         ! of "t1" and then update "t1" from the following
         ! values given by the model engine coupler
         windx1(:) = windx2(:)
-        windx2(:) = src(1)
+        windx2(:) = src(:)
         bmi_status=BMI_SUCCESS
       endif
-    case("VV10m")
+    case("VV10m_t0")
+      if(SUM(windy1) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! for first model iteration
+        ! but do not update "t0" here since
+        ! this was completed by the model
+        ! engine during the model initializaion
+        ! phase where "t0" was forced by hot start
+        windy1(:) = src(:)
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+	! and in this case, Q_bnd is called first
+	! and therefore updates the source term
+	! first instead of here
+        bmi_status = BMI_FAILURE
+      endif
+    case("VV10m_t1")
       if(SUM(windy2) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1232,12 +1406,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation
-        windy1(:) = src(1)   
-        windy2(:) = src(1)
+        windy2(:) = src(:)
         bmi_status=BMI_SUCCESS
       else
         ! Since this is now after first model iteration
@@ -1245,10 +1414,29 @@ end function schism_finalizer
         ! of "t1" and then update "t1" from the following
         ! values given by the model engine coupler
         windy1(:) = windy2(:)
-        windy2(:) = src(1)
+        windy2(:) = src(:)
         bmi_status=BMI_SUCCESS
       endif
-    case("SPFH2m")
+    case("SPFH2m_t0")
+      if(SUM(shum1) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! for first model iteration
+        ! but do not update "t0" here since
+        ! this was completed by the model
+        ! engine during the model initializaion
+        ! phase where "t0" was forced by hot start
+        shum1(:) = src(:)
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+	! and in this case, Q_bnd is called first
+	! and therefore updates the source term
+	! first instead of here
+        bmi_status = BMI_FAILURE
+      endif
+    case("SPFH2m_t1")
       if(SUM(shum2) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1256,12 +1444,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation
-        shum1(:) = src(1)   
-        shum2(:) = src(1)
+        shum2(:) = src(:)
         bmi_status=BMI_SUCCESS
       else
         ! Since this is now after first model iteration
@@ -1269,7 +1452,7 @@ end function schism_finalizer
         ! of "t1" and then update "t1" from the following
         ! values given by the model engine coupler
         shum1(:) = shum2(:)
-        shum2(:) = src(1)
+        shum2(:) = src(:)
         bmi_status=BMI_SUCCESS
       endif
     case default
@@ -1328,7 +1511,21 @@ end function schism_finalizer
     !c_f_pointer(dest, dest_flattened, [this%model%n_y * this%model%n_x])
 
     select case(name)
-    case("ETA2_bnd")
+    case("ETA2_bnd_t0")
+      if(SUM(ath2(1,1,:,1,1)) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! after model initialization phase
+        do i = 1, size(inds)
+            ath2(1,1,inds(i),1,1) = src(i)
+        enddo
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+        bmi_status = BMI_FAILURE
+      endif
+    case("ETA2_bnd_t1")
       if(SUM(ath2(1,1,:,2,1)) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1336,12 +1533,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation	
         do i = 1, size(inds)
-            ath2(1,1,inds(i),1,1) = src(i)	
             ath2(1,1,inds(i),2,1) = src(i)
         enddo
         bmi_status=BMI_SUCCESS
@@ -1356,7 +1548,21 @@ end function schism_finalizer
         enddo
         bmi_status=BMI_SUCCESS
       endif
-    case("Q_bnd")
+    case("Q_bnd_source_t0")
+      if(SUM(ath3(:,1,1,1)) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! after model initialization phase
+        do i = 1, size(inds)
+            ath3(inds(i),1,1,1) = src(i)
+        enddo
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+        bmi_status = BMI_FAILURE
+      endif
+    case("Q_bnd_source_t1")
       if(SUM(ath3(:,1,2,1)) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1364,12 +1570,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation	
         do i = 1, size(inds)
-            ath3(inds(i),1,1,1) = src(i)	
             ath3(inds(i),1,2,1) = src(i)
         enddo
         bmi_status=BMI_SUCCESS
@@ -1384,7 +1585,58 @@ end function schism_finalizer
         enddo
         bmi_status=BMI_SUCCESS
       endif
-    case("SFCPRS")
+    case("Q_bnd_sink_t0")
+      if(SUM(ath3(:,1,1,2)) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! after model initialization phase
+        do i = 1, size(inds)
+            ath3(inds(i),1,1,2) = src(i)
+        enddo
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+        bmi_status = BMI_FAILURE
+      endif
+    case("Q_bnd_sink_t1")
+      if(SUM(ath3(:,1,2,2)) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! for first model iteration
+        ! but do not update "t0" here since
+        ! this was completed by the model
+        ! engine during the model initializaion
+        ! phase where "t0" was forced by hot start
+        do i = 1, size(inds)
+            ath3(inds(i),1,2,2) = src(i)
+        enddo
+        bmi_status=BMI_SUCCESS
+      else
+        ! Since this is now after first model iteration
+        ! we will now update "t0" from the initial value
+        ! of "t1" and then update "t1" from the following
+        ! values given by the model engine coupler
+        do i = 1, size(inds)
+            ath3(inds(i),1,1,2) = ath3(inds(i),1,2,2)
+            ath3(inds(i),1,2,2) = src(i)
+        enddo
+        bmi_status=BMI_SUCCESS
+      endif
+    case("SFCPRS_t0")
+      if(SUM(pr1) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! after model initialization phase
+        do i = 1, size(inds)
+            pr1(inds(i)) = src(i)
+        enddo
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+        bmi_status = BMI_FAILURE
+      endif
+    case("SFCPRS_t1")
       if(SUM(pr2) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1392,12 +1644,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation	
         do i = 1, size(inds)
-            pr1(inds(i)) = src(i)	
             pr2(inds(i)) = src(i)
         enddo
         bmi_status=BMI_SUCCESS
@@ -1412,7 +1659,21 @@ end function schism_finalizer
         enddo
         bmi_status=BMI_SUCCESS
       endif
-    case("TMP2m")
+    case("TMP2m_t0")
+      if(SUM(airt1) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! after model initialization phase
+        do i = 1, size(inds)
+            airt1(inds(i)) = src(i)
+        enddo
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+        bmi_status = BMI_FAILURE
+      endif
+    case("TMP2m_t1")
       if(SUM(airt2) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1420,12 +1681,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation	
         do i = 1, size(inds)
-            airt1(inds(i)) = src(i)	
             airt2(inds(i)) = src(i)
         enddo
         bmi_status=BMI_SUCCESS
@@ -1440,8 +1696,8 @@ end function schism_finalizer
         enddo
         bmi_status=BMI_SUCCESS
       endif
-    case("RAINRATE")
-      if(SUM(ath3(:,1,2,1)) .eq. 0.0 .OR. this%model%iths .eq. 0.0) then
+    case("RAINRATE_t0")
+      if(SUM(ath3(:,1,2,1)) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
         ! but do not update "t0" here since
@@ -1449,26 +1705,50 @@ end function schism_finalizer
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
         ! Convert rainrate data to discharge flux
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation		
         do i = 1, size(inds)
             ath3(inds(i),1,1,1) = ath3(inds(i),1,1,1) + (src(i) * area(inds(i))/1000.0)
-            ath3(inds(i),1,2,1) = ath3(inds(i),1,2,1) + (src(i) * area(inds(i))/1000.0)	    
         enddo
         bmi_status=BMI_SUCCESS
       else
-        ! Since Q_bnd is called first to set the source
-        ! term, we only just need to update the "t1" 
-        ! source term and add the rain flux contribution
-        ! Convert rainrate data to discharge flux
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+	! and in this case, Q_bnd is called first
+	! and therefore updates the source term
+	! first instead of here
+        bmi_status = BMI_FAILURE
+      endif
+    case("RAINRATE_t1")
+      ! Since Q_bnd is called first to set the source
+      ! term, we only just need to update the "t1" 
+      ! source term and add the rain flux contribution
+      ! Convert rainrate data to discharge flux
+      do i = 1, size(inds)
+          ath3(inds(i),1,2,1) = ath3(inds(i),1,2,1) + (src(i) * area(inds(i))/1000.0)
+      enddo
+      bmi_status=BMI_SUCCESS
+    case("UU10m_t0")
+      if(SUM(windx1) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! for first model iteration
+        ! but do not update "t0" here since
+        ! this was completed by the model
+        ! engine during the model initializaion
+        ! phase where "t0" was forced by hot start
         do i = 1, size(inds)
-            ath3(inds(i),1,2,1) = ath3(inds(i),1,2,1) + (src(i) * area(inds(i))/1000.0)
+            windx1(inds(i)) = src(i)
         enddo
         bmi_status=BMI_SUCCESS
-      endif	
-    case("UU10m")
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+	! and in this case, Q_bnd is called first
+	! and therefore updates the source term
+	! first instead of here
+        bmi_status = BMI_FAILURE
+      endif
+    case("UU10m_t1")
       if(SUM(windx2) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1476,13 +1756,8 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation	
         do i = 1, size(inds)
-            windx1(inds(i)) = src(i)
-            windx2(inds(i)) = src(i)	    
+            windx2(inds(i)) = src(i)
         enddo
         bmi_status=BMI_SUCCESS
       else
@@ -1496,7 +1771,29 @@ end function schism_finalizer
         enddo
         bmi_status=BMI_SUCCESS
       endif
-    case("VV10m")
+    case("VV10m_t0")
+      if(SUM(windy1) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! for first model iteration
+        ! but do not update "t0" here since
+        ! this was completed by the model
+        ! engine during the model initializaion
+        ! phase where "t0" was forced by hot start
+        do i = 1, size(inds)
+            windy1(inds(i)) = src(i)
+        enddo
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+	! and in this case, Q_bnd is called first
+	! and therefore updates the source term
+	! first instead of here
+        bmi_status = BMI_FAILURE
+      endif
+      bmi_status=BMI_SUCCESS
+    case("VV10m_t1")
       if(SUM(windy2) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1504,12 +1801,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation	
         do i = 1, size(inds)
-            windy1(inds(i)) = src(i)	
             windy2(inds(i)) = src(i)
         enddo
         bmi_status=BMI_SUCCESS
@@ -1524,7 +1816,28 @@ end function schism_finalizer
         enddo
         bmi_status=BMI_SUCCESS
       endif
-    case("SPFH2m")
+    case("SPFH2m_t0")
+      if(SUM(shum1) .eq. 0.0) then
+        ! Allow model engine to set data
+        ! for first model iteration
+        ! but do not update "t0" here since
+        ! this was completed by the model
+        ! engine during the model initializaion
+        ! phase where "t0" was forced by hot start
+        do i = 1, size(inds)
+            shum1(inds(i)) = src(i)
+        enddo
+        bmi_status=BMI_SUCCESS
+      else
+        ! Return BMI failure and dont allow
+        ! model engine to set "t0" data since
+        ! thi will be done when we update "t1"
+	! and in this case, Q_bnd is called first
+	! and therefore updates the source term
+	! first instead of here
+        bmi_status = BMI_FAILURE
+      endif
+    case("SPFH2m_t1")
       if(SUM(shum2) .eq. 0.0) then
         ! Allow model engine to set data
         ! for first model iteration
@@ -1532,12 +1845,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ! but since that functionality isn't present 
-	! within the model engine currently, we just
- 	! set "t0" and "t1" as the same value during
-  	! the first hour of the SCHISM simulation	
         do i = 1, size(inds)
-            shum1(inds(i)) = src(i)	
             shum2(inds(i)) = src(i)
         enddo
         bmi_status=BMI_SUCCESS
@@ -1567,6 +1875,40 @@ end function schism_finalizer
     integer :: bmi_status, i, j, ind_count
 
     select case(name)
+    case("ETA2_bnd_ind")
+      ! Since open water level boundaries
+      ! are constrained by user, we must
+      ! set a count loop to break once 
+      ! we reach that threshold in ath2
+      ind_count = 1
+      ! Allocate bnd_ind array to ingest
+      ! global node indices for open boundaries
+      allocate(bnd_ind(size(ath2(1,1,:,1,1))))
+      ! loop over open boundary segment (2) and number
+      ! of nodes possible in each open boundary segment
+      outer : do i=1,nope_global
+        do j=1,nond_global(i)
+            ! If we've ingested all global indices possible
+            ! for the open boundary segments, then break out of loop
+            if(ind_count > size(bnd_ind)) exit outer
+          
+            bnd_ind(ind_count) = iond_global(i,j) !global node indices
+            ind_count = ind_count + 1
+         enddo
+      enddo outer
+      dest = [bnd_ind]
+      bmi_status=BMI_SUCCESS
+
+    case("Q_bnd_ind")
+      ! Allocate bnd_ind array to ingest
+      ! global element indices for source boundaries
+      allocate(bnd_ind(size(ieg_source)))
+      ! loop over all user sources for mesh
+      do i = 1, nsources
+        bnd_ind(i) = ieg_source(i) ! global element indices
+      enddo
+      dest = [bnd_ind]
+      bmi_status=BMI_SUCCESS
     case default
        dest(:) = -1
        bmi_status = BMI_FAILURE
@@ -1617,9 +1959,6 @@ end function schism_finalizer
     case("VY")
       dest = [vv2(1,:)]
       bmi_status=BMI_SUCCESS
-    case("BEDLEVEL")
-      dest = [dp(:)]
-      bmi_status=BMI_SUCCESS      
     case default
        dest(:) = -1.d0
        bmi_status = BMI_FAILURE
@@ -1733,11 +2072,6 @@ end function schism_finalizer
           dest(i) = vv2(1,inds(i))
       enddo
       bmi_status=BMI_SUCCESS
-    case("BEDLEVEL")
-      do i = 1, size(inds)
-          dest(i) = dp(inds(i))
-      enddo
-      bmi_status=BMI_SUCCESS      
     case default
        dest(:) = -1.d0
        bmi_status = BMI_FAILURE
