@@ -9,6 +9,9 @@
   Sample script using python api:
   see download_adt.py
 
+  Sample checking the availability of a variable:
+  copernicusmarine describe --include-datasets -c adt | less
+
 
 
 Replace eta2 in hotstart.nc with ADT:

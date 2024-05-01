@@ -1,5 +1,6 @@
 import os
 import sys
+import gc
 from datetime import datetime, timedelta
 from time import time
 from dateutil import parser
@@ -9,6 +10,9 @@ import numpy as np
 from netCDF4 import Dataset
 
 from generate_adcirc import split_quads  # modified by FY
+
+import psutil
+process = psutil.Process(os.getpid())
 
 def read_vgrid(vgrid_file):
     time_start = time()
@@ -37,7 +41,16 @@ def read_vgrid(vgrid_file):
 
     return nvrt, sigma
 
-def vertical_interp(var, zcor, zinter, bottom_index):
+from dataclasses import dataclass, field
+from typing import Any
+@dataclass
+class VerticalInterpInfo:
+    it: int
+    zinter: float
+    level: Any = field(default_factory=np.array)
+    weight: Any = field(default_factory=np.array)
+
+def vertical_interp(var, zcor, zinter, bottom_index, vertical_interp_info=None):
     '''
     inputs:
         -var: var[np,nvrt] for each time record.
@@ -46,43 +59,59 @@ def vertical_interp(var, zcor, zinter, bottom_index):
         -bottom_index[np, ]: bottom level, 0-based index
     '''
 
-    NP, nvrt = zcor.shape
-    row_indices = np.arange(NP)
+    if vertical_interp_info is None:
+        print('calculating vertical interpolation weights')
+        t1 = time()
 
-    target_level = np.zeros(NP, dtype=int)  # zinter should be between zcor[:, target_level] and zcor[:, target_level+1]
-    lower_level_weight = np.zeros(NP, dtype=float)  # linear interpolation, i.e., lower_level_weight + upper_level_weight = 1.0
+        NP, nvrt = zcor.shape
+        row_indices = np.arange(NP)
+        target_level = np.zeros(NP, dtype=int)  # zinter should be between zcor[:, target_level] and zcor[:, target_level+1]
+                                                # , i.e., target_level is the lower level
+        target_level_weight = np.zeros(NP, dtype=float)  # linear interpolation, i.e., lower_level_weight + upper_level_weight = 1.0
 
-    # get all points where zinter is above the surface
-    idx = zinter >= zcor[:,-1]
-    if sum(~idx) == 0:  # all are surface, no need to interpolate, return the surface values
-        return var[:, -1]
-    else:  # record vertical index and weight for points where zinter is above surface
-        target_level[idx] = nvrt-2  # i.e., surface level (nvr-1) is the upper level
-        lower_level_weight[idx] = 0.0  # weight of the upper level is 1.0
+        # get all points where zinter is above the surface
+        idx = zinter >= zcor[:,-1]
+        target_level[idx] = nvrt-2  # i.e., surface level (nvrt-1) is the upper level
+        target_level_weight[idx] = 0.0  # weight of the lower level is 0.0, i.e., all from the upper level
 
-    # get all points where zinter is below the bottom
-    idx = zinter < zcor[row_indices,bottom_index]
-    if sum(~idx) == 0:  # all are bottom, no need to interpolate, return the bottom values
-        return var[row_indices, bottom_index]
-    else: # record vertical index and weight for points where zinter is below the bottom
+        # get all points where zinter is below the bottom
+        idx = zinter < zcor[row_indices,bottom_index]
         target_level[idx] = bottom_index[idx]
-        lower_level_weight[idx] = 1.0  # weight of the lower level is 1.0
+        target_level_weight[idx] = 1.0  # weight of the lower level is 1.0, i.e., all from the lower level
 
-    #intermediate
-    for k in np.arange(nvrt-1):
-        idx=(zinter>=zcor[:,k])*(zinter<zcor[:,k+1])
-        target_level[idx] = k
-        lower_level_weight[idx] = (zcor[idx,k+1] - zinter[idx]) /(zcor[idx,k+1] - zcor[idx,k])
+        #intermediate
+        for k in np.arange(nvrt-1):
+            idx=(zinter>=zcor[:,k])*(zinter<zcor[:,k+1])
+            target_level[idx] = k
+            target_level_weight[idx] = (zcor[idx,k+1] - zinter[idx]) /(zcor[idx,k+1] - zcor[idx,k])
 
-    if any(np.isnan(lower_level_weight)) or any(np.isnan(target_level)):
-        raise ValueError('NaN values in target_level or lower_level_weight')
+        print(f"calculating vertical interpolation weights took {time()-t1}")
 
-    var_interp = var[row_indices, target_level] * lower_level_weight + var[row_indices, target_level + 1] * (1.0 - lower_level_weight)
+    else:
+        target_level = vertical_interp_info.level
+        target_level_weight = vertical_interp_info.weight
 
-    return var_interp
+    if any(np.isnan(target_level_weight)) or any(np.isnan(target_level)):
+        raise ValueError('NaN values in target_level or target_level_weight')
+
+    row_indices = np.arange(len(target_level))
+    var_interp = var[row_indices, target_level] * target_level_weight + var[row_indices, target_level + 1] * (1.0 - target_level_weight)
+
+    return [var_interp, target_level, target_level_weight]
+
+def mask_var(data, idry, threshold=10000, mask_value=-99999):
+    '''
+    Mask dry nodes and large values.
+    data is a 2D array of shape (ntimes, NP).
+    idry is a boolean array of shape (ntimes, NP) that indicates dry nodes.
+    '''
+    data[idry] = mask_value  # Mask dry nodes
+    data[data > threshold] = mask_value  # mask large values, to be consistent with older version of the script
+
+    return data
 
 # a dictionary of the data to be extracted
-var_dict = {
+native_var_dict = {
     'temp_surface': {
         'file_prefix': 'temperature',
         'var_name': 'temperature',
@@ -118,13 +147,6 @@ var_dict = {
         'units': 'm/s',
         'level': 'surface'
     },
-    'vvel_surface': {
-        'file_prefix': 'horizontalVelY',
-        'var_name': 'horizontalVelY',
-        'long name': 'V-component at the surface',
-        'units': 'm/s',
-        'level': 'surface'
-    },
     'uvel_bottom': {
         'file_prefix': 'horizontalVelX',
         'var_name': 'horizontalVelX',
@@ -132,13 +154,23 @@ var_dict = {
         'units': 'm/s',
         'level': 'near bottom'
     },
+    'vvel_surface': {
+        'file_prefix': 'horizontalVelY',
+        'var_name': 'horizontalVelY',
+        'long name': 'V-component at the surface',
+        'units': 'm/s',
+        'level': 'surface'
+    },
     'vvel_bottom': {
         'file_prefix': 'horizontalVelY',
         'var_name': 'horizontalVelY',
         'long name': 'V-component at the bottom',
         'units': 'm/s',
         'level': 'near bottom'
-    },
+    }
+}
+
+interpolated_var_dict = {
     'uvel4.5': {
         'file_prefix': 'horizontalVelX',
         'var_name': 'horizontalVelX',
@@ -178,39 +210,35 @@ if __name__ == '__main__':
         {output_dir}/schout_UV4.5m_{stack}.nc
     '''
 
-
-    # hardwired path for operational use
     t0=time()
 
+    # --------------------- parse input arguments ---------------------
     # parse input arguments
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--stack', required=True, help='input stack id')
     argparser.add_argument('--output_dir', default='./extract/', help='A SCHISM run folder that has outputs/')
+    argparser.add_argument('--mem_save_mode', default=False, help='Setting the memory saving mode: true for less memory consumption but slightly slower')
     args = argparser.parse_args()
 
     sid = args.stack
     outdir= args.output_dir
+    mem_save_mode = args.mem_save_mode
     os.makedirs(outdir, exist_ok=True)
 
+    # --------------------- specify schism outputs ---------------------
     fpath = './'  # should be a SCHISM run directory that contains outputs/
-
-    # import pickle
-    # schism_output = pickle.load(open(f"{outdir}/schism_output_{sid}.pkl", "rb"))
 
     # open 3D schism outputs
     schism_output = {
-        'temperature': np.array(Dataset(f"{fpath}/outputs/temperature_{sid}.nc")['temperature']),
-        'salinity': np.array(Dataset(f"{fpath}/outputs/salinity_{sid}.nc")['salinity']),
-        'horizontalVelX': np.array(Dataset(f"{fpath}/outputs/horizontalVelX_{sid}.nc")['horizontalVelX']),
-        'horizontalVelY': np.array(Dataset(f"{fpath}/outputs/horizontalVelY_{sid}.nc")['horizontalVelY']),
-        'zCoordinates': np.array(Dataset(f'{fpath}/outputs/zCoordinates_{sid}.nc')['zCoordinates'])
+        'temperature': Dataset(f"{fpath}/outputs/temperature_{sid}.nc")['temperature'],
+        'salinity': Dataset(f"{fpath}/outputs/salinity_{sid}.nc")['salinity'],
+        'horizontalVelX': Dataset(f"{fpath}/outputs/horizontalVelX_{sid}.nc")['horizontalVelX'],
+        'horizontalVelY': Dataset(f"{fpath}/outputs/horizontalVelY_{sid}.nc")['horizontalVelY'],
+        'zCoordinates': Dataset(f'{fpath}/outputs/zCoordinates_{sid}.nc')['zCoordinates']
     }
+    print(f"Memory usage before reading files: {process.memory_info().rss / 1024 ** 2:.2f} MB")
 
-    # pickle save the schism output
-    # import pickle
-    # with open(f"{outdir}/schism_output_{sid}.pkl", "wb") as f:
-    #     pickle.dump(schism_output, f)
-
+    # --------------------- basic info, should be same for all input files ---------------------
     # process time information from out2d_*.nc; the time info is the same for all files
     ds = Dataset(f"{fpath}/outputs/out2d_{sid}.nc")
     base_date_str = ds['time'].base_date.split()
@@ -231,9 +259,6 @@ if __name__ == '__main__':
     elev2d = np.array(ds['elevation'])
 
     # nvrt, sigma = read_vgrid(f'{fpath}/vgrid.in')
-    # zcor = sigma[np.newaxis,: ,:] * inun_depth[:, :, np.newaxis]  # wrong, should add + elev2d[:, :, np.newaxis]
-    inun_depth = elev2d + depth.reshape(1,-1)
-    zcor = schism_output['zCoordinates']
 
     x=ds['SCHISM_hgrid_node_x'][:]
     y=ds['SCHISM_hgrid_node_y'][:]
@@ -251,44 +276,18 @@ if __name__ == '__main__':
     max_ele_nodes = 3  # max number of nodes per element
     print(f'number of elements increased from {len(elements)} to {NE} after splitting quads to triangles')
 
-    # extract data
+    # extract time
     times = ds['time'][:]
     ntimes = len(times)
     time_indices, node_indices = np.ogrid[0:ntimes, 0:NP]
-    # initialize arrays to store extracted data
-    extracted_data = {}
-    for var_name, var_info in var_dict.items():
-        print(f"Extracting {var_name}")
-        # nc_file = f"{fpath}/outputs/{var_info['file_prefix']}_{sid}.nc"
-        data = schism_output[var_info['var_name']]
+    # Done processing basic information
+    ds.close()
 
-        # output data is always 2D
-        output_data = np.zeros((ntimes, NP))
+    print(f"Memory usage after extracting basic info: {process.memory_info().rss / 1024 ** 2:.2f} MB")
 
-        # vertical interpolation
-        if var_info['level'] == 'surface':
-            output_data = data[:, :, -1]
-        elif var_info['level'] == 'bottom':
-            output_data = data[time_indices, node_indices, bottom_index_node]  # numpy fancy indexing
-        elif var_info['level'] == 'near bottom':
-            output_data = data[time_indices, node_indices, bottom_index_node+1]  # 1 level above the bottom
-        else:
-            if type(var_info['level']) not in [int, float]:
-                raise ValueError('Invalid level value')
-            for it in np.arange(ntimes):
-                zinter = np.zeros(NP, dtype=float)
-                zinter[~idry[it, :]] = var_info['level'] + elev2d[it, ~idry[it, :]]  # zinter is relative to the free surface
-                output_data[it, :] = vertical_interp(data[it, :, :], zcor[it, :, :], zinter[:], bottom_index_node[:])
-
-        # Mask dry nodes
-        output_data[idry]=-99999
-        output_data[output_data>10000]=-99999  # mask large values, to be consistent with older version of the script
-
-        # store extracted data
-        extracted_data[var_name] = output_data.copy()
-
-
+    # write the output file
     with Dataset(f"{outdir}/schout_UV4.5m_{sid}.nc", "w", format="NETCDF4") as fout:
+        # basic information
         #dimensions
         fout.createDimension('time', None)
         fout.createDimension('nSCHISM_hgrid_node', NP)
@@ -302,6 +301,7 @@ if __name__ == '__main__':
         fout['time'].base_date=base_date_str #(date.year, date.month, date.day, 0)
         fout['time'].standard_name="time"
         fout['time'][:] = times
+        del times; gc.collect()
 
         fout.createVariable('SCHISM_hgrid_node_x', 'f8', ('nSCHISM_hgrid_node',))
         fout['SCHISM_hgrid_node_x'].long_name="node x-coordinate"
@@ -309,6 +309,7 @@ if __name__ == '__main__':
         fout['SCHISM_hgrid_node_x'].units="degrees_east"
         fout['SCHISM_hgrid_node_x'].mesh="SCHISM_hgrid"
         fout['SCHISM_hgrid_node_x'][:]=x
+        del x; gc.collect()
 
         fout.createVariable('SCHISM_hgrid_node_y', 'f8', ('nSCHISM_hgrid_node',))
         fout['SCHISM_hgrid_node_y'].long_name="node y-coordinate"
@@ -316,6 +317,7 @@ if __name__ == '__main__':
         fout['SCHISM_hgrid_node_y'].units="degrees_north"
         fout['SCHISM_hgrid_node_y'].mesh="SCHISM_hgrid"
         fout['SCHISM_hgrid_node_y'][:]=y
+        del y; gc.collect()
 
         fout.createVariable('SCHISM_hgrid_face_nodes', 'i', ('nSCHISM_hgrid_face','nMaxSCHISM_hgrid_face_nodes',))
         fout['SCHISM_hgrid_face_nodes'].long_name="element"
@@ -323,12 +325,14 @@ if __name__ == '__main__':
         fout['SCHISM_hgrid_face_nodes'].start_index=1
         fout['SCHISM_hgrid_face_nodes'].units="nondimensional"
         fout['SCHISM_hgrid_face_nodes'][:]=np.array(tris)
+        del tris; gc.collect()
 
         fout.createVariable('depth', 'f', ('nSCHISM_hgrid_node',))
         fout['depth'].long_name="bathymetry"
         fout['depth'].units="m"
         fout['depth'].mesh="SCHISM_hgrid"
         fout['depth'][:]=depth
+        # del depth; gc.collect()
 
         fout.createVariable('elev', 'f8', ('time', 'nSCHISM_hgrid_node',), fill_value=-99999)
         fout['elev'].long_name="water elevation"
@@ -336,12 +340,82 @@ if __name__ == '__main__':
         fout['elev'].mesh="SCHISM_hgrid"
         #fout['elev'].missing_value=np.nan
         fout['elev'][:,:]=elev2d
+        # elev2d is still needed
 
-        for var_name, var_info in var_dict.items():
+        # create 2D variables, both native and interpolated
+        for var_name, var_info in {**native_var_dict, **interpolated_var_dict}.items():
             fout.createVariable(var_name, 'f8', ('time', 'nSCHISM_hgrid_node',), fill_value=-99999)
             fout[var_name].long_name=var_info['long name']
             fout[var_name].units=var_info['units']
-            fout[var_name][:, :] = extracted_data[var_name]
+
+        if not mem_save_mode:
+            # native variables that don't need to be interpolated are read in at all time steps
+            last_var = ''
+            for var_name, var_info in native_var_dict.items():
+                t1 = time()
+                print(f"\nProcessing {var_name}")
+
+                # some 3D data can be reused, only read when needed
+                if last_var != var_info['var_name']:
+                    data_3d = np.array(schism_output[var_info['var_name']])
+                    last_var = var_info['var_name']
+
+                if var_info['level'] == 'surface':
+                    data = data_3d[:, :, -1]
+                elif var_info['level'] == 'bottom':
+                    data = data_3d[:, np.arange(NP), bottom_index_node]
+                elif var_info['level'] == 'near bottom':
+                    data = data_3d[:, np.arange(NP), bottom_index_node+1]
+
+                data = mask_var(data, idry)
+                print(f"Memory usage after extracting {var_name}: {process.memory_info().rss / 1024 ** 2:.2f} MB")
+                fout[var_name][:] = data
+                print(f"Processing {var_name} took {time()-t1} seconds\n")
+
+        # do interpolation time-step by time-step to save memory
+        if mem_save_mode:
+            var_dict = {**native_var_dict, **interpolated_var_dict}
+        else:
+            var_dict = interpolated_var_dict
+
+        for it in range(ntimes):
+            print(f"\nProcessing time {it+1}/{ntimes}")
+            t_it = time()
+            vertical_interp_info = VerticalInterpInfo(-1, 0.0, None, None)  # force reset for a new time step
+            for var_name, var_info in var_dict.items():
+                print(f"Processing {var_name}")
+
+                if var_info['level'] == 'surface':
+                    data = schism_output[var_info['var_name']][it, :, -1]
+                elif var_info['level'] == 'bottom':
+                    data_3d = np.array(schism_output[var_info['var_name']][it, :, :])
+                    data = data_3d[np.arange(NP), bottom_index_node]
+                elif var_info['level'] == 'near bottom':
+                    data_3d = np.array(schism_output[var_info['var_name']][it, :, :])
+                    data = data_3d[np.arange(NP), bottom_index_node + 1]
+                else:  # specified zinter, to be interpolated
+                    if type(var_info['level']) not in [int, float]:
+                        raise ValueError('Invalid level value')
+                    zinter = var_info['level'] + elev2d[it, :]  # zinter is relative to the free surface
+                    data_3d = np.array(schism_output[var_info['var_name']][it, :, :])
+                    # inun_depth = elev2d[it, :] + depth.reshape(1,-1)
+                    # zcor = sigma[np.newaxis,:] * inun_depth[:, np.newaxis] + elev2d[it, :, np.newaxis]
+                    zcor = np.array(schism_output['zCoordinates'][it, :])
+
+                    # the vertical interpolation is expensive, so we need to check if we can reuse the weights
+                    # if the time index or the target z has changed, we need to recalculate the weights
+                    if vertical_interp_info.it != it or vertical_interp_info.zinter != var_info['level']:
+                        data, level, weight = vertical_interp(data_3d[:, :], zcor[:, :], zinter[:], bottom_index_node[:])
+                        vertical_interp_info = VerticalInterpInfo(it, float(var_info['level']), level, weight)
+                    else:
+                        data, _, _ = vertical_interp(data_3d[:, :], zcor[:, :], zinter[:], bottom_index_node[:], vertical_interp_info)
+
+                # mask dry nodes and large values
+                data = mask_var(data, idry[it, :])
+                fout[var_name][it, :] = data
+
+                print(f"Memory usage after extracting {var_name}: {process.memory_info().rss / 1024 ** 2:.2f} MB")
+            print(f"Processing time step {it+1} took {time()-t_it} seconds\n")
 
         fout.title = 'SCHISM Model output'
         fout.source = 'SCHISM model output version v10'
