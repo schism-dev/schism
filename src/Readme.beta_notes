@@ -9,6 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `ca44ba0` (1 May 2024): removed isav and replaced it with iveg
 - `4fb6228` (9 Feb 2024): add cmake CPP 'BLD_STANDALONE' to accommodate UFS
 - `9bee0f5` (8 Feb 2024): removed IMPOSE_NET_FLUX and 'meth_sink'
 - `d5fb0f1` (3 Jan 2024): merged ZG's stemp branch (sediment-water heat exchange option), with
@@ -599,6 +600,7 @@ git versions:
 149. `045962` (Sept 13, 2023): removed goto in lap.F90
 150. `66242aa` (Sept 13, 2023): removed goto in harm.F90
 151. `5914ae2` (Mar 26, 2024): fix an init error for diffm* (c/o Ufuk)
+161. `ca44ba0` (1 May 2024): fixed bugs in vegetation&marsh module (uninited sav_h0 etc) 
 
 ================================================================================================
 (D) Auto-test history:
