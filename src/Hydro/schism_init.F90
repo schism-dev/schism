@@ -205,7 +205,7 @@
      &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
      &fwvor_streaming,fwvor_wveg,fwvor_wveg_NL,wafo_obcramp, &
      &iwbl,cur_wwm,if_source,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
-     &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
+     &rho0,shw,iveg,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
@@ -481,7 +481,7 @@
       fwvor_gradpress=1; fwvor_breaking=1; fwvor_streaming=1; fwvor_wveg=0; fwvor_wveg_NL=0; wafo_obcramp=0;
       fwvor_advxy_stokes=1; fwvor_advz_stokes=1; fwvor_gradpress=1; fwvor_breaking=1; wafo_obcramp=0;
       iwbl=0; cur_wwm=0; if_source=0; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
-      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
+      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; iveg=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
       hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; level_age=-999;
       !vclose_surf_frac \in [0,1]: correction factor for vertical vel & flux. 1: no correction
       vclose_surf_frac=1.0
@@ -1165,8 +1165,8 @@
 #endif
 
 !     SAV
-      if(isav/=0.and.isav/=1) then
-       write(errmsg,*)'INIT: illegal isav',isav
+      if(iveg/=0.and.iveg/=1) then
+       write(errmsg,*)'INIT: illegal iveg,',iveg
        call parallel_abort(errmsg)
       endif
 
@@ -3778,7 +3778,7 @@
       sav_nv=0.d0 !Nv: # of stems per m^2
       sav_di=0.d0 !D [m]
       sav_cd=0.d0 !Cdv : drag coefficient
-      if(isav==1) then
+      if(iveg==1) then
         !\lambda=D*Nv [1/m]
         if(myrank==0) then
           open(10,file=in_dir(1:len_in_dir)//'sav_D.gr3',status='old')
@@ -3867,7 +3867,7 @@
 
 #ifdef USE_MARSH
         !Assume constant inputs from .gr3; save these values
-        sav_di0=tmp; sav_h0=tmp2; sav_nv0=tmp1; sav_cd0=tmp3
+        sav_di0=sav_di(1); sav_h0=sav_h(1); sav_nv0=sav_nv(1); sav_cd0=sav_cd(1)
         !Reset
         sav_di=0.d0; sav_h=0.d0; sav_nv=0.d0; sav_alpha=0.d0; sav_cd=0.d0
         do i=1,nea
@@ -3880,7 +3880,7 @@
           endif
         enddo !i
 #endif
-      endif !isav=1 
+      endif !iveg=1 
 
 !...  Surface min. mixing length for f.s. and max. for all; inactive 
 !      read(15,*) !xlmax00

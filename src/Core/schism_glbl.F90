@@ -90,7 +90,7 @@ module schism_glbl
                   &iwind_form,irec_nu,itur,ihhat,inu_elev, &
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
-                  &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav, &
+                  &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,iveg, &
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
                   &iof_ugrid,model_type_pahm
