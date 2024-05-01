@@ -1225,7 +1225,7 @@ end function schism_finalizer
       if(SUM(ath3(:,1,1,2)) .eq. 0.0) then
         ! Allow model engine to set data
         ! after model initialization phase
-        ath3(:,1,1,2) = src(:)
+        ath3(:,1,1,2) = src(:)*-1
         bmi_status=BMI_SUCCESS
       else
         ! Return BMI failure and dont allow
@@ -1241,7 +1241,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ath3(:,1,2,2) = src(:)
+        ath3(:,1,2,2) = src(:)*-1
         bmi_status=BMI_SUCCESS
       else
         ! Since this is now after first model iteration
@@ -1249,7 +1249,7 @@ end function schism_finalizer
         ! of "t1" and then update "t1" from the following
         ! values given by the model engine coupler
         ath3(:,1,1,2) = ath3(:,1,2,2)
-        ath3(:,1,2,2) = src(:)
+        ath3(:,1,2,2) = src(:)*-1
         bmi_status=BMI_SUCCESS
       endif
     case("SFCPRS_t0")
@@ -1590,7 +1590,7 @@ end function schism_finalizer
         ! Allow model engine to set data
         ! after model initialization phase
         do i = 1, size(inds)
-            ath3(inds(i),1,1,2) = src(i)
+            ath3(inds(i),1,1,2) = src(i)*-1
         enddo
         bmi_status=BMI_SUCCESS
       else
@@ -1608,7 +1608,7 @@ end function schism_finalizer
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
         do i = 1, size(inds)
-            ath3(inds(i),1,2,2) = src(i)
+            ath3(inds(i),1,2,2) = src(i)*-1
         enddo
         bmi_status=BMI_SUCCESS
       else
@@ -1618,7 +1618,7 @@ end function schism_finalizer
         ! values given by the model engine coupler
         do i = 1, size(inds)
             ath3(inds(i),1,1,2) = ath3(inds(i),1,2,2)
-            ath3(inds(i),1,2,2) = src(i)
+            ath3(inds(i),1,2,2) = src(i)*-1
         enddo
         bmi_status=BMI_SUCCESS
       endif
