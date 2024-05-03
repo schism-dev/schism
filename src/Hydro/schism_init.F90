@@ -1157,18 +1157,19 @@
 !        call parallel_abort(errmsg)
 !      endif
 
+!     Vegetation
+      if(iveg/=0.and.iveg/=1) then
+       write(errmsg,*)'INIT: illegal iveg,',iveg
+       call parallel_abort(errmsg)
+      endif
+
 #ifdef USE_MARSH
+      if(iveg==0) call parallel_abort('INIT: marsh needs vegetation option')
       !SLR rate in mm/year
       !Convert to m/s
 !      if(slr_rate<0) call parallel_abort('INIT: slr_rate<0')
       slr_rate=slr_rate*1.d-3/365.d0/86400.d0 !m/s
 #endif
-
-!     SAV
-      if(iveg/=0.and.iveg/=1) then
-       write(errmsg,*)'INIT: illegal iveg,',iveg
-       call parallel_abort(errmsg)
-      endif
 
 !     Ice
 #ifdef USE_MICE

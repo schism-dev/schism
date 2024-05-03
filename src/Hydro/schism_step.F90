@@ -8115,49 +8115,46 @@
       do i=1,np
         do j=1,nne(i)
           ie=indel(j,i)
-          if(imarsh(ie)==1) then
-            if(iveg==0) then
-              Cdp(i)=0.05d0
-              rough_p(i)=1.d-2
-            else !/=0
-              veg_di(i)=veg_di0
-              veg_h(i)=veg_h0
-              veg_nv(i)=veg_nv0
-              veg_cd(i)=veg_cd0
-              veg_alpha(i)=veg_di0*veg_nv0*veg_cd0/2.d0
-            endif !iveg
+          if(imarsh(ie)==1) then !iveg/=0
+!            if(iveg==0) then
+!              Cdp(i)=0.05d0
+!              rough_p(i)=1.d-2
+!            else !/=0
+            veg_di(i)=veg_di0
+            veg_h(i)=veg_h0
+            veg_nv(i)=veg_nv0
+            veg_cd(i)=veg_cd0
+            veg_alpha(i)=veg_di0*veg_nv0*veg_cd0/2.d0
           endif !imarsh
 
-          !drowned marsh
-          if(nwild(ie)==1.and.imarsh(ie)==0) then
-            Cdp(i)=0.001d0
-            rough_p(i)=1.d-4
-          endif
+          !drowned marsh: veg_di etc =0
+!          if(nwild(ie)==1.and.imarsh(ie)==0) then
+!            Cdp(i)=0.001d0
+!            rough_p(i)=1.d-4
+!          endif
         enddo !j
       enddo !i
 !$OMP end do
 
-!$OMP do
-      do i=1,ns
-        do j=1,2
-          ie=isdel(j,i)
-          if(iveg==0.and.imarsh(ie)==1) Cd(i)=0.05d0
-          if(nwild(ie)==1.and.imarsh(ie)==0) Cd(i)=0.001d0
-        enddo !j
-      enddo !i
-!$OMP end do
+!!$OMP do
+!      do i=1,ns
+!        do j=1,2
+!          ie=isdel(j,i)
+!          if(iveg==0.and.imarsh(ie)==1) Cd(i)=0.05d0
+!          if(nwild(ie)==1.and.imarsh(ie)==0) Cd(i)=0.001d0
+!        enddo !j
+!      enddo !i
+!!$OMP end do
       
 !$OMP master
-      call exchange_p2d(Cdp)
-      call exchange_p2d(rough_p)
-      call exchange_s2d(Cd)
-      if(iveg>0) then
-        call exchange_p2d(veg_di)
-        call exchange_p2d(veg_h)
-        call exchange_p2d(veg_nv)
-        call exchange_p2d(veg_cd)
-        call exchange_p2d(veg_alpha)
-      endif
+!      call exchange_p2d(Cdp)
+!      call exchange_p2d(rough_p)
+!      call exchange_s2d(Cd)
+      call exchange_p2d(veg_di)
+      call exchange_p2d(veg_h)
+      call exchange_p2d(veg_nv)
+      call exchange_p2d(veg_cd)
+      call exchange_p2d(veg_alpha)
 !$OMP end master
 #endif /*USE_MARSH*/
 !$OMP end parallel
