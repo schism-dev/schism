@@ -172,7 +172,7 @@
                      &fluxchan,fluxchan1,fluxchan2,tot_s,flux_s,ah,ubm,aorb,ramp_ss,Cdmax, &
                      &bthick_ori,big_ubstar,big_vbstar,zsurf,tot_bedmass,w1,w2,slr_elev, &
                      &i34inv,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi, &
-                     &sav_cfk,sav_cfpsi,sav_h_sd,sav_alpha_sd,sav_nv_sd,sav_c,beta_bar, &
+                     &veg_cfk,veg_cfpsi,veg_h_sd,veg_alpha_sd,veg_nv_sd,veg_c,beta_bar, &
                      &bigfa1,bigfa2,vnf,grav3,tf,maxpice, z0_donelan,start_t0,start_t1
 !Tsinghua group: 0821...
       real(rkind) :: dtrdz,apTpxy_up,apTpxy_do,epsffs,epsfbot !8022 +epsffs,epsfbot
@@ -205,9 +205,9 @@
                      &deta2_dy(nsa),dpr_dx(nsa),dpr_dy(nsa),detp_dx(nsa),detp_dy(nsa), &
                      &sne(3,nvrt),area_e(nvrt),srad_e(nea),qel(np),elbc(npa),hhat(nsa), & !,hhat2(nsa), &
                      &bigu(2,nsa),ghat1(2,nea),etp(npa),h1d(0:nvrt),SS1d(0:nvrt), &
-                     &NN1d(0:nvrt),q2tmp(nvrt),xltmp(nvrt),rzbt(nvrt),shearbt(2:nvrt),sav_prod(nvrt), &
+                     &NN1d(0:nvrt),q2tmp(nvrt),xltmp(nvrt),rzbt(nvrt),shearbt(2:nvrt),veg_prod(nvrt), &
                      &xlmax(nvrt),cpsi3(2:nvrt),cpsi2p(2:nvrt),q2ha(2:nvrt),xlha(2:nvrt), &
-                     &chi(nsa),chi2(nsa),vsource(nea),sav_c2(nsa),sav_beta(nsa),grav2(npa)
+                     &chi(nsa),chi2(nsa),vsource(nea),veg_c2(nsa),veg_beta(nsa),grav2(npa)
       real(rkind) :: swild(max(100,nsa+nvrt+12+ntracers)),swild2(nvrt,12),swild10(max(4,nvrt),12), &
      &swild3(20+mntracers),swild4(2,4),utmp0(4),vtmp0(4)
 !#ifdef USE_SED
@@ -2479,8 +2479,8 @@
       endif
 
 !     SAV const
-      sav_cfk=0.07d0 !Shimizu & Tsujimoto (1994)
-      sav_cfpsi=0.16d0
+      veg_cfk=0.07d0 !Shimizu & Tsujimoto (1994)
+      veg_cfpsi=0.16d0
 
 !$OMP parallel default(shared) private(i,vmax,vmin,tmin,k,drhodz,bvf,k1,k2,dudz,dvdz,shear2, &
 !$OMP rich,j,u_taus,u_taub,nlev,klev,h1d,SS1d,NN1d,ztmp, &
@@ -2490,7 +2490,7 @@
 !$OMP toth,z0s,z0b, &
 !$OMP tmp,dzz,shearbt,rzbt,q2ha,xlha,cpsi3,zctr2,dists,distb,fwall,cpsi2p,xlmax,q2fs,q2bot,xlbot, &
 !$OMP tmp0,zsurf,xlfs,nqdim,kin,alow,bdia,cupp,gam2,prod,buoy,diss,soln2,gam,q2tmp,psi_n,psi_n1, &
-!$OMP q2l,xltmp,upper,xl_max,vd,td,qd1,qd2,zt,sav_prod,zz1,zrat,ub2,vb2,vmag1,vmag2)
+!$OMP q2l,xltmp,upper,xl_max,vd,td,qd1,qd2,zt,veg_prod,zz1,zrat,ub2,vb2,vmag1,vmag2)
 
       if(nchi/=0) then
 !$OMP   do
@@ -2808,7 +2808,7 @@
 
 !       Wet node (and >1 layer); compute layer thickness etc.
 !       Error: use ufg?
-        zt=znl(kbp(j),j)+sav_h(j) !top of SAV
+        zt=znl(kbp(j),j)+veg_h(j) !top of SAV
         do k=kbp(j)+1,nvrt
           dzz(k)=znl(k,j)-znl(k-1,j)
           dudz=(uu2(k,j)-uu2(k-1,j))/dzz(k)
@@ -2823,7 +2823,7 @@
           xlha(k)=(xl(k,j)+xl(k-1,j))/2.d0
 
           !SAV production term \alpha*|u|^3*Hev()
-          sav_prod(k)=0.d0 !init @half level
+          veg_prod(k)=0.d0 !init @half level
           if(iveg==1.and.zt>znl(k-1,j)) then !partial or full SAV layer
             zz1=min(zt,znl(k,j))
             zrat=(zz1-znl(k-1,j))/(znl(k,j)-znl(k-1,j)) !\in (0,1]
@@ -2831,7 +2831,7 @@
             vb2=(1.d0-zrat)*vv2(k-1,j)+zrat*vv2(k,j)
             vmag2=sqrt(ub2*ub2+vb2*vb2)             
             vmag1=sqrt(uu2(k-1,j)**2.d0+vv2(k-1,j)**2.d0)
-            sav_prod(k)=sav_alpha(j)*(vmag1**3.d0+vmag2**3.d0)/2.d0
+            veg_prod(k)=veg_alpha(j)*(vmag1**3.d0+vmag2**3.d0)/2.d0
           endif !iveg
 
 !         Compute c_psi_3
@@ -2949,7 +2949,7 @@
             bdia(kin)=bdia(kin)+dzz(k+1)/3.d0+tmp
             cupp(kin)=cupp(kin)+dzz(k+1)/6.d0-tmp
             gam2(kin)=gam2(kin)+dzz(k+1)/6.d0*(2.d0*q2(k,j)+q2(k+1,j))
-            prod=(dfv(k+1,j)+dfv(k,j))/2.d0*shearbt(k+1)+sav_cfk*sav_prod(k+1) !add SAV
+            prod=(dfv(k+1,j)+dfv(k,j))/2.d0*shearbt(k+1)+veg_cfk*veg_prod(k+1) !add SAV
             buoy=(dfh(k+1,j)+dfh(k,j))/2.d0*rzbt(k+1)
             if(prod+buoy>=0.d0) then
               gam2(kin)=gam2(kin)+dt*dzz(k+1)/2.d0*(prod+buoy)
@@ -2968,7 +2968,7 @@
             bdia(kin)=bdia(kin)+dzz(k)/3.d0+tmp
             alow(kin)=alow(kin)+dzz(k)/6.d0-tmp
             gam2(kin)=gam2(kin)+dzz(k)/6.d0*(2.d0*q2(k,j)+q2(k-1,j))
-            prod=(dfv(k,j)+dfv(k-1,j))/2.d0*shearbt(k)+sav_cfk*sav_prod(k)
+            prod=(dfv(k,j)+dfv(k-1,j))/2.d0*shearbt(k)+veg_cfk*veg_prod(k)
             buoy=(dfh(k,j)+dfh(k-1,j))/2.d0*rzbt(k)
             if(prod+buoy>=0.d0) then
               gam2(kin)=gam2(kin)+dt*dzz(k)/2.d0*(prod+buoy)
@@ -3018,7 +3018,7 @@
             psi_n=cmiu0**rpub*q2(k,j)**rmub*xl(k,j)**rnub !psi^n_{j,k}
             psi_n1=cmiu0**rpub*q2(k+1,j)**rmub*xl(k+1,j)**rnub !psi^n_{j,k+1}
             gam2(kin)=gam2(kin)+dzz(k+1)/6.d0*(2.d0*psi_n+psi_n1)
-            prod=cpsi1*(dfv(k+1,j)+dfv(k,j))/2.d0*shearbt(k+1)+sav_cfpsi*sav_prod(k+1) !add SAV
+            prod=cpsi1*(dfv(k+1,j)+dfv(k,j))/2.d0*shearbt(k+1)+veg_cfpsi*veg_prod(k+1) !add SAV
             buoy=cpsi3(k+1)*(dfh(k+1,j)+dfh(k,j))/2.d0*rzbt(k+1)
             if(prod+buoy>=0.d0) then
               gam2(kin)=gam2(kin)+dt*dzz(k+1)/2.d0*(prod+buoy)*(psi_n+psi_n1)/2.d0/q2ha(k+1)
@@ -3041,7 +3041,7 @@
             psi_n=cmiu0**rpub*q2(k,j)**rmub*xl(k,j)**rnub !psi^n_{j,k}
             psi_n1=cmiu0**rpub*q2(k-1,j)**rmub*xl(k-1,j)**rnub !psi^n_{j,k-1}
             gam2(kin)=gam2(kin)+dzz(k)/6.d0*(2.d0*psi_n+psi_n1)
-            prod=cpsi1*(dfv(k,j)+dfv(k-1,j))/2.d0*shearbt(k)+sav_cfpsi*sav_prod(k) !add SAV
+            prod=cpsi1*(dfv(k,j)+dfv(k-1,j))/2.d0*shearbt(k)+veg_cfpsi*veg_prod(k) !add SAV
             buoy=cpsi3(k)*(dfh(k,j)+dfh(k-1,j))/2.d0*rzbt(k)
             if(prod+buoy>=0.d0) then
               gam2(kin)=gam2(kin)+dt*dzz(k)/2.d0*(prod+buoy)*(psi_n+psi_n1)/2.d0/q2ha(k)
@@ -5054,9 +5054,9 @@
         enddo !j
       enddo !i=1,nope_global
 
-!$OMP parallel default(shared) private(i,n1,n2,htot,tmp,k,sav_h_sd,sav_nv_sd,sav_alpha_sd, &
+!$OMP parallel default(shared) private(i,n1,n2,htot,tmp,k,veg_h_sd,veg_nv_sd,veg_alpha_sd, &
 !$OMP bigu1,bigv1,uuint,zctr2,zz1,zrat,ub2,vb2,ubar1,ubar2,vmag1,vmag2,bb1,bb2,tmp1, &
-!$OMP tmpx2,tmpy2,sav_c)
+!$OMP tmpx2,tmpy2,veg_c)
 
 !     Compute b.c. flag for all nodes for the matrix
 !!$OMP do 
@@ -5073,7 +5073,7 @@
 !...
 !$OMP workshare
       chi=0.d0; chi2=0.d0; hhat=0.d0; bigu=0.d0 !; hhat2=0
-      sav_c2=0.d0; sav_beta=0.d0
+      veg_c2=0.d0; veg_beta=0.d0
 !$OMP end workshare
 
 
@@ -5086,9 +5086,9 @@
         n2=isidenode(2,i)
         htot=(eta2(n1)+eta2(n2))/2.d0+dps(i)
         if(htot<=0.d0) call parallel_abort('STEP: htot(9.1)')
-        sav_h_sd=sum(sav_h(isidenode(1:2,i)))/2.d0
-        sav_nv_sd=sum(sav_nv(isidenode(1:2,i)))/2.d0
-        sav_alpha_sd=sum(sav_alpha(isidenode(1:2,i)))/2.d0
+        veg_h_sd=sum(veg_h(isidenode(1:2,i)))/2.d0
+        veg_nv_sd=sum(veg_nv(isidenode(1:2,i)))/2.d0
+        veg_alpha_sd=sum(veg_alpha(isidenode(1:2,i)))/2.d0
 
 !	bigu1,2 (in ll if ics=2)
         bigu(1,i)=0.d0 !U^n_x
@@ -5102,13 +5102,13 @@
         vmag1=sqrt(sdbt(1,kbs(i)+1,i)**2.d0+sdbt(2,kbs(i)+1,i)**2.d0)
         chi2(i)=Cd(i)*vmag1 !sqrt(sdbt(1,kbs(i)+1,i)**2+sdbt(2,kbs(i)+1,i)**2)
         chi(i)=chi2(i)
-        if(iveg==1) chi(i)=chi(i)/(1.d0+sav_alpha_sd*vmag1*dt)
+        if(iveg==1) chi(i)=chi(i)/(1.d0+veg_alpha_sd*vmag1*dt)
 
-!       Calc consts in SAV model; make sure sav_[c2,beta]=0 at 2D, dry
+!       Calc consts in SAV model; make sure veg_[c2,beta]=0 at 2D, dry
 !       side, and emergent side
         uuint=0.d0 !\int_{-h}^{z_v} |u|dz / H^\alpha = \bar{|u|}^\alpha
-        if(iveg==1.and.nvrt-kbs(i)>1.and.sav_h_sd>0.d0) then !3D wet side with SAV
-          zctr2=zs(kbs(i),i)+sav_h_sd !top of SAV 
+        if(iveg==1.and.nvrt-kbs(i)>1.and.veg_h_sd>0.d0) then !3D wet side with SAV
+          zctr2=zs(kbs(i),i)+veg_h_sd !top of SAV 
           do k=kbs(i),nvrt-1
             if(zctr2>zs(k,i)) then !partial or full SAV layer
               zz1=min(zctr2,zs(k+1,i))
@@ -5123,29 +5123,29 @@
               uuint=uuint+(zz1-zs(k,i))*(ubar1+ubar2)/2.d0
             endif
           enddo !k
-          uuint=uuint/min(htot,sav_h_sd) !>=0
+          uuint=uuint/min(htot,veg_h_sd) !>=0
 
 !          vmag2=bigu(1,i)**2+bigu(2,i)**2
 !          bb1=(bigu1*bigu(1,i)+bigv1*bigu(2,i))/max(small1*1.e-2,vmag2) !a'
 !          bb2=(-bigu1*bigu(2,i)+bigv1*bigu(1,i))/max(small1*1.e-2,vmag2) !b'
 
-          sav_c2(i)=sav_alpha_sd*dt*uuint !>=0
-          if(sav_h_sd<0.99d0*htot) then !3D wet submergent side with SAV
-            !tmpx1=sav_alpha_sd*dt*uuint !>=0
-            !sav_c=/(1+tmpx1)
+          veg_c2(i)=veg_alpha_sd*dt*uuint !>=0
+          if(veg_h_sd<0.99d0*htot) then !3D wet submergent side with SAV
+            !tmpx1=veg_alpha_sd*dt*uuint !>=0
+            !veg_c=/(1+tmpx1)
   
             tmpx2=max(1.d-5,chi2(i)*vmag1/grav/htot) !energy gradient
             !\beta_2; arguments checked
-            tmpy2=sqrt(sqrt(sav_nv_sd)/sav_h_sd)*(-0.32d0-0.85d0*log10((htot-sav_h_sd)/sav_h_sd*tmpx2))
-            sav_beta(i)=exp(tmpy2*(zctr2-zs(kbs(i)+1,i)))-1.d0 !\beta
-            sav_beta(i)=min(10.d0,max(sav_beta(i),0.d0))
-          endif !sav_h_sd
+            tmpy2=sqrt(sqrt(veg_nv_sd)/veg_h_sd)*(-0.32d0-0.85d0*log10((htot-veg_h_sd)/veg_h_sd*tmpx2))
+            veg_beta(i)=exp(tmpy2*(zctr2-zs(kbs(i)+1,i)))-1.d0 !\beta
+            veg_beta(i)=min(10.d0,max(veg_beta(i),0.d0))
+          endif !veg_h_sd
         endif !iveg==1.
 
         !hhat is \breve{H} in notes
         if(nvrt-kbs(i)==1) then !2D
           tmp=htot+chi2(i)*dt
-          if(iveg==1) tmp=tmp+sav_alpha_sd*vmag1*htot*dt
+          if(iveg==1) tmp=tmp+veg_alpha_sd*vmag1*htot*dt
           if(tmp<=0.d0) then
             write(errmsg,*)'Impossible dry 53:',tmp,htot,iplg(isidenode(1:2,i))
             call parallel_abort(errmsg)
@@ -5155,12 +5155,12 @@
           hhat(i)=htot-chi(i)*dt
 !          hhat(i)=hhat2(i)
           if(iveg==1) then
-            if(sav_h_sd<0.99d0*htot) then !submergent
-              sav_c=sav_c2(i)/(1.d0+sav_c2(i))
-              hhat(i)=hhat(i)-sav_c*(sav_h_sd+sav_beta(i)*chi(i)*dt)
+            if(veg_h_sd<0.99d0*htot) then !submergent
+              veg_c=veg_c2(i)/(1.d0+veg_c2(i))
+              hhat(i)=hhat(i)-veg_c*(veg_h_sd+veg_beta(i)*chi(i)*dt)
             else !emergent
-              hhat(i)=hhat(i)/(1.d0+sav_c2(i)) !sav_alpha_sd*uuint*dt)
-            endif !sav_h_sd
+              hhat(i)=hhat(i)/(1.d0+veg_c2(i)) !veg_alpha_sd*uuint*dt)
+            endif !veg_h_sd
           endif !iveg
 
 !	  Enforce positivity for 3D model
@@ -5425,7 +5425,7 @@
 !$OMP detpdy,chigamma,ubstar,vbstar,h_bar,bigf1,bigf2,botf1,botf2,big_ubstar,big_vbstar, &
 !$OMP av_df,j,nd,isd,htot,cff1,cff2,tmp1,tmp2,k,rs1,rs2,swild10,horx,hory,swild2,swild, &
 !$OMP itmp1,tmpx1,tmpx2,tmpy1,tmpy2,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi,cff3, &
-!$OMP sav_h_sd,zctr2,sav_c,xtmp,ytmp,wx2,wy2,zrat,bigfa1,bigfa2,grav3,vn1,vn2,tt1,ss1,n1,n2) 
+!$OMP veg_h_sd,zctr2,veg_c,xtmp,ytmp,wx2,wy2,zrat,bigfa1,bigfa2,grav3,vn1,vn2,tt1,ss1,n1,n2) 
       do i=1,nea
         ghat1(1,i)=0.d0 !init
         ghat1(2,i)=0.d0
@@ -5470,8 +5470,8 @@
           !Side
           isd=elside(j,i)
           htot=dps(isd)+sum(eta2(isidenode(1:2,isd)))/2.d0 !>0
-          sav_h_sd=sum(sav_h(isidenode(1:2,isd)))/2.d0
-          zctr2=zs(kbs(isd),isd)+sav_h_sd !top of SAV
+          veg_h_sd=sum(veg_h(isidenode(1:2,isd)))/2.d0
+          zctr2=zs(kbs(isd),isd)+veg_h_sd !top of SAV
           if(nvrt==kbs(isd)+1) then !2D
             !coefficients applied to 2/3D case 
             cff1=hhat(isd)/htot 
@@ -5483,16 +5483,16 @@
             cff2=1.d0
             cff3=0.d0
             if(iveg==1) then
-              if(sav_h_sd<0.99d0*htot) then !submergent 
+              if(veg_h_sd<0.99d0*htot) then !submergent 
                 cff1=1
-                sav_c=sav_c2(isd)/(1.d0+sav_c2(isd))
-                cff2=1.d0+sav_beta(isd)*sav_c
-                cff3=sav_c
+                veg_c=veg_c2(isd)/(1.d0+veg_c2(isd))
+                cff2=1.d0+veg_beta(isd)*veg_c
+                cff3=veg_c
               else !emergent
-                cff1=1.d0/(1.d0+sav_c2(isd))
+                cff1=1.d0/(1.d0+veg_c2(isd))
                 cff2=cff1
                 cff3=0.d0
-              endif !sav_h_sd
+              endif !veg_h_sd
             endif !iveg
           endif !2/3D
           av_cff1=av_cff1+cff1/real(i34(i),rkind)
@@ -5500,7 +5500,7 @@
           av_cff3=av_cff3+cff3/real(i34(i),rkind)
           av_cff2_chi=av_cff2_chi+cff2*chi(isd)/real(i34(i),rkind)
           av_cff3_chi=av_cff3_chi+cff3*chi(isd)/real(i34(i),rkind)
-          av_df=av_df+min(htot,sav_h_sd)/htot/real(i34(i),rkind)
+          av_df=av_df+min(htot,veg_h_sd)/htot/real(i34(i),rkind)
 
           !btrack values: U^\star, U^{\star\alpha}
           tmp1=0.d0; tmp2=0.d0 !U^\star
@@ -5646,11 +5646,11 @@
         do j=1,i34(i) !side
           isd=elside(j,i)
           htot=dps(isd)+sum(eta2(isidenode(1:2,isd)))/2.d0
-          sav_h_sd=sum(sav_h(isidenode(1:2,isd)))/2.d0
+          veg_h_sd=sum(veg_h(isidenode(1:2,isd)))/2.d0
           bigf1=htot*botf1 
           bigf2=htot*botf2 
-          bigfa1=min(htot,sav_h_sd)*botf1
-          bigfa2=min(htot,sav_h_sd)*botf2
+          bigfa1=min(htot,veg_h_sd)*botf1
+          bigfa2=min(htot,veg_h_sd)*botf2
           tmp1=tmp1+av_cff1*dt*bigf1-av_cff2*chi(isd)*dt*dt*botf1-av_cff3*dt*bigfa1
           tmp2=tmp2+av_cff1*dt*bigf2-av_cff2*chi(isd)*dt*dt*botf2-av_cff3*dt*bigfa2
         enddo !j
@@ -6370,7 +6370,7 @@
 
 !$OMP parallel default(shared) private(j,k,node1,node2,htot,taux2,tauy2,hat_gam_x, &
 !$OMP hat_gam_y,tmp1,tmp2,dzz,dfz,ndim,kin,alow,bdia,cupp,tmp,rrhs,soln,gam,dep, &
-!$OMP swild,uths,vths,vnorm,etam,vtan,jblock,jface,dot1,ss,sav_h_sd,sav_alpha_sd, &
+!$OMP swild,uths,vths,vnorm,etam,vtan,jblock,jface,dot1,ss,veg_h_sd,veg_alpha_sd, &
 !$OMP zctr2,cff1,zz1,zrat,ub2,vb2,vmag1,vmag2,vn1,vn2,tt1,ss1)
 
 !$OMP workshare
@@ -6397,8 +6397,8 @@
 !	Wet sides
         node1=isidenode(1,j)
         node2=isidenode(2,j)
-        sav_h_sd=sum(sav_h(isidenode(1:2,j)))/2.d0
-        sav_alpha_sd=sum(sav_alpha(isidenode(1:2,j)))/2.d0
+        veg_h_sd=sum(veg_h(isidenode(1:2,j)))/2.d0
+        veg_alpha_sd=sum(veg_alpha(isidenode(1:2,j)))/2.d0
 !       ll frame at side
 !        swild10(1:3,1:3)=(pframe(:,:,node1)+pframe(:,:,node2))/2
 
@@ -6463,7 +6463,7 @@
 
 !	Coefficient matrix 
         ndim=nvrt-kbs(j)
-        zctr2=zs(kbs(j),j)+sav_h_sd !top of SAV
+        zctr2=zs(kbs(j),j)+veg_h_sd !top of SAV
         do k=kbs(j)+1,nvrt
           kin=k-kbs(j) !eq. #
           alow(kin)=0.d0 
@@ -6478,7 +6478,7 @@
               vb2=(1.d0-zrat)*swild98(2,k,j)+zrat*swild98(2,k+1,j)
               vmag2=sqrt(ub2*ub2+vb2*vb2)              
               vmag1=sqrt(swild98(1,k,j)**2.d0+swild98(2,k,j)**2.d0)
-              cff1=cff1+sav_alpha_sd*dt*(vmag1+vmag2)/2.d0
+              cff1=cff1+veg_alpha_sd*dt*(vmag1+vmag2)/2.d0
             endif !iveg
 
             tmp=dt*dfz(k+1)/dzz(k+1)
@@ -6495,7 +6495,7 @@
               vb2=(1.d0-zrat)*swild98(2,k-1,j)+zrat*swild98(2,k,j)
               vmag2=sqrt(ub2*ub2+vb2*vb2)
               vmag1=sqrt(swild98(1,k-1,j)**2.d0+swild98(2,k-1,j)**2.d0)
-              cff1=cff1+sav_alpha_sd*dt*(vmag1+vmag2)/2.d0
+              cff1=cff1+veg_alpha_sd*dt*(vmag1+vmag2)/2.d0
             endif !iveg
 
             tmp=dt*dfz(k)/dzz(k)
@@ -7863,14 +7863,14 @@
         if(iveg==1.and.isav_icm==1)then
           !Convert hcansav to nodes
           do i=1,np
-            sav_h(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
+            veg_h(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
           enddo !i
-          call exchange_p2d(sav_h)
+          call exchange_p2d(veg_h)
 
           do i=1,npa
             !Do not allow SAV to grow out of init patch for the time being
-            if(sav_nv(i)==0.d0.or.sav_alpha(i)==0.d0) then
-              sav_nv(i)=0.d0; sav_alpha(i)=0.d0; sav_h(i)=0.d0
+            if(veg_nv(i)==0.d0.or.veg_alpha(i)==0.d0) then
+              veg_nv(i)=0.d0; veg_alpha(i)=0.d0; veg_h(i)=0.d0
             endif
           enddo !i
 
@@ -8103,9 +8103,13 @@
       enddo !i=1,ne
 !$OMP end do
 
+!$OMP master
+      call exchange_e2di(imarsh)
+!$OMP end master
+
       !Set Cd etc for marsh and also drowned marsh
 !$OMP workshare
-      sav_di=0.d0; sav_h=0.d0; sav_nv=0.d0; sav_alpha=0.d0
+      veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha=0.d0
 !$OMP end workshare
 !$OMP do 
       do i=1,np
@@ -8116,10 +8120,11 @@
               Cdp(i)=0.05d0
               rough_p(i)=1.d-2
             else !/=0
-              sav_di(i)=sav_di0
-              sav_h(i)=sav_h0
-              sav_nv(i)=sav_nv0
-              sav_alpha(i)=sav_di0*sav_nv0*sav_cd(i)/2.d0
+              veg_di(i)=veg_di0
+              veg_h(i)=veg_h0
+              veg_nv(i)=veg_nv0
+              veg_cd(i)=veg_cd0
+              veg_alpha(i)=veg_di0*veg_nv0*veg_cd0/2.d0
             endif !iveg
           endif !imarsh
 
@@ -8146,12 +8151,12 @@
       call exchange_p2d(Cdp)
       call exchange_p2d(rough_p)
       call exchange_s2d(Cd)
-      call exchange_e2di(imarsh)
       if(iveg>0) then
-        call exchange_p2d(sav_di)
-        call exchange_p2d(sav_h)
-        call exchange_p2d(sav_nv)
-        call exchange_p2d(sav_alpha)
+        call exchange_p2d(veg_di)
+        call exchange_p2d(veg_h)
+        call exchange_p2d(veg_nv)
+        call exchange_p2d(veg_cd)
+        call exchange_p2d(veg_alpha)
       endif
 !$OMP end master
 #endif /*USE_MARSH*/
@@ -9678,7 +9683,7 @@
 #endif
 
 #ifdef USE_MARSH
-        if(iof_marsh(1)==1)
+        if(iof_marsh(1)==1) then
           icount=icount+1 
           if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.14)')
           varout_2delem(icount,:)=imarsh(1:ne)

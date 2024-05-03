@@ -168,7 +168,7 @@
                     &ubl1,ubl2,ubl3,ubl4,ubl5,ubl6,ubl7,ubl8,xn1, &
                     &xn2,yn1,yn2,xstal,ystal,ae,THAS,THAF,err_max,rr,suma, &
                     &te,sa,wx1,wx2,wy1,wy2,aux1,aux2,time,ttt, &
-                    &et,qq,tr,ft1,dep,wtratio,rmaxvel,sav_cd0,tf
+                    &et,qq,tr,ft1,dep,wtratio,rmaxvel,tf
 
 
 #ifdef USE_FIB
@@ -1422,8 +1422,8 @@
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa),epsilon2_elem(ne), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
-         & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
-         & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa), &
+         & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),veg_alpha(npa), &
+         & veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
          & wwave_force(2,nvrt,nsa),btaun(npa), &
          & rsxx(npa), rsxy(npa), rsyy(npa), stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
@@ -3772,27 +3772,27 @@
         endif
       enddo !k
 
-!     SAV inputs: sav_*.gr3
-      sav_alpha=0.d0 !=D*Nv*Cdv/2; init; D is diameter; Cdv is form drag (sav_cd)
-      sav_h=0.d0 !veg height; not used at 2D sides
-      sav_nv=0.d0 !Nv: # of stems per m^2
-      sav_di=0.d0 !D [m]
-      sav_cd=0.d0 !Cdv : drag coefficient
+!     Vegetation inputs: veg_*.gr3
+      veg_alpha=0.d0 !=D*Nv*Cdv/2; init; D is diameter; Cdv is form drag (veg_cd)
+      veg_h=0.d0 !veg height; not used at 2D sides
+      veg_nv=0.d0 !Nv: # of stems per m^2
+      veg_di=0.d0 !D [m]
+      veg_cd=0.d0 !Cdv : drag coefficient
       if(iveg==1) then
         !\lambda=D*Nv [1/m]
         if(myrank==0) then
-          open(10,file=in_dir(1:len_in_dir)//'sav_D.gr3',status='old')
-          open(31,file=in_dir(1:len_in_dir)//'sav_N.gr3',status='old')
+          open(10,file=in_dir(1:len_in_dir)//'veg_D.gr3',status='old')
+          open(31,file=in_dir(1:len_in_dir)//'veg_N.gr3',status='old')
           read(10,*)
           read(10,*) itmp1,itmp2
           read(31,*); read(31,*)k,m
           if(itmp1/=ne_global.or.itmp2/=np_global.or.k/=ne_global.or.m/=np_global) &
-     &call parallel_abort('INIT: Check sav_.gr3 (1)')
+     &call parallel_abort('INIT: Check veg_.gr3 (1)')
           do i=1,np_global
             read(10,*)j,xtmp,ytmp,tmp
             read(31,*)j,xtmp,ytmp,tmp1
             if(tmp<0.d0.or.tmp1<0.d0) then
-              write(errmsg,*)'INIT: illegal sav_:',i,tmp,tmp1
+              write(errmsg,*)'INIT: illegal veg_:',i,tmp,tmp1
               call parallel_abort(errmsg)
             endif
             buf3(i)=tmp; buf4(i)=tmp1
@@ -3803,11 +3803,11 @@
          
 !          if(ipgl(i)%rank==myrank) then
 !            nd=ipgl(i)%id
-!            sav_alpha(nd)=tmp*tmp1*tmp3/2.d0
-!            sav_nv(nd)=tmp1
-!            sav_h(nd)=tmp2
-!            sav_di(nd)=tmp
-!            sav_cd(nd)=tmp3
+!            veg_alpha(nd)=tmp*tmp1*tmp3/2.d0
+!            veg_nv(nd)=tmp1
+!            veg_h(nd)=tmp2
+!            veg_di(nd)=tmp
+!            veg_cd(nd)=tmp3
 !          endif
           enddo !i
           close(10)
@@ -3819,24 +3819,24 @@
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
-            sav_nv(nd)=buf4(i) !tmp1
-            sav_di(nd)=buf3(i) !tmp
+            veg_nv(nd)=buf4(i) !tmp1
+            veg_di(nd)=buf3(i) !tmp
           endif
         enddo !i
 
         if(myrank==0) then
           !SAV height [m]
-          open(32,file=in_dir(1:len_in_dir)//'sav_h.gr3',status='old')
+          open(32,file=in_dir(1:len_in_dir)//'veg_h.gr3',status='old')
           !Drag coefficient
-          open(30,file=in_dir(1:len_in_dir)//'sav_cd.gr3',status='old')
+          open(30,file=in_dir(1:len_in_dir)//'veg_cd.gr3',status='old')
           read(32,*); read(32,*)i,j
           read(30,*); read(30,*)l,mm
-          if(i/=ne_global.or.j/=np_global.or.l/=ne_global.or.mm/=np_global) call parallel_abort('INIT: Check sav_.gr3')
+          if(i/=ne_global.or.j/=np_global.or.l/=ne_global.or.mm/=np_global) call parallel_abort('INIT: Check veg_.gr3')
           do i=1,np_global
             read(32,*)j,xtmp,ytmp,tmp2
             read(30,*)j,xtmp,ytmp,tmp3
             if(tmp2<0.d0.or.tmp3<0) then
-              write(errmsg,*)'INIT: illegal sav_:',i,tmp2,tmp3
+              write(errmsg,*)'INIT: illegal veg_:',i,tmp2,tmp3
               call parallel_abort(errmsg)
             endif
             buf3(i)=tmp2; buf4(i)=tmp3
@@ -3854,29 +3854,29 @@
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
-            sav_alpha(nd)=sav_di(nd)*sav_nv(nd)*buf4(i)/2.d0 !tmp*tmp1*tmp3/2.d0
-            sav_h(nd)=buf3(i) !tmp2
-            sav_cd(nd)=buf4(i) !tmp3
+            veg_alpha(nd)=veg_di(nd)*veg_nv(nd)*buf4(i)/2.d0 !tmp*tmp1*tmp3/2.d0
+            veg_h(nd)=buf3(i) !tmp2
+            veg_cd(nd)=buf4(i) !tmp3
 
             !Make D, Nv and h consistent at no SAV places
-            if(sav_di(nd)*sav_nv(nd)*sav_h(nd)*sav_cd(nd)==0.d0) then
-              sav_di(nd)=0.d0; sav_nv(nd)=0.d0; sav_h(nd)=0.d0; sav_cd(nd)=0.d0
+            if(veg_di(nd)*veg_nv(nd)*veg_h(nd)*veg_cd(nd)==0.d0) then
+              veg_di(nd)=0.d0; veg_nv(nd)=0.d0; veg_h(nd)=0.d0; veg_cd(nd)=0.d0
             endif
           endif
         enddo !i
 
 #ifdef USE_MARSH
         !Assume constant inputs from .gr3; save these values
-        sav_di0=sav_di(1); sav_h0=sav_h(1); sav_nv0=sav_nv(1); sav_cd0=sav_cd(1)
+        veg_di0=veg_di(1); veg_h0=veg_h(1); veg_nv0=veg_nv(1); veg_cd0=veg_cd(1)
         !Reset
-        sav_di=0.d0; sav_h=0.d0; sav_nv=0.d0; sav_alpha=0.d0; sav_cd=0.d0
+        veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha=0.d0; veg_cd=0.d0
         do i=1,nea
           if(imarsh(i)>0) then
-            sav_di(elnode(1:i34(i),i))=sav_di0 
-            sav_h(elnode(1:i34(i),i))=sav_h0 
-            sav_nv(elnode(1:i34(i),i))=sav_nv0
-            sav_cd(elnode(1:i34(i),i))=sav_cd0
-            sav_alpha(elnode(1:i34(i),i))=sav_di0*sav_nv0*sav_cd0/2.d0
+            veg_di(elnode(1:i34(i),i))=veg_di0 
+            veg_h(elnode(1:i34(i),i))=veg_h0 
+            veg_nv(elnode(1:i34(i),i))=veg_nv0
+            veg_cd(elnode(1:i34(i),i))=veg_cd0
+            veg_alpha(elnode(1:i34(i),i))=veg_di0*veg_nv0*veg_cd0/2.d0
           endif
         enddo !i
 #endif
@@ -6524,7 +6524,7 @@
 #endif
 
 #ifdef USE_MARSH
-      if(iof_marsh(1)==1) 
+      if(iof_marsh(1)==1) then
         ncount_2delem=ncount_2delem+1
         counter_out_name=counter_out_name+1
         out_name(counter_out_name)='marshFlag'

@@ -124,8 +124,8 @@ module schism_glbl
   real(rkind),save :: q2min,tempmin,tempmax,saltmin,saltmax, &
                       &vis_coe1,vis_coe2,h_bcc1,velmin_btrack,h_tvd,rmaxvel1,rmaxvel2, &
                       &difnum_max_l2,wtime1,wtime2,cmiu0, &
-                      &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,sav_di0,sav_h0,sav_nv0, &
-                      &dtb_min_transport,bounds_lon(2)
+                      &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,veg_di0,veg_h0,veg_nv0, &
+                      &veg_cd0,dtb_min_transport,bounds_lon(2)
 
 !  logical,save :: lm2d !2D or 3D model
   logical,save :: lhas_quad=.false. !existence of quads
@@ -664,7 +664,7 @@ module schism_glbl
   integer,save,allocatable     :: imarsh(:),ibarrier_m(:)
 
 ! SAV
-  real(rkind),save,allocatable     :: sav_alpha(:),sav_h(:),sav_nv(:),sav_di(:),sav_cd(:)
+  real(rkind),save,allocatable     :: veg_alpha(:),veg_h(:),veg_nv(:),veg_di(:),veg_cd(:)
 
 !Tsinghua group:0825
   REAL(rkind),save :: Cbeta,beta0,c_miu,Cv_max,ecol,ecol1,sigf,sigepsf,Ceps1,Ceps2,Ceps3,Acol,sig_s,fi_c,ksi_c,kpz !1013+kpz

@@ -9,6 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- : renamed sav_*.gr3 as veg_*.gr3;
 - `ca44ba0` (1 May 2024): removed isav and replaced it with iveg
 - `4fb6228` (9 Feb 2024): add cmake CPP 'BLD_STANDALONE' to accommodate UFS
 - `9bee0f5` (8 Feb 2024): removed IMPOSE_NET_FLUX and 'meth_sink'
