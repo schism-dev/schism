@@ -2810,6 +2810,8 @@
         if(myrank==0) then
           do i=1,nsources
             read(31,*)ieg_source(i) !global elem. #
+            if(ieg_source(i)<=0.or.ieg_source(i)>ne_global) &
+     &call parallel_abort('INIT: source elem over')
           enddo !i
           read(31,*) !blank line
           read(31,*)nsinks
@@ -2825,6 +2827,8 @@
         if(myrank==0) then
           do i=1,nsinks
             read(31,*)ieg_sink(i)
+            if(ieg_sink(i)<=0.or.ieg_sink(i)>ne_global) &
+     &call parallel_abort('INIT: sink elem over')
           enddo !i
           close(31)
         endif !myrank
@@ -2882,6 +2886,8 @@
             if(j/=NF90_NOERR) call parallel_abort('init: source_elem')
             j=nf90_get_var(ncid_source,mm,ieg_source(1:nsources),(/1/),(/nsources/))
             if(j/=NF90_NOERR) call parallel_abort('init: source_elem(2)')
+            if(maxval(ieg_source)>ne_global.or.minval(ieg_source)<=0) &
+     & call parallel_abort('init: check source elem')
           endif !nsources
 
           if(nsinks>0) then
@@ -2889,6 +2895,8 @@
             if(j/=NF90_NOERR) call parallel_abort('init: sink_elem')
             j=nf90_get_var(ncid_source,mm,ieg_sink(1:nsinks),(/1/),(/nsinks/))
             if(j/=NF90_NOERR) call parallel_abort('init: sink_elem(2)')
+            if(maxval(ieg_sink)>ne_global.or.minval(ieg_sink)<=0) &
+     & call parallel_abort('init: check sink elem')
           endif !nsinks
         endif !myrank=0
         call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
