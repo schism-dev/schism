@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022 Helmholtz-Zentrum Hereon
+# SPDX-FileCopyrightText: 2022-2023 Helmholtz-Zentrum hereon GmbH
 # SPDX-License-Identifier: CC0-1.0
 # SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
 
@@ -7,7 +7,7 @@ FROM phusion/baseimage:jammy-1.0.1
 LABEL description="SCHISM Docker environment based on Ubuntu"
 LABEL author="Carsten Lemmen <carsten.lemmen@hereon.de>"
 LABEL license="CC0-1.0"
-LABEL copyright="2022 Helmholtz-Zentrum Hereon"
+LABEL copyright="2022-2023 Helmholtz-Zentrum hereon GmbH"
 
 # Arguments can be passed via the --build-arg key=value command to the 
 # docker build command.  The default values are set below to mpich, oldio=on,

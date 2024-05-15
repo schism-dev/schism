@@ -7,22 +7,26 @@
 !
 !> @author Richard Hofmeister
 !> @author Carsten Lemmen <carsten.lemmen@hereon.de>
-!> @author Deborah Benkort <deborah.benkort@hereon.de>
+!> @author Deborah Benkort
 !> @author Jan Kossack <jan.kossack@hereon.de>
 !> @author Wang Zhenggui
 
 !> @copyright Copyright 2021-2022 Virginia Institute of Marine Science
-!> @copyright Copyright 2021-2022 Helmholtz-Zentrum Hereon
-!> @copyright Copyright 2017-2021 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2021-2024 Helmholtz-Zentrum hereon GmbH
+!> @copyright Copyright 2017-2021 Helmholtz-Zentrum Geesthacht GmbH
 !
-! @license dual-licensed under the Apache License, Version 2.0 and the Gnu
-! Public License Version 3.0
+! @license dual-licensed under the Apache License, Version 2.0
+! and the GNU Public License Version 3.0
 !
-#include "fabm_version.h"
 
+! The cmake system should make sure that _FABM_API_VERSION_ is defined 
+! to 0 if it does not find $FABM_BASE/include/fabm_version.h 
 #ifndef _FABM_API_VERSION_
-#define _FABM_API_VERSION_ 0
+#include "fabm_version.h"
 #endif
+
+! For access to the mask, include the driver header file
+#include "fabm_driver.h"
 
 #ifdef USE_ICEBGC
 #ifndef USE_ICE
@@ -162,7 +166,9 @@ module fabm_schism
     real(rk), dimension(:), pointer     :: bottom_speed => null()
     real(rk), dimension(:), pointer     :: bottom_roughness => null()
 
+#ifndef _FABM_HORIZONTAL_MASK_
     integer, dimension(:,:), pointer   :: mask => null()
+#endif
     integer, dimension(:), pointer     :: mask_hz => null()
     
 #ifdef USE_ICEBGC
@@ -371,24 +377,34 @@ subroutine fabm_schism_init_stage2
   call fs%model%set_domain(nvrt, ne, dt)
 #endif
 
-  allocate(fs%mask(nvrt,ne), fs%mask_hz(ne))
-  fs%mask(:,:) = 0
+  allocate(fs%mask_hz(ne))
   fs%mask_hz(:) = 0
   where(kbe == nvrt) 
     fs%mask_hz = 1
   endwhere 
-  !> @how do we deal with items that are between levels and 
-  !> have a physical vertical range 2:nvrt
+
+#ifndef _FABM_HORIZONTAL_MASK_
+  allocate(fs%mask(nvrt,ne))
+  fs%mask(:,:) = 0
   do i=1,ne 
     if (kbe(i) > 1) fs%mask(1:kbe(i),i) = 1
   enddo
+#endif
   
 #if _FABM_API_VERSION_ < 1
+#ifndef _FABM_HORIZONTAL_MASK_
   call fabm_set_mask(fs%model, fs%mask, fs%mask_hz)
 #else
-  call fs%model%set_mask(fs%mask, fs%mask_hz)
+  call fabm_set_mask(fs%model, fs%mask_hz)
 #endif
- 
+#else
+#ifndef _FABM_HORIZONTAL_MASK_
+  call fs%model%set_mask(fs%mask, fs%mask_hz)
+#else
+  call fs%model%set_mask(fs%mask_hz)
+#endif
+#endif
+
   allocate(bottom_idx(1:ne))
   allocate(surface_idx(1:ne))
   bottom_idx(:) = kbe(:)+1

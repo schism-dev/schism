@@ -172,7 +172,7 @@
                      &fluxchan,fluxchan1,fluxchan2,tot_s,flux_s,ah,ubm,aorb,ramp_ss,Cdmax, &
                      &bthick_ori,big_ubstar,big_vbstar,zsurf,tot_bedmass,w1,w2,slr_elev, &
                      &i34inv,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi, &
-                     &sav_cfk,sav_cfpsi,sav_h_sd,sav_alpha_sd,sav_nv_sd,sav_c,beta_bar, &
+                     &veg_cfk,veg_cfpsi,veg_h_sd,veg_alpha_sd,veg_nv_sd,veg_c,beta_bar, &
                      &bigfa1,bigfa2,vnf,grav3,tf,maxpice, z0_donelan,start_t0,start_t1
 !Tsinghua group: 0821...
       real(rkind) :: dtrdz,apTpxy_up,apTpxy_do,epsffs,epsfbot !8022 +epsffs,epsfbot
@@ -205,9 +205,9 @@
                      &deta2_dy(nsa),dpr_dx(nsa),dpr_dy(nsa),detp_dx(nsa),detp_dy(nsa), &
                      &sne(3,nvrt),area_e(nvrt),srad_e(nea),qel(np),elbc(npa),hhat(nsa), & !,hhat2(nsa), &
                      &bigu(2,nsa),ghat1(2,nea),etp(npa),h1d(0:nvrt),SS1d(0:nvrt), &
-                     &NN1d(0:nvrt),q2tmp(nvrt),xltmp(nvrt),rzbt(nvrt),shearbt(2:nvrt),sav_prod(nvrt), &
+                     &NN1d(0:nvrt),q2tmp(nvrt),xltmp(nvrt),rzbt(nvrt),shearbt(2:nvrt),veg_prod(nvrt), &
                      &xlmax(nvrt),cpsi3(2:nvrt),cpsi2p(2:nvrt),q2ha(2:nvrt),xlha(2:nvrt), &
-                     &chi(nsa),chi2(nsa),vsource(nea),sav_c2(nsa),sav_beta(nsa),grav2(npa)
+                     &chi(nsa),chi2(nsa),vsource(nea),veg_c2(nsa),veg_beta(nsa),grav2(npa)
       real(rkind) :: swild(max(100,nsa+nvrt+12+ntracers)),swild2(nvrt,12),swild10(max(4,nvrt),12), &
      &swild3(20+mntracers),swild4(2,4),utmp0(4),vtmp0(4)
 !#ifdef USE_SED
@@ -252,9 +252,9 @@
       real(rkind) :: wflux_correct, surface_flux_ratio
 
 
-#ifdef USE_WWM
-      CHARACTER(LEN=3) :: RADFLAG
-#endif /*USE_WWM*/
+!#ifdef USE_WWM
+!      CHARACTER(LEN=3) :: RADFLAG
+!#endif /*USE_WWM*/
 
 #ifdef USE_FABM
       real(rkind) :: tau_bottom_nodes(npa)
@@ -914,7 +914,7 @@
           if(idry(i)==1) then
             tau(1:2,i)=0.d0
           else if (iwind_form==-2) then
-            !stress=rho_air*ufric^2 [Pa]; scaled by rho_water
+            !stress=rho_air*ufric^2 [Pa]; scaled by rho_water so [m2/s2]
             tmp=1.293d-3*out_wwm_windpar(i,8)**2.d0*rampwind 
             !Wind direction
             theta=atan2(windy(i),windx(i))
@@ -1908,7 +1908,7 @@
         ! Deal with Stokes drift at open boundaries (KM)
         ! Subtract depth-averaged Stokes drift vel per Bennis et al. (2011) and
         ! Kevin Martin
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
         if(RADFLAG.eq.'VOR') then
           tmpx = 0.d0; tmpy = 0.d0;
           do k=kbs(i),nvrt-1
@@ -2386,14 +2386,29 @@
 !                Cdp(i)=Cdp(i)*exp(dzb_decay*(1.d0-bthick_ori/bthick))
 !              endif
               !WBL
+#if defined USE_WWM || defined USE_WW3
 #ifdef USE_WWM
-              ! Quantities used in both formulations for the WBL
-              ubm = out_wwm(i,22)    ! orbital vel.
+              ubm = out_wwm(i,22)  !orbital vel. [m/s]
+              aorb = out_wwm(i,23) !orbital amp=U_orb/ <angular freq> [m]
+              wdir = out_wwm(i,18) !wave direction [deg]
               if(out_wwm(i,12)==0.d0) then
                 wfr=0.d0
               else
                 wfr = 2.d0*pi/out_wwm(i,12)  ! angular freq.; out_wwm is not real*8
               endif
+#endif /*USE_WWM*/
+
+#ifdef USE_WW3
+              ubm=sqrt(wave_orbu(i)**2.d0+wave_orbv(i)**2.d0) !orbital vel. [m/s]
+              aorb=ubm*wave_tm1(i)/2.d0/pi !orbital amp [m]
+              wdir=wave_dir(i)
+              if(wave_tm1(i)==0.d0) then
+                wfr=0.d0
+              else
+                wfr=2.d0*pi/wave_tm1(i) !angular freq
+              endif
+#endif /*USE_WW3*/
+
               vmag = sqrt(uu2(kbp(i)+1,i)**2.d0+vv2(kbp(i)+1,i)**2.d0) !current magnitude
 
               ! Wave boundary layer
@@ -2402,7 +2417,6 @@
               else if(iwbl == 1) then ! Grant and Madsen type of WBL
                 taubx = Cdp(i)*vmag*uu2(kbp(i)+1,i)
                 tauby = Cdp(i)*vmag*vv2(kbp(i)+1,i)
-                wdir = out_wwm(i,18) !wave direction
                 !call wbl_GM(taubx,tauby,rough_p(i),ubm,wfr,wdir,z0b,fw,delta_wc,iter,ifl)
                 call wbl_GM(taubx,tauby,rough_p(i),ubm,wfr,wdir,z0b,fw,delta_wbl(i),iter,ifl)
                 !z0b_save(i) = z0b ! (z0b, T. Guérin) 
@@ -2414,7 +2428,6 @@
                 taub_wc(i) = Cdp(i)*vmag*vmag !(uu2(kbp(i)+1,i)**2.d0+vv2(kbp(i)+1,i)**2.d0) 
               else if(iwbl == 2) then! Soulsby (1997) type of WBL
                 call wbl_Soulsby97(uu2(kbp(i)+1,i),vv2(kbp(i)+1,i),rough_p(i),wfr,ubm,bthick,Cdp(i),taub_wc(i))
-                aorb = out_wwm(i,23) ! orbital amp.
                 delta_wbl(i) = 0.09D0*30.D0*rough_p(i)*(aorb/(30.D0*rough_p(i)))**0.82D0
               endif !iwbl             
 
@@ -2437,7 +2450,7 @@
         if(it==iths_main+1) write(12,*)'Cd min/max at 1st step= ',minval(Cdp),maxval(Cdp)
 
 !       Output warning for WBL if iteration didn't converge
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
         if(iwbl==1) then
            ltmp1(1)=ltmp
            call mpi_reduce(ltmp1,ltmp2,1,MPI_LOGICAL,MPI_LOR,0,comm,ierr)
@@ -2466,8 +2479,8 @@
       endif
 
 !     SAV const
-      sav_cfk=0.07d0 !Shimizu & Tsujimoto (1994)
-      sav_cfpsi=0.16d0
+      veg_cfk=0.07d0 !Shimizu & Tsujimoto (1994)
+      veg_cfpsi=0.16d0
 
 !$OMP parallel default(shared) private(i,vmax,vmin,tmin,k,drhodz,bvf,k1,k2,dudz,dvdz,shear2, &
 !$OMP rich,j,u_taus,u_taub,nlev,klev,h1d,SS1d,NN1d,ztmp, &
@@ -2477,7 +2490,7 @@
 !$OMP toth,z0s,z0b, &
 !$OMP tmp,dzz,shearbt,rzbt,q2ha,xlha,cpsi3,zctr2,dists,distb,fwall,cpsi2p,xlmax,q2fs,q2bot,xlbot, &
 !$OMP tmp0,zsurf,xlfs,nqdim,kin,alow,bdia,cupp,gam2,prod,buoy,diss,soln2,gam,q2tmp,psi_n,psi_n1, &
-!$OMP q2l,xltmp,upper,xl_max,vd,td,qd1,qd2,zt,sav_prod,zz1,zrat,ub2,vb2,vmag1,vmag2)
+!$OMP q2l,xltmp,upper,xl_max,vd,td,qd1,qd2,zt,veg_prod,zz1,zrat,ub2,vb2,vmag1,vmag2)
 
       if(nchi/=0) then
 !$OMP   do
@@ -2496,7 +2509,7 @@
         tmp=sqrt(uu2(kbp(i)+1,i)**2.d0+vv2(kbp(i)+1,i)**2.d0)
         tau_bot_node(1,i)=prho(kbp(i)+1,i)*Cdp(i)*tmp*uu2(kbp(i)+1,i) !unit: kg/m/s^2 (Pa)
         tau_bot_node(2,i)=prho(kbp(i)+1,i)*Cdp(i)*tmp*vv2(kbp(i)+1,i)
-        tau_bot_node(3,i)=prho(kbp(i)+1,i)*Cdp(i)*tmp
+        tau_bot_node(3,i)=prho(kbp(i)+1,i)*Cdp(i)*tmp*tmp
       enddo !i
 !$OMP end do
 
@@ -2645,6 +2658,11 @@
           !u_taub=(-(1.d0/cw)*wave_sbftot(j)/rho0 +
           !(1.d0/cw)*sqrt(taub_wc(j))**3)**(1./3.) !opt2
           !u_taub=((1.d0/cw)*sqrt(taub_wc(j))**3)**(1./3.) !opt3
+#elif  USE_WW3
+!Error:
+          u_taus=0.5d0*16.6d0**(2.d0/3.d0)*turbinj*sqrt(sqrt(wave_ocean_flux_x(j)**2.d0+ &
+     &wave_ocean_flux_y(j)**2.d0)) !m/s
+          u_taub=sqrt(taub_wc(j))
 #else
           u_taus=sqrt(sqrt(tau(1,j)**2.d0+tau(2,j)**2.d0))
 !          u_taub=sqrt(Cdp(j)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0))
@@ -2701,10 +2719,14 @@
 !          h1d(0)=h1d(1)
           toth=eta2(j)+dp(j)
 !         surface and bottom roughness length (m)
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
           ! alphaw set in param.nml
           if (alphaw .gt. 0.d0) then
+#ifdef USE_WWM
             z0s=alphaw * out_wwm(j,1)  ! e.g. Moghimi et al. (OM, 2013)
+#else
+            z0s=alphaw * wave_hs(j)  ! e.g. Moghimi et al. (OM, 2013)
+#endif
           else
             z0s=abs(alphaw)
           endif
@@ -2786,7 +2808,7 @@
 
 !       Wet node (and >1 layer); compute layer thickness etc.
 !       Error: use ufg?
-        zt=znl(kbp(j),j)+sav_h(j) !top of SAV
+        zt=znl(kbp(j),j)+veg_h(j) !top of SAV
         do k=kbp(j)+1,nvrt
           dzz(k)=znl(k,j)-znl(k-1,j)
           dudz=(uu2(k,j)-uu2(k-1,j))/dzz(k)
@@ -2801,16 +2823,16 @@
           xlha(k)=(xl(k,j)+xl(k-1,j))/2.d0
 
           !SAV production term \alpha*|u|^3*Hev()
-          sav_prod(k)=0.d0 !init @half level
-          if(isav==1.and.zt>znl(k-1,j)) then !partial or full SAV layer
+          veg_prod(k)=0.d0 !init @half level
+          if(iveg==1.and.zt>znl(k-1,j)) then !partial or full SAV layer
             zz1=min(zt,znl(k,j))
             zrat=(zz1-znl(k-1,j))/(znl(k,j)-znl(k-1,j)) !\in (0,1]
             ub2=(1.d0-zrat)*uu2(k-1,j)+zrat*uu2(k,j) !@top of SAV layer
             vb2=(1.d0-zrat)*vv2(k-1,j)+zrat*vv2(k,j)
             vmag2=sqrt(ub2*ub2+vb2*vb2)             
             vmag1=sqrt(uu2(k-1,j)**2.d0+vv2(k-1,j)**2.d0)
-            sav_prod(k)=sav_alpha(j)*(vmag1**3.d0+vmag2**3.d0)/2.d0
-          endif !isav
+            veg_prod(k)=veg_alpha(j)*(vmag1**3.d0+vmag2**3.d0)/2.d0
+          endif !iveg
 
 !         Compute c_psi_3
           if(mid.eq.'MY') then
@@ -2884,6 +2906,11 @@
 
 #endif
 
+#ifdef USE_WW3
+        q2fs=q2fs+0.5d0*16.6d0**(2.d0/3.d0)*turbinj*sqrt(wave_ocean_flux_x(j)**2.d0+ &
+     &wave_ocean_flux_y(j)**2.d0)
+#endif
+
         q2bot = 0.5d0*16.6d0**(2.d0/3.d0)*Cdp(j)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0)
         ! Limiters
         q2fs  = max(q2fs,q2min)
@@ -2898,6 +2925,8 @@
 #ifdef USE_WWM
         ! 0.6Hs, following Terray et al. (1996), and used by Bennis et al. (2014) and Moghimi et al. (2016)
         zsurf = 0.6d0*out_wwm(j,1) 
+#elif  USE_WW3
+        zsurf = 0.6d0*wave_hs(j) 
 #else
         zsurf = dzz(nvrt)
 #endif
@@ -2920,7 +2949,7 @@
             bdia(kin)=bdia(kin)+dzz(k+1)/3.d0+tmp
             cupp(kin)=cupp(kin)+dzz(k+1)/6.d0-tmp
             gam2(kin)=gam2(kin)+dzz(k+1)/6.d0*(2.d0*q2(k,j)+q2(k+1,j))
-            prod=(dfv(k+1,j)+dfv(k,j))/2.d0*shearbt(k+1)+sav_cfk*sav_prod(k+1) !add SAV
+            prod=(dfv(k+1,j)+dfv(k,j))/2.d0*shearbt(k+1)+veg_cfk*veg_prod(k+1) !add SAV
             buoy=(dfh(k+1,j)+dfh(k,j))/2.d0*rzbt(k+1)
             if(prod+buoy>=0.d0) then
               gam2(kin)=gam2(kin)+dt*dzz(k+1)/2.d0*(prod+buoy)
@@ -2939,7 +2968,7 @@
             bdia(kin)=bdia(kin)+dzz(k)/3.d0+tmp
             alow(kin)=alow(kin)+dzz(k)/6.d0-tmp
             gam2(kin)=gam2(kin)+dzz(k)/6.d0*(2.d0*q2(k,j)+q2(k-1,j))
-            prod=(dfv(k,j)+dfv(k-1,j))/2.d0*shearbt(k)+sav_cfk*sav_prod(k)
+            prod=(dfv(k,j)+dfv(k-1,j))/2.d0*shearbt(k)+veg_cfk*veg_prod(k)
             buoy=(dfh(k,j)+dfh(k-1,j))/2.d0*rzbt(k)
             if(prod+buoy>=0.d0) then
               gam2(kin)=gam2(kin)+dt*dzz(k)/2.d0*(prod+buoy)
@@ -2989,7 +3018,7 @@
             psi_n=cmiu0**rpub*q2(k,j)**rmub*xl(k,j)**rnub !psi^n_{j,k}
             psi_n1=cmiu0**rpub*q2(k+1,j)**rmub*xl(k+1,j)**rnub !psi^n_{j,k+1}
             gam2(kin)=gam2(kin)+dzz(k+1)/6.d0*(2.d0*psi_n+psi_n1)
-            prod=cpsi1*(dfv(k+1,j)+dfv(k,j))/2.d0*shearbt(k+1)+sav_cfpsi*sav_prod(k+1) !add SAV
+            prod=cpsi1*(dfv(k+1,j)+dfv(k,j))/2.d0*shearbt(k+1)+veg_cfpsi*veg_prod(k+1) !add SAV
             buoy=cpsi3(k+1)*(dfh(k+1,j)+dfh(k,j))/2.d0*rzbt(k+1)
             if(prod+buoy>=0.d0) then
               gam2(kin)=gam2(kin)+dt*dzz(k+1)/2.d0*(prod+buoy)*(psi_n+psi_n1)/2.d0/q2ha(k+1)
@@ -3012,7 +3041,7 @@
             psi_n=cmiu0**rpub*q2(k,j)**rmub*xl(k,j)**rnub !psi^n_{j,k}
             psi_n1=cmiu0**rpub*q2(k-1,j)**rmub*xl(k-1,j)**rnub !psi^n_{j,k-1}
             gam2(kin)=gam2(kin)+dzz(k)/6.d0*(2.d0*psi_n+psi_n1)
-            prod=cpsi1*(dfv(k,j)+dfv(k-1,j))/2.d0*shearbt(k)+sav_cfpsi*sav_prod(k) !add SAV
+            prod=cpsi1*(dfv(k,j)+dfv(k-1,j))/2.d0*shearbt(k)+veg_cfpsi*veg_prod(k) !add SAV
             buoy=cpsi3(k)*(dfh(k,j)+dfh(k-1,j))/2.d0*rzbt(k)
             if(prod+buoy>=0.d0) then
               gam2(kin)=gam2(kin)+dt*dzz(k)/2.d0*(prod+buoy)*(psi_n+psi_n1)/2.d0/q2ha(k)
@@ -3221,8 +3250,12 @@
 
 !        xlfs=max(xlmin2(j),xlsc0(j)*dzz(nvrt)*0.4_rkind) 
 !modif AD :: modification of mixing layer as Delpey et al.
+#if defined USE_WWM || defined USE_WW3
 #ifdef USE_WWM
         tmp0=out_wwm(j,1) !Hs
+#else
+        tmp0=wave_hs(j) !Hs
+#endif
         zsurf=0.2d0*tmp0
 #else
         zsurf=dzz(nvrt)
@@ -3733,7 +3766,6 @@
                   call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),sv2(:,jsj),swild(2),ibelow)
                 endif !isd/=i
 
-!new37
                 if(ics==1) then
                   swild10(i,1)=swild(1); swild10(i,2)=swild(2)
                 else
@@ -3830,7 +3862,6 @@
                     !call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),swild98(2,:,jsj),swild(2),ibelow)
                   endif !isd/=i
 
-!new37
                   if(ics==1) then
                     swild10(i,1)=swild(1); swild10(i,2)=swild(2)
                   else
@@ -3915,7 +3946,7 @@
                   call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),su2(:,jsj),swild(1),ibelow)
                   call vinter(1,nvrt,1,zs(k,j),kbs(jsj),nvrt,k,zs(:,jsj),sv2(:,jsj),swild(2),ibelow)
                 endif !isd/=i
-                !in ll frame if ics=2; new37
+                !in ll frame if ics=2 
                 if(ics==1) then
                   swild10(i,1)=swild(1); swild10(i,2)=swild(2)
                 else
@@ -4175,7 +4206,7 @@
         !swild_tmp to store global coord. of the starting side
         swild_tmp(1)=xcj(isd0); swild_tmp(2)=ycj(isd0); swild_tmp(3)=zcj(isd0)
         !swild10_tmp to store frame at starting pt for ics=2 (not used for ics=1)
-        !Use sframe2; new37
+        !Use sframe2 
         swild10_tmp(1:3,1:3)=sframe2(:,:,i) !pframe(:,:,isidenode(1,isd0)) 
 
         do j=jmin,nvrt 
@@ -4237,7 +4268,6 @@
 !              dudy=dot_product(uu2(j,elnode(1:i34(ie),ie)),dldxy(1:i34(ie),2,ie))
 !              dvdx=dot_product(vv2(j,elnode(1:i34(ie),ie)),dldxy(1:i34(ie),1,ie))
 !              dvdy=dot_product(vv2(j,elnode(1:i34(ie),ie)),dldxy(1:i34(ie),2,ie))
-!new37
               do jj=1,i34(ie)
                 nd0=elnode(jj,ie)
                 if(ics==1) then
@@ -4574,7 +4604,6 @@
                     id=elside(nxq(i34(ie)-1,ll,i34(ie)),ie)
                   endif
                   kin=max(k,kbs(id))
-!new37
                   if(ics==1) then
                     suru=suru+swild96(1,kin,id)
                     surv=surv+swild96(2,kin,id)
@@ -4810,7 +4839,6 @@
               call vinter(1,nvrt,1,znl(k,i),kbs(isd),nvrt,k,zs(:,isd),gam,swild(1),ibelow)
               gam(:)=sv2(:,isd)
               call vinter(1,nvrt,1,znl(k,i),kbs(isd),nvrt,k,zs(:,isd),gam,swild(2),ibelow)
-!new37
               if(ics==1) then
                 swild10(m,1)=swild(1) !u@side @nodal level
                 swild10(m,2)=swild(2) !v
@@ -4930,7 +4958,6 @@
         n1=isidenode(1,i); n2=isidenode(2,i)
         do k=kbs(i),nvrt
 !          if(isbs(i)==0) then !internal
-!new37
           if(ics==1) then
             sdbt(1,k,i)=su2(k,i)-dt*(bcc(1,k,n1)+bcc(1,k,n2))/2.d0-dt*swild2(k,1)
             sdbt(2,k,i)=sv2(k,i)-dt*(bcc(2,k,n1)+bcc(2,k,n2))/2.d0-dt*swild2(k,2)
@@ -5027,9 +5054,9 @@
         enddo !j
       enddo !i=1,nope_global
 
-!$OMP parallel default(shared) private(i,n1,n2,htot,tmp,k,sav_h_sd,sav_nv_sd,sav_alpha_sd, &
+!$OMP parallel default(shared) private(i,n1,n2,htot,tmp,k,veg_h_sd,veg_nv_sd,veg_alpha_sd, &
 !$OMP bigu1,bigv1,uuint,zctr2,zz1,zrat,ub2,vb2,ubar1,ubar2,vmag1,vmag2,bb1,bb2,tmp1, &
-!$OMP tmpx2,tmpy2,sav_c)
+!$OMP tmpx2,tmpy2,veg_c)
 
 !     Compute b.c. flag for all nodes for the matrix
 !!$OMP do 
@@ -5046,7 +5073,7 @@
 !...
 !$OMP workshare
       chi=0.d0; chi2=0.d0; hhat=0.d0; bigu=0.d0 !; hhat2=0
-      sav_c2=0.d0; sav_beta=0.d0
+      veg_c2=0.d0; veg_beta=0.d0
 !$OMP end workshare
 
 
@@ -5059,9 +5086,9 @@
         n2=isidenode(2,i)
         htot=(eta2(n1)+eta2(n2))/2.d0+dps(i)
         if(htot<=0.d0) call parallel_abort('STEP: htot(9.1)')
-        sav_h_sd=sum(sav_h(isidenode(1:2,i)))/2.d0
-        sav_nv_sd=sum(sav_nv(isidenode(1:2,i)))/2.d0
-        sav_alpha_sd=sum(sav_alpha(isidenode(1:2,i)))/2.d0
+        veg_h_sd=sum(veg_h(isidenode(1:2,i)))/2.d0
+        veg_nv_sd=sum(veg_nv(isidenode(1:2,i)))/2.d0
+        veg_alpha_sd=sum(veg_alpha(isidenode(1:2,i)))/2.d0
 
 !	bigu1,2 (in ll if ics=2)
         bigu(1,i)=0.d0 !U^n_x
@@ -5075,13 +5102,13 @@
         vmag1=sqrt(sdbt(1,kbs(i)+1,i)**2.d0+sdbt(2,kbs(i)+1,i)**2.d0)
         chi2(i)=Cd(i)*vmag1 !sqrt(sdbt(1,kbs(i)+1,i)**2+sdbt(2,kbs(i)+1,i)**2)
         chi(i)=chi2(i)
-        if(isav==1) chi(i)=chi(i)/(1.d0+sav_alpha_sd*vmag1*dt)
+        if(iveg==1) chi(i)=chi(i)/(1.d0+veg_alpha_sd*vmag1*dt)
 
-!       Calc consts in SAV model; make sure sav_[c2,beta]=0 at 2D, dry
+!       Calc consts in SAV model; make sure veg_[c2,beta]=0 at 2D, dry
 !       side, and emergent side
         uuint=0.d0 !\int_{-h}^{z_v} |u|dz / H^\alpha = \bar{|u|}^\alpha
-        if(isav==1.and.nvrt-kbs(i)>1.and.sav_h_sd>0.d0) then !3D wet side with SAV
-          zctr2=zs(kbs(i),i)+sav_h_sd !top of SAV 
+        if(iveg==1.and.nvrt-kbs(i)>1.and.veg_h_sd>0.d0) then !3D wet side with SAV
+          zctr2=zs(kbs(i),i)+veg_h_sd !top of SAV 
           do k=kbs(i),nvrt-1
             if(zctr2>zs(k,i)) then !partial or full SAV layer
               zz1=min(zctr2,zs(k+1,i))
@@ -5096,29 +5123,29 @@
               uuint=uuint+(zz1-zs(k,i))*(ubar1+ubar2)/2.d0
             endif
           enddo !k
-          uuint=uuint/min(htot,sav_h_sd) !>=0
+          uuint=uuint/min(htot,veg_h_sd) !>=0
 
 !          vmag2=bigu(1,i)**2+bigu(2,i)**2
 !          bb1=(bigu1*bigu(1,i)+bigv1*bigu(2,i))/max(small1*1.e-2,vmag2) !a'
 !          bb2=(-bigu1*bigu(2,i)+bigv1*bigu(1,i))/max(small1*1.e-2,vmag2) !b'
 
-          sav_c2(i)=sav_alpha_sd*dt*uuint !>=0
-          if(sav_h_sd<0.99d0*htot) then !3D wet submergent side with SAV
-            !tmpx1=sav_alpha_sd*dt*uuint !>=0
-            !sav_c=/(1+tmpx1)
+          veg_c2(i)=veg_alpha_sd*dt*uuint !>=0
+          if(veg_h_sd<0.99d0*htot) then !3D wet submergent side with SAV
+            !tmpx1=veg_alpha_sd*dt*uuint !>=0
+            !veg_c=/(1+tmpx1)
   
             tmpx2=max(1.d-5,chi2(i)*vmag1/grav/htot) !energy gradient
             !\beta_2; arguments checked
-            tmpy2=sqrt(sqrt(sav_nv_sd)/sav_h_sd)*(-0.32d0-0.85d0*log10((htot-sav_h_sd)/sav_h_sd*tmpx2))
-            sav_beta(i)=exp(tmpy2*(zctr2-zs(kbs(i)+1,i)))-1.d0 !\beta
-            sav_beta(i)=min(10.d0,max(sav_beta(i),0.d0))
-          endif !sav_h_sd
-        endif !isav==1.
+            tmpy2=sqrt(sqrt(veg_nv_sd)/veg_h_sd)*(-0.32d0-0.85d0*log10((htot-veg_h_sd)/veg_h_sd*tmpx2))
+            veg_beta(i)=exp(tmpy2*(zctr2-zs(kbs(i)+1,i)))-1.d0 !\beta
+            veg_beta(i)=min(10.d0,max(veg_beta(i),0.d0))
+          endif !veg_h_sd
+        endif !iveg==1.
 
         !hhat is \breve{H} in notes
         if(nvrt-kbs(i)==1) then !2D
           tmp=htot+chi2(i)*dt
-          if(isav==1) tmp=tmp+sav_alpha_sd*vmag1*htot*dt
+          if(iveg==1) tmp=tmp+veg_alpha_sd*vmag1*htot*dt
           if(tmp<=0.d0) then
             write(errmsg,*)'Impossible dry 53:',tmp,htot,iplg(isidenode(1:2,i))
             call parallel_abort(errmsg)
@@ -5127,14 +5154,14 @@
         else !3D
           hhat(i)=htot-chi(i)*dt
 !          hhat(i)=hhat2(i)
-          if(isav==1) then
-            if(sav_h_sd<0.99d0*htot) then !submergent
-              sav_c=sav_c2(i)/(1.d0+sav_c2(i))
-              hhat(i)=hhat(i)-sav_c*(sav_h_sd+sav_beta(i)*chi(i)*dt)
+          if(iveg==1) then
+            if(veg_h_sd<0.99d0*htot) then !submergent
+              veg_c=veg_c2(i)/(1.d0+veg_c2(i))
+              hhat(i)=hhat(i)-veg_c*(veg_h_sd+veg_beta(i)*chi(i)*dt)
             else !emergent
-              hhat(i)=hhat(i)/(1.d0+sav_c2(i)) !sav_alpha_sd*uuint*dt)
-            endif !sav_h_sd
-          endif !isav
+              hhat(i)=hhat(i)/(1.d0+veg_c2(i)) !veg_alpha_sd*uuint*dt)
+            endif !veg_h_sd
+          endif !iveg
 
 !	  Enforce positivity for 3D model
           if(ihhat==1) hhat(i)=max(0._rkind,hhat(i))
@@ -5345,7 +5372,6 @@
               call vinter(1,nvrt,1,(zs(k,i)+zs(k-1,i))/2.d0,kbe(ie)+1,nvrt,k,gam,gam2,swild(1),ibelow)
               gam2(kbe(ie)+1:nvrt)=dr_dxy(2,kbe(ie)+1:nvrt,ie)
               call vinter(1,nvrt,1,(zs(k,i)+zs(k-1,i))/2.d0,kbe(ie)+1,nvrt,k,gam,gam2,swild(2),ibelow)
-!new37
               if(ics==2) then !to sframe2
                 call project_hvec(swild(1),swild(2),eframe(:,:,ie),sframe2(:,:,i),tmp1,tmp2)
                 swild(1)=tmp1
@@ -5394,12 +5420,12 @@
       swild95(:,:,2)=bcc(2,:,:)
 #endif
 
-!     Elem. average ghat1 (in eframe if ics=2). Dimension: m^2/s
+!     Elem. average ghat1 (in eframe if ics=2; \breve{G} in notes). Dimension: m^2/s.
 !$OMP parallel do default(shared) private(i,tau_x,tau_y,detadx,detady,dprdx,dprdy,detpdx, &
 !$OMP detpdy,chigamma,ubstar,vbstar,h_bar,bigf1,bigf2,botf1,botf2,big_ubstar,big_vbstar, &
 !$OMP av_df,j,nd,isd,htot,cff1,cff2,tmp1,tmp2,k,rs1,rs2,swild10,horx,hory,swild2,swild, &
 !$OMP itmp1,tmpx1,tmpx2,tmpy1,tmpy2,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi,cff3, &
-!$OMP sav_h_sd,zctr2,sav_c,xtmp,ytmp,wx2,wy2,zrat,bigfa1,bigfa2,grav3,vn1,vn2,tt1,ss1,n1,n2) 
+!$OMP veg_h_sd,zctr2,veg_c,xtmp,ytmp,wx2,wy2,zrat,bigfa1,bigfa2,grav3,vn1,vn2,tt1,ss1,n1,n2) 
       do i=1,nea
         ghat1(1,i)=0.d0 !init
         ghat1(2,i)=0.d0
@@ -5444,42 +5470,43 @@
           !Side
           isd=elside(j,i)
           htot=dps(isd)+sum(eta2(isidenode(1:2,isd)))/2.d0 !>0
-          sav_h_sd=sum(sav_h(isidenode(1:2,isd)))/2.d0
-          zctr2=zs(kbs(isd),isd)+sav_h_sd !top of SAV`
+          veg_h_sd=sum(veg_h(isidenode(1:2,isd)))/2.d0
+          zctr2=zs(kbs(isd),isd)+veg_h_sd !top of SAV
           if(nvrt==kbs(isd)+1) then !2D
             !coefficients applied to 2/3D case 
             cff1=hhat(isd)/htot 
             cff2=0.d0
             cff3=0.d0
           else !3D
+            !Init for no-veg case
             cff1=1.d0
             cff2=1.d0
             cff3=0.d0
-            if(isav==1) then
-              if(sav_h_sd<0.99d0*htot) then !submergent (including no SAV)
+            if(iveg==1) then
+              if(veg_h_sd<0.99d0*htot) then !submergent 
                 cff1=1
-                sav_c=sav_c2(isd)/(1.d0+sav_c2(isd))
-                cff2=1.d0+sav_beta(isd)*sav_c
-                cff3=sav_c
+                veg_c=veg_c2(isd)/(1.d0+veg_c2(isd))
+                cff2=1.d0+veg_beta(isd)*veg_c
+                cff3=veg_c
               else !emergent
-                cff1=1.d0/(1.d0+sav_c2(isd))
+                cff1=1.d0/(1.d0+veg_c2(isd))
                 cff2=cff1
                 cff3=0.d0
-              endif !sav_h_sd
-            endif !isav
+              endif !veg_h_sd
+            endif !iveg
           endif !2/3D
           av_cff1=av_cff1+cff1/real(i34(i),rkind)
           av_cff2=av_cff2+cff2/real(i34(i),rkind)
           av_cff3=av_cff3+cff3/real(i34(i),rkind)
           av_cff2_chi=av_cff2_chi+cff2*chi(isd)/real(i34(i),rkind)
           av_cff3_chi=av_cff3_chi+cff3*chi(isd)/real(i34(i),rkind)
-          av_df=av_df+min(htot,sav_h_sd)/htot/real(i34(i),rkind)
+          av_df=av_df+min(htot,veg_h_sd)/htot/real(i34(i),rkind)
 
           !btrack values: U^\star, U^{\star\alpha}
-          tmp1=0.d0; tmp2=0.d0
-          xtmp=0.d0; ytmp=0.d0
+          tmp1=0.d0; tmp2=0.d0 !U^\star
+          xtmp=0.d0; ytmp=0.d0 !U^{\star\alpha}
           do k=kbs(isd)+1,nvrt 
-            if(nvrt==kbs(isd)+1) then  !2D
+            if(nvrt==kbs(isd)+1) then  !2D; no need to compute U^{\star\alpha}
               tmp1=tmp1+sdbt(1,nvrt,isd)*(zs(k,isd)-zs(k-1,isd))
               tmp2=tmp2+sdbt(2,nvrt,isd)*(zs(k,isd)-zs(k-1,isd))
             else !3D
@@ -5487,7 +5514,7 @@
               wy2=(sdbt(2,k,isd)+sdbt(2,k-1,isd))/2.d0*(zs(k,isd)-zs(k-1,isd))
               tmp1=tmp1+wx2
               tmp2=tmp2+wy2
-              if(isav==1.and.zctr2>zs(k-1,isd)) then
+              if(iveg==1.and.zctr2>zs(k-1,isd)) then
                 zrat=min(1.d0,(zctr2-zs(k-1,isd))/(zs(k,isd)-zs(k-1,isd)))
                 xtmp=xtmp+wx2*zrat
                 ytmp=ytmp+wy2*zrat
@@ -5495,7 +5522,7 @@
             endif !2/3D
           enddo !k
 
-!new37
+          !Add btrack & surface stress terms to \breve{G} first
           if(ics==1) then
             ghat1(1,i)=ghat1(1,i)+cff1*tmp1-cff3*xtmp
             ghat1(2,i)=ghat1(2,i)+cff1*tmp2-cff3*ytmp
@@ -5524,13 +5551,15 @@
           ghat1(2,i)=ghat1(2,i)-chi(isd)*dt*cff2*vbstar+dt*cff1*tau_y
 
           !All terms in F,F^\alpha,f_b except baroclinic
+          !F, f_b: all explicit terms excluding vegetation 
+          !F^\alpha=\int_{-h}^z_v f dz (f ncludes all explicit terms except for vegetation)
           !Only need to calculate F^\alpha for 3D sides (but init=0) 
-          bigf1=cori(isd)*bigu(2,isd)
+          bigf1=cori(isd)*bigu(2,isd) !F_x
           bigf2=-cori(isd)*bigu(1,isd)
-          botf1=cori(isd)*sv2(kbs(isd)+1,isd)
+          botf1=cori(isd)*sv2(kbs(isd)+1,isd) !f_b_x
           botf2=-cori(isd)*su2(kbs(isd)+1,isd)
           bigfa1=0.d0; bigfa2=0.d0 !F^\alpha
-          if(isav==1.and.nvrt>kbs(isd)+1) then
+          if(iveg==1.and.nvrt>kbs(isd)+1) then !3D
             do k=kbs(isd)+1,nvrt
               if(zctr2>zs(k-1,isd)) then
                 wx2=(zs(k,isd)-zs(k-1,isd))*(su2(k,isd)+su2(k-1,isd))/2.d0
@@ -5540,7 +5569,7 @@
                 bigfa2=bigfa2-cori(isd)*wx2*zrat
               endif !zctr2 
             enddo !k
-          endif !isav
+          endif !iveg
 
 !1006
 #ifdef USE_SED 
@@ -5563,14 +5592,12 @@
             bigf1=bigf1+wx2
             bigf2=bigf2+wy2
 
-            if(isav==1.and.nvrt>kbs(isd)+1.and.zctr2>zs(k-1,isd)) then
+            if(iveg==1.and.nvrt>kbs(isd)+1.and.zctr2>zs(k-1,isd)) then
               zrat=min(1.d0,(zctr2-zs(k-1,isd))/(zs(k,isd)-zs(k-1,isd)))
               bigfa1=bigfa1+wx2*zrat
               bigfa2=bigfa2+wy2*zrat
-            endif !isav
+            endif !iveg
           enddo !k
-!          bigf1=bigf1+rs1 
-!          bigf2=bigf2+rs2
           botf1=botf1+wwave_force(1,kbs(isd)+1,isd) 
           botf2=botf2+wwave_force(2,kbs(isd)+1,isd)
 #endif /*USE_WWM*/
@@ -5580,26 +5607,22 @@
             swild10(k,1)=d2uv(1,k,isd)
             swild10(k,2)=d2uv(2,k,isd)
           enddo !k
-!          horx=0
-!          hory=0
           do k=kbs(isd)+1,nvrt
             wx2=(zs(k,isd)-zs(k-1,isd))*(swild10(k,1)+swild10(k-1,1))/2.d0 !(d2uv(1,k,isd)+d2uv(1,k-1,isd))/2
             wy2=(zs(k,isd)-zs(k-1,isd))*(swild10(k,2)+swild10(k-1,2))/2.d0 !(d2uv(2,k,isd)+d2uv(2,k-1,isd))/2
             bigf1=bigf1+wx2
             bigf2=bigf2+wy2
 
-            if(isav==1.and.nvrt>kbs(isd)+1.and.zctr2>zs(k-1,isd)) then
+            if(iveg==1.and.nvrt>kbs(isd)+1.and.zctr2>zs(k-1,isd)) then
               zrat=min(1.d0,(zctr2-zs(k-1,isd))/(zs(k,isd)-zs(k-1,isd)))
               bigfa1=bigfa1+wx2*zrat
               bigfa2=bigfa2+wy2*zrat
-            endif !isav
+            endif !iveg
           enddo !k
-!          bigf1=bigf1+horx 
-!          bigf2=bigf2+hory
           botf1=botf1+swild10(kbs(isd)+1,1)
           botf2=botf2+swild10(kbs(isd)+1,2)
 
-!new37
+          !Add to ghat1
           if(ics==2) then
             call project_hvec(bigf1,bigf2,sframe2(:,:,isd),eframe(:,:,i),vn1,vn2)
             bigf1=vn1; bigf2=vn2
@@ -5623,11 +5646,11 @@
         do j=1,i34(i) !side
           isd=elside(j,i)
           htot=dps(isd)+sum(eta2(isidenode(1:2,isd)))/2.d0
-          sav_h_sd=sum(sav_h(isidenode(1:2,isd)))/2.d0
+          veg_h_sd=sum(veg_h(isidenode(1:2,isd)))/2.d0
           bigf1=htot*botf1 
           bigf2=htot*botf2 
-          bigfa1=min(htot,sav_h_sd)*botf1
-          bigfa2=min(htot,sav_h_sd)*botf2
+          bigfa1=min(htot,veg_h_sd)*botf1
+          bigfa2=min(htot,veg_h_sd)*botf2
           tmp1=tmp1+av_cff1*dt*bigf1-av_cff2*chi(isd)*dt*dt*botf1-av_cff3*dt*bigfa1
           tmp2=tmp2+av_cff1*dt*bigf2-av_cff2*chi(isd)*dt*dt*botf2-av_cff3*dt*bigfa2
         enddo !j
@@ -5670,8 +5693,10 @@
           botf2=-grav3/rho0*swild2(kbe(i)+1,2)
           bigfa1=av_df*swild(1) !approx
           bigfa2=av_df*swild(2)
-          ghat1(1,i)=ghat1(1,i)+rampbc*dt*av_cff1*swild(1)-rampbc*dt*dt*av_cff2_chi*botf1-av_cff3*bigfa1
-          ghat1(2,i)=ghat1(2,i)+rampbc*dt*av_cff1*swild(2)-rampbc*dt*dt*av_cff2_chi*botf2-av_cff3*bigfa2
+          ghat1(1,i)=ghat1(1,i)+rampbc*dt*av_cff1*swild(1)-rampbc*dt*dt*av_cff2_chi*botf1- &
+     &rampbc*av_cff3*dt*bigfa1
+          ghat1(2,i)=ghat1(2,i)+rampbc*dt*av_cff1*swild(2)-rampbc*dt*dt*av_cff2_chi*botf2- &
+     &rampbc*av_cff3*dt*bigfa2
         endif !ibc==0
 
 !       Debug
@@ -5791,7 +5816,6 @@
 !	  I_4
           do m=1,i34(ie)
             isd=elside(m,ie)
-!new37
             if(ics==1) then
               swild2(1:2,m)=bigu(1:2,isd)   
             else
@@ -5858,7 +5882,8 @@
             enddo !l
           endif !i34       
 
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
+!Error: Stokes drift should be also inside vegetation terms?
           if(RADFLAG.eq.'VOR'.and.idry_e(ie)==0) then
             sum1=0.d0; sum2=0.d0 !in eframe
             do m=1,i34(ie) !wet sides
@@ -5970,7 +5995,7 @@
               Unbar=bigu(1,isd)*snx(isd)+bigu(2,isd)*sny(isd)
               tmp0=(1-thetai)*dt*distj(isd)*Unbar/2.d0
               !Overwrite tmp0 for vortex formulation
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
               if(RADFLAG.eq.'VOR') then
                 sum1=0.d0 !integral; x-comp.
                 sum2=0.d0 !integral
@@ -6056,7 +6081,7 @@
 
 !     Check symmetry 
 #ifdef DEBUG
-      if(isav==0) then
+      if(iveg==0) then
         do i=1,np
           do j=1,nnp(i)
             nd=indnd(j,i)
@@ -6083,7 +6108,7 @@
 !             write(12,*)'sparsem:',iplg(i),iplg(nd),irank_s,real(sparsem(j,i)),real(sparsem(0,i)),real(sparsem(j,i)/sparsem(0,i))
           enddo !j
         enddo !i=1,np
-      endif !isav
+      endif !iveg
 #endif /*DEBUG*/
 
 #ifdef TIMER2
@@ -6251,7 +6276,6 @@
               do m=1,i34(ie)
                 tmpx=eta2(elnode(m,ie))*dldxy(m,1,ie) !eframe if ics=2
                 tmpy=eta2(elnode(m,ie))*dldxy(m,2,ie)
-!new37
                 if(ics==2) then
                   call project_hvec(tmpx,tmpy,eframe(:,:,ie),sframe2(:,:,j),vn1,vn2)
                   tmpx=vn1; tmpy=vn2
@@ -6273,7 +6297,6 @@
                 tmpx3=etp(nd)*dldxy(m,1,ie)
                 tmpy3=etp(nd)*dldxy(m,2,ie)
             
-!new37
                 if(ics==2) then
                   call project_hvec(tmpx1,tmpy1,eframe(:,:,ie),sframe2(:,:,j),vn1,vn2)
                   tmpx1=vn1; tmpy1=vn2
@@ -6347,7 +6370,7 @@
 
 !$OMP parallel default(shared) private(j,k,node1,node2,htot,taux2,tauy2,hat_gam_x, &
 !$OMP hat_gam_y,tmp1,tmp2,dzz,dfz,ndim,kin,alow,bdia,cupp,tmp,rrhs,soln,gam,dep, &
-!$OMP swild,uths,vths,vnorm,etam,vtan,jblock,jface,dot1,ss,sav_h_sd,sav_alpha_sd, &
+!$OMP swild,uths,vths,vnorm,etam,vtan,jblock,jface,dot1,ss,veg_h_sd,veg_alpha_sd, &
 !$OMP zctr2,cff1,zz1,zrat,ub2,vb2,vmag1,vmag2,vn1,vn2,tt1,ss1)
 
 !$OMP workshare
@@ -6374,8 +6397,8 @@
 !	Wet sides
         node1=isidenode(1,j)
         node2=isidenode(2,j)
-        sav_h_sd=sum(sav_h(isidenode(1:2,j)))/2.d0
-        sav_alpha_sd=sum(sav_alpha(isidenode(1:2,j)))/2.d0
+        veg_h_sd=sum(veg_h(isidenode(1:2,j)))/2.d0
+        veg_alpha_sd=sum(veg_alpha(isidenode(1:2,j)))/2.d0
 !       ll frame at side
 !        swild10(1:3,1:3)=(pframe(:,:,node1)+pframe(:,:,node2))/2
 
@@ -6390,7 +6413,6 @@
             call parallel_abort(errmsg)
           endif
 !          del=hhat(j)*hhat(j)+(theta2*cori(j)*dt*htot)**2 !delta > 0
-          !new37
           if(ics==1) then
             taux2=(tau(1,node1)+tau(1,node2))/2.d0
             tauy2=(tau(2,node1)+tau(2,node2))/2.d0
@@ -6441,7 +6463,7 @@
 
 !	Coefficient matrix 
         ndim=nvrt-kbs(j)
-        zctr2=zs(kbs(j),j)+sav_h_sd !top of SAV
+        zctr2=zs(kbs(j),j)+veg_h_sd !top of SAV
         do k=kbs(j)+1,nvrt
           kin=k-kbs(j) !eq. #
           alow(kin)=0.d0 
@@ -6449,15 +6471,15 @@
           bdia(kin)=0.d0
           if(k<nvrt) then
             cff1=1.d0 !init \bar{c^{k+1}}
-            if(isav==1.and.zctr2>zs(k,j)) then
+            if(iveg==1.and.zctr2>zs(k,j)) then
               zz1=min(zctr2,zs(k+1,j))
               zrat=(zz1-zs(k,j))/(zs(k+1,j)-zs(k,j)) !\in (0,1]
               ub2=(1.d0-zrat)*swild98(1,k,j)+zrat*swild98(1,k+1,j) !u@top level
               vb2=(1.d0-zrat)*swild98(2,k,j)+zrat*swild98(2,k+1,j)
               vmag2=sqrt(ub2*ub2+vb2*vb2)              
               vmag1=sqrt(swild98(1,k,j)**2.d0+swild98(2,k,j)**2.d0)
-              cff1=cff1+sav_alpha_sd*dt*(vmag1+vmag2)/2.d0
-            endif !isav
+              cff1=cff1+veg_alpha_sd*dt*(vmag1+vmag2)/2.d0
+            endif !iveg
 
             tmp=dt*dfz(k+1)/dzz(k+1)
             cupp(kin)=cupp(kin)+cff1*dzz(k+1)/6.d0-tmp
@@ -6466,15 +6488,15 @@
 
           if(k>kbs(j)+1) then
             cff1=1.d0 !init \bar{c^k}
-            if(isav==1.and.zctr2>zs(k-1,j)) then
+            if(iveg==1.and.zctr2>zs(k-1,j)) then
               zz1=min(zctr2,zs(k,j))
               zrat=(zz1-zs(k-1,j))/(zs(k,j)-zs(k-1,j)) !\in (0,1]
               ub2=(1.d0-zrat)*swild98(1,k-1,j)+zrat*swild98(1,k,j) !u@top layer
               vb2=(1.d0-zrat)*swild98(2,k-1,j)+zrat*swild98(2,k,j)
               vmag2=sqrt(ub2*ub2+vb2*vb2)
               vmag1=sqrt(swild98(1,k-1,j)**2.d0+swild98(2,k-1,j)**2.d0)
-              cff1=cff1+sav_alpha_sd*dt*(vmag1+vmag2)/2.d0
-            endif !isav
+              cff1=cff1+veg_alpha_sd*dt*(vmag1+vmag2)/2.d0
+            endif !iveg
 
             tmp=dt*dfz(k)/dzz(k)
             alow(kin)=alow(kin)+cff1*dzz(k)/6.d0-tmp
@@ -6517,7 +6539,6 @@
             endif
 !-----------------------------
           else !k=nvrt
-!new37
             if(ics==1) then            
               taux2=(tau(1,node1)+tau(1,node2))/2.d0
               tauy2=(tau(2,node1)+tau(2,node2))/2.d0
@@ -6661,7 +6682,7 @@
             if(islip==0) then !free slip
               vnorm=0.d0 !for most cases
               !Normal component from vortex formulation
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
               if(RADFLAG.eq.'VOR') then
                 vnorm=stokes_hvel_side(1,k,j)*snx(j)+stokes_hvel_side(2,k,j)*sny(j)+ &
      &roller_stokes_hvel_side(1,k,j)*snx(j)+roller_stokes_hvel_side(2,k,j)*sny(j)
@@ -6742,7 +6763,6 @@
                   kin=max(k,kbs(id)+1)
                 endif
 
-!new37
                 if(ics==1) then
                   suru=suru+su2(kin,id) !utmp
                   surv=surv+sv2(kin,id) !vtmp
@@ -6894,7 +6914,7 @@
 !     Add Stokes drift to horizontal vel for wvel and transport; will restore
 !     after transport. Temporarily save original Eulerian vel s[uv]2 as bcc for
 !     F.V. calculation below
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
       if(RADFLAG.eq.'VOR') then
         bcc(1,:,1:nsa)=su2
         bcc(2,:,1:nsa)=sv2
@@ -6914,7 +6934,7 @@
 
 !$OMP workshare
       we=0.d0 !for dry and below bottom levels; in eframe if ics=2
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
       dr_dxy=0.d0 !Eulerian wvel
 #endif
       flux_adv_vface=-1.d34 !used in transport; init. as flags
@@ -6973,11 +6993,10 @@
         ubar2=0.d0; vbar2=0.d0 !average bottom Eulerian hvel
         do m=1,i34(i) !side
           isd=elside(m,i)
-!new37
           if(ics==1) then
             ubar=ubar+su2(kbs(isd),isd)*i34inv 
             vbar=vbar+sv2(kbs(isd),isd)*i34inv
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
             ubar2=ubar2+bcc(1,kbs(isd),isd)*i34inv
             vbar2=vbar2+bcc(2,kbs(isd),isd)*i34inv
 #endif
@@ -6985,7 +7004,7 @@
             call project_hvec(su2(kbs(isd),isd),sv2(kbs(isd),isd),sframe2(:,:,isd),eframe(:,:,i),vn1,vn2)
             ubar=ubar+vn1*i34inv
             vbar=vbar+vn2*i34inv
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
             call project_hvec(bcc(1,kbs(isd),isd),bcc(2,kbs(isd),isd),sframe2(:,:,isd),eframe(:,:,i),vn1,vn2)
             ubar2=ubar2+vn1*i34inv
             vbar2=vbar2+vn2*i34inv
@@ -7002,13 +7021,13 @@
           ubed=swild(1); vbed=swild(2); wbed=swild(3)
           bflux0=ubed*sne(1,kbe(i))+vbed*sne(2,kbe(i))+wbed*sne(3,kbe(i)) !normal bed vel.
           we(kbe(i),i)=wbed
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
           dr_dxy(1,kbe(i),i)=wbed
 #endif
         else
           !Error: /=0 for 2D (but OK b/cos fluxes are 0 below for transport)
           we(kbe(i),i)=(av_bdef2-av_bdef1)/dt-dhdx*ubar-dhdy*vbar
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
           dr_dxy(1,kbe(i),i)=(av_bdef2-av_bdef1)/dt-dhdx*ubar2-dhdy*vbar2
 #endif
         endif
@@ -7029,19 +7048,19 @@
             vnor1=su2(l,jsj)*snx(jsj)+sv2(l,jsj)*sny(jsj)
             vnor2=su2(l+1,jsj)*snx(jsj)+sv2(l+1,jsj)*sny(jsj)
             sum1=sum1+ssign(j,i)*(zs(max(l+1,kbs(jsj)),jsj)-zs(max(l,kbs(jsj)),jsj))*distj(jsj)*(vnor1+vnor2)/2.d0
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
             vnor1=bcc(1,l,jsj)*snx(jsj)+bcc(2,l,jsj)*sny(jsj)
             vnor2=bcc(1,l+1,jsj)*snx(jsj)+bcc(2,l+1,jsj)*sny(jsj)
             sum2=sum2+ssign(j,i)*(zs(max(l+1,kbs(jsj)),jsj)-zs(max(l,kbs(jsj)),jsj))*distj(jsj)*(vnor1+vnor2)/2.d0
 #endif
 
-            !In eframe; new37
+            !In eframe; 
             if(ics==1) then
               ubar=ubar+su2(l,jsj)*i34inv 
               ubar1=ubar1+su2(l+1,jsj)*i34inv 
               vbar=vbar+sv2(l,jsj)*i34inv 
               vbar1=vbar1+sv2(l+1,jsj)*i34inv 
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
               ubar2=ubar2+bcc(1,l,jsj)*i34inv 
               ubar3=ubar3+bcc(1,l+1,jsj)*i34inv 
               vbar2=vbar2+bcc(2,l,jsj)*i34inv 
@@ -7054,7 +7073,7 @@
               vbar=vbar+vn2*i34inv
               ubar1=ubar1+tt1*i34inv
               vbar1=vbar1+ss1*i34inv
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
               call project_hvec(bcc(1,l,jsj),bcc(2,l,jsj),sframe2(:,:,jsj),eframe(:,:,i),vn1,vn2)
               call project_hvec(bcc(1,l+1,jsj),bcc(2,l+1,jsj),sframe2(:,:,jsj),eframe(:,:,i),tt1,ss1)
               ubar2=ubar2+vn1*i34inv
@@ -7069,7 +7088,7 @@
           if(l==kbe(i)) then
             bflux=(av_bdef2-av_bdef1)/dt
             if(imm==2) bflux=bflux0
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
             bflux2=bflux
 #endif
           else
@@ -7078,14 +7097,14 @@
             !large w-vel, but flux balance is not affected (nor is
             !transport)
             bflux=ubar*sne(1,l)+vbar*sne(2,l)+we(l,i)*sne(3,l)
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
             bflux2=ubar2*sne(1,l)+vbar2*sne(2,l)+dr_dxy(1,l,i)*sne(3,l)
 #endif
           endif
 
           we(l+1,i)=(-sum1-(ubar1*sne(1,l+1)+vbar1*sne(2,l+1))*area_e(l+1) + &
      &bflux*area_e(l))/sne(3,l+1)/area_e(l+1)
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
           dr_dxy(1,l+1,i)=(-sum2-(ubar3*sne(1,l+1)+vbar3*sne(2,l+1))*area_e(l+1) + &
      &bflux2*area_e(l))/sne(3,l+1)/area_e(l+1)
 #endif
@@ -7124,7 +7143,6 @@
           vbar=0.d0
           do j=1,i34(i)
             jsj=elside(j,i)
-!new37
             if(ics==1) then
               ubar=ubar+su2(l,jsj)*i34inv 
               vbar=vbar+sv2(l,jsj)*i34inv  
@@ -7842,21 +7860,21 @@
         call ecosystem(it)
 
         !feedback from ICM to Hydro 
-        if(isav==1.and.isav_icm==1)then
+        if(iveg==1.and.isav_icm==1)then
           !Convert hcansav to nodes
           do i=1,np
-            sav_h(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
+            veg_h(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
           enddo !i
-          call exchange_p2d(sav_h)
+          call exchange_p2d(veg_h)
 
           do i=1,npa
             !Do not allow SAV to grow out of init patch for the time being
-            if(sav_nv(i)==0.d0.or.sav_alpha(i)==0.d0) then
-              sav_nv(i)=0.d0; sav_alpha(i)=0.d0; sav_h(i)=0.d0
+            if(veg_nv(i)==0.d0.or.veg_alpha(i)==0.d0) then
+              veg_nv(i)=0.d0; veg_alpha(i)=0.d0; veg_h(i)=0.d0
             endif
           enddo !i
 
-        endif!isav&&isav_icm
+        endif!iveg&&isav_icm
 
 #endif /*USE_ICM*/
 
@@ -7972,7 +7990,7 @@
       if(myrank==0) write(16,*)'done solving transport equation'
 
 !     Restore 3D Eulerian vel
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
       if(RADFLAG.eq.'VOR') then
         su2=su2-stokes_hvel_side(1,:,:)
         sv2=sv2-stokes_hvel_side(2,:,:)
@@ -8085,73 +8103,58 @@
       enddo !i=1,ne
 !$OMP end do
 
+!$OMP master
+      call exchange_e2di(imarsh)
+!$OMP end master
+
       !Set Cd etc for marsh and also drowned marsh
 !$OMP workshare
-      sav_di=0.d0; sav_h=0.d0; sav_nv=0.d0; sav_alpha=0.d0
+      veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha=0.d0
 !$OMP end workshare
 !$OMP do 
       do i=1,np
         do j=1,nne(i)
           ie=indel(j,i)
-          if(imarsh(ie)==1) then
-            if(isav==0) then
-              Cdp(i)=0.05d0
-              rough_p(i)=1.d-2
-            else !isav/=0
-              sav_di(i)=sav_di0
-              sav_h(i)=sav_h0
-              sav_nv(i)=sav_nv0
-              sav_alpha(i)=sav_di0*sav_nv0*sav_cd(i)/2.d0
-            endif !isav 
+          if(imarsh(ie)==1) then !iveg/=0
+!            if(iveg==0) then
+!              Cdp(i)=0.05d0
+!              rough_p(i)=1.d-2
+!            else !/=0
+            veg_di(i)=veg_di0
+            veg_h(i)=veg_h0
+            veg_nv(i)=veg_nv0
+            veg_cd(i)=veg_cd0
+            veg_alpha(i)=veg_di0*veg_nv0*veg_cd0/2.d0
           endif !imarsh
 
-          !drowned marsh
-          if(nwild(ie)==1.and.imarsh(ie)==0) then
-            Cdp(i)=0.001d0
-            rough_p(i)=1.d-4
-          endif
+          !drowned marsh: veg_di etc =0
+!          if(nwild(ie)==1.and.imarsh(ie)==0) then
+!            Cdp(i)=0.001d0
+!            rough_p(i)=1.d-4
+!          endif
         enddo !j
       enddo !i
 !$OMP end do
 
-!$OMP do
-      do i=1,ns
-        do j=1,2
-          ie=isdel(j,i)
-          if(isav==0.and.imarsh(ie)==1) Cd(i)=0.05d0
-          if(nwild(ie)==1.and.imarsh(ie)==0) Cd(i)=0.001d0
-        enddo !j
-      enddo !i
-!$OMP end do
-      
-
-!      do i=1,ne
-!        if(imarsh(i)==1) then
-!          if(isav==0) then
-!            Cdp(elnode(1:i34(i),i))=0.05d0
-!            Cd(elside(1:i34(i),i))=0.05d0
-!            rough_p(elnode(1:i34(i),i))=1.d-2
-!          else
-!            sav_di(elnode(1:i34(i),i))=sav_di0
-!            sav_h(elnode(1:i34(i),i))=sav_h0
-!            sav_nv(elnode(1:i34(i),i))=sav_nv0
-!            sav_alpha(elnode(1:i34(i),i))=sav_di0*sav_nv0*sav_cd0/2.d0
-!          endif !isav
-!        endif
+!!$OMP do
+!      do i=1,ns
+!        do j=1,2
+!          ie=isdel(j,i)
+!          if(iveg==0.and.imarsh(ie)==1) Cd(i)=0.05d0
+!          if(nwild(ie)==1.and.imarsh(ie)==0) Cd(i)=0.001d0
+!        enddo !j
 !      enddo !i
-!$OMP end do
-
+!!$OMP end do
+      
 !$OMP master
-      call exchange_p2d(Cdp)
-      call exchange_p2d(rough_p)
-      call exchange_s2d(Cd)
-      call exchange_e2di(imarsh)
-      if(isav>0) then
-        call exchange_p2d(sav_di)
-        call exchange_p2d(sav_h)
-        call exchange_p2d(sav_nv)
-        call exchange_p2d(sav_alpha)
-      endif
+!      call exchange_p2d(Cdp)
+!      call exchange_p2d(rough_p)
+!      call exchange_s2d(Cd)
+      call exchange_p2d(veg_di)
+      call exchange_p2d(veg_h)
+      call exchange_p2d(veg_nv)
+      call exchange_p2d(veg_cd)
+      call exchange_p2d(veg_alpha)
 !$OMP end master
 #endif /*USE_MARSH*/
 !$OMP end parallel
@@ -9183,6 +9186,17 @@
 
 #endif
 
+#if defined USE_WW3
+        ! Eastward wave radiation stress
+        call writeout_nc(id_out_ww3(1),'rsxx',1,1,npa,rsxx)
+
+        ! Eastward northward wave radiation stress
+        call writeout_nc(id_out_ww3(2),'rsxy',1,1,npa,rsxy)
+
+        ! Northward wave radiation stress
+        call writeout_nc(id_out_ww3(3),'rsyy',1,1,npa,rsyy)
+#endif
+
 #ifdef USE_MARSH
         if(iof_marsh(1)==1) call writeout_nc(id_out_var(noutput+5), &
      &'marsh_flag',4,1,nea,dble(imarsh))
@@ -9666,7 +9680,7 @@
 #endif
 
 #ifdef USE_MARSH
-        if(iof_marsh(1)==1)
+        if(iof_marsh(1)==1) then
           icount=icount+1 
           if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.14)')
           varout_2delem(icount,:)=imarsh(1:ne)

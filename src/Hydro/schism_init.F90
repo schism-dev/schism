@@ -168,7 +168,7 @@
                     &ubl1,ubl2,ubl3,ubl4,ubl5,ubl6,ubl7,ubl8,xn1, &
                     &xn2,yn1,yn2,xstal,ystal,ae,THAS,THAF,err_max,rr,suma, &
                     &te,sa,wx1,wx2,wy1,wy2,aux1,aux2,time,ttt, &
-                    &et,qq,tr,ft1,dep,wtratio,rmaxvel,sav_cd0,tf
+                    &et,qq,tr,ft1,dep,wtratio,rmaxvel,tf
 
 
 #ifdef USE_FIB
@@ -205,7 +205,7 @@
      &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
      &fwvor_streaming,fwvor_wveg,fwvor_wveg_NL,wafo_obcramp, &
      &iwbl,cur_wwm,if_source,dramp_ss,ieos_type,ieos_pres,eos_a,eos_b,slr_rate, &
-     &rho0,shw,isav,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
+     &rho0,shw,iveg,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
@@ -481,7 +481,7 @@
       fwvor_gradpress=1; fwvor_breaking=1; fwvor_streaming=1; fwvor_wveg=0; fwvor_wveg_NL=0; wafo_obcramp=0;
       fwvor_advxy_stokes=1; fwvor_advz_stokes=1; fwvor_gradpress=1; fwvor_breaking=1; wafo_obcramp=0;
       iwbl=0; cur_wwm=0; if_source=0; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
-      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; isav=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
+      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; iveg=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
       hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; level_age=-999;
       !vclose_surf_frac \in [0,1]: correction factor for vertical vel & flux. 1: no correction
       vclose_surf_frac=1.0
@@ -497,6 +497,7 @@
       iprecip_off_bnd=0
       model_type_pahm=10
       stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
+      RADFLAG='VOR'
 
       !Output elev, hvel by detault
       nc_out=1
@@ -1156,18 +1157,19 @@
 !        call parallel_abort(errmsg)
 !      endif
 
+!     Vegetation
+      if(iveg/=0.and.iveg/=1) then
+       write(errmsg,*)'INIT: illegal iveg,',iveg
+       call parallel_abort(errmsg)
+      endif
+
 #ifdef USE_MARSH
+      if(iveg==0) call parallel_abort('INIT: marsh needs vegetation option')
       !SLR rate in mm/year
       !Convert to m/s
 !      if(slr_rate<0) call parallel_abort('INIT: slr_rate<0')
       slr_rate=slr_rate*1.d-3/365.d0/86400.d0 !m/s
 #endif
-
-!     SAV
-      if(isav/=0.and.isav/=1) then
-       write(errmsg,*)'INIT: illegal isav',isav
-       call parallel_abort(errmsg)
-      endif
 
 !     Ice
 #ifdef USE_MICE
@@ -1421,9 +1423,10 @@
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa),epsilon2_elem(ne), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
-         & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),sav_alpha(npa), &
-         & sav_h(npa),sav_nv(npa),sav_di(npa),sav_cd(npa), &
-         & wwave_force(2,nvrt,nsa),btaun(npa),stat=istat)
+         & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),veg_alpha(npa), &
+         & veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
+         & wwave_force(2,nvrt,nsa),btaun(npa), &
+         & rsxx(npa), rsxy(npa), rsyy(npa), stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -1507,7 +1510,7 @@
      &call parallel_abort('INIT: mass correction needs itr_met=3 or 4')
 
 !     Wave model arrays
-#ifdef  USE_WWM
+#if defined USE_WWM || defined USE_WW3
       if(iorder==0) then
         allocate(out_wwm(npa,35),out_wwm_windpar(npa,10),   &
                & out_wwm_rol(npa,35),taub_wc(npa), &
@@ -1521,7 +1524,7 @@
       out_wwm=0.d0; out_wwm_windpar=0.d0; out_wwm_rol=0.d0; eps_w=0.d0; eps_r=0.d0; eps_br=0.d0
       jpress=0.d0; sbr=0.d0; sbf=0.d0; srol=0.d0; sds=0.d0; sveg=0.d0; taub_wc=0.d0
       stokes_hvel=0.d0; stokes_wvel=0.d0; stokes_hvel_side=0.d0; stokes_wvel_side=0.d0
-      roller_stokes_hvel=0.d0; roller_stokes_hvel_side=0.d0; delta_wbl=0.D0
+      roller_stokes_hvel=0.d0; roller_stokes_hvel_side=0.d0; delta_wbl=1.d0
       wave_sbrtot=0.0D0; wave_sbftot=0.0D0; wave_sintot=0.0D0; wave_sdstot=0.0D0; wave_svegtot = 0.0D0
       !BM: coupling current for WWM
       allocate(curx_wwm(npa),cury_wwm(npa),stat=istat)
@@ -1624,6 +1627,20 @@
         elnode_wwm(1:3,:)=elnode(1:3,:)
       endif !lhas_quad
 #endif /*USE_WWM*/
+
+!Additional WW3 arrays
+#ifdef  USE_WW3
+      if(iorder==0) then
+        allocate(wave_hs(npa),wave_dir(npa),wave_tm1(npa),wave_wnm(npa),wave_pres(npa),wave_stokes_x(npa), &
+     &wave_stokes_y(npa),wave_ocean_flux_x(npa),wave_ocean_flux_y(npa), &
+     &wave_flux_friction_x(npa),wave_flux_friction_y(npa),wave_orbu(npa), &
+     &wave_orbv(npa),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: alloc WW3')
+        wave_hs=0.d0; wave_dir=0.d0; wave_tm1=0.d0; wave_wnm=0.d0; wave_pres=0.d0
+        wave_stokes_x=0.d0; wave_stokes_y=0.d0; wave_ocean_flux_x=0.d0; wave_ocean_flux_y=0.d0
+        wave_flux_friction_x=0.d0; wave_flux_friction_y=0.d0; wave_orbu=0.d0; wave_orbv=0.d0
+      endif !iorder=0
+#endif /*USE_WW3*/
 
 #ifdef USE_TIMOR
 !     Allocate TIMOR arrays
@@ -1736,6 +1753,7 @@
       nsteps_from_cold=0
       wind_rotate_angle=0.d0
       wwave_force=0.d0
+      diffmin=1.d-6; diffmax=1.d0
 
 !Tsinghua group
 #ifdef USE_SED 
@@ -1770,6 +1788,7 @@
       dfq1=0.d0; dfq2=0.d0 !for hotstart
       fluxevp=0.d0; fluxprc=0.d0
       prec_rain=0.d0; prec_snow=0.d0
+      rsxx=0.d0; rsxy=0.d0; rsyy=0.d0
 
 !     Fort.12 flags
 !      ifort12=0
@@ -2187,8 +2206,8 @@
       enddo !i
 #endif      
 
-!... Read lat/lon for spectral spatial interpolation  in WWM
-#ifdef USE_WWM
+!... Read lat/lon for spectral spatial interpolation in WWM or WW3
+#if defined USE_WWM || defined USE_WW3
       if(myrank==0) then
         inquire(file=in_dir(1:len_in_dir)//'hgrid.ll',exist=lexist)
         if(lexist) then
@@ -2791,6 +2810,8 @@
         if(myrank==0) then
           do i=1,nsources
             read(31,*)ieg_source(i) !global elem. #
+            if(ieg_source(i)<=0.or.ieg_source(i)>ne_global) &
+     &call parallel_abort('INIT: source elem over')
           enddo !i
           read(31,*) !blank line
           read(31,*)nsinks
@@ -2806,6 +2827,8 @@
         if(myrank==0) then
           do i=1,nsinks
             read(31,*)ieg_sink(i)
+            if(ieg_sink(i)<=0.or.ieg_sink(i)>ne_global) &
+     &call parallel_abort('INIT: sink elem over')
           enddo !i
           close(31)
         endif !myrank
@@ -2863,6 +2886,8 @@
             if(j/=NF90_NOERR) call parallel_abort('init: source_elem')
             j=nf90_get_var(ncid_source,mm,ieg_source(1:nsources),(/1/),(/nsources/))
             if(j/=NF90_NOERR) call parallel_abort('init: source_elem(2)')
+            if(maxval(ieg_source)>ne_global.or.minval(ieg_source)<=0) &
+     & call parallel_abort('init: check source elem')
           endif !nsources
 
           if(nsinks>0) then
@@ -2870,6 +2895,8 @@
             if(j/=NF90_NOERR) call parallel_abort('init: sink_elem')
             j=nf90_get_var(ncid_source,mm,ieg_sink(1:nsinks),(/1/),(/nsinks/))
             if(j/=NF90_NOERR) call parallel_abort('init: sink_elem(2)')
+            if(maxval(ieg_sink)>ne_global.or.minval(ieg_sink)<=0) &
+     & call parallel_abort('init: check sink elem')
           endif !nsinks
         endif !myrank=0
         call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
@@ -3754,27 +3781,27 @@
         endif
       enddo !k
 
-!     SAV inputs: sav_*.gr3
-      sav_alpha=0.d0 !=D*Nv*Cdv/2; init; D is diameter; Cdv is form drag (sav_cd)
-      sav_h=0.d0 !veg height; not used at 2D sides
-      sav_nv=0.d0 !Nv: # of stems per m^2
-      sav_di=0.d0 !D [m]
-      sav_cd=0.d0 !Cdv : drag coefficient
-      if(isav==1) then
+!     Vegetation inputs: veg_*.gr3
+      veg_alpha=0.d0 !=D*Nv*Cdv/2; init; D is diameter; Cdv is form drag (veg_cd)
+      veg_h=0.d0 !veg height; not used at 2D sides
+      veg_nv=0.d0 !Nv: # of stems per m^2
+      veg_di=0.d0 !D [m]
+      veg_cd=0.d0 !Cdv : drag coefficient
+      if(iveg==1) then
         !\lambda=D*Nv [1/m]
         if(myrank==0) then
-          open(10,file=in_dir(1:len_in_dir)//'sav_D.gr3',status='old')
-          open(31,file=in_dir(1:len_in_dir)//'sav_N.gr3',status='old')
+          open(10,file=in_dir(1:len_in_dir)//'veg_D.gr3',status='old')
+          open(31,file=in_dir(1:len_in_dir)//'veg_N.gr3',status='old')
           read(10,*)
           read(10,*) itmp1,itmp2
           read(31,*); read(31,*)k,m
           if(itmp1/=ne_global.or.itmp2/=np_global.or.k/=ne_global.or.m/=np_global) &
-     &call parallel_abort('INIT: Check sav_.gr3 (1)')
+     &call parallel_abort('INIT: Check veg_.gr3 (1)')
           do i=1,np_global
             read(10,*)j,xtmp,ytmp,tmp
             read(31,*)j,xtmp,ytmp,tmp1
             if(tmp<0.d0.or.tmp1<0.d0) then
-              write(errmsg,*)'INIT: illegal sav_:',i,tmp,tmp1
+              write(errmsg,*)'INIT: illegal veg_:',i,tmp,tmp1
               call parallel_abort(errmsg)
             endif
             buf3(i)=tmp; buf4(i)=tmp1
@@ -3785,11 +3812,11 @@
          
 !          if(ipgl(i)%rank==myrank) then
 !            nd=ipgl(i)%id
-!            sav_alpha(nd)=tmp*tmp1*tmp3/2.d0
-!            sav_nv(nd)=tmp1
-!            sav_h(nd)=tmp2
-!            sav_di(nd)=tmp
-!            sav_cd(nd)=tmp3
+!            veg_alpha(nd)=tmp*tmp1*tmp3/2.d0
+!            veg_nv(nd)=tmp1
+!            veg_h(nd)=tmp2
+!            veg_di(nd)=tmp
+!            veg_cd(nd)=tmp3
 !          endif
           enddo !i
           close(10)
@@ -3801,24 +3828,24 @@
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
-            sav_nv(nd)=buf4(i) !tmp1
-            sav_di(nd)=buf3(i) !tmp
+            veg_nv(nd)=buf4(i) !tmp1
+            veg_di(nd)=buf3(i) !tmp
           endif
         enddo !i
 
         if(myrank==0) then
           !SAV height [m]
-          open(32,file=in_dir(1:len_in_dir)//'sav_h.gr3',status='old')
+          open(32,file=in_dir(1:len_in_dir)//'veg_h.gr3',status='old')
           !Drag coefficient
-          open(30,file=in_dir(1:len_in_dir)//'sav_cd.gr3',status='old')
+          open(30,file=in_dir(1:len_in_dir)//'veg_cd.gr3',status='old')
           read(32,*); read(32,*)i,j
           read(30,*); read(30,*)l,mm
-          if(i/=ne_global.or.j/=np_global.or.l/=ne_global.or.mm/=np_global) call parallel_abort('INIT: Check sav_.gr3')
+          if(i/=ne_global.or.j/=np_global.or.l/=ne_global.or.mm/=np_global) call parallel_abort('INIT: Check veg_.gr3')
           do i=1,np_global
             read(32,*)j,xtmp,ytmp,tmp2
             read(30,*)j,xtmp,ytmp,tmp3
             if(tmp2<0.d0.or.tmp3<0) then
-              write(errmsg,*)'INIT: illegal sav_:',i,tmp2,tmp3
+              write(errmsg,*)'INIT: illegal veg_:',i,tmp2,tmp3
               call parallel_abort(errmsg)
             endif
             buf3(i)=tmp2; buf4(i)=tmp3
@@ -3836,33 +3863,33 @@
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
-            sav_alpha(nd)=sav_di(nd)*sav_nv(nd)*buf4(i)/2.d0 !tmp*tmp1*tmp3/2.d0
-            sav_h(nd)=buf3(i) !tmp2
-            sav_cd(nd)=buf4(i) !tmp3
+            veg_alpha(nd)=veg_di(nd)*veg_nv(nd)*buf4(i)/2.d0 !tmp*tmp1*tmp3/2.d0
+            veg_h(nd)=buf3(i) !tmp2
+            veg_cd(nd)=buf4(i) !tmp3
 
             !Make D, Nv and h consistent at no SAV places
-            if(sav_di(nd)*sav_nv(nd)*sav_h(nd)*sav_cd(nd)==0.d0) then
-              sav_di(nd)=0.d0; sav_nv(nd)=0.d0; sav_h(nd)=0.d0; sav_cd(nd)=0.d0
+            if(veg_di(nd)*veg_nv(nd)*veg_h(nd)*veg_cd(nd)==0.d0) then
+              veg_di(nd)=0.d0; veg_nv(nd)=0.d0; veg_h(nd)=0.d0; veg_cd(nd)=0.d0
             endif
           endif
         enddo !i
 
 #ifdef USE_MARSH
         !Assume constant inputs from .gr3; save these values
-        sav_di0=tmp; sav_h0=tmp2; sav_nv0=tmp1; sav_cd0=tmp3
+        veg_di0=veg_di(1); veg_h0=veg_h(1); veg_nv0=veg_nv(1); veg_cd0=veg_cd(1)
         !Reset
-        sav_di=0.d0; sav_h=0.d0; sav_nv=0.d0; sav_alpha=0.d0; sav_cd=0.d0
+        veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha=0.d0; veg_cd=0.d0
         do i=1,nea
           if(imarsh(i)>0) then
-            sav_di(elnode(1:i34(i),i))=sav_di0 
-            sav_h(elnode(1:i34(i),i))=sav_h0 
-            sav_nv(elnode(1:i34(i),i))=sav_nv0
-            sav_cd(elnode(1:i34(i),i))=sav_cd0
-            sav_alpha(elnode(1:i34(i),i))=sav_di0*sav_nv0*sav_cd0/2.d0
+            veg_di(elnode(1:i34(i),i))=veg_di0 
+            veg_h(elnode(1:i34(i),i))=veg_h0 
+            veg_nv(elnode(1:i34(i),i))=veg_nv0
+            veg_cd(elnode(1:i34(i),i))=veg_cd0
+            veg_alpha(elnode(1:i34(i),i))=veg_di0*veg_nv0*veg_cd0/2.d0
           endif
         enddo !i
 #endif
-      endif !isav=1 
+      endif !iveg=1 
 
 !...  Surface min. mixing length for f.s. and max. for all; inactive 
 !      read(15,*) !xlmax00
@@ -6139,7 +6166,7 @@
       enddo
 
 ! MP from KM
-#ifdef USE_WWM
+#if defined USE_WWM || defined USE_WW3
       ! Computation of the bed slope at nodes
       allocate(tanbeta_x(npa),tanbeta_y(npa),stat=istat)
       call compute_bed_slope !iof(198) = 1
@@ -6506,7 +6533,7 @@
 #endif
 
 #ifdef USE_MARSH
-      if(iof_marsh(1)==1) 
+      if(iof_marsh(1)==1) then
         ncount_2delem=ncount_2delem+1
         counter_out_name=counter_out_name+1
         out_name(counter_out_name)='marshFlag'
@@ -7010,12 +7037,14 @@
 !          enddo !i
 !          stop
 
-!$OMP parallel do default(shared) private(j)
+!$OMP parallel do default(shared) private(j,k)
           do j=1,npa
             q2(:,j) = tke1d(0:(nvrt-1))
             xl(:,j) = L1d(0:(nvrt-1))
-            dfv(:,j) = min(diffmax(j),max(diffmin(j),num1d(0:(nvrt-1))))
-            dfh(:,j) = min(diffmax(j),max(diffmin(j),nuh1d(0:(nvrt-1))))
+            do k=1,nvrt
+              dfv(k,j) = min(diffmax(j),max(diffmin(j),num1d(k-1))) !0:(nvrt-1))))
+              dfh(k,j) = min(diffmax(j),max(diffmin(j),nuh1d(k-1)))
+            enddo !k
           enddo !j
 !$OMP end parallel do
 #endif
@@ -7023,8 +7052,10 @@
 
 !...  Impose limit for diffusivities for cold & hot starts
       do j=1,npa
-        dfv(:,j)=min(diffmax(j),max(diffmin(j),dfv(:,j)))
-        dfh(:,j)=min(diffmax(j),max(diffmin(j),dfh(:,j)))
+        do k=1,nvrt
+          dfv(k,j)=min(diffmax(j),max(diffmin(j),dfv(k,j)))
+          dfh(k,j)=min(diffmax(j),max(diffmin(j),dfh(k,j)))
+        enddo !k
       enddo !j
 
 !     Set essential b.c. flags (needed by PetSc)

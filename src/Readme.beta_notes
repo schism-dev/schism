@@ -9,6 +9,9 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `e66f1b3` (3 May 2024): renamed sav_*.gr3 as veg_*.gr3; also MARSH module now requires iveg/=0;
+- `ca44ba0` (1 May 2024): removed isav and replaced it with iveg
+- `4fb6228` (9 Feb 2024): add cmake CPP 'BLD_STANDALONE' to accommodate UFS
 - `9bee0f5` (8 Feb 2024): removed IMPOSE_NET_FLUX and 'meth_sink'
 - `d5fb0f1` (3 Jan 2024): merged ZG's stemp branch (sediment-water heat exchange option), with
             new parameters: stemp_stc, stemp_dz(1:2);
@@ -592,11 +595,13 @@ git versions:
 (144) 594bf10 (May 9, 2023): deflated global nc and hotstart scribe outputs. However, deflate is not done in 
       combine_hotstart7.f90 as it seems to cause hang in restart;
 145. `a6fd5cb` (May 15, 2023): revamped nws=4 to allow more variables for 3D. The input needed is 'atmos.nc'.
-146. `a832e4fd` (Aug 15, 2023): renamed LAP routines and tridag to avoid conflicts with other ESMs.
-147. `d31ea846` (Aug 30, 2023): fixed similar bugs on too many open nc handle (as Kijin did for 1-way script)
+146. `a832e4fd` (Aug 15, 2023): renamed LAPACK routines and tridag to avoid conflicts with other ESMs.
+147. `d31ea846` (Aug 30, 2023): fixed similar bugs on too many open nc handle (c/o Kijin) for 1-way script)
 148. `abf37240` (Aug 31, 2023): Ivica J. fixed a bug in FAIRALL option (bulk_psiu should be real*8)
 149. `045962` (Sept 13, 2023): removed goto in lap.F90
 150. `66242aa` (Sept 13, 2023): removed goto in harm.F90
+151. `5914ae2` (Mar 26, 2024): fix an init error for diffm* (c/o Ufuk)
+161. `ca44ba0` (1 May 2024): fixed bugs in vegetation&marsh module (uninited sav_h0 etc) 
 
 ================================================================================================
 (D) Auto-test history:

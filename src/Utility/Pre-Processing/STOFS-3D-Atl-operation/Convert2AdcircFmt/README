@@ -1,0 +1,5 @@
+The files under Shapefiles/ are inputs to generate_adcirc.py.
+They are for STOFS-3D-Atlantic v7 based on R16, and handled by git-lfs
+
+git-lfs pull origin --include="src/Utility/Pre-Processing/STOFS-3D-Atl-operation/Convert2AdcircFmt/Shapefiles/*"
+

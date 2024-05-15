@@ -644,7 +644,7 @@
 #endif
          USE DATAPOOL
 #ifdef SCHISM
-         use schism_glbl, only : ics,isav
+         use schism_glbl, only : ics,iveg
 #endif
          IMPLICIT NONE
 
@@ -1165,7 +1165,7 @@
          
 ! Check consistency with SCHISM inputs here
 #ifdef SCHISM
-         IF(MEVEG/=0.and.isav==0) CALL WWM_ABORT('WWM: MEVEG/=0.and.isav==0')
+         IF(MEVEG/=0.and.iveg==0) CALL WWM_ABORT('WWM: MEVEG/=0.and.iveg==0')
 #endif
 
       END SUBROUTINE

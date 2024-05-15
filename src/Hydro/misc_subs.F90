@@ -48,7 +48,6 @@
 ! function quad_int
 ! subroutine compute_bed_slope
 ! subroutine smooth_2dvar
-! subroutine compute_wave_force_lon (called from ESMF directly for WW3)
 ! subroutine savensend3D_scribe
 
 !weno>
@@ -69,6 +68,9 @@
 ! function M66DET 
 ! subroutine GetSten1 
 !<weno
+
+! subroutine signa2
+! subroutine compute_wave_force_lon (called from ESMF directly for WW3)
 
 !===============================================================================
 !===============================================================================
@@ -3223,7 +3225,7 @@
           endif
         enddo !j
         if(ifl==0) then    !todo: assert
-          write(errmsg,*)'EVAL_CUBIC: Falied to find:',i,xtmp,xmin,xmax
+          write(errmsg,*)'EVAL_CUBIC: Falied to find: i=',i,' xtmp=',xtmp,' xmin=',xmin,' xmax=',xmax
           call parallel_abort(errmsg)
         endif
       enddo !i=1,npts2
@@ -6174,108 +6176,6 @@
       end subroutine smooth_2dvar
 
 
-!     This routine is called from ESMF directly to be used for USE_WW3
-!     Compute wave force using Longuet-Higgins Stewart formulation
-      subroutine compute_wave_force_lon(RSXX0,RSXY0,RSYY0)
-      use schism_glbl, only : rkind,nsa,np,npa,nvrt,rho0,idry,idry_s,dp,dps,hmin_radstress, &
-     &WWAVE_FORCE,errmsg,it_main,time_stamp,ipgl,id_out_ww3
-      use schism_msgp
-      use schism_io, only: writeout_nc
-      implicit none
-!TODO: change to intent(in)
-      REAL(rkind), intent(in) :: RSXX0(np),RSXY0(np),RSYY0(np) !from WW3, [N/m]
-
-      REAL(rkind) :: RSXX(npa),RSXY(npa),RSYY(npa) !from WW3, [N/m]
-      !REAL(rkind), allocatable :: DSXX3D(:,:,:),DSXY3D(:,:,:),DSYY3D(:,:,:)
-      REAL(rkind) :: DSXX3D(2,NVRT,nsa),DSXY3D(2,NVRT,nsa),DSYY3D(2,NVRT,nsa)
-      integer :: IS,i
-      REAL(rkind) :: HTOT,sum1,sum2,sum3,tmp
-    
-!      allocate(DSXX3D(2,NVRT,nsa), DSYY3D(2,NVRT,nsa),DSXY3D(2,NVRT,nsa),stat=i)
-!      if(i/=0) call parallel_abort('compute_wave_force_lon, alloc')
-
-      !Output for check
-      call writeout_nc(id_out_ww3(1),'RSXX',1,1,np,RSXX0)
-      call writeout_nc(id_out_ww3(2),'RSXY',1,1,np,RSXY0)
-      call writeout_nc(id_out_ww3(3),'RSYY',1,1,np,RSYY0)
-
-      !Check
-      sum1=sum(RSXX0)
-      sum2=sum(RSXY0)
-      sum3=sum(RSYY0)
-      tmp=sum1+sum2+sum3
-      if(tmp/=tmp) then
-        !errmsg cannot take large arrays
-        write(errmsg,*)'compute_wave_force_lon: NaN- see nonfatal; ',sum1,sum2,sum3
-        write(12,*)RSXX0,RSXY0,RSYY0
-        call parallel_abort(errmsg)
-      endif
-!new39
-      write(12,*)'Inside compute_wave_force_lon:',it_main,sum1,sum2,sum3
-      if(ipgl(101)%rank==myrank) then
-        i=ipgl(101)%id
-        if(i<=np) write(99,*)real(time_stamp/86400.d0),real(RSXX0(i)),real(RSYY0(i)),real(RSXY0(i))
-      endif
-
-      !Exchange
-      RSXX(1:np)=RSXX0
-      RSXY(1:np)=RSXY0
-      RSYY(1:np)=RSYY0
-      call exchange_p2d(RSXX)
-      call exchange_p2d(RSXY)
-      call exchange_p2d(RSYY)
-
-      !Convert unit so that [RSXX]=m^3/s/s
-      do i=1,npa
-        if(idry(i)==1.or.max(abs(RSXX(i)),abs(RSXY(i)),abs(RSYY(i)))>1.e10) then
-          RSXX(i)=0.d0
-          RSXY(i)=0.d0
-          RSYY(i)=0.d0
-        else !wet
-          RSXX(i)=RSXX(i)/rho0
-          RSXY(i)=RSXY(i)/rho0
-          RSYY(i)=RSYY(i)/rho0
-        endif !idry
-      enddo !i
-
-!new39
-      sum1=sum(RSXX+RSXY+RSYY)/3.d0/npa
-      write(12,*)'Inside compute_wave_force_lon(2):',it_main,sum1
-      
-
-      ! Computing gradients of the depth-averaged radiation stress (m^2/s/s)
-      CALL hgrad_nodes(2,0,nvrt,npa,nsa,RSXX,DSXX3D)   !(dSxx/dx , dSxx/dy )
-      CALL hgrad_nodes(2,0,nvrt,npa,nsa,RSYY,DSYY3D)   !(dSyy/dx , dSyy/dy )
-      CALL hgrad_nodes(2,0,nvrt,npa,nsa,RSXY,DSXY3D)   !(dSxy/dx , dSxy/dy )
-      CALL exchange_s3d_2(DSXX3D)
-      CALL exchange_s3d_2(DSYY3D)
-      CALL exchange_s3d_2(DSXY3D)
-
-!new39
-      sum1=sum(DSXX3D+DSYY3D+DSXY3D)/2.d0/nsa/nvrt
-      write(12,*)'Inside compute_wave_force_lon(3):',it_main,sum1
-      
-      ! Computing the wave forces
-      ! These are stored in wwave_force(:,1:nsa,1:2) (unit: m/s/s)
-      WWAVE_FORCE=0.d0 !m/s/s
-      DO IS=1,nsa
-        IF(idry_s(IS)==1) CYCLE
-
-        ! Total water depth at sides
-        HTOT=MAX(dps(IS),hmin_radstress)
-
-        ! Wave forces
-        WWAVE_FORCE(1,:,IS)=WWAVE_FORCE(1,:,IS)-(DSXX3D(1,:,IS)+DSXY3D(2,:,IS))/HTOT
-        WWAVE_FORCE(2,:,IS)=WWAVE_FORCE(2,:,IS)-(DSXY3D(1,:,IS)+DSYY3D(2,:,IS))/HTOT
-      ENDDO !IS
-
-      sum1=sum(WWAVE_FORCE)/2.d0/nvrt/nsa
-!new39
-      write(12,*)'done compute_wave_force_lon:',sum1,it_main
-
-!      deallocate(DSXX3D,DSYY3D,DSXY3D)
-      end subroutine compute_wave_force_lon
-
 !     Save temp 3D vars and send to scribes
       subroutine savensend3D_scribe(icount,imode,ivs,nvrt0,npes,savevar1,savevar2)
       use schism_glbl, only : rkind,np,ne,ns,nvrt,nsend_varout,varout_3dnode, &
@@ -6368,3 +6268,672 @@
   
       end function signa2
 
+!     This routine is called from ESMF directly to be used for USE_WW3
+!     Compute wave force using Longuet-Higgins Stewart formulation
+      subroutine compute_wave_force_lon(RSXX0,RSXY0,RSYY0)
+      use schism_glbl, only : rkind,nsa,np,npa,nvrt,rho0,idry,idry_s,dp,dps,hmin_radstress, &
+     &WWAVE_FORCE,errmsg,it_main,time_stamp,ipgl,id_out_ww3, rsxx, rsxy, rsyy
+      use schism_msgp
+      use schism_io, only: writeout_nc
+      implicit none
+!TODO: change to intent(in)
+      REAL(rkind), intent(in) :: RSXX0(np),RSXY0(np),RSYY0(np) !from WW3, [N/m]
+
+      !REAL(rkind), allocatable :: DSXX3D(:,:,:),DSXY3D(:,:,:),DSYY3D(:,:,:)
+      REAL(rkind) :: DSXX3D(2,NVRT,nsa),DSXY3D(2,NVRT,nsa),DSYY3D(2,NVRT,nsa), &
+                    &SXX3D(NVRT,npa),SXY3D(NVRT,npa),SYY3D(NVRT,npa)
+      integer :: IS,i
+      REAL(rkind) :: HTOT,sum1,sum2,sum3,tmp
+    
+      !Check
+      sum1=sum(RSXX0)
+      sum2=sum(RSXY0)
+      sum3=sum(RSYY0)
+      tmp=sum1+sum2+sum3
+      if(tmp/=tmp) then
+        !errmsg cannot take large arrays
+        write(errmsg,*)'compute_wave_force_lon: NaN- see nonfatal; ',sum1,sum2,sum3
+        write(12,*)RSXX0,RSXY0,RSYY0
+        call parallel_abort(errmsg)
+      endif
+!new39
+      write(12,*)'Inside compute_wave_force_lon:',it_main,sum1,sum2,sum3
+      if(ipgl(101)%rank==myrank) then
+        i=ipgl(101)%id
+        if(i<=np) write(99,*)real(time_stamp/86400.d0),real(RSXX0(i)),real(RSYY0(i)),real(RSXY0(i))
+      endif
+
+      !Exchange
+      RSXX(1:np)=RSXX0
+      RSXY(1:np)=RSXY0
+      RSYY(1:np)=RSYY0
+      call exchange_p2d(RSXX)
+      call exchange_p2d(RSXY)
+      call exchange_p2d(RSYY)
+
+      !Convert unit so that [RSXX]=m^3/s/s
+      do i=1,npa
+        if(idry(i)==1.or.max(abs(RSXX(i)),abs(RSXY(i)),abs(RSYY(i)))>1.e10) then
+          RSXX(i)=0.d0
+          RSXY(i)=0.d0
+          RSYY(i)=0.d0
+        else !wet
+          RSXX(i)=RSXX(i)/rho0
+          RSXY(i)=RSXY(i)/rho0
+          RSYY(i)=RSYY(i)/rho0
+        endif !idry
+ 
+        !Add vertical dimension
+        SXX3D(:,i)=RSXX(i)
+        SXY3D(:,i)=RSXY(i)
+        SYY3D(:,i)=RSYY(i)
+      enddo !i
+
+!new39
+      sum1=sum(RSXX+RSXY+RSYY)/3.d0/npa
+      write(12,*)'Inside compute_wave_force_lon(2):',it_main,sum1
+      
+
+      ! Computing gradients of the depth-averaged radiation stress (m^2/s/s)
+      CALL hgrad_nodes(2,0,nvrt,npa,nsa,SXX3D,DSXX3D)   !(dSxx/dx , dSxx/dy )
+      CALL hgrad_nodes(2,0,nvrt,npa,nsa,SYY3D,DSYY3D)   !(dSyy/dx , dSyy/dy )
+      CALL hgrad_nodes(2,0,nvrt,npa,nsa,SXY3D,DSXY3D)   !(dSxy/dx , dSxy/dy )
+      CALL exchange_s3d_2(DSXX3D)
+      CALL exchange_s3d_2(DSYY3D)
+      CALL exchange_s3d_2(DSXY3D)
+
+!new39
+      sum1=sum(DSXX3D+DSYY3D+DSXY3D)/2.d0/nsa/nvrt
+      write(12,*)'Inside compute_wave_force_lon(3):',it_main,sum1
+      
+      ! Computing the wave forces
+      ! These are stored in wwave_force(:,1:nsa,1:2) (unit: m/s/s)
+      WWAVE_FORCE=0.d0 !m/s/s
+      DO IS=1,nsa
+        IF(idry_s(IS)==1) CYCLE
+
+        ! Total water depth at sides
+        HTOT=MAX(dps(IS),hmin_radstress)
+
+        ! Wave forces
+        WWAVE_FORCE(1,:,IS)=WWAVE_FORCE(1,:,IS)-(DSXX3D(1,:,IS)+DSXY3D(2,:,IS))/HTOT
+        WWAVE_FORCE(2,:,IS)=WWAVE_FORCE(2,:,IS)-(DSXY3D(1,:,IS)+DSYY3D(2,:,IS))/HTOT
+      ENDDO !IS
+
+      sum1=sum(WWAVE_FORCE)/2.d0/nvrt/nsa
+!new39
+      write(12,*)'done compute_wave_force_lon:',sum1,it_main
+
+!      deallocate(DSXX3D,DSYY3D,DSXY3D)
+      end subroutine compute_wave_force_lon
+
+!=========================================================================
+!     Following X routines are called by ESMF
+!     3D vortex formulation of wave-current coupling via WWM)
+!     For WW3 OASIS coupler see
+!     /sciclone/home/yinglong/git/CoastalApp/WW3/model/ftn/w3oacpmd.ftn
+!     (search /OASOCM)
+!=========================================================================
+#ifdef USE_WW3
+!     Grab necessary arrays from WW3 and save into SCHISM global arrays
+      SUBROUTINE get_WW3_arrays(WW3__OHS,WW3__DIR,WW3_T0M1,WW3__WNM,WW3__BHD,WW3_USSX,WW3_USSY, &
+     &WW3_TWOX,WW3_TWOY,WW3_TBBX,WW3_TBBY,WW3_UBRX,WW3_UBRY)
+        USE schism_glbl, ONLY: rkind,errmsg,np,npa,wave_hs,wave_dir,wave_tm1, &
+     &wave_wnm,wave_pres,wave_stokes_x,wave_stokes_y,wave_ocean_flux_x, &
+     &wave_ocean_flux_y,wave_flux_friction_x,wave_flux_friction_y, &
+     &wave_orbu,wave_orbv
+        USE schism_msgp
+        IMPLICIT NONE
+
+        !No ghost
+        REAL(rkind),intent(in) :: WW3__OHS(np),WW3__DIR(np),WW3_T0M1(np), &
+     &WW3__WNM(np),WW3__BHD(np),WW3_USSX(np),WW3_USSY(np),WW3_TWOX(np), &
+     &WW3_TWOY(np),WW3_TBBX(np),WW3_TBBY(np),WW3_UBRX,WW3_UBRY
+
+        REAL(rkind) :: tmp
+
+        wave_hs(1:np)=WW3__OHS !Sig wave height [m]
+        wave_dir(1:np)=WW3__DIR !mean wave dir [deg]
+        wave_tm1(1:np)=WW3_T0M1 !mean wave period [s]
+        wave_wnm(1:np)=WW3__WNM !mean wave number [1/m]
+        wave_pres(1:np)=WW3__BHD !wave-induced Bernoulli head pressure [N/m or Pa?]
+        wave_stokes_x(1:np)=WW3_USSX !Stokes drift [m/s]
+        wave_stokes_y(1:np)=WW3_USSY 
+        wave_ocean_flux_x(1:np)=WW3_TWOX !wave-ocean mom flux [m2/s2]
+        wave_ocean_flux_y(1:np)=WW3_TWOY
+        wave_flux_friction_x(1:np)=WW3_TBBX !Momentum flux due to bottom friction [m2/s2]
+        wave_flux_friction_y(1:np)=WW3_TBBY
+        wave_orbu(1:np)=WW3_UBRX !near bed orbital vel [m/s]
+        wave_orbv(1:np)=WW3_UBRY 
+
+        !Exchange
+        call exchange_p2d(wave_hs)
+        call exchange_p2d(wave_dir)
+        call exchange_p2d(wave_tm1)
+        call exchange_p2d(wave_wnm)
+        call exchange_p2d(wave_pres)
+        call exchange_p2d(wave_stokes_x)
+        call exchange_p2d(wave_stokes_y)
+        call exchange_p2d(wave_ocean_flux_x)
+        call exchange_p2d(wave_ocean_flux_y)
+        call exchange_p2d(wave_flux_friction_x)
+        call exchange_p2d(wave_flux_friction_y)
+        call exchange_p2d(wave_orbu)
+        call exchange_p2d(wave_orbv)
+
+        tmp=sum(wave_hs+wave_dir+wave_tm1+wave_wnm+wave_pres+wave_stokes_x+wave_stokes_y+ &
+     &wave_ocean_flux_x+wave_ocean_flux_y+wave_flux_friction_x+wave_flux_friction_y+ &
+     &wave_orbu+wave_orbv)
+        if(tmp/=tmp) then
+          write(errmsg,*)'WW3 input has nan:',tmp
+          call parallel_abort(errmsg)
+        endif
+      end SUBROUTINE get_WW3_arrays
+
+!**********************************************************************
+!*  This routine is used with RADFLAG=VOR (3D vortex formulation, after Bennis et al., 2011)
+!*  => Computation of the wave-induced pressure term at nodes (the gradient is computed directly 
+!*  at sides when calculating the forces) and the Stokes drift velocities. The latter are 
+!*  computed at all levels, at nodes and sides, and for both the wave and roller (kept separated).
+!**********************************************************************
+      SUBROUTINE STOKES_STRESS_INTEGRAL_SCHISM
+        USE schism_glbl, ONLY: rkind,errmsg,hmin_radstress,np,npa,ns,nsa,kbs,kbe, &
+     &ne,nea,idry_e, nvrt,kbp,idry,dp, &
+     &isdel,indel,elnode,dldxy,zs,area,idry_s,isidenode,nne,rho0,znl, &
+     &jpress,stokes_hvel,stokes_wvel,stokes_hvel_side,stokes_wvel_side, & 
+     &roller_stokes_hvel,roller_stokes_hvel_side,wave_pres,wave_wnm, &
+     &wave_stokes_x,wave_stokes_y
+ 
+        USE schism_msgp
+        IMPLICIT NONE
+
+        INTEGER     :: ip,k,id,is,il,ie,isd,j,l,n1,n2,n3,icount
+        REAL(rkind) :: D_loc, k_loc, kD_loc, z_loc, E_loc, Er_loc, JPress_loc
+        REAL(rkind) :: Uint, Vint, Urint, Vrint
+        REAL(rkind) :: USTOKES_loc(NVRT), VSTOKES_loc(NVRT), UrSTOKES_loc(NVRT), VrSTOKES_loc(NVRT)
+        real(rkind) :: tmp0, tmp1, tmp2, ztmp, ubar, vbar, dhdx, dhdy
+        real(rkind) :: stokes_wvel_elem(nvrt,nea), ws_tmp1(nvrt,nsa),ws_tmp2(nvrt,nsa)
+        real(rkind) :: dr_dxy_loc(2,nvrt,nsa)
+
+!...    Computing Stokes drift horizontal velocities at nodes and pressure term
+        stokes_hvel=0.d0; jpress=0.d0; roller_stokes_hvel=0.d0
+        DO ip = 1, npa
+          IF(idry(ip) == 1) CYCLE
+
+          ! Total water depth at the node
+          D_loc = max(znl(nvrt,ip)-znl(kbp(ip),ip),hmin_radstress) !>0
+
+          !new40
+          jpress(ip)=wave_pres(ip)/rho0 !needs to be [m2/s2]
+
+          k_loc=wave_wnm(ip) !MIN(KDMAX/DEP(IP),WK(IS,IP))
+          kD_loc=k_loc*D_loc !MIN(KDMAX,WK(IS,IP)*D_loc)
+          IF(kD_loc <= 0) THEN
+            WRITE(errmsg,*)'WWM: kD_loc<=0'
+            CALL parallel_abort(errmsg)
+          END IF
+
+          do il=kbp(ip),nvrt
+            ! Here we need to compute z+h of Eq. C.1 of Bennis et al. (2011)
+            ! In her framework, z varies from -h to eta, meaning that z+h corresponds to the distance to the bed
+            ! -ZETA(KBP(IP),IP) corresponds to h, the depth at node IP (not the total water depth)
+            ! Waves
+            z_loc=znl(il,ip)-znl(kbp(ip),ip) !distance from bottom
+!              USTOKES_loc(IL) = USTOKES_loc(IL) + Uint*COSH(2.D0*k_loc*z_loc)/SINH(kD_loc)**2
+!              VSTOKES_loc(IL) = VSTOKES_loc(IL) + Vint*COSH(2.D0*k_loc*z_loc)/SINH(kD_loc)**2
+            tmp0=COSH(2.D0*k_loc*z_loc)/SINH(kD_loc)**2
+            stokes_hvel(1,il,ip)=wave_stokes_x(ip)*tmp0
+            stokes_hvel(2,il,ip)=wave_stokes_y(ip)*tmp0
+          enddo !il
+
+          ! Surface roller contribution to horizontal Stokes drift velocities
+          ! NB: we do not just add the contribution and keep separated arrays.
+          ! This is motivated by the fact that we do not want this contribution to
+          ! influence Wst, which is computed from the continuity equation for waves only
+          
+!          IF (IROLLER == 1) THEN
+!            IF(CROLP(IP)== 0) THEN
+!              WRITE(errmsg,*)'WWM: CROLP(IP)=0'
+!              CALL parallel_abort(errmsg)
+!            END IF
+!            Urint = 2.D0*COS(DROLP(IP))*EROL2(IP)/(CROLP(IP)*D_loc)
+!            Vrint = 2.D0*SIN(DROLP(IP))*EROL2(IP)/(CROLP(IP)*D_loc)
+!
+!            ! Homogeneous across depth
+!            UrSTOKES_loc = Urint
+!            VrSTOKES_loc = Vrint
+!
+!            ! Making sure, the Stokes drift velocities do not blow up in very shallow water
+!            IF (D_loc < 2.D0*hmin_radstress) THEN
+!              UrSTOKES_loc = SIGN(MIN(0.1D0*SQRT(G9*D_loc),ABS(Urint)),Urint)
+!              VrSTOKES_loc = SIGN(MIN(0.1D0*SQRT(G9*D_loc),ABS(Vrint)),Vrint)
+!            END IF
+!          END IF
+
+          ! Surface rollers
+!          IF (IROLLER == 1) THEN
+!            ! Smoothing the roller contribution to the Stokes drift velocity near the shoreline
+!            ! With this profile, U_st < 10% of computed U_st at h < DMIN, and U_st > 95% of computed U_st at h > 2.25*DMIN
+!            IF (D_loc < 1.5D0*DMIN) THEN
+!              ROLLER_stokes_hvel(1,:,IP) = UrSTOKES_loc*(SINH(DEP(IP))/SINH(1.5D0))**2
+!              ROLLER_stokes_hvel(2,:,IP) = VrSTOKES_loc*(SINH(DEP(IP))/SINH(1.5D0))**2
+!            ELSE
+!              ROLLER_stokes_hvel(1,:,IP) = UrSTOKES_loc
+!              ROLLER_stokes_hvel(2,:,IP) = VrSTOKES_loc
+!            END IF
+!          END IF
+
+          ! Storing pressure term
+!          JPRESS(IP) =BHD_WW3(IP) !JPress_loc
+        END DO !ip
+
+!...    Computing Stokes drift horizontal velocities at sides (in pframe if ics=2)
+        ! The average of the values from vertically adjacent nodes is taken
+        stokes_hvel_side=0.D0; roller_stokes_hvel_side=0.D0
+        DO is = 1,nsa
+          IF(idry_s(is) == 1) CYCLE
+
+          ! Indexes of surrounding nodes
+          n1 = isidenode(1,is); n2 = isidenode(2,is)
+          DO k = kbs(is),nvrt
+            stokes_hvel_side(1,k,is)=(stokes_hvel(1,k,n1)+stokes_hvel(1,k,n2))/2.D0
+            stokes_hvel_side(2,k,is)=(stokes_hvel(2,k,n1)+stokes_hvel(2,k,n2))/2.D0
+
+            ! Surface rollers
+!            IF (IROLLER == 1) THEN
+!              ROLLER_stokes_hvel_SIDE(1,k,IS) = (ROLLER_stokes_hvel(1,k,n1) + ROLLER_stokes_hvel(1,k,n2))/2.D0
+!              ROLLER_stokes_hvel_SIDE(2,k,IS) = (ROLLER_stokes_hvel(2,k,n1) + ROLLER_stokes_hvel(2,k,n2))/2.D0
+!            END IF
+          END DO !k
+        END DO !is
+
+!...    Compute _bottom_ Stokes drift w-vel. at elements
+!       Used only first 3 nodes of quad
+!Error: can remove vertical index in stokes_wvel_elem
+        stokes_wvel_elem= 0.D0
+        DO ie = 1,nea
+          IF(idry_e(ie) == 1) CYCLE
+
+          ! Index of the surrounding nodes
+          n1 = elnode(1,ie)
+          n2 = elnode(2,ie)
+          n3 = elnode(3,ie)
+          IF(kbe(ie) == 0) THEN
+            WRITE(errmsg,*)'WW3: Vortex kbe(i) == 0'
+            CALL parallel_abort(errmsg)
+          END IF
+
+          ubar=(stokes_hvel(1,max(kbp(n1),kbe(ie)),n1)+stokes_hvel(1,max(kbp(n2),kbe(ie)),n2) &
+              &+stokes_hvel(1,max(kbp(n3),kbe(ie)),n3))/3.D0 !average bottom stokes-x-vel
+          vbar=(stokes_hvel(2,max(kbp(n1),kbe(ie)),n1)+stokes_hvel(2,max(kbp(n2),kbe(ie)),n2) &
+              &+stokes_hvel(2,max(kbp(n3),kbe(ie)),n3))/3.D0 !average bottom stokes-y-vel
+          dhdx=dp(n1)*dldxy(1,1,ie)+dp(n2)*dldxy(2,1,ie)+dp(n3)*dldxy(3,1,ie) !eframe
+          dhdy=dp(n1)*dldxy(1,2,ie)+dp(n2)*dldxy(2,2,ie)+dp(n3)*dldxy(3,2,ie)
+          stokes_wvel_elem(kbe(ie),ie)=-dhdx*ubar-dhdy*vbar
+        END DO !nea
+
+!...    Compute _bottom_ Stokes w-vel. at nodes
+        stokes_wvel = 0.D0
+        DO ip = 1,np !residents only
+          IF(idry(ip) == 1) CYCLE
+
+          !Bottom Stokes w-vel.
+          tmp0 = 0.D0
+          DO j = 1,nne(ip)
+            ie = indel(j,ip)
+            IF(idry_e(ie)==0) THEN
+              stokes_wvel(kbp(ip),ip)=stokes_wvel(kbp(ip),ip)+stokes_wvel_elem(kbe(ie),ie)*area(ie)
+            END IF
+            tmp0 = tmp0 + area(ie) !>0
+          END DO !j
+          stokes_wvel(kbp(ip),ip) = stokes_wvel(kbp(ip),ip)/tmp0
+        END DO !ip
+
+!...    Compute horizontal gradient of Stokes x and y-vel. (to compute Stokes w-vel.)
+        ws_tmp1 = 0.D0; ws_tmp2 = 0.D0
+        CALL hgrad_nodes(2,0,nvrt,npa,nsa,stokes_hvel(1,:,:),dr_dxy_loc)
+        ws_tmp1(:,:) = dr_dxy_loc(1,:,:) !valid only in resident; dU/dx
+        CALL hgrad_nodes(2,0,nvrt,npa,nsa,stokes_hvel(2,:,:),dr_dxy_loc)
+        ws_tmp2(:,:) = dr_dxy_loc(2,:,:) !dV/dy
+
+!...    Compute Stokes w-vel. at side and all levels: stokes_wvel_side(nvrt,nsa)
+        stokes_wvel_side = 0.D0
+        DO is = 1,ns !residents only
+          IF(idry_s(is) == 1) CYCLE
+          n1 = isidenode(1,is)
+          n2 = isidenode(2,is)
+
+          !Bottom Stokes w-vel.
+          stokes_wvel_side(kbs(is),is)=(stokes_wvel(max(kbs(is),kbp(n1)),n1)+stokes_wvel(max(kbs(is),kbp(n2)),n2))/2.D0
+
+          !Stokes w-vel. at all levels
+          DO k = kbs(is)+1,nvrt 
+            ztmp = zs(k,is) - zs(k-1,is)
+            stokes_wvel_side(k,is)=stokes_wvel_side(k-1,is)-(ws_tmp1(k,is)+ws_tmp1(k-1,is))/2.D0*ztmp &
+     &-(ws_tmp2(k,is)+ws_tmp2(k-1,is))/2.D0*ztmp
+           END DO
+        END DO !is
+
+      END SUBROUTINE STOKES_STRESS_INTEGRAL_SCHISM
+
+!**********************************************************************
+!*  This routine is used with RADFLAG=VOR (3D vortex formulation, after
+!Bennis et al., 2011)
+!*  => Computation of the conservative terms A1 and B1 from Eq. (11) and
+!(12) respectively
+!**********************************************************************
+      SUBROUTINE COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM
+        USE schism_glbl, ONLY: rkind,np,npa,kbs,ns,nsa,nvrt,idry_e,isdel,elnode,dldxy,cori,zs, &
+     &su2,sv2,uu2,vv2,idry_s,jpress,wwave_force,stokes_hvel_side, &
+     &stokes_wvel_side,fwvor_gradpress,fwvor_advz_stokes,fwvor_advxy_stokes
+        USE schism_msgp
+        IMPLICIT NONE
+
+        integer     :: is,ie,k,l,icount
+        real(rkind) :: dJ_dx_loc, dJ_dy_loc, du_loc, dv_loc, dz_loc, Ust_loc, Vst_loc, &
+                       &VF_x_loc,VF_y_loc, STCOR_x_loc, STCOR_y_loc
+        real(rkind) :: du_dxy(2,nvrt,nsa), dv_dxy(2,nvrt,nsa)
+
+!...    Initialisation
+        wwave_force = 0.D0
+
+!...    Computing the spatial derivative of horizontal velocities
+        CALL hgrad_nodes(2,0,nvrt,npa,nsa,uu2,du_dxy)
+        CALL hgrad_nodes(2,0,nvrt,npa,nsa,vv2,dv_dxy)
+
+!...    Main loop over the sides
+        DO is = 1,ns !resident
+          IF(idry_s(is) == 1) CYCLE
+
+          !------------------------
+          ! Pressure term (grad(J))
+          icount = 0; dJ_dx_loc = 0; dJ_dy_loc = 0
+          IF (fwvor_gradpress == 1) THEN ! BM
+            DO l = 1,2 !elements
+              ie = isdel(l,is)
+              if(ie/=0) then; if(idry_e(ie)==0) then
+                icount = icount + 1
+                dJ_dx_loc=dJ_dx_loc+dot_product(jpress(elnode(1:3,ie)),dldxy(1:3,1,ie)) !in eframe
+                dJ_dy_loc=dJ_dy_loc+dot_product(jpress(elnode(1:3,ie)),dldxy(1:3,2,ie))
+              endif; endif
+            END DO !l
+            ! Averaging the values from the two surrounding elements
+            IF(icount > 2) CALL parallel_abort('Pressure term:icount>2')
+            IF(icount == 2) THEN
+              dJ_dx_loc = dJ_dx_loc/2.D0
+              dJ_dy_loc = dJ_dy_loc/2.D0
+            END IF
+          END IF
+
+          !---------------------------------------
+          ! Depth-varying conservative wave forces 
+          du_loc = 0; dv_loc = 0; dz_loc = 1
+          DO k=kbs(is),nvrt
+            IF (fwvor_advz_stokes == 1) THEN ! BM
+              ! du/dz and dv/dz terms
+              IF (k == kbs(is) .OR. k == kbs(is)+1) THEN
+                dz_loc = zs(kbs(is)+2,is) - zs(kbs(is)+1,is)
+                du_loc = su2(kbs(is)+2,is) - su2(kbs(is)+1,is)
+                dv_loc = sv2(kbs(is)+2,is) - sv2(kbs(is)+1,is)
+              ELSE IF (k == nvrt) THEN
+                dz_loc = zs(k,is) - zs(k-1,is)
+                du_loc = su2(k,is) - su2(k-1,is)
+                dv_loc = sv2(k,is) - sv2(k-1,is)
+              ELSE
+                dz_loc = zs(k+1,is) - zs(k-1,is)
+                du_loc = su2(k+1,is) - su2(k-1,is)
+                dv_loc = sv2(k+1,is) - sv2(k-1,is)
+              END IF
+            END IF
+
+            ! Stokes drift velocity
+            ! LRU team : switch off roller contribution, which is only accounted 
+            ! for within continuity equation. This is motivated by the fact that VF
+            ! arises from the irrotational part of the wave motion as opposed
+            ! to surface rollers.
+            Ust_loc = 0.D0; Vst_loc = 0.D0
+            IF (fwvor_advxy_stokes == 1) THEN
+              Ust_loc = stokes_hvel_side(1,k,is)
+              Vst_loc = stokes_hvel_side(2,k,is)
+            END IF
+
+            ! Vortex force 
+            !  x axis : -du/dy*v_s + dv/dx*v_s - W_s*du/dz
+            !  y axis : +du/dy*u_s - dv/dx*u_s - W_s*dv/dz
+            VF_x_loc=-du_dxy(2,k,is)*Vst_loc+dv_dxy(1,k,is)*Vst_loc-stokes_wvel_side(k,is)*du_loc/dz_loc
+            VF_y_loc=du_dxy(2,k,is)*Ust_loc-dv_dxy(1,k,is)*Ust_loc-stokes_wvel_side(k,is)*dv_loc/dz_loc
+            
+            ! Stokes-Coriolis
+            ! x axis : f*v_s
+            ! y axis : -f*U_st
+            STCOR_x_loc = cori(is)*Vst_loc
+            STCOR_y_loc = -cori(is)*Ust_loc
+            
+            ! Saving wave forces [m/s/s]
+            wwave_force(1,k,is)=wwave_force(1,k,is)+VF_x_loc+STCOR_x_loc-dJ_dx_loc
+            wwave_force(2,k,is)=wwave_force(2,k,is)+VF_y_loc+STCOR_y_loc-dJ_dy_loc
+          END DO !k
+        END DO !is
+
+        ! Exchange between ghost regions
+        CALL exchange_s3d_2(wwave_force)
+
+      END SUBROUTINE COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM
+
+
+!**********************************************************************
+!*  This routine is used with RADFLAG=VOR (3D vortex formulation, after Bennis et al., 2011)
+!*  => Computation of the non-conservative terms due to depth-induced breaking (term Fd from Eq. (11) and (12))
+!*  March 2022 : update LRU team
+!    Accounts for depth-induced breaking, roller (if turned on) and whitecapping contribution
+!**********************************************************************
+      SUBROUTINE COMPUTE_BREAKING_VF_TERMS_SCHISM
+        USE schism_glbl, ONLY: rkind,nvrt,hmin_radstress,kbs,ns,isbs,dps,h0, &
+     &zs,nsa,idry_s,isidenode,eta2,errmsg,wwave_force,wave_hs, &
+     &wave_ocean_flux_x,wave_ocean_flux_y
+        USE schism_msgp 
+        IMPLICIT NONE
+
+        INTEGER     :: ZPROF_BREAK 
+        INTEGER     :: is,isd,k,j,l,n1,n2,n3,icount
+        REAL(rkind) :: eta_tmp, tmp0, htot, sum_2D, sum_3D
+        REAL(rkind) :: Fdb_x_loc, Fdb_y_loc, Fds_x_loc, Fds_y_loc
+        REAL(rkind) :: swild_2D(nvrt), swild_3D(nvrt)
+        
+        ZPROF_BREAK=2
+
+        ! Compute sink of momentum due to wave breaking 
+        DO is = 1, ns
+          ! Check IF dry segment or open bnd segment
+          IF(idry_s(is) == 1 .or. isbs(is) > 0) CYCLE
+          
+          ! Water depth at side
+          n1 = isidenode(1,is); n2 = isidenode(2,is)
+          eta_tmp = (eta2(n1) + eta2(n2))/2.D0
+          !htot = max(h0,dps(is)+eta_tmp,hmin_radstress) ! KM
+          htot = max(h0,dps(is)+eta_tmp) !>0
+          ! Threshold on Hs
+          tmp0 = (wave_hs(n1) + wave_hs(n2))/2.D0 !Hs
+          IF(tmp0 <= 0.005D0) CYCLE
+
+          IF(kbs(is)+1 == nvrt) THEN !2D
+            !Fdb_x_loc = 0.D0 ; Fdb_y_loc = 0.D0
+            !Fds_x_loc = 0.D0 ; Fds_y_loc = 0.D0
+            ! N.B. average between the two adjacent nodes
+            ! Depth-induced breaking and roller contribution
+            !new40: WW3_TWOX in [m2/s2]- divide by H_rms=sqrt(2)/2*Hs to get m/s/s.
+            !Also in turbulence
+            Fdb_x_loc=-(wave_ocean_flux_x(n1)+wave_ocean_flux_x(n2))/2.d0/(tmp0*sqrt(2.d0)/2.d0)
+            Fdb_y_loc=-(wave_ocean_flux_y(n1)+wave_ocean_flux_y(n2))/2.d0/(tmp0*sqrt(2.d0)/2.d0)
+!            IF (IROLLER == 1) THEN
+!              Fdb_x_loc = -((1.D0-ALPROL)*(SBR(1,n1) + SBR(1,n2)) + SROL(1,n1) + SROL(1,n2))/2.D0/htot 
+!              Fdb_y_loc = -((1.D0-ALPROL)*(SBR(2,n1) + SBR(2,n2)) + SROL(2,n1) + SROL(2,n2))/2.D0/htot
+!            ELSE
+!            Fdb_x_loc = - (SBR(1,n1) + SBR(1,n2))/2.D0/htot
+!            Fdb_y_loc = - (SBR(2,n1) + SBR(2,n2))/2.D0/htot
+!            ENDIF
+            
+            !Whitecapping contribution (included WW3_TWOX)
+!            Fds_x_loc = -(SDS(1,n1) + SDS(1,n2))/2.D0/htot
+!            Fds_y_loc = -(SDS(2,n1) + SDS(2,n2))/2.D0/htot
+            
+            ! Save breaking wave force
+            wwave_force(1,:,is) = wwave_force(1,:,is) + Fdb_x_loc !+ Fds_x_loc
+            wwave_force(2,:,is) = wwave_force(2,:,is) + Fdb_y_loc !+ Fds_y_loc
+
+          ELSE !3D
+            ! Vertical distribution function of qdm (due to wave breaking)
+            swild_3D = 0.D0
+            DO k = kbs(is),nvrt 
+              ! Homogeneous vertical distribution
+              IF (ZPROF_BREAK == 1) swild_3D(k) = 1.D0 
+              ! Hyperbolic distribution
+              IF (ZPROF_BREAK == 2) swild_3D(k) = cosh((dps(is)+zs(k,is))/(0.2D0*tmp0))
+              IF (ZPROF_BREAK == 3) swild_3D(k) = 1.D0 - tanh(((eta_tmp-zs(k,is))/(0.5D0*tmp0))**2.D0)
+              IF (ZPROF_BREAK == 4) swild_3D(k) = 1.D0 - tanh(((eta_tmp-zs(k,is))/(0.5D0*tmp0))**4.D0)
+              IF (ZPROF_BREAK == 5) swild_3D(k) = 1.D0 - tanh(((eta_tmp-zs(k,is))/(0.5D0*tmp0))**8.D0)
+              ! All in the two surface layers
+              IF (ZPROF_BREAK == 6 .AND. k .GE. nvrt-1) swild_3D(k)=1.D0
+            END DO !k
+
+            ! In shallow depths, we make the vertical profile tend to a vertical-uniform one
+            ! Objectives: 1 - vertical mixing; 2 - numerical stability
+            !IF (htot .LT. 5.D0*DMIN_SCHISM) swild_3D = 1.D0 + (swild_3D - 1.D0)*tanh((0.2D0*htot/DMIN_SCHISM)**8.D0)
+            !IF (htot .LT. 2.0D0) swild_3D = 1.D0 + (swild_3D - 1.D0)*tanh((htot/2.0D0)**8.D0)
+ 
+            ! Integral of the vertical distribution function
+            sum_3D = 0.0D0
+            DO k = kbs(is),nvrt-1
+              sum_3D = sum_3D + (swild_3D(k+1) + swild_3D(k))/2.D0*(zs(k+1,is) - zs(k,is))
+            END DO !k
+            IF(sum_3D==0) THEN
+              WRITE(errmsg,*)'WWM: sum_3D=0'
+              CALL parallel_abort(errmsg)
+            END IF
+
+            DO k = kbs(is),nvrt
+!              Fdb_x_loc = 0.D0 ; Fdb_y_loc = 0.D0
+!              Fds_x_loc = 0.D0 ; Fds_y_loc = 0.D0
+              
+              !new40: Depth-induced breaking and roller contribution (SBR)
+              Fdb_x_loc=-swild_3D(k)*(wave_ocean_flux_x(n1)+wave_ocean_flux_x(n2))/2.D0/sum_3D
+              Fdb_y_loc=-swild_3D(k)*(wave_ocean_flux_y(n1)+wave_ocean_flux_y(n2))/2.D0/sum_3D
+
+!              IF (IROLLER == 1) THEN
+!                Fdb_x_loc = -swild_3D(k)*((1.D0-ALPROL)*(SBR(1,n1) + SBR(1,n2)) + SROL(1,n1) + SROL(1,n2))/2.D0/sum_3D 
+!                Fdb_y_loc = -swild_3D(k)*((1.D0-ALPROL)*(SBR(2,n1) + SBR(2,n2)) + SROL(2,n1) + SROL(2,n2))/2.D0/sum_3D
+!              ELSE
+!                Fdb_x_loc = -swild_3D(k)*(SBR(1,n1) + SBR(1,n2))/2.D0/sum_3D
+!                Fdb_y_loc = -swild_3D(k)*(SBR(2,n1) + SBR(2,n2))/2.D0/sum_3D
+!              ENDIF
+!              !new40: Whitecapping contribution
+!              Fds_x_loc = -swild_3D(k)*(SDS(1,n1) + SDS(1,n2))/2.D0/sum_3D
+!              Fds_y_loc = -swild_3D(k)*(SDS(2,n1) + SDS(2,n2))/2.D0/sum_3D
+
+              ! Save breaking wave force
+              wwave_force(1,k,is) = wwave_force(1,k,is) + Fdb_x_loc !+ Fds_x_loc
+              wwave_force(2,k,is) = wwave_force(2,k,is) + Fdb_y_loc !+ Fds_y_loc
+            END DO !k
+          END IF !2D/3D
+          
+          !! Smoothing wave forces near the shoreline
+          !! With this profile, F < 10% of computed F at h < DMIN, and F > 95% of computed F at h > 2.25*DMIN
+          !!IF (htot < 8.*DMIN) wwave_force(:,:,is) = wwave_force(:,:,is)*tanh((0.5D0*htot/DMIN)**8.D0)
+          !IF (htot < 1.5D0) wwave_force(1,:,is) = wwave_force(1,:,is)*(SINH(htot)/SINH(1.5D0))**2
+          !IF (htot < 0.8D0) wwave_force(2,:,is) = wwave_force(2,:,is)*(SINH(htot)/SINH(0.8D0))**2
+
+        END DO !is
+
+        ! Exchange between ghost regions
+        CALL exchange_s3d_2(wwave_force)
+
+      END SUBROUTINE COMPUTE_BREAKING_VF_TERMS_SCHISM
+
+!**********************************************************************
+!*  This routine is used with RADFLAG=VOR (3D vortex formulation, after Bennis et al., 2011)
+!*  => Computation of the non-conservative terms (Fb) due to bottom friction (see Uchiyama et al., 2010)
+!*  TO DO : pass the vertical distribution in option similar to breaking wave force
+!**********************************************************************
+      SUBROUTINE COMPUTE_STREAMING_VF_TERMS_SCHISM
+        USE schism_glbl, ONLY: rkind,nvrt,hmin_radstress,kbs,ns,isbs,dps,h0,out_wwm, &
+     &zs,idry_s,isidenode,nchi,rough_p,iwbl,delta_wbl,errmsg,small1, &
+     &wwave_force,wave_flux_friction_x,wave_flux_friction_y,eta2
+        USE schism_msgp 
+        IMPLICIT NONE
+
+        INTEGER     :: is, isd, k, j, l, n1, n2, n3, icount
+        REAL(rkind) :: eta_tmp, tmp0, tmp1, tmp2, htot, sum_2D, sum_3D
+        REAL(rkind) :: Fws_x_loc,Fws_y_loc
+        REAL(rkind) :: swild_2D(nvrt), swild_3D(nvrt)
+
+        ! Compute sink of momentum due to wave breaking 
+        DO is = 1, ns
+          ! Check IF dry segment or open bnd segment
+          IF(idry_s(is)==1.or.isbs(is)> 0) CYCLE
+          
+          ! Water depth at side
+          n1 = isidenode(1,is); n2 = isidenode(2,is)
+          eta_tmp = (eta2(n1) + eta2(n2))/2.D0
+          !htot = max(h0,dps(is)+eta_tmp,hmin_radstress) ! KM
+          htot = max(h0,dps(is)+eta_tmp) !>0
+   
+          IF(kbs(is)+1 == nvrt) THEN !2D
+            ! N.B. average between the two adjacent nodes
+            !new40: WW3_TBBX [m2/s2] devided by delta_wbl or htot to get m/s/s
+            Fws_x_loc=-(wave_flux_friction_x(n1)+wave_flux_friction_x(n2))/2.d0/htot !m/s/s
+            Fws_y_loc=-(wave_flux_friction_y(n1)+wave_flux_friction_y(n2))/2.d0/htot
+            ! Saving wave streaming
+            wwave_force(1,:,is) = wwave_force(1,:,is) + Fws_x_loc 
+            wwave_force(2,:,is) = wwave_force(2,:,is) + Fws_y_loc
+
+          ELSE !3D
+            ! Threshold on WBBL
+            ! 1/kwd = awd * delta_wbl (delta_wbl defined for iwbl=1.or.iwbl=2)
+            ! we take awd = 1 but literature suggests awd>1
+            ! we note 1/kwd = tmp0
+            tmp0 = (delta_wbl(n1) + delta_wbl(n2))/2.D0
+            IF(tmp0<=small1) CYCLE
+            !tmp0>0
+            
+            ! Vertical distribution function of qdm
+            swild_3D = 0.D0
+            DO k = kbs(is), nvrt
+              ! Homogeneous vertical distribution
+              !swild_3D(k) = 1.D0
+              ! Hyperbolic distribution - Type of profile 1
+              !swild_3D(k) = cosh((eta_tmp-zs(k,is))/tmp0)
+              ! Hyperbolic distribution - Type of profile 2
+              swild_3D(k) = 1.D0 - tanh(((dps(is)+zs(k,is))/tmp0)**2.D0)
+              !swild_3D(k) = 1.D0 - tanh(((dps(is)+zs(k,is))/tmp0)**4.D0)
+              !swild_3D(k) = 1.D0 - tanh(((dps(is)+zs(k,is))/tmp0)**8.D0)
+            END DO !k
+            
+            ! In shallow depths, we make the vertical profile tend to a vertical-uniform one
+            ! Objectives: 1 - vertical mixing; 2 - numerical stability
+            !IF (htot .LT. 2.0D0) swild_3D = 1.D0 + (swild_3D - 1.D0)*tanh((htot/2.0D0)**8.D0)
+
+            ! Integral of the vertical distribution function
+            sum_3D = 0.0D0
+            DO k = kbs(is), nvrt-1
+              sum_3D = sum_3D + (swild_3D(k+1) + swild_3D(k))/2.D0*(zs(k+1,is) - zs(k,is))
+            END DO !nvrt-1
+            IF(sum_3D==0) THEN
+              WRITE(errmsg,*)'WW3: sum_3D=0'
+              CALL parallel_abort(errmsg)
+            END IF
+
+            DO k = kbs(is), nvrt
+              Fws_x_loc=-swild_3D(k)*(wave_flux_friction_x(n1)+wave_flux_friction_x(n2))/2.D0/sum_3D !m/s/s
+              Fws_y_loc=-swild_3D(k)*(wave_flux_friction_y(n1)+wave_flux_friction_y(n2))/2.D0/sum_3D
+              ! Saving wave streaming
+              wwave_force(1,k,is) = wwave_force(1,k,is) + Fws_x_loc
+              wwave_force(2,k,is) = wwave_force(2,k,is) + Fws_y_loc
+            END DO
+          END IF !2D/3D
+        END DO !is
+
+        ! Exchange between ghost regions
+        CALL exchange_s3d_2(wwave_force)
+
+      END SUBROUTINE COMPUTE_STREAMING_VF_TERMS_SCHISM
+#endif /*USE_WW3*/

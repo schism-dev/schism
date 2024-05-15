@@ -90,7 +90,7 @@ module schism_glbl
                   &iwind_form,irec_nu,itur,ihhat,inu_elev, &
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
-                  &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,isav, &
+                  &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,iveg, &
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
                   &iof_ugrid,model_type_pahm
@@ -124,8 +124,8 @@ module schism_glbl
   real(rkind),save :: q2min,tempmin,tempmax,saltmin,saltmax, &
                       &vis_coe1,vis_coe2,h_bcc1,velmin_btrack,h_tvd,rmaxvel1,rmaxvel2, &
                       &difnum_max_l2,wtime1,wtime2,cmiu0, &
-                      &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,sav_di0,sav_h0,sav_nv0, &
-                      &dtb_min_transport,bounds_lon(2)
+                      &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,veg_di0,veg_h0,veg_nv0, &
+                      &veg_cd0,dtb_min_transport,bounds_lon(2)
 
 !  logical,save :: lm2d !2D or 3D model
   logical,save :: lhas_quad=.false. !existence of quads
@@ -475,6 +475,7 @@ module schism_glbl
                                   &elev_nudge(:),uv_nudge(:),fluxprc(:),fluxevp(:), &
                                   &dav(:,:),elevmax(:),dav_max(:,:),dav_maxmag(:), & 
                                   &etaic(:),diffmax(:),diffmin(:),dfq1(:,:),dfq2(:,:)
+  real(rkind),save,allocatable,target :: rsxx(:), rsxy(:), rsyy(:)
 
   !(2,npa). ocean-ice stress (junk if no ice) [m^2/s/s]
   real(rkind),save,allocatable :: tau_oi(:,:)
@@ -591,8 +592,8 @@ module schism_glbl
 ! vertical flux diversion closure fraction applied at surface
 !  real(rkind) :: vclose_surf_frac   ! 1.0:flux applied at surface, 0.5:half at top half at bottom
 
-! WWM
-!#ifdef USE_WWM
+! WWM & WW3
+  CHARACTER(LEN=3) :: RADFLAG
   integer,save :: msc2,mdc2
   real(rkind),save,allocatable :: wwave_force(:,:,:), jpress(:), sbr(:,:), sbf(:,:), srol(:,:), sds(:,:), sveg(:,:), eps_w(:), eps_r(:),eps_br(:)
   real(rkind),save,allocatable :: stokes_hvel(:,:,:), stokes_wvel(:,:), stokes_hvel_side(:,:,:), stokes_wvel_side(:,:)
@@ -609,7 +610,10 @@ module schism_glbl
   real(rkind),save,allocatable :: wave_sintot(:)
   real(rkind),save,allocatable :: wave_sdstot(:)
   real(rkind),save,allocatable :: wave_svegtot(:)
-!#endif
+  real(rkind),save,allocatable :: wave_hs(:),wave_dir(:),wave_tm1(:),wave_wnm(:), &
+ &wave_pres(:),wave_stokes_x(:),wave_stokes_y(:),wave_ocean_flux_x(:), &
+ &wave_ocean_flux_y(:),wave_flux_friction_x(:),wave_flux_friction_y(:), &
+ &wave_orbu(:),wave_orbv(:)
 
 ! TIMOR
 !#ifdef USE_TIMOR
@@ -660,7 +664,7 @@ module schism_glbl
   integer,save,allocatable     :: imarsh(:),ibarrier_m(:)
 
 ! SAV
-  real(rkind),save,allocatable     :: sav_alpha(:),sav_h(:),sav_nv(:),sav_di(:),sav_cd(:)
+  real(rkind),save,allocatable     :: veg_alpha(:),veg_h(:),veg_nv(:),veg_di(:),veg_cd(:)
 
 !Tsinghua group:0825
   REAL(rkind),save :: Cbeta,beta0,c_miu,Cv_max,ecol,ecol1,sigf,sigepsf,Ceps1,Ceps2,Ceps3,Acol,sig_s,fi_c,ksi_c,kpz !1013+kpz

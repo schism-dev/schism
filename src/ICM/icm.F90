@@ -976,7 +976,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
       !hdep: total distance from surface to the bottom level of the layer above sav canopy
       if(zid(k-1)>=shtz) then
           rKeh0=rKeh0+(rKe0(k)+rKeV(k))*dz(k);  hdep=hdep+dz(k)
-      endif !isav
+      endif !
 
       if(zid(k-1)<shtz) then
         xT=temp(k)-sTGP !adjust sav  maximum growth rate by temperature

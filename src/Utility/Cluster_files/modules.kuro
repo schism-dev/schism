@@ -1,0 +1,2 @@
+module load intel/compiler-2024.0 openmpi-ib/intel-2024.0/4.1.6 hdf5/intel-2024.0/1.14.3_openmpi
+module load slurm/23.11.1 netcdf-c/intel-2024.0/4.9.2_openmpi netcdf-fortran/intel-2024.0/4.6.1_openmpi

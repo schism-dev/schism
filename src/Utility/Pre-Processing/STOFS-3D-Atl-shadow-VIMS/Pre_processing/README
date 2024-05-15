@@ -1,17 +1,24 @@
 Scripts for pre-processing, mainly generating input files.
 
 hgrid.*:
-0) generate *.2dm
+0) generate *.2dm in SMS, remove isolated nodes, check for duplicated nodes (should be none)
+* improve hgrid (remove skew/small elements): RiverMeshTools/RiverMapper/RiverMapper/improve_hgrid.py
 
-1)   get bathy-loaded *.2dm and hgrid.ll
-/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Grid/proc_hgrid.py
+*) Load bathymetry, see Bathy_edit/DEM_loading/README
 
-2) Optional: force thalweg depth
-  2.1) generate a *.2dm from thalweg points, redistribute with 100 m
-  2.2) /sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Grid/force_thalweg.py
+*) Optional: force thalweg depth
+  1) generate a *.2dm from thalweg points, redistribute with 100 m
+  2) /sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Grid/force_thalweg.py
 
-3) Load levee
-  3.1) set_levee_height.py
-  3.2) set_additional_dp.py, force higher levee height at upstream Missi. R. and remove forced levee height at lower Missi. R.
 
-4) to be added: split quads where necessary
+*) use the stofs3d-atl-driver.py to generate individual inputs
+
+*) Inputs not included in the driver yet:
+flux.th: see River/
+TEM_1.th: seems no more temperature for St. Laurence River as of Apr, 2024, use ambient temperature in bctides.in as a temporary fix.
+hotstart: see Hotstart/README, especially on incorporating aviso into eta2 in hotstart.nc
+Nudge:
+Bnd_th_nc: hycom-based inputs are straightforward; see Bnd_th_nc/elev2D_aviso/ for incorporating aviso into elev2D.th.nc
+sflux: see Sflux/ on how to generate sflux files based on HRR/GFS/ERA5
+
+*) see Hotstart/download_hycom.py on how to download hycom

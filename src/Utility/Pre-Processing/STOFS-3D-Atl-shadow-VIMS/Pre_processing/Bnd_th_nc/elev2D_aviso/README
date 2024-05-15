@@ -1,0 +1,2 @@
+Needs to download aviso product manually and save as aviso.nc as an input for gen_bnd_aviso.py
+needs hgrid.gr3 and vgrid.in

@@ -715,14 +715,14 @@
 
 !----------------------------------------------------------------------
 ! Vegetation model
-! If isav=1, need 4 extra inputs: (1) sav_D.gr3 (depth is stem diameter in meters);
-! (2) sav_N.gr3 (depth is # of stems per m^2);
-! (3) sav_h.gr3 (height of canopy in meters);
-! (4) sav_cd.gr3 (drag coefficient).									
+! If iveg=1, need 4 extra inputs: (1) veg_D.gr3 (depth is stem diameter in meters);
+! (2) veg_N.gr3 (depth is # of stems per m^2);
+! (3) veg_h.gr3 (height of canopy in meters);
+! (4) veg_cd.gr3 (drag coefficient).									
 ! If one of these depths=0 at a node, the code will set all to 0. 
-! If USE_MARSH is on and isav=1, all .gr3 must have constant depths!
+! If USE_MARSH is on and iveg=1, all .gr3 must have constant depths!
 !----------------------------------------------------------------------
-  isav = 0 !on/off flag
+  iveg = 0 !on/off flag
 
 !----------------------------------------------------------------------
 ! Coupling step with ICE module.

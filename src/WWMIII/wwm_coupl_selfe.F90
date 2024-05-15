@@ -1,4 +1,4 @@
-!Note: most arrays in this file are from SCHISM directly (too account for
+!Note: most arrays in this file are from SCHISM directly (to account for
 !quads)
 #include "wwm_functions.h"
 #ifdef SCHISM
@@ -87,7 +87,7 @@
           ! Total water depth at sides
           HTOT = MAX((DEP(isidenode(1,IS)) + DEP(isidenode(2,IS)))/2.0D0,hmin_radstress)
 
-          ! Wave forces
+          ! Wave forces (HTOT>0)
           WWAVE_FORCE(1,:,IS) = WWAVE_FORCE(1,:,IS) - (DSXX3D(1,:,IS) + DSXY3D(2,:,IS)) / HTOT
           WWAVE_FORCE(2,:,IS) = WWAVE_FORCE(2,:,IS) - (DSXY3D(1,:,IS) + DSYY3D(2,:,IS)) / HTOT
         END DO !IS
@@ -123,7 +123,7 @@
           IF(idry(IP) == 1) CYCLE
 
           ! Total water depth at the node
-          D_loc = MAX( DEP(IP) , hmin_radstress )
+          D_loc = MAX( DEP(IP) , hmin_radstress ) !>0
 
           ! Initialization of the local Stokes drift and J variables
           USTOKES_loc  = 0.D0; VSTOKES_loc  = 0.D0;
@@ -135,6 +135,10 @@
             Uint   = 0.D0; Vint   = 0.D0; Urint   = 0.D0; Vrint   = 0.D0
             k_loc  = MIN(KDMAX/DEP(IP),WK(IS,IP))
             kD_loc = MIN(KDMAX,WK(IS,IP)*D_loc)
+            IF(kD_loc == 0) THEN
+              WRITE(errmsg,*)'WWM: kD_loc=0'
+              CALL parallel_abort(errmsg)
+            END IF
 
             ! Loop on the directions
             DO ID = 1, MDC
@@ -162,6 +166,10 @@
           ! influence Wst, which is computed from the continuity equation for waves only
           
           IF (IROLLER == 1) THEN
+            IF(CROLP(IP)== 0) THEN
+              WRITE(errmsg,*)'WWM: CROLP(IP)=0'
+              CALL parallel_abort(errmsg)
+            END IF
             Urint = 2.D0*COS(DROLP(IP))*EROL2(IP)/(CROLP(IP)*D_loc)
             Vrint = 2.D0*SIN(DROLP(IP))*EROL2(IP)/(CROLP(IP)*D_loc)
 
@@ -217,7 +225,8 @@
           END DO
         END DO !nsa
 
-!...    Compute bottom Stokes drift z-vel. at elements
+!...    Compute bottom Stokes drift w-vel. at elements
+!       Used only first 3 nodes of quad
         STOKES_WVEL_ELEM = 0.D0
         DO IE = 1,nea
            IF(idry_e(IE) == 1) CYCLE
@@ -240,41 +249,41 @@
            STOKES_WVEL_ELEM(kbe(IE),IE) = -dhdx*ubar - dhdy*vbar
         END DO !nea
 
-!...    Compute bottom Stokes z-vel. at nodes
+!...    Compute bottom Stokes w-vel. at nodes
         STOKES_WVEL = 0.D0
         DO IP = 1,np !residents only
            IF(idry(IP) == 1) CYCLE
 
-           !Bottom Stokes z-vel.
+           !Bottom Stokes w-vel.
            tmp0 = 0.D0
            DO j = 1,nne(IP)
               ie = indel(j,IP)
               IF(idry_e(ie)==0) THEN
                 STOKES_WVEL(kbp(IP),IP) = STOKES_WVEL(kbp(IP),IP) + STOKES_WVEL_ELEM(kbe(ie),ie)*area(ie)
               END IF
-              tmp0 = tmp0 + area(ie)
+              tmp0 = tmp0 + area(ie) !>0
            END DO !j
            STOKES_WVEL(kbp(IP),IP) = STOKES_WVEL(kbp(IP),IP)/tmp0
         END DO !np
 
-!...    Compute horizontal gradient of Stokes x and y-vel. (to compute Stokes z-vel.)
+!...    Compute horizontal gradient of Stokes x and y-vel. (to compute Stokes w-vel.)
         ws_tmp1 = 0.D0; ws_tmp2 = 0.D0
         CALL hgrad_nodes(2,0,NVRT,MNP,nsa,STOKES_HVEL(1,:,:),dr_dxy_loc)
         ws_tmp1(:,:) = dr_dxy_loc(1,:,:) !valid only in resident
         CALL hgrad_nodes(2,0,NVRT,MNP,nsa,STOKES_HVEL(2,:,:),dr_dxy_loc)
         ws_tmp2(:,:) = dr_dxy_loc(2,:,:)
 
-!...    Compute Stokes z-vel. at all levels: STOKES_WVEL_SIDE(NVRT,nsa)
+!...    Compute Stokes w-vel. at all levels: STOKES_WVEL_SIDE(NVRT,nsa)
         STOKES_WVEL_SIDE = 0.D0
         DO IS = 1,ns !residents only
           IF(idry_s(IS) == 1) CYCLE
           n1 = isidenode(1,IS)
           n2 = isidenode(2,IS)
 
-          !Bottom Stokes z-vel.
+          !Bottom Stokes w-vel.
           STOKES_WVEL_SIDE(kbs(IS),IS) = (STOKES_WVEL(max(kbs(IS),kbp(n1)),n1) + STOKES_WVEL(max(kbs(IS),kbp(n2)),n2))/2.D0
 
-          !Stokes z-vel. at all levels
+          !Stokes w-vel. at all levels
           DO k = kbs(IS)+1, NVRT
             ztmp = zs(k,IS) - zs(k-1,IS)
             STOKES_WVEL_SIDE(k,IS) = STOKES_WVEL_SIDE(k-1,IS) &
@@ -404,14 +413,14 @@
 
 !**********************************************************************
 !*  This routine is used with RADFLAG=VOR (3D vortex formulation, after Bennis et al., 2011)
-!*  => Computation of the non-conservative terms due to depth-induced breaking (term Fb from Eq. (11) and (12))
+!*  => Computation of the non-conservative terms due to depth-induced breaking (term Fd from Eq. (11) and (12))
 !*  March 2022 : update LRU team
 !    Accounts for depth-induced breaking, roller (if turned on) and whitecapping contribution
 !**********************************************************************
       SUBROUTINE COMPUTE_BREAKING_VF_TERMS_SCHISM
         USE DATAPOOL
         USE schism_glbl, ONLY: hmin_radstress, kbs, ns, isbs, dps, h0, out_wwm, &
-                               &zs,nsa,idry_s,isidenode
+                               &zs,nsa,idry_s,isidenode,errmsg
         USE schism_msgp 
         IMPLICIT NONE
 
@@ -430,7 +439,7 @@
           n1 = isidenode(1,IS); n2 = isidenode(2,IS)
           eta_tmp = (eta2(n1) + eta2(n2))/2.D0
           !htot = max(h0,dps(IS)+eta_tmp,hmin_radstress) ! KM
-          htot = max(h0,dps(IS)+eta_tmp)
+          htot = max(h0,dps(IS)+eta_tmp) !>0
 
           IF(kbs(IS)+1 == NVRT) THEN !2D
           
@@ -469,9 +478,9 @@
               IF (ZPROF_BREAK == 1) swild_3D(k) = 1.D0 
               ! Hyperbolic distribution
               IF (ZPROF_BREAK == 2) swild_3D(k) = cosh((dps(IS)+zs(k,IS))/(0.2D0*tmp0))
-              IF (ZPROF_BREAK == 3) swild_3D(k) = 1.D0 - dtanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**2.D0)
-              IF (ZPROF_BREAK == 4) swild_3D(k) = 1.D0 - dtanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**4.D0)
-              IF (ZPROF_BREAK == 5) swild_3D(k) = 1.D0 - dtanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**8.D0)
+              IF (ZPROF_BREAK == 3) swild_3D(k) = 1.D0 - tanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**2.D0)
+              IF (ZPROF_BREAK == 4) swild_3D(k) = 1.D0 - tanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**4.D0)
+              IF (ZPROF_BREAK == 5) swild_3D(k) = 1.D0 - tanh(((eta_tmp-zs(k,IS))/(0.5D0*tmp0))**8.D0)
               ! All in the two surface layers
               IF (ZPROF_BREAK == 6 .AND. k .GE. NVRT-1) swild_3D(k)=1.D0
             END DO !k
@@ -486,6 +495,10 @@
             DO k = kbs(IS), NVRT-1
               sum_3D = sum_3D + (swild_3D(k+1) + swild_3D(k))/2.D0*(zs(k+1,IS) - zs(k,IS))
             END DO !NVRT-1
+            IF(sum_3D==0) THEN
+              WRITE(errmsg,*)'WWM: sum_3D=0'
+              CALL parallel_abort(errmsg)
+            END IF
 
             DO k = kbs(IS), NVRT
             
@@ -524,14 +537,14 @@
 
 !**********************************************************************
 !*  This routine is used with RADFLAG=VOR (3D vortex formulation, after Bennis et al., 2011)
-!*  => Computation of the non-conservative terms due to bottom friction (see Uchiyama et al., 2010)
+!*  => Computation of the non-conservative terms (Fb) due to bottom friction (see Uchiyama et al., 2010)
 !*  TO DO : pass the vertical distribution in option similar to breaking wave force
 !**********************************************************************
       SUBROUTINE COMPUTE_STREAMING_VF_TERMS_SCHISM
         ! MP
         USE DATAPOOL
         USE schism_glbl, ONLY: hmin_radstress, kbs, ns, isbs, dps, h0, out_wwm,&
-                               &zs, idry_s, isidenode, nchi, rough_p, iwbl, delta_wbl
+                         &zs,idry_s,isidenode,nchi,rough_p,iwbl,delta_wbl,errmsg
         USE schism_msgp 
         IMPLICIT NONE
 
@@ -549,7 +562,7 @@
           n1 = isidenode(1,IS); n2 = isidenode(2,IS)
           eta_tmp = (eta2(n1) + eta2(n2))/2.D0
           !htot = max(h0,dps(IS)+eta_tmp,hmin_radstress) ! KM
-          htot = max(h0,dps(IS)+eta_tmp)
+          htot = max(h0,dps(IS)+eta_tmp) !>0
    
           IF(kbs(IS)+1 == NVRT) THEN !2D
           
@@ -568,6 +581,7 @@
             ! we note 1/kwd = tmp0
             tmp0 = (delta_wbl(n1) + delta_wbl(n2))/2.D0
             IF(tmp0 .LT. SMALL) CYCLE
+            !tmp0>0
             
             ! Vertical distribution function of qdm
             swild_3D = 0.D0
@@ -577,9 +591,9 @@
               ! Hyperbolic distribution - Type of profile 1
               !swild_3D(k) = cosh((eta_tmp-zs(k,IS))/tmp0)
               ! Hyperbolic distribution - Type of profile 2
-              swild_3D(k) = 1.D0 - dtanh(((dps(IS)+zs(k,IS))/tmp0)**2.D0)
-              !swild_3D(k) = 1.D0 - dtanh(((dps(IS)+zs(k,IS))/tmp0)**4.D0)
-              !swild_3D(k) = 1.D0 - dtanh(((dps(IS)+zs(k,IS))/tmp0)**8.D0)
+              swild_3D(k) = 1.D0 - tanh(((dps(IS)+zs(k,IS))/tmp0)**2.D0)
+              !swild_3D(k) = 1.D0 - tanh(((dps(IS)+zs(k,IS))/tmp0)**4.D0)
+              !swild_3D(k) = 1.D0 - tanh(((dps(IS)+zs(k,IS))/tmp0)**8.D0)
             END DO !k
             
             ! In shallow depths, we make the vertical profile tend to a vertical-uniform one
@@ -591,13 +605,17 @@
             DO k = kbs(IS), NVRT-1
               sum_3D = sum_3D + (swild_3D(k+1) + swild_3D(k))/2.D0*(zs(k+1,IS) - zs(k,IS))
             END DO !NVRT-1
+            IF(sum_3D==0) THEN
+              WRITE(errmsg,*)'WWM: sum_3D=0'
+              CALL parallel_abort(errmsg)
+            END IF
 
             DO k = kbs(IS), NVRT
               Fws_x_loc = - swild_3D(k)*(SBF(1,n1) + SBF(1,n2))/2.D0/sum_3D
               Fws_y_loc = - swild_3D(k)*(SBF(2,n1) + SBF(2,n2))/2.D0/sum_3D
               ! Saving wave streaming
-              WWAVE_FORCE(1,k,IS) = WWAVE_FORCE(1,k,IS) + Fws_x_loc 
-              WWAVE_FORCE(2,k,IS) = WWAVE_FORCE(2,k,IS) + Fws_y_loc              
+              WWAVE_FORCE(1,k,IS) = WWAVE_FORCE(1,k,IS) + Fws_x_loc
+              WWAVE_FORCE(2,k,IS) = WWAVE_FORCE(2,k,IS) + Fws_y_loc
             END DO
           END IF !2D/3D
 
@@ -639,8 +657,8 @@
             n1 = isidenode(1,IS); n2 = isidenode(2,IS)
             eta_tmp = (eta2(n1) + eta2(n2))/2.D0
             !htot = max(h0,dps(IS)+eta_tmp,hmin_radstress)
-            htot = max(h0,dps(IS)+eta_tmp)
-			
+            htot = max(h0,dps(IS)+eta_tmp) !>0
+
             !vegetation height at sides
             SAV_H_tmp = (VLTH(n1)+VLTH(n2))/2.D0 
    
@@ -653,19 +671,18 @@
               WWAVE_FORCE(2,:,IS) = WWAVE_FORCE(2,:,IS) + Fveg_y_loc
   
             ELSE !3D  
-
               tmp0 = 0.D0
               topveg_k = NVRT
               IF (SAV_H_tmp >= htot) THEN !emergent vegetation
                 topveg_k = NVRT
-              ELSE
+              ELSE !submerged vegetation
                 DO k = kbs(IS), NVRT-1
                   tmp0 = tmp0 + zs(k+1,IS) - zs(k,IS)
-                  IF (tmp0 >= SAV_H_tmp) THEN !submerged vegetation
+                  IF (tmp0 >= SAV_H_tmp) THEN
                     topveg_k = k+1
-				    EXIT
+                    EXIT
                   ENDIF
-                END DO
+                END DO !k
               ENDIF
 
               ! Vertical distribution function of qdm
@@ -682,8 +699,9 @@
               DO k = kbs(IS), topveg_k-1
                 sum_3D = sum_3D + (swild_3D(k+1) + swild_3D(k))/2.D0*(zs(k+1,IS) - zs(k,IS))
               END DO !topveg_k-1
-              IF(sum_3D == 0) CALL parallel_abort('Vertical profile in wave vegetation force: integral=0')
+              IF(sum_3D==0) CALL parallel_abort('WWM: Vertical profile in wave vegetation force: integral=0')
 
+!'
               DO k = kbs(IS), topveg_k
                 Fveg_x_loc = - swild_3D(k)*(SVEG(1,n1) + SVEG(1,n2))/2.D0/sum_3D
                 Fveg_y_loc = - swild_3D(k)*(SVEG(2,n1) + SVEG(2,n2))/2.D0/sum_3D
@@ -742,7 +760,7 @@
             !Initialization
             WWAVE_FORCE_VEG_NL_TOT = 0.D0
 
-            Uorbi(:) = 0.D0							
+            Uorbi(:) = 0.D0
             etaw(:) = 0.D0
 
             ! Check IF dry segment or open bnd segment
@@ -752,14 +770,14 @@
             n1 = isidenode(1,IS); n2 = isidenode(2,IS)
 
             eta_tmp = (eta2(n1) + eta2(n2))/2.D0
-            htot = max(h0,dps(IS)+eta_tmp)
+            htot = max(h0,dps(IS)+eta_tmp) !>0
 
             !Vegetation characteristics at sides
             SAV_CD_tmp = (VCD(n1) + VCD(n2))/2.D0
             SAV_BV_tmp = (VDM(n1) + VDM(n2))/2.D0
             SAV_NV_tmp = (VNV(n1) + VNV(n2))/2.D0
             SAV_H_tmp = (VLTH(n1) + VLTH(n2))/2.D0
-			
+
             !Check IF this is a vegetated SIDE
             IF (SAV_CD_tmp*SAV_BV_tmp*SAV_NV_tmp*SAV_H_tmp == 0.D0) CYCLE
 
@@ -774,30 +792,26 @@
             w_dir_tmp = DEG*PI/180.d0
 
             IF (Hs_tmp <= 0.00D0) CYCLE
-            IF (TM10_tmp <= 0.00D0) CYCLE									 
+            IF (TM10_tmp <= 0.00D0) CYCLE
 
             !Bed slope at sides
             tanbeta_x_tmp = (tanbeta_x(n1) + tanbeta_x(n2))/2.D0
             tanbeta_y_tmp = (tanbeta_y(n1) + tanbeta_y(n2))/2.D0
-			
+
             ! Computation of wave orbital velocities and water surface elevations over a wave cycle in case of non linear waves.
             ! Both of the proposed methods compute near bed orbital velocity. As effects of coastal vegetation on waves usually 
             ! occur in shallow water conditions, near bed orbital velocity is used as the depth-averaged value to a first approximation. 
             !The vegetation force is then empirically distributed over the vegetation height. The implementation of a more accurate
             ! method computing vertical profiles of orbital velocity is under development (See Fenton, 1988).
-			
             ! Choose ONE of the following methods : WAVE_ASYMMETRY_ELFRINK_VEG or WAVE_ASYMMETRY_RF.
-			
             ! The routine WAVE_ASYMMETRY_ELFRINK_VEG computes a time series of wave orbital velocity
             ! and water surface elevation over a wave cycle based on Elfrink et al. (2006). 
 
             !CALL WAVE_ASYMMETRY_ELFRINK_VEG(Hs_tmp,TM10_tmp,w_dir_tmp,htot,tanbeta_x_tmp,tanbeta_y_tmp,&
                  !ech+1,Uorbi,Ucrest,Utrough,T_crest,T_trough,etaw)
-				 
             ! The routine WAVE_ASYMMETRY_RF computes a time series of wave orbital velocity
             ! and water surface elevation over a wave cycle based on Rienecker and Fenton (1981) and Ruessink et al. (2012). 				 
-				 
-            CALL WAVE_ASYMMETRY_RF(Hrms_tmp,TM10_tmp,klm_tmp,htot,ech,Uorbi,etaw)			
+            CALL WAVE_ASYMMETRY_RF(Hrms_tmp,TM10_tmp,klm_tmp,htot,ech,Uorbi,etaw)
 
             !Fv,w = 1/Trep int 0 -> Trep 0.5*rhow*Cd*bv*Nv*h'v*uw*abs(uw) dt
             dt = TM10_tmp/(ech-1)
@@ -822,12 +836,12 @@
               topveg_k = NVRT
               IF (SAV_H_tmp >= htot) THEN !emergent vegetation
                 topveg_k = NVRT
-              ELSE
+              ELSE !submerged vegetation
                 DO k = kbs(IS), NVRT-1
                   tmp0 = tmp0 + zs(k+1,IS) - zs(k,IS)
-                  IF (tmp0 >= SAV_H_tmp) THEN !submerged vegetation
+                  IF (tmp0 >= SAV_H_tmp) THEN
                     topveg_k = k+1
-				    EXIT
+                    EXIT
                   ENDIF
                 END DO
               ENDIF
@@ -844,12 +858,12 @@
                 sum_3D = sum_3D + (swild_3D(k+1) + swild_3D(k))/2.D0*(zs(k+1,IS) - zs(k,IS))
               END DO !topveg_k-1
 
-              IF(sum_3D == 0) CALL parallel_abort('Vertical profile in intrawave vegetation force: integral=0')
+              IF(sum_3D==0) CALL parallel_abort('Vertical profile in intrawave vegetation force: integral=0')
+!'
 
               DO k = kbs(IS), topveg_k
                 WWAVE_FORCE_VEG_NL_x = - swild_3D(k)*WWAVE_FORCE_VEG_NL_TOT*COS(w_dir_tmp)/sum_3D
                 WWAVE_FORCE_VEG_NL_y = - swild_3D(k)*WWAVE_FORCE_VEG_NL_TOT*SIN(w_dir_tmp)/sum_3D
-				
                 WWAVE_FORCE(1,k,IS) = WWAVE_FORCE(1,k,IS) + WWAVE_FORCE_VEG_NL_x
                 WWAVE_FORCE(2,k,IS) = WWAVE_FORCE(2,k,IS) + WWAVE_FORCE_VEG_NL_y
               END DO
@@ -857,7 +871,6 @@
           END DO
 
         CALL exchange_s3d_2(WWAVE_FORCE)
-		
       END SUBROUTINE
 
 !**********************************************************************

@@ -9,15 +9,20 @@ The command to checkout the tests is:
 
 `svn co https://columbia.vims.edu/schism/schism_verification_tests`
 
+(You can also simply use wget to download)
+
 Note that the test suite is kept up to date with the latest master branch on the [SCHISM's git repo](https://github.com/schism-dev/schism/tree/master).
 As a result, there may be some differences (some parameters may have been removed or added) between the param.nml you are using and the one from the verification tests (master branch).
-In this case, you may need to modify the param.nml you downloaded from the "schism_verification_tests" to make it work with your SCHISM version.
-A sample param.nml is always provided under your SCHISM source code directory:
+ It's important to use a correct `param.nml` corresponding to the version of SCHISM you are using. A sample param.nml is always provided under your SCHISM source code directory:
 
 `$your_schism_dir/sample_inputs/param.nml`
 
 The latest master version for this input can also be viewed on the [Github page](https://github.com/schism-dev/schism/blob/master/sample_inputs/param.nml).
-Useful user info can be found in the source code bundle `src/Readme.beta_notes` (including change of format for input files and bug fixes).
+Useful info can be found in the source code bundle `src/Readme.beta_notes` (including change of format for input files and bug fixes) if you wish to hop among different versions.
+
+To ease the burden of beginners who wish to verify their own build of different SCHISM
+ versions, we have also included a subdirectory `Tags` in the test suite, in which users can
+ test all major tag releases with a simple test case (Quarter Annulus).
 
 
 ## SCHISM Modules required in the test suite

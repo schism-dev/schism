@@ -1,10 +1,67 @@
+python:
+  - 3.8
+  - 3.9
+  - 3.10
+  - 3.11
 mpi:
   - openmpi  # [not win]
   - mpich  # [not win]
-
-#pin_run_as_build:
-#    openmpi: x.x
-
-#pin_run_as_build:
-#    mpich: x.x
-
+WWM:
+# - true
+  - false
+WW3:
+# - true
+  - false
+TVD_LIM:
+# - SB
+  - VL
+# - MM
+# - OS
+PREC_EVAP:
+# - true
+  - false
+GOTM:
+# - true
+  - false
+HA:
+# - true
+  - false
+OLDIO:
+# - true
+  - false
+SED2D:
+# - true
+ - false
+ICE:
+# - true
+  - false
+GEN:
+# - true
+  - false
+AGE:
+# - true
+  - false
+ECO:
+# - true
+  - false
+ICM:
+# - true
+  - false
+PH:
+# - true
+  - false
+COSINE:
+# - true
+  - false
+FIB:
+# - true
+  - false
+FABM:
+# - true
+  - false
+MARSH:
+# - true
+  - false
+SED:
+# - true
+ - false

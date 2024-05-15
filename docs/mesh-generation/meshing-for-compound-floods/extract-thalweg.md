@@ -8,7 +8,8 @@ Flow accumulation threshold is a parameter that identifies grids with flow accum
 <img src="../../assets/riverstream_1e7.png" width=320 height=250>
 
 ## Scripts
-Scripts are available from this [Git Repo](). 
+[pyDEM](https://github.com/schism-dev/RiverMeshTools/tree/main/pyDEM) 
+can be downloaded from the [RiverMeshTools repository](https://github.com/schism-dev/rivermeshtools).
 
 ### Dependencies
 numpy  
@@ -97,15 +98,82 @@ if __name__ == '__main__':
     del pool
 ```  
 
-2. Extract channel network  
-Fill depression:  
-Algorithm "Priority-Flood+Epsilon" ([Barnes et al., 2014](#barnes2014a)) is used here to fill depressions in the DEM. This algorithm increases every cell in a depression to the level of that depression's output, plus an additional increment which can direct flow to the periphery of the DEM.
+2. Extract channel networks  
 
-    Flow direction:
+  Extracting channel networks consists of three steps:  
 
-    Compute watershed (Flow accumulation and channel links):
+  * Fill or breach depressions  
 
-    Extract rivers:
+    Algorithm "Priority-Flood + $\epsilon$" ([Barnes et al., 2014](#barnes2014a)) is used to fill depressions. 
+
+* Calculate flow directions based on the given flow coordinate system. In pyDEM, flow directions use a D8 flow coordinate system that appears as follow: 
+
+<figure>
+<img src="../../assets/flow_metrics.png" alt="drawing" width=320 height=250"/>
+<figcaption>D8 flow coordinate system consisted of 9 raster cells. The numbers are local indices that correpond to each neighbor of the center cell.
+</figcaption>
+</figure>
+
+
+* Calculate flow accumulation  
+
+    Flow accumulation is the total number of cells passing through each (raster) cell. With flow accumulations, we can apply a presccribed 
+threshold to determine which cells should be included in the final digital stream network. 
+
+  The details of the algorithm can be found in [Ye et al. (2023)](#ye2023).
+
+## Sample applications 
+
+Two example applications can be found under subdirectories from [pyDEM_Samples.tar](https://ccrm.vims.edu/yinglong/feiye/Public/pyDEM_Samples.tar).
+The subdirectory "Serial" contains a Python script `run_serial.py` and an input file `tiff/Savannah_river.tif`. This can be used for a small domain. 
+The script reads: 
+
+```python
+import glob
+import time
+from pylib import *
+from pyDEM.dem import *
+import numpy as np
+
+np.seterr(all='raise')
+
+if __name__ == '__main__':
+    #input tiff files
+    files = glob.glob('tiff/Savannah_river.tif')
+    files.sort()
+
+    acc_limit = 1e7
+    t0 = time.time()
+
+    for fname in files:
+        names = [fname]
+
+        #output filename
+        sname = f"./{fname.split('.')[0].split('/')[-1]}_{acc_limit}"
+        print(sname)
+
+        #declare a dem object
+        S=dem()
+
+        #read data
+        if not os.path.exists('{}.npz'.format(sname)):
+            S.proc_demfile(names,sname=sname,depth_limit=[-100,1000],subdomain_size=2e10)
+        S.read_data('{}.npz'.format(sname))
+
+        #compuate watershed information
+        S.compute_watershed()
+
+        #extract river network (area_limit: catchment area)
+        S.compute_river(acc_limit=acc_limit)
+
+        #write shapefile for river network
+        gdf = S.write_shapefile(npt_smooth=None)
+        gdf.to_file(f'{sname}.shp')
+        print(f'It took {(time.time() - t0)/60} mins!')
+
+```
+For a large domain, a parallel dirver is preferred to speed up the process. A sample script is under Parallel/, named `run_mpi_vortex.py`, 
+which can run with multiple nodes/cpus with `mpi4py`.
 
 
 **References**
@@ -113,3 +181,6 @@ Algorithm "Priority-Flood+Epsilon" ([Barnes et al., 2014](#barnes2014a)) is used
 <span id="barnes2014a">C. Barnes, R., Lehman, C., Mulla (2014). Priority-flood: An optimal depression-filling and watershed-labeling algorithm for digital elevation models. Computers & Geosciences 62, 117–127. doi:10.1016/j.cageo.2013.04.024.</span>
 
 <span id="barnes2016">Barnes, Richard. 2016. RichDEM: Terrain Analysis Software. http://github.com/r-barnes/richdem. </span>
+
+<span id="ye2023"> Ye, F., Cui, L., Zhang, Y., Wang, Z., Moghimi, S., Myers, E., Seroka, G., Zundel, A., Mani, S., Kelley, J.G.W. 
+A parallel Python-based tool for meshing watershed rivers at continental scale, Environmental Modelling & Software, 166. https://doi.org/10.1016/j.envsoft.2023.105731.</span>

@@ -1,8 +1,18 @@
 1. Download adt data
-    Register account at http://my.cmems-du.eu/motu-web/Motu
-    and install motuclient API:
-        pip install motuclient
-    Then use getdata.sh (replace username and password with yours)
+  Install the tool "copernicusmarine" following https://help.marine.copernicus.eu/en/articles/7970514-copernicus-marine-toolbox-installation.
+
+  Sample download command:
+  copernicusmarine subset --dataset-id cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.25deg_P1D -v adt -v sla -v err_sla -t 2024-04-01 -T 2024-04-10 -x -66.5 -X -52. -y 6.75 -Y 53.25 -f adt_test.nc --force-download --username xxx --password  XXXXXX
+  "cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.25deg_P1D" covers period from 31 Dec 2021 to now.
+  Change dataset-id to "c3s_obs-sl_glo_phy-ssh_my_twosat-l4-duacs-0.25deg_P1D" to download period from "31 Dec 1992 to 6 Jun 2023"
+
+  Sample script using python api:
+  see download_adt.py
+
+  Sample checking the availability of a variable:
+  copernicusmarine describe --include-datasets -c adt | less
+
+
 
 Replace eta2 in hotstart.nc with ADT:
  replace_eta2_aviso.py 
