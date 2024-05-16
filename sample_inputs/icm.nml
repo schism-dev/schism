@@ -140,6 +140,12 @@ iSed = 1
 iBA = 0
 
 !-----------------------------------------------------------------------
+!Clam Model switch: iClam;  nclam: number of clam species
+!-----------------------------------------------------------------------
+iClam = 0
+nclam = 5
+
+!-----------------------------------------------------------------------
 !solar radiation: dim=(npt,time) or (time,)
 !  iRad=0: short wave from sflux; require ihconsv =1, nws=2
 !  iRad=1: short wave from ICM_rad.th.nc (unit: E.m-2.day-1)
@@ -558,6 +564,32 @@ gFCP    = 0.5 0.45 0.05  !fraction of predation BA C into 3G classes in sediment
 gFNP    = 0.5 0.45 0.05  !fraction of predation BA N into 3G classes in sediment 
 gFPP    = 0.5 0.45 0.05  !fraction of predation BA P into 3G classes in sediment 
 /
+
+&CLAM_ICM
+!-----------------------------------------------------------------------
+!clam model:  (number of clam species is defined in the MARCO)
+!calpha(clam=1:nclam, PC); cKTFR=(clam,2);  cTSS=(clam, 4)
+!-----------------------------------------------------------------------
+cpatch0 =  -999          !region flag for clam. (1: ON all elem.; -999: spatial)
+clam0   =  0.1    0.1    0.1    0.1    0.1     !initial clam conc. (g[C].m-2)
+cfrmax  =  0.5    0.5    0.5    0.5    0.5     !maximum filtration rate (m3.g[C]-1.day-1)
+cTFR    =  27.0   27.0   27.0   27.0   27.0    !optimal temperature of filtration (oC)
+cKTFR   =  0.015 0.015 0.015 0.015 0.015   0.015 0.015 0.015 0.015 0.015   !T dependece of filtration (oC-2)
+csalt   =  7.0    7.0    7.0    7.0    7.0     !salinity when filtration is halved (psu)
+cKDO    =  3.5    3.5    3.5    3.5    3.5     !DO dependece of filtration (mg-1.L)
+cDOh    =  1.0    1.0    1.0    1.0    1.0     !DO conc. when filtration is halved (mg/L)
+cfTSSm  =  0.1    0.1    0.1    0.1    0.1     !minimum value of TSS factor on filtration
+cKTSS   =  1.0  1.0  1.0  1.0  1.0      1.0  1.0  1.0  1.0  1.0   !contribution coefficients for oranic and inoranic matters to TSS
+cTSS    =  4 4 4 4 4   5 5 5 5 5   20 20 20 20 20  25 25 25 25 25 !TSS values for its effect (trapezoid) on filtraion (mg/L)
+cRF     =  0.1    0.1    0.1    0.1    0.1     !active respiration rate when filtering water
+cIFmax  =  0.12   0.12   0.12   0.12   0.12    !maximum ingestion rate (g[C_food].g[C_clam]-1.day-1)
+calpha  =  0.75 0.75 0.75 0.75 0.75   0.75 0.75 0.75 0.75 0.75   0.75 0.75 0.75 0.75 0.75   1.0 1.0 1.0 1.0 1.0   0.0 0.0 0.0 0.0 0.0 !assimilation rate
+cMTB    =  0.008  0.008  0.008  0.008  0.008   !basal metabolism rate (day-1)
+cTMT    =  20.0   20.0   20.0   20.0   20.0    !reference temperature for metabolism (oC)
+cKTMT   =  0.069  0.069  0.069  0.069  0.069   !temperature dependence for metabolism (oC-1)
+cMRT    =  0.3    0.3    0.3    0.3    0.3     !mortality rate (day-1)
+cn2c    =  0.167  0.167  0.167  0.167  0.167   !nitrogen to carbon ratio
+cp2c    =  0.011  0.011  0.011  0.011  0.011   !phosphorus to carbon ratio
 
 &ERO
 !-----------------------------------------------------------------------

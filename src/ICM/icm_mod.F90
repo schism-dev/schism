@@ -28,14 +28,13 @@ module icm_mod
   !global switch and variables
   !-------------------------------------------------------------------------------
   integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iBA,iRad,isflux,ibflux,iout_icm,nspool_icm
-  integer,save,target :: iSilica,iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm
+  integer,save,target :: iSilica,iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm,iClam,nclam
   real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,PRR(3),wqc0(29),WSP(29),WSPn(29)
   real(rkind),save,target,dimension(3) :: alpha
   integer,save,pointer :: jdry,jsav,jveg,ised_icm,iBA_icm
 
-  integer,parameter :: nout_sav=4, nout_veg=12, nout_sed=26, nout_ba=1
-  integer,save,target :: ntrs_icm,itrs(2,9),nout_icm,nout_d2d,nout_d3d,n2d(9),n3d(9),i2d(9),i3d(9)
-  integer,save,pointer :: itrs_icm(:,:),elem_in(:,:)
+  integer,save,target :: ntrs_icm,nout,nouts(10),iout(2,10),nout_icm_3d(2),nhot_icm
+  integer,save,pointer :: itrs_icm(:,:),elem_in(:,:),nout_icm
   integer,save :: iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP,iLPOP, &
         & iDOP,iPO4,iCOD,iDOX,iSU,iSA,iZB1,iZB2,iTIC,iALK,iCA,iCACO3,iSRPOC,iSRPON,iSRPOP,iPIP
   character(len=6),save :: name_icm(100),name_d2d(100),name_d3d(100)
@@ -47,9 +46,13 @@ module icm_mod
   real(rkind),save,pointer,dimension(:,:) :: wqc,ZBS,PBS 
   real(rkind),save,pointer,dimension(:) :: temp,salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
                               & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3,SRPOC,SRPON,SRPOP,PIP
-  real(rkind),save,target,allocatable :: DIN(:),dwqc(:,:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:),gdwqc(:,:) 
+  real(rkind),save,target,allocatable :: DIN(:),dwqc(:,:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:),gdwqc(:,:),cdwqc(:,:)
   real(rkind),save,pointer,dimension(:,:) :: zdPBS,zdC,zdN,zdP,zdS
   real(rkind),save,pointer,dimension(:) :: zdDOX 
+
+  !debug variables
+  real(rkind),save,pointer,dimension(:,:) :: dbCHLA
+  real(rkind),save,pointer,dimension(:) :: dbTN,dbTP
  
   !-------------------------------------------------------------------------------
   !ICM parameters and variables
@@ -104,10 +107,10 @@ module icm_mod
   real(rkind),save,target :: sc2dw,s2den,sn2c,sp2c,so2c      !convert ratios
 
   integer,save,allocatable :: spatch(:)               !sav region
-  real(rkind),save,allocatable,dimension(:) :: stleaf,ststem,stroot,sht
-  real(rkind),save,allocatable,dimension(:,:) :: sleaf,sstem,sroot !(nvrt,nea), unit: g/m^2
-  real(rkind),save,allocatable,dimension(:) :: sroot_POC,sroot_PON,sroot_POP,sroot_DOX !(nea), unit: g/m^2/day
-  real(rkind),save,allocatable,dimension(:) :: sleaf_NH4,sleaf_PO4  !(nea), unit: g/m^2/day
+  real(rkind),save,target,allocatable,dimension(:) :: stleaf,ststem,stroot,sht
+  real(rkind),save,target,allocatable,dimension(:,:) :: sleaf,sstem,sroot !(nvrt,nea), unit: g/m^2
+  real(rkind),save,target,allocatable,dimension(:) :: sroot_POC,sroot_PON,sroot_POP,sroot_DOX !(nea), unit: g/m^2/day
+  real(rkind),save,target,allocatable,dimension(:) :: sleaf_NH4,sleaf_PO4  !(nea), unit: g/m^2/day
 
   !-------------------------------------------------------------------------------
   !VEG parameters and variables
@@ -124,10 +127,10 @@ module icm_mod
 
   real(rkind),save :: mtemp !todo add function to read mtemp
   integer,save,allocatable :: vpatch(:)                     !reg region
-  real(rkind),save,allocatable,dimension(:,:) :: vht !,ztcveg !(nea,3)
-  real(rkind),save,allocatable,dimension(:,:) :: vtleaf,vtstem,vtroot !(nea,3)
-  real(rkind),save,allocatable,dimension(:,:) :: vroot_POC,vroot_PON,vroot_POP,vroot_DOX !(nea,3)
-  real(rkind),save,allocatable,dimension(:,:) :: vleaf_NH4,vleaf_PO4 !(nea,3)
+  real(rkind),save,target,allocatable,dimension(:,:) :: vht !,ztcveg !(nea,3)
+  real(rkind),save,target,allocatable,dimension(:,:) :: vtleaf,vtstem,vtroot !(nea,3)
+  real(rkind),save,target,allocatable,dimension(:,:) :: vroot_POC,vroot_PON,vroot_POP,vroot_DOX !(nea,3)
+  real(rkind),save,target,allocatable,dimension(:,:) :: vleaf_NH4,vleaf_PO4 !(nea,3)
 
   !-------------------------------------------------------------------------------
   !sediment flux model (SFM) parameters and variables
@@ -165,6 +168,16 @@ module icm_mod
   real(rkind),save,target,allocatable,dimension(:) :: BA,gPR
 
   !-------------------------------------------------------------------------------
+  !Clam model (CLAM) parameters and variables
+  !-------------------------------------------------------------------------------
+  real(rkind),save,target :: cpatch0
+  real(rkind),save,target,allocatable,dimension(:) :: clam0,cfrmax,cTFR,csalt,cKDO,cDOh,cfTSSm,cRF, &
+                                                    & cIFmax,cMTB,cTMT,cKTMT,cMRT,cn2c,cp2c
+  real(rkind),save,target,allocatable,dimension(:,:) :: cKTFR,cKTSS,cTSS,calpha
+
+  integer,save,allocatable,dimension(:) :: cpatch
+  real(rkind),save,target,allocatable,dimension(:,:) :: CLAM,cFPOC,cFPON,cFPOP
+  !-------------------------------------------------------------------------------
   !benthic erosion (ERO) parameters and variables
   !-------------------------------------------------------------------------------
   integer,save,target :: ierosion !0.9; 0.01kg/m^2/s; 80% in mud, 20% in sand 
@@ -185,20 +198,22 @@ module icm_mod
   end type brent_var
 
   !---------------------------------------------------------------------------
-  !spatially varying parameters: for different dimensions 
+  !pointer array defined for 1). spatially varying param,  2). output array
   !---------------------------------------------------------------------------
-  type :: icm_spatial_param
-    character(len=30) :: varname  !parameter name
+  type :: icm_pointer
+    character(len=30) :: name  !parameter name
     integer :: ndim=0  !parameter dimension
     integer :: dims(2) !dimension info
-    real(rkind),dimension(30) :: data0 !oirginal value of data
+    integer :: id=0    !id number
+    integer :: itype=0 !used to identify data type
+    real(rkind),dimension(50) :: data0 !oirginal value of data
     integer,allocatable,dimension(:,:) :: istat
     real(rkind),pointer :: p=>null()                !param. of single value
     real(rkind),pointer,dimension(:) :: p1=>null()   !param. of 1D array
     real(rkind),pointer,dimension(:,:) :: p2=>null() !param of 2D array
     real(rkind),allocatable,dimension(:,:,:) :: data
-  end type icm_spatial_param
-  type(icm_spatial_param),save,target,allocatable,dimension(:) :: sp
+  end type icm_pointer
+  type(icm_pointer),save,target,allocatable,dimension(:) :: sp,wqout,wqhot
 
   !---------------------------------------------------------------------------
   !station outputs

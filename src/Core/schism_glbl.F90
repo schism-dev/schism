@@ -93,12 +93,12 @@ module schism_glbl
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,iveg, &
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
-                  &iof_ugrid,model_type_pahm
+                  &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_veg,iof_icm_sed,iof_icm_ba,&
+                  &iof_icm_clam,iof_icm_dbg
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
-     &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg, &
-     &iof_icm_sed,iof_icm_ba,iof_icm_dbg,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
-     & iadjust_mass_consv,lev_tr_source2(:)
+     &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_cos,iof_fib, &
+     &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd,iadjust_mass_consv,lev_tr_source2(:)
 
   real(rkind),save :: dt,h0,drampbc,drampwind,drampwafo,dramp,dramp_ss,wtiminc,npstime,npstiminc, &
                       &surf_time1,surf_time2,time_nu,step_nu,time_nu_tr,step_nu_tr,dzb_min,vdmax_pp1, &

@@ -47,10 +47,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,nout_ba,name_icm,iSilica,iZB,iPh, &
-                    & iCBP,isav_icm,iveg_icm,ised_icm,iBA_icm,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & 
-                    & btemp,bPOC,bPON,bPOP,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bstc,bSTR,bThp,bTox, &
-                    & SOD,JNH4,JNO3,JPO4,JCOD,JSA,BA,nout_d2d,nout_d3d,name_d2d,name_d3d
+      use icm_mod, only : ntrs_icm,nout_icm,nout_icm_3d,wqout,wqhot,nhot_icm
 #endif
 
 #ifdef USE_COSINE
@@ -176,8 +173,9 @@
 #endif
 
 #ifndef USE_ICM
-      integer,parameter :: nout_icm=1,nout_sav=4,nout_veg=12,nout_sed=26,nout_ba=1
+      integer :: nout_icm_3d(2)=(/0,0/)
 #endif
+
 
 #ifdef USE_OIL
 #endif
@@ -213,7 +211,7 @@
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg,iof_icm_sed, &
-     &iof_icm_ba,iof_icm_dbg,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
+     &iof_icm_ba,iof_icm_clam,iof_icm_dbg,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta,iof_ugrid
 
 !-------------------------------------------------------------------------------
@@ -438,9 +436,8 @@
       !order). Flags for modules other than hydro are only used inside USE_*
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
-     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(nout_icm),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2), &
-     &iof_icm_ph(4),iof_icm_cbp(4),iof_icm_sav(nout_sav),iof_icm_veg(nout_veg),iof_icm_sed(nout_sed),iof_icm_ba(nout_ba), &
-     &iof_icm_dbg(2),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
+     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), &
+     &iof_icm_cbp(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
@@ -504,25 +501,12 @@
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25:26)=1
       iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_cbp=0; iof_icm_sav=0
-      iof_icm_veg=0; iof_icm_sed=0; iof_icm_ba=0; iof_icm_dbg=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; 
-      iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
+      iof_icm_veg=0; iof_icm_sed=0; iof_icm_ba=0; iof_icm_clam=0;   iof_icm_dbg=0; iof_cos=0; iof_fib=0; iof_sed2d=0
+      iof_ice=0; iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
 
       read(15,nml=OPT)
       read(15,nml=SCHOUT)
       close(15)
-
-#ifdef USE_ICM
-      !get value of iof_icm from ICM submodules
-      iof_icm(1:17)=iof_icm_core
-      if(iSilica==1) iof_icm(itrs_icm(1,2):itrs_icm(2,2))=iof_icm_silica
-      if(iZB==1) iof_icm(itrs_icm(1,3):itrs_icm(2,3))=iof_icm_zb
-      if(iPh==1) iof_icm(itrs_icm(1,4):itrs_icm(2,4))=iof_icm_ph
-      if(iCBP==1) iof_icm(itrs_icm(1,5):itrs_icm(2,5))=iof_icm_cbp
-      if(isav_icm==1) iof_icm(itrs_icm(1,6):itrs_icm(2,6))=iof_icm_sav
-      if(iveg_icm==1) iof_icm(itrs_icm(1,7):itrs_icm(2,7))=iof_icm_veg
-      if(ised_icm==1) iof_icm(itrs_icm(1,8):itrs_icm(2,8))=iof_icm_sed
-      if(iBA_icm==1) iof_icm(itrs_icm(1,9):itrs_icm(2,9))=iof_icm_ba
-#endif
 
       !zcor should be on usually
 !      iof_hydro(25)=1
@@ -5598,121 +5582,24 @@
 
 
 #ifdef USE_ICM
-        !gfortran requires all chars have same length
-        ar_name(1:14)=(/'btemp ','bstc  ','bSTR  ','bThp  ','bTox  ', &
-                      & 'bNH4  ','bNH4s ','bNO3  ','bPO4  ','bH2S  ', &
-                      & 'bCH4  ','bPOS  ','bSA   ','sht   '/)
-!'
-        do k=1,14 !# of 1D arrays
-          if(isav_icm==0.and.k==14) cycle
-          if(myrank==0) then
-            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM1')
-            j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM2')
-          endif
-          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-          do i=1,ne_global
-            if(iegl(i)%rank==myrank) then
-              ie=iegl(i)%id
-              if(k==1) then
-                btemp(ie)=buf3(i)
-              else if(k==2) then
-                bstc(ie)=buf3(i)
-              else if(k==3) then
-                bSTR(ie)=buf3(i)
-              else if(k==4) then
-                bThp(ie)=buf3(i)
-              else if(k==5) then
-                bTox(ie)=buf3(i)
-              else if(k==6) then
-                bNH4(ie)=buf3(i)
-              else if(k==7) then
-                bNH4s(ie)=buf3(i)
-              else if(k==8) then
-                bNO3(ie)=buf3(i)
-              else if(k==9) then
-                bPO4(ie)=buf3(i)
-              else if(k==10) then
-                bH2S(ie)=buf3(i)
-              else if(k==11) then
-                bCH4(ie)=buf3(i)
-              else if(k==12) then
-                bPOS(ie)=buf3(i)
-              else if(k==13) then
-                bSA(ie)=buf3(i)
-              else if(k==14) then
-                sht(ie)=buf3(i)
+        do k=1,nhot_icm
+          do m=1,wqhot(k)%dims(1)
+            if(myrank==0) then
+              j=nf90_inq_varid(ncid2,trim(adjustl(wqhot(k)%name)),mm)
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICM1')
+              if(wqhot(k)%ndim==1) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
+              if(wqhot(k)%ndim==2) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICM2')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+            do i=1,ne_global
+              if(iegl(i)%rank==myrank) then
+                if(wqhot(k)%ndim==1) wqhot(k)%p1(iegl(i)%id)=buf3(i)
+                if(wqhot(k)%ndim==2) wqhot(k)%p2(m,iegl(i)%id)=buf3(i)
               endif
-            endif !iegl
-          enddo !i
-        enddo !k=1,20
-
-        !gfortran requires all chars have same length
-        ar_name(1:10)=(/'bPOC  ','bPON  ','bPOP  ','sleaf ','sstem ','sroot ','vht   ','vtleaf','vtstem','vtroot'/)
-        do k=1,10 !# of 2D arrays
-          if(isav_icm==0.and.k>=4.and.k<=6) cycle
-          if(iveg_icm==0.and.k>=7.and.k<=10) cycle
-
-          if(myrank==0) then
-            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM3')
-          endif
-
-          if((k>=1.and.k<=3).or.(k>=7.and.k<=10)) then
-            do m=1,3
-              if(myrank==0) then
-                j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
-                if(j/=NF90_NOERR) call parallel_abort('init: nc ICM4')
-              endif
-              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-              do i=1,ne_global
-                if(iegl(i)%rank==myrank) then
-                  ie=iegl(i)%id
-                  if(k==1) then
-                    bPOC(ie,m)=buf3(i)
-                  elseif(k==2) then
-                    bPON(ie,m)=buf3(i)
-                  elseif(k==3) then
-                    bPOP(ie,m)=buf3(i)
-                  elseif(k==7) then
-                    vht(ie,m)=buf3(i)
-                  else if(k==8) then
-                    vtleaf(ie,m)=buf3(i)
-                  else if(k==9) then
-                    vtstem(ie,m)=buf3(i)
-                  else if(k==10) then
-                    vtroot(ie,m)=buf3(i)
-                  endif
-                endif !iegl
-              enddo !i
-            enddo !m
-          elseif(k>=4.and.k<=6) then
-            do m=1,nvrt
-              if(myrank==0) then
-                j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
-                if(j/=NF90_NOERR) call parallel_abort('init: nc ICM5')
-              endif
-              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-              do i=1,ne_global
-                if(iegl(i)%rank==myrank) then
-                  ie=iegl(i)%id
-                  if(k==4) then
-                    sleaf(m,ie)=buf3(i)
-                  else if(k==5) then
-                    sstem(m,ie)=buf3(i)
-                  else if(k==6) then
-                    sroot(m,ie)=buf3(i)
-                  endif
-                endif !iegl
-              enddo !i
-            enddo !m
-          endif!if((k>=1.and.k<=3
+            enddo!i
+          enddo!m
         enddo !k
-
 #endif /*USE_ICM*/
 
 #ifdef USE_COSINE
@@ -6478,58 +6365,14 @@
 #endif
 
 #ifdef USE_ICM
-      if(isav_icm/=0) then
-        do i=1,nout_sav
-          if(iof_icm_sav(i)==1) then
-            ncount_2delem=ncount_2delem+1
-            counter_out_name=counter_out_name+1
-            iout_23d(counter_out_name)=4
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+i-1)))
-          endif !iof
-        enddo !i
-      endif !isav_icm/
-
-      if(iveg_icm/=0) then
-        do i=1,nout_veg
-          if(iof_icm_veg(i)==1) then
-            ncount_2delem=ncount_2delem+1
-            counter_out_name=counter_out_name+1
-            iout_23d(counter_out_name)=4
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+i-1)))
-          endif !iof
-        enddo !i
-      endif !iveg_icm/
-
-      if(ised_icm/=0) then
-        do i=1,nout_sed
-          if(iof_icm_sed(i)==1) then
-            ncount_2delem=ncount_2delem+1
-            counter_out_name=counter_out_name+1
-            iout_23d(counter_out_name)=4
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+i-1)))
-          endif !iof
-        enddo !i
-      endif
-
-      if(iBA_icm/=0) then
-        do i=1,nout_ba
-          if(iof_icm_ba(i)==1) then
-            ncount_2delem=ncount_2delem+1
-            counter_out_name=counter_out_name+1
-            iout_23d(counter_out_name)=4
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,9)+i-1)))
-          endif !iof
-        enddo !i
-      endif
-
-      if(iof_icm_dbg(1)/=0) then
-        do i=1,nout_d2d
+      do i=1,nout_icm
+        if(iof_icm(i)==1.and.wqout(i)%itype==4) then
           ncount_2delem=ncount_2delem+1
           counter_out_name=counter_out_name+1
           iout_23d(counter_out_name)=4
-          out_name(counter_out_name)='ICM_'//trim(adjustl(name_d2d(i)))
-        enddo
-      endif
+          out_name(counter_out_name)=trim(adjustl(wqout(i)%name))
+        endif !iof
+      enddo !i
 #endif
 
 #ifdef USE_MARSH
@@ -6729,12 +6572,12 @@
 #endif
 
 #ifdef USE_ICM
-      do i=1,ntrs(7)
-        if(iof_icm(i)==1) then
+      do i=1,nout_icm
+        if(iof_icm(i)==1.and.wqout(i)%itype==2) then
           ncount_3dnode=ncount_3dnode+1
           counter_out_name=counter_out_name+1
           iout_23d(counter_out_name)=2
-          out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(i)))
+          out_name(counter_out_name)=trim(adjustl(wqout(i)%name))
         endif
       enddo !i
 #endif/*USE_ICM*/
@@ -6867,14 +6710,14 @@
 
       !Modules
 #ifdef USE_ICM
-      if(iof_icm_dbg(2)/=0) then
-        do i=1,nout_d3d
+      do i=1,nout_icm
+        if(iof_icm(i)==1.and.wqout(i)%itype==6) then
           ncount_3delem=ncount_3delem+1
           counter_out_name=counter_out_name+1
           iout_23d(counter_out_name)=6
-          out_name(counter_out_name)='ICM_'//trim(adjustl(name_d3d(i)))
-        enddo
-      endif
+          out_name(counter_out_name)=trim(adjustl(wqout(i)%name))
+        endif
+      enddo
 #endif
 
 #ifdef USE_DVD
@@ -6966,10 +6809,10 @@
           call mpi_send(start_hour,1,rtype,nproc_schism-i,139,comm_schism,ierr)
           call mpi_send(utc_start,1,rtype,nproc_schism-i,140,comm_schism,ierr)
 #ifdef USE_ICM
-          call mpi_send(nout_icm,1,itype,nproc_schism-i,142,comm_schism,ierr)
-          call mpi_send(nout_d3d,1,itype,nproc_schism-i,143,comm_schism,ierr)
-          call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,144,comm_schism,ierr)
-          call mpi_send(iof_icm_dbg,2,itype,nproc_schism-i,145,comm_schism,ierr)
+          call mpi_send(nout_icm_3d,2,itype,nproc_schism-i,142,comm_schism,ierr)
+          !call mpi_send(nout_d3d,1,itype,nproc_schism-i,143,comm_schism,ierr)
+          !call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,144,comm_schism,ierr)
+          !call mpi_send(iof_icm_dbg,2,itype,nproc_schism-i,145,comm_schism,ierr)
 #endif
         call mpi_send(ics,1,itype,nproc_schism-i,146,comm_schism,ierr)
         call mpi_send(iof_ugrid,1,itype,nproc_schism-i,147,comm_schism,ierr)
