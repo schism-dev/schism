@@ -71,6 +71,8 @@
 
 ! subroutine signa2
 ! subroutine compute_wave_force_lon (called from ESMF directly for WW3)
+! subroutine get_WW3_arrays and other routines (called from ESMF directly for WW3
+!            for 3D vortex coupling)
 
 !===============================================================================
 !===============================================================================
@@ -6375,7 +6377,7 @@
 !     (search /OASOCM)
 !=========================================================================
 #ifdef USE_WW3
-!     Grab necessary arrays from WW3 and save into SCHISM global arrays
+!     Grab necessary arrays from WW3 and save into SCHISM arrays
       SUBROUTINE get_WW3_arrays(WW3__OHS,WW3__DIR,WW3_T0M1,WW3__WNM,WW3__BHD,WW3_USSX,WW3_USSY, &
      &WW3_TWOX,WW3_TWOY,WW3_TBBX,WW3_TBBY,WW3_UBRX,WW3_UBRY)
         USE schism_glbl, ONLY: rkind,errmsg,np,npa,wave_hs,wave_dir,wave_tm1, &
