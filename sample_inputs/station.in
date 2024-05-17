@@ -1,4 +1,4 @@
-1 1 1 1 1 1 1 1 1 !on (1)|off(0) flags for elev, air pressure, windx, windy, T, S, u, v, w
+1 1 1 1 1 1 1 1 1 !on (1)|off(0) flags for elev,air pressure,windx,windy,T,S,u,v,w,rest of tracers (expanded into subclasses of each module)
 4 !# of stations
 1 6.5833 54.0000 -1 !Format: station #,x,y,z; if ics=2, x,y are degr in lon/lat. z is z-coord (not distance from surface!). For 3D variables, code will extrapolate above surface/below bottom if necessary
 2 7.1583 55.195 -5 

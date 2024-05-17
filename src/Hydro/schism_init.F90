@@ -961,14 +961,12 @@
 
 !     Kriging option
 !     Choice of generalized covariance fucntion
-!      call get_param('param.in','kr_co',1,kr_co,tmp,stringvalue)
       if(kr_co<=0.or.kr_co>4) then
         write(errmsg,*)'Wrong kr_co:',kr_co
         call parallel_abort(errmsg)
       endif
 
 !...  Max. for vel. magnitude
-!      call get_param('param.in','rmaxvel',2,itmp,tmp,stringvalue)
       if(rmaxvel<1._rkind) then
         write(errmsg,*)'Illegal rmaxvel:',rmaxvel
         call parallel_abort(errmsg)
@@ -978,7 +976,6 @@
       rmaxvel2=rmaxvel*1.013_rkind !v-vel
 
 !...  min. vel for invoking btrack and for abnormal exit in quicksearch
-!      call get_param('param.in','velmin_btrack',2,itmp,velmin_btrack,stringvalue)
       if(velmin_btrack<=0._rkind) then
         write(errmsg,*)'Illegal velmin_btrack:',velmin_btrack
         call parallel_abort(errmsg)
@@ -988,14 +985,12 @@
 !     to avoid underflow. This should not need to be adjusted
 !     normally; may need to lower it for some benchmark tests
 !     Default: btrack_nudge=1.013e-3
-!      call get_param('param.in','btrack_nudge',2,itmp,btrack_nudge,stringvalue)
       if(btrack_nudge<=0._rkind.or.btrack_nudge>0.5_rkind) then
         write(errmsg,*)'Illegal btrack_nudge:',btrack_nudge
         call parallel_abort(errmsg)
       endif
 
 !     Test btrack alone (1: rotating Gausshill) - can only be used with pure b-tropic model and pure tri
-!      call get_param('param.in','ibtrack_test',1,ibtrack_test,tmp,stringvalue)
       if(ibtrack_test<0.or.ibtrack_test>1) then
         write(errmsg,*)'Illegal ibtrack_test:',ibtrack_test
         call parallel_abort(errmsg)
@@ -1004,7 +999,6 @@
       if(ibtrack_test==1.and.lhas_quad) call parallel_abort('INIT: btrack cannot have quads')
 
 !     Rouse test
-!      call get_param('param.in','irouse_test',1,irouse_test,tmp,stringvalue)
       if(irouse_test/=0.and.irouse_test/=1) then
         write(errmsg,*)'Illegal irouse_test:',irouse_test
         call parallel_abort(errmsg)
@@ -1019,7 +1013,6 @@
       endif
 
 !...  Inundation algorithm flag (1: better algorithm for fine resolution)
-!      call get_param('param.in','inunfl',1,inunfl,tmp,stringvalue)
       if(inunfl/=0.and.inunfl/=1) then
         write(errmsg,*)'Illegal inunfl:',inunfl
         call parallel_abort(errmsg)
@@ -1028,17 +1021,12 @@
 !...  Numerical shoreline flag (boundary between dry and wet elements) 
       ! 1: the wave forces at the shoreline are set equal to the barotropic gradient, which is calculated on the wet element
       ! 0: the wave forces at the shoreline are calculated using the hgrad_nodes routine (non physical velocities in very shallow cells)
-!      call get_param('param.in','shorewafo',1,shorewafo,tmp,stringvalue)
       if(shorewafo/=0.and.shorewafo/=1) then
         write(errmsg,*)'Illegal shorewafo:',shorewafo
         call parallel_abort(errmsg)
       endif
 
-!     write mode; not used really
-!!      call get_param('param.in','iwrite',1,iwrite,tmp,stringvalue)
-
 !     Elev. i.c. option (elev.ic)
-!      call get_param('param.in','ic_elev',1,ic_elev,tmp,stringvalue)
       if(ic_elev/=0.and.ic_elev/=1) then
         write(errmsg,*)'Illegal ic_elev:',ic_elev
         call parallel_abort(errmsg)
@@ -1052,13 +1040,10 @@
       endif
 
 !     Inverse barometric effects on elev. b.c.
-!      call get_param('param.in','inv_atm_bnd',1,inv_atm_bnd,tmp,stringvalue)
       if(inv_atm_bnd/=0.and.inv_atm_bnd/=1) then
         write(errmsg,*)'Illegal inv_atm_bnd:',inv_atm_bnd
         call parallel_abort(errmsg)
       endif
-      !Reference atmos. pressure 
-!      call get_param('param.in','prmsl_ref',2,itmp,prmsl_ref,stringvalue)
 
 !     Scales for dimensioning in inter-subdomain btrack
 !     mxnbt=s1_mxnbt*nmm*nvrt is the dimension of btlist (nmm is the max. of all
@@ -1067,8 +1052,6 @@
 !       (nbt is the initial # of inter-subdomain trajectories), and
 !     mnbt*nnbr is the dimension of btrecvq() in routine inter_btrack (nnbr is #
 !     of nbr processes).
-!      call get_param('param.in','s1_mxnbt',2,itmp,s1_mxnbt,stringvalue)
-!      call get_param('param.in','s2_mxnbt',2,itmp,s2_mxnbt,stringvalue)
       if(s1_mxnbt<=0._rkind.or.s2_mxnbt<=0._rkind) then
         write(errmsg,*)'Illegal s[12]_mxnbt:',s1_mxnbt,s2_mxnbt
         call parallel_abort(errmsg)
@@ -1076,17 +1059,11 @@
 
 !     Station output option (/=0: need station.in)
 !     If ics=2, the coord. in station.in must be in lat/lon (degrees)
-!      call get_param('param.in','iout_sta',1,iout_sta,tmp,stringvalue)
-
       if(iout_sta/=0) then
-!        call get_param('param.in','nspool_sta',1,nspool_sta,tmp,stringvalue) !output skip
         if(nspool_sta<=0) call parallel_abort('Wrong nspool_sta')
         if(mod(nhot_write,nspool_sta)/=0) call parallel_abort('mod(nhot_write,nspool_sta)/=0')
 !'
       endif
-
-!...  Read harmonic analysis information (Adapted from ADCIRC)
-!      call get_param('param.in','iharind',1,iharind,tmp,stringvalue)
 
 !...  WWM 
 !     Coupling flag
@@ -1099,12 +1076,6 @@
         call parallel_abort(errmsg)
       endif
 
-!...  ramp for the wave forces
-!      if(nrampwafo/=0.and.nrampwafo/=1) then
-!        write(errmsg,*)'Unknown nrampwafo',nrampwafo
-!        call parallel_abort(errmsg)
-!      endif
-
 !     Coupling interval (# of time steps)
       if(nstep_wwm<1) then
         write(errmsg,*)'Wrong coupling interval:',nstep_wwm
@@ -1112,7 +1083,6 @@
       endif
 
 !     Wave boundary layer option
-!      call get_param('param.in','iwbl',1,iwbl,tmp,stringvalue)
       if(iwbl<0.or.iwbl>2) then
         write(errmsg,*)'Wrong iwbl:',iwbl
         call parallel_abort(errmsg)
@@ -3907,7 +3877,7 @@
 !     Station output option (/=0: need station.in)
 !     If ics=2, the coord. in station.in must be in lat/lon (degrees)
       if(iout_sta/=0) then
-        nvar_sta=9 !# of output variables
+        nvar_sta=9+ntracers-2 !# of output variables
         if(iorder==0) then
           allocate(iof_sta(nvar_sta),stat=istat)
           if(istat/=0) call parallel_abort('Sta. allocation failure (1)')
@@ -3915,7 +3885,7 @@
 
         if(myrank==0) then
           open(32,file=in_dir(1:len_in_dir)//'station.in',status='old')
-!         Output variables in order: elev, air pressure, windx, windy, T, S, u, v, w
+!         Output variables in order: elev, air pressure, windx, windy, T, S, u, v, w, rest of tracers
           read(32,*)iof_sta(1:nvar_sta) !on-off flag for each variable
           read(32,*)nout_sta
 !         Following is needed for dimension of nwild2

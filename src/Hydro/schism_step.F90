@@ -9974,7 +9974,7 @@
 
           do i=1,nout_sta
             ie=iep_sta(i)
-            if(ie==0) then !not parent
+            if(ie==0) then !no parent in this rank
               iep_flag(i)=0 !for comm. later
               sta_out(i,j)=0.d0
               sta_out3d(:,i,j)=0.d0
@@ -9982,29 +9982,30 @@
             else !is parent
               iep_flag(i)=1
               sta_out(i,j)=0.d0 !initialize
-              select case(j)
-                case(1) !elev.
-                  swild2(1,1:i34(ie))=eta2(elnode(1:i34(ie),ie))
-                case(2) !air pressure
-                  swild2(1,1:i34(ie))=pr(elnode(1:i34(ie),ie))
-                case(3) !wind x
-                  swild2(1,1:i34(ie))=windx(elnode(1:i34(ie),ie))
-                case(4) !wind y
-                  swild2(1,1:i34(ie))=windy(elnode(1:i34(ie),ie))
-                case(5) !T
-                  swild2(1:nvrt,1:i34(ie))=tr_nd(1,1:nvrt,elnode(1:i34(ie),ie))
-                case(6) !S
-                  swild2(1:nvrt,1:i34(ie))=tr_nd(2,1:nvrt,elnode(1:i34(ie),ie))
-                case(7) !u
+              if(j==1) then !elev.
+                swild2(1,1:i34(ie))=eta2(elnode(1:i34(ie),ie))
+              else if(j==2) then !air pressure
+                swild2(1,1:i34(ie))=pr(elnode(1:i34(ie),ie))
+              else if(j==3) then !wind x
+                swild2(1,1:i34(ie))=windx(elnode(1:i34(ie),ie))
+              else if(j==4) then !wind y
+                swild2(1,1:i34(ie))=windy(elnode(1:i34(ie),ie))
+              else if(j==5) then !T
+                swild2(1:nvrt,1:i34(ie))=tr_nd(1,1:nvrt,elnode(1:i34(ie),ie))
+              else if(j==6) then !S
+                swild2(1:nvrt,1:i34(ie))=tr_nd(2,1:nvrt,elnode(1:i34(ie),ie))
+              else if(j==7) then !u
 !Error: may not be accurate near poles as pframe changes rapidly there
-                  swild2(1:nvrt,1:i34(ie))=uu2(1:nvrt,elnode(1:i34(ie),ie))
-                case(8) !v
-                  swild2(1:nvrt,1:i34(ie))=vv2(1:nvrt,elnode(1:i34(ie),ie))
-                case(9) !w
-                  swild2(1:nvrt,1:i34(ie))=ww2(1:nvrt,elnode(1:i34(ie),ie))
-                case default
-                  call parallel_abort('MAIN: unknown sta. output')
-              end select
+                swild2(1:nvrt,1:i34(ie))=uu2(1:nvrt,elnode(1:i34(ie),ie))
+              else if(j==8) then !v
+                swild2(1:nvrt,1:i34(ie))=vv2(1:nvrt,elnode(1:i34(ie),ie))
+              else if(j==9) then !w
+                swild2(1:nvrt,1:i34(ie))=ww2(1:nvrt,elnode(1:i34(ie),ie))
+              else if(j<=9+ntracers-2) then 
+                swild2(1:nvrt,1:i34(ie))=tr_nd(j-7,1:nvrt,elnode(1:i34(ie),ie))
+              else
+                call parallel_abort('STEP: unknown sta. output')
+              endif !j
 
               if(j<=4) then !2D var.
                 sta_out(i,j)=sum(arco_sta(i,1:i34(ie))*swild2(1,1:i34(ie)))
@@ -10082,7 +10083,7 @@
                   zta_out3d_gb(:,j,i)=-9999.d0
                 endif
               else
-                sta_out_gb(j,i)=sta_out_gb(j,i)/nwild2(j)
+                sta_out_gb(j,i)=sta_out_gb(j,i)/dble(nwild2(j))
                 if(i>4) then !3D only
                   sta_out3d_gb(:,j,i)=sta_out3d_gb(:,j,i)/dble(nwild2(j))
                   zta_out3d_gb(:,j,i)=zta_out3d_gb(:,j,i)/dble(nwild2(j))
