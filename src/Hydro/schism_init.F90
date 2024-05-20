@@ -183,7 +183,7 @@
 !     Name list
       integer :: ntracer_gen,ntracer_age,sed_class,eco_class !,flag_fib
       namelist /CORE/ipre,ibc,ibtp,ntracer_gen,ntracer_age,sed_class,eco_class, &
-     &nspool,ihfskip,msc2,mdc2,dt,rnday
+     &nspool,ihfskip,msc2,mdc2,dt,rnday,nbins_veg_vert
 
       namelist /OPT/ gen_wsett,flag_fib,ics,rearth_pole,rearth_eq,indvel, &
      &imm,ibdef,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
@@ -207,7 +207,8 @@
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
-     &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz
+     &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
+     &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg,iof_icm_sed, &
@@ -314,6 +315,7 @@
       if(nspool==0.or.ihfskip==0) call parallel_abort('Zero nspool')
       if(mod(ihfskip,nspool)/=0) call parallel_abort('ihfskip/nspool /= integer')
 !'
+      if(nbins_veg_vert<=0) call parallel_abort('INIT: nbins_veg_vert<=0')
  
 !     m[sd]c2 are checked inside WWM
 
@@ -439,7 +441,8 @@
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), &
      &iof_icm_cbp(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
-     &srqst7(nscribes+10),stat=istat)
+     &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
+     &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
         srqst7(:)=MPI_REQUEST_NULL
         !Global output on/off flags
@@ -495,6 +498,10 @@
       model_type_pahm=10
       stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
       RADFLAG='VOR'
+      veg_vert_z=(/((i-1)*0.4d0,i=1,nbins_veg_vert+1)/) ![m]
+      veg_vert_scale_cd=(/(1.0d0,i=1,nbins_veg_vert+1)/) !scaling [-]
+      veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
+      veg_vert_scale_D=(/(1.0d0,i=1,nbins_veg_vert+1)/)
 
       !Output elev, hvel by detault
       nc_out=1
@@ -1113,8 +1120,17 @@
 
 !     Vegetation
       if(iveg/=0.and.iveg/=1) then
-       write(errmsg,*)'INIT: illegal iveg,',iveg
-       call parallel_abort(errmsg)
+        write(errmsg,*)'INIT: illegal iveg,',iveg
+        call parallel_abort(errmsg)
+      endif
+
+      if(iveg/=0) then
+        do k=1,nbins_veg_vert
+          if(veg_vert_z(k)>=veg_vert_z(k+1)) then
+            write(errmsg,*)'INIT: veg_vert_z not ascending,',veg_vert_z
+            call parallel_abort(errmsg)
+          endif
+        enddo !k
       endif
 
 #ifdef USE_MARSH
@@ -1377,7 +1393,7 @@
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa),epsilon2_elem(ne), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
-         & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),veg_alpha(npa), &
+         & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),veg_alpha0(npa), &
          & veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
          & wwave_force(2,nvrt,nsa),btaun(npa), &
          & rsxx(npa), rsxy(npa), rsyy(npa), stat=istat)
@@ -3736,7 +3752,7 @@
       enddo !k
 
 !     Vegetation inputs: veg_*.gr3
-      veg_alpha=0.d0 !=D*Nv*Cdv/2; init; D is diameter; Cdv is form drag (veg_cd)
+      veg_alpha0=0.d0 !=D*Nv*Cdv/2; init; D is diameter; Cdv is form drag (veg_cd)
       veg_h=0.d0 !veg height; not used at 2D sides
       veg_nv=0.d0 !Nv: # of stems per m^2
       veg_di=0.d0 !D [m]
@@ -3759,19 +3775,6 @@
               call parallel_abort(errmsg)
             endif
             buf3(i)=tmp; buf4(i)=tmp1
-            !Make D, Nv and h consistent at no SAV places
-!            if(tmp*tmp1*tmp2*tmp3==0.d0) then
-!              tmp=0.d0; tmp1=0.d0; tmp2=0.d0; tmp3=0
-!            endif
-         
-!          if(ipgl(i)%rank==myrank) then
-!            nd=ipgl(i)%id
-!            veg_alpha(nd)=tmp*tmp1*tmp3/2.d0
-!            veg_nv(nd)=tmp1
-!            veg_h(nd)=tmp2
-!            veg_di(nd)=tmp
-!            veg_cd(nd)=tmp3
-!          endif
           enddo !i
           close(10)
           close(31)
@@ -3803,10 +3806,6 @@
               call parallel_abort(errmsg)
             endif
             buf3(i)=tmp2; buf4(i)=tmp3
-            !Make D, Nv and h consistent at no SAV places
-!            if(tmp*tmp1*tmp2*tmp3==0.d0) then
-!              tmp=0.d0; tmp1=0.d0; tmp2=0.d0; tmp3=0
-!            endif
           enddo !i
           close(32)
           close(30)
@@ -3817,14 +3816,14 @@
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
-            veg_alpha(nd)=veg_di(nd)*veg_nv(nd)*buf4(i)/2.d0 !tmp*tmp1*tmp3/2.d0
             veg_h(nd)=buf3(i) !tmp2
             veg_cd(nd)=buf4(i) !tmp3
 
-            !Make D, Nv and h consistent at no SAV places
+            !Make D, Nv and h consistent at no veg places
             if(veg_di(nd)*veg_nv(nd)*veg_h(nd)*veg_cd(nd)==0.d0) then
               veg_di(nd)=0.d0; veg_nv(nd)=0.d0; veg_h(nd)=0.d0; veg_cd(nd)=0.d0
             endif
+            veg_alpha0(nd)=veg_di(nd)*veg_nv(nd)*veg_cd(nd)/2.d0 !tmp*tmp1*tmp3/2.d0
           endif
         enddo !i
 
@@ -3832,14 +3831,14 @@
         !Assume constant inputs from .gr3; save these values
         veg_di0=veg_di(1); veg_h0=veg_h(1); veg_nv0=veg_nv(1); veg_cd0=veg_cd(1)
         !Reset
-        veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha=0.d0; veg_cd=0.d0
+        veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha0=0.d0; veg_cd=0.d0
         do i=1,nea
           if(imarsh(i)>0) then
             veg_di(elnode(1:i34(i),i))=veg_di0 
             veg_h(elnode(1:i34(i),i))=veg_h0 
             veg_nv(elnode(1:i34(i),i))=veg_nv0
             veg_cd(elnode(1:i34(i),i))=veg_cd0
-            veg_alpha(elnode(1:i34(i),i))=veg_di0*veg_nv0*veg_cd0/2.d0
+            veg_alpha0(elnode(1:i34(i),i))=veg_di0*veg_nv0*veg_cd0/2.d0
           endif
         enddo !i
 #endif

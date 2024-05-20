@@ -33,6 +33,9 @@
   sed_class = 5 !SED3D (USE_SED)
   eco_class = 27 !EcoSim (USE_ECO): must be between [25,60]
 
+! # of vertical bins in vegetation module (used only if iveg/=0)
+  nbins_veg_vert = 2
+
 ! Global output controls
   nspool = 36 !output step spool
   ihfskip = 864 !stack spool; every ihfskip steps will be put into 1_*, 2_*, etc...
@@ -718,11 +721,18 @@
 ! If iveg=1, need 4 extra inputs: (1) veg_D.gr3 (depth is stem diameter in meters);
 ! (2) veg_N.gr3 (depth is # of stems per m^2);
 ! (3) veg_h.gr3 (height of canopy in meters);
-! (4) veg_cd.gr3 (drag coefficient).									
+! (4) veg_cd.gr3 (drag coefficient).
+! The vertical scaling is given by veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1) below.
+! veg_vert_z(:) specify the distance from bed for each bin (ascending order starting from 0).
+
 ! If one of these depths=0 at a node, the code will set all to 0. 
 ! If USE_MARSH is on and iveg=1, all .gr3 must have constant depths!
 !----------------------------------------------------------------------
   iveg = 0 !on/off flag
+  veg_vert_z = 0.,0.5,1. ![m] starting from 0.
+  veg_vert_scale_cd = 1.,1.,1. !scaling [-]
+  veg_vert_scale_N = 1.,1.,1. !scaling [-]
+  veg_vert_scale_D = 1.,1.,1. !scaling [-]
 
 !----------------------------------------------------------------------
 ! Coupling step with ICE module.

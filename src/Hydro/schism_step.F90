@@ -169,7 +169,7 @@
                      &fluxchan,fluxchan1,fluxchan2,tot_s,flux_s,ah,ubm,aorb,ramp_ss,Cdmax, &
                      &bthick_ori,big_ubstar,big_vbstar,zsurf,tot_bedmass,w1,w2,slr_elev, &
                      &i34inv,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi, &
-                     &veg_cfk,veg_cfpsi,veg_h_sd,veg_alpha_sd,veg_nv_sd,veg_c,beta_bar, &
+                     &veg_cfk,veg_cfpsi,veg_h_sd,veg_alpha_sd,veg_alpha_sd_bot,veg_nv_sd,veg_c,beta_bar, &
                      &bigfa1,bigfa2,vnf,grav3,tf,maxpice, z0_donelan,start_t0,start_t1
 !Tsinghua group: 0821...
       real(rkind) :: dtrdz,apTpxy_up,apTpxy_do,epsffs,epsfbot !8022 +epsffs,epsfbot
@@ -233,6 +233,7 @@
       real(4),allocatable :: swild11(:),swild12(:,:),swild14(:,:,:) !reading schout*
       real(rkind),allocatable :: hp_int(:,:,:),buf1(:,:),buf2(:,:),buf3(:),msource(:,:)
       real(rkind),allocatable :: fluxes_tr(:,:),fluxes_tr_gb(:,:) !fluxes output between regions
+      real(rkind),allocatable :: veg_alpha3D(:,:),veg_alpha_vert_mean(:)
       logical :: ltmp,ltmp1(1),ltmp2(1)
 
       logical,save :: first_call=.true.
@@ -352,6 +353,12 @@
         if(istat/=0) call parallel_abort('STEP: fluxes_tr alloc')
       endif
 !     End alloc.
+
+!     Vertical variation of veg_alpha
+      if(iveg/=0) then
+        allocate(veg_alpha3D(nvrt,npa),veg_alpha_vert_mean(npa),stat=istat)
+        if(istat/=0) call parallel_abort('STEP: veg_alpha3D alloc')
+      endif !iveg
 
 !     Offline transport
 !      if(itransport_only/=0) then
@@ -2479,7 +2486,7 @@
       veg_cfk=0.07d0 !Shimizu & Tsujimoto (1994)
       veg_cfpsi=0.16d0
 
-!$OMP parallel default(shared) private(i,vmax,vmin,tmin,k,drhodz,bvf,k1,k2,dudz,dvdz,shear2, &
+!$OMP parallel default(shared) private(i,vmax,vmin,tmin,k,kk,drhodz,bvf,k1,k2,dudz,dvdz,shear2, &
 !$OMP rich,j,u_taus,u_taub,nlev,klev,h1d,SS1d,NN1d,ztmp, &
 #ifdef USE_GOTM
 !$OMP tke1d,L1d,eps1d,num1d,nuh1d, &
@@ -2487,7 +2494,8 @@
 !$OMP toth,z0s,z0b, &
 !$OMP tmp,dzz,shearbt,rzbt,q2ha,xlha,cpsi3,zctr2,dists,distb,fwall,cpsi2p,xlmax,q2fs,q2bot,xlbot, &
 !$OMP tmp0,zsurf,xlfs,nqdim,kin,alow,bdia,cupp,gam2,prod,buoy,diss,soln2,gam,q2tmp,psi_n,psi_n1, &
-!$OMP q2l,xltmp,upper,xl_max,vd,td,qd1,qd2,zt,veg_prod,zz1,zrat,ub2,vb2,vmag1,vmag2)
+!$OMP q2l,xltmp,upper,xl_max,vd,td,qd1,qd2,zt,veg_prod,zz1,zrat,ub2,vb2,vmag1,vmag2,sum1,sum2, &
+!$OMP ifl,cff1,cff2,cff3,rl10)
 
       if(nchi/=0) then
 !$OMP   do
@@ -2510,7 +2518,63 @@
       enddo !i
 !$OMP end do
 
-!
+!     Add vertical variation to veg_alpha and compute vertical mean
+      if(iveg/=0) then
+!$OMP do
+        do i=1,npa
+          if(idry(i)==1) then
+            veg_alpha3D(:,i)=veg_alpha0(i)
+            veg_alpha_vert_mean(i)=veg_alpha0(i)
+          else !wet
+            do k=kbp(i),nvrt
+              rl10=znl(k,i)-znl(kbp(i),i) !>=0
+              if(rl10>=veg_vert_z(nbins_veg_vert+1)) then
+                cff1=veg_vert_scale_cd(nbins_veg_vert+1)
+                cff2=veg_vert_scale_N(nbins_veg_vert+1)
+                cff3=veg_vert_scale_D(nbins_veg_vert+1)
+              else
+                ifl=0
+                do kk=1,nbins_veg_vert
+                  if(rl10>=veg_vert_z(kk).and.rl10<=veg_vert_z(kk+1)) then
+                    zrat=(rl10-veg_vert_z(kk))/(veg_vert_z(kk+1)-veg_vert_z(kk))
+                    ifl=kk
+                    exit
+                  endif !znl
+                enddo !kk
+                if(ifl==0) then
+                  write(errmsg,*)'STEP: veg vert failed,',veg_vert_z
+                  call parallel_abort(errmsg) 
+                endif
+                cff1=veg_vert_scale_cd(ifl)*(1.d0-zrat)+veg_vert_scale_cd(ifl+1)*zrat
+                cff2=veg_vert_scale_N(ifl)*(1.d0-zrat)+veg_vert_scale_N(ifl+1)*zrat
+                cff3=veg_vert_scale_D(ifl)*(1.d0-zrat)+veg_vert_scale_D(ifl+1)*zrat
+              endif !rl10
+  
+              veg_alpha3D(k,i)=veg_alpha0(i)*cff1*cff2*cff3
+            enddo !k
+  
+            !Mean
+            zt=znl(kbp(i),i)+veg_h(i) !top
+            sum1=0.d0
+            sum2=0.d0
+            do k=kbp(i),nvrt-1
+              if(znl(k+1,i)<=zt) then
+                sum1=sum1+(veg_alpha3D(k,i)+veg_alpha3D(k+1,i))*0.5d0*(znl(k+1,i)-znl(k,i))
+                sum2=sum2+znl(k+1,i)-znl(k,i)
+              else
+                exit
+              endif
+            enddo !k
+            if(sum2==0.d0) then
+              veg_alpha_vert_mean(i)=veg_alpha3D(kbp(i),i)
+            else
+              veg_alpha_vert_mean(i)=sum1/sum2
+            endif
+          endif !idry
+        enddo !i=1,npa
+!$OMP end do
+      endif !iveg/=0
+
 !************************************************************************
 !                                                                       *
 !               Turbulence closure schemes                              *
@@ -2828,7 +2892,8 @@
             vb2=(1.d0-zrat)*vv2(k-1,j)+zrat*vv2(k,j)
             vmag2=sqrt(ub2*ub2+vb2*vb2)             
             vmag1=sqrt(uu2(k-1,j)**2.d0+vv2(k-1,j)**2.d0)
-            veg_prod(k)=veg_alpha(j)*(vmag1**3.d0+vmag2**3.d0)/2.d0
+            !veg_prod(k)=veg_alpha(j)*(vmag1**3.d0+vmag2**3.d0)/2.d0
+            veg_prod(k)=(veg_alpha3D(k,j)+veg_alpha3D(k-1,j))*0.5d0*(vmag1**3.d0+vmag2**3.d0)/2.d0
           endif !iveg
 
 !         Compute c_psi_3
@@ -5053,7 +5118,7 @@
 
 !$OMP parallel default(shared) private(i,n1,n2,htot,tmp,k,veg_h_sd,veg_nv_sd,veg_alpha_sd, &
 !$OMP bigu1,bigv1,uuint,zctr2,zz1,zrat,ub2,vb2,ubar1,ubar2,vmag1,vmag2,bb1,bb2,tmp1, &
-!$OMP tmpx2,tmpy2,veg_c)
+!$OMP tmpx2,tmpy2,veg_c,veg_alpha_sd_bot)
 
 !     Compute b.c. flag for all nodes for the matrix
 !!$OMP do 
@@ -5085,7 +5150,6 @@
         if(htot<=0.d0) call parallel_abort('STEP: htot(9.1)')
         veg_h_sd=sum(veg_h(isidenode(1:2,i)))/2.d0
         veg_nv_sd=sum(veg_nv(isidenode(1:2,i)))/2.d0
-        veg_alpha_sd=sum(veg_alpha(isidenode(1:2,i)))/2.d0
 
 !	bigu1,2 (in ll if ics=2)
         bigu(1,i)=0.d0 !U^n_x
@@ -5099,7 +5163,11 @@
         vmag1=sqrt(sdbt(1,kbs(i)+1,i)**2.d0+sdbt(2,kbs(i)+1,i)**2.d0)
         chi2(i)=Cd(i)*vmag1 !sqrt(sdbt(1,kbs(i)+1,i)**2+sdbt(2,kbs(i)+1,i)**2)
         chi(i)=chi2(i)
-        if(iveg==1) chi(i)=chi(i)/(1.d0+veg_alpha_sd*vmag1*dt)
+        if(iveg==1) then
+          veg_alpha_sd=sum(veg_alpha_vert_mean(isidenode(1:2,i)))/2.d0
+          veg_alpha_sd_bot=(veg_alpha3D(kbp(n1),n1)+veg_alpha3D(kbp(n2),n2))/2.d0
+          chi(i)=chi(i)/(1.d0+veg_alpha_sd_bot*vmag1*dt)
+        endif
 
 !       Calc consts in SAV model; make sure veg_[c2,beta]=0 at 2D, dry
 !       side, and emergent side
@@ -5128,9 +5196,6 @@
 
           veg_c2(i)=veg_alpha_sd*dt*uuint !>=0
           if(veg_h_sd<0.99d0*htot) then !3D wet submergent side with SAV
-            !tmpx1=veg_alpha_sd*dt*uuint !>=0
-            !veg_c=/(1+tmpx1)
-  
             tmpx2=max(1.d-5,chi2(i)*vmag1/grav/htot) !energy gradient
             !\beta_2; arguments checked
             tmpy2=sqrt(sqrt(veg_nv_sd)/veg_h_sd)*(-0.32d0-0.85d0*log10((htot-veg_h_sd)/veg_h_sd*tmpx2))
@@ -6395,7 +6460,7 @@
         node1=isidenode(1,j)
         node2=isidenode(2,j)
         veg_h_sd=sum(veg_h(isidenode(1:2,j)))/2.d0
-        veg_alpha_sd=sum(veg_alpha(isidenode(1:2,j)))/2.d0
+!        veg_alpha_sd=sum(veg_alpha(isidenode(1:2,j)))/2.d0
 !       ll frame at side
 !        swild10(1:3,1:3)=(pframe(:,:,node1)+pframe(:,:,node2))/2
 
@@ -6475,6 +6540,8 @@
               vb2=(1.d0-zrat)*swild98(2,k,j)+zrat*swild98(2,k+1,j)
               vmag2=sqrt(ub2*ub2+vb2*vb2)              
               vmag1=sqrt(swild98(1,k,j)**2.d0+swild98(2,k,j)**2.d0)
+              veg_alpha_sd=0.25d0*(veg_alpha3D(k+1,node1)+veg_alpha3D(k,node1)+ &
+     &veg_alpha3D(k+1,node2)+veg_alpha3D(k,node2))
               cff1=cff1+veg_alpha_sd*dt*(vmag1+vmag2)/2.d0
             endif !iveg
 
@@ -6492,6 +6559,8 @@
               vb2=(1.d0-zrat)*swild98(2,k-1,j)+zrat*swild98(2,k,j)
               vmag2=sqrt(ub2*ub2+vb2*vb2)
               vmag1=sqrt(swild98(1,k-1,j)**2.d0+swild98(2,k-1,j)**2.d0)
+              veg_alpha_sd=0.25d0*(veg_alpha3D(k-1,node1)+veg_alpha3D(k,node1)+ &
+     &veg_alpha3D(k-1,node2)+veg_alpha3D(k,node2))
               cff1=cff1+veg_alpha_sd*dt*(vmag1+vmag2)/2.d0
             endif !iveg
 
@@ -7866,8 +7935,8 @@
 
           do i=1,npa
             !Do not allow SAV to grow out of init patch for the time being
-            if(veg_nv(i)==0.d0.or.veg_alpha(i)==0.d0) then
-              veg_nv(i)=0.d0; veg_alpha(i)=0.d0; veg_h(i)=0.d0
+            if(veg_nv(i)==0.d0.or.veg_alpha0(i)==0.d0) then
+              veg_nv(i)=0.d0; veg_alpha0(i)=0.d0; veg_h(i)=0.d0
             endif
           enddo !i
 
@@ -8121,7 +8190,7 @@
             veg_h(i)=veg_h0
             veg_nv(i)=veg_nv0
             veg_cd(i)=veg_cd0
-            veg_alpha(i)=veg_di0*veg_nv0*veg_cd0/2.d0
+            veg_alpha0(i)=veg_di0*veg_nv0*veg_cd0/2.d0
           endif !imarsh
 
           !drowned marsh: veg_di etc =0
@@ -8151,7 +8220,7 @@
       call exchange_p2d(veg_h)
       call exchange_p2d(veg_nv)
       call exchange_p2d(veg_cd)
-      call exchange_p2d(veg_alpha)
+      call exchange_p2d(veg_alpha0)
 !$OMP end master
 #endif /*USE_MARSH*/
 !$OMP end parallel
@@ -10534,6 +10603,9 @@
 
       if(ibtrack_test==1) deallocate(tsd)
       if(iflux/=0) deallocate(fluxes_tr, fluxes_tr_gb)
+
+      if(allocated(veg_alpha3D)) deallocate(veg_alpha3D)
+      if(allocated(veg_alpha_vert_mean)) deallocate(veg_alpha_vert_mean)
 
 #ifdef TIMER2
       tmp=mpi_wtime()
