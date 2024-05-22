@@ -9,5 +9,6 @@ set(NetCDF_C_DIR  "$ENV{NETCDF}"  CACHE PATH "Path to NetCDF C library")
 
 ###Compile flags
 #set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -mcmodel=medium -assume byterecl -axCORE-AVX2 -xSSE4.2" CACHE STRING "Fortran flags" FORCE)
-set(CMAKE_Fortran_FLAGS_RELEASE "-axCORE-AVX2 -O3 -mcmodel medium -no-prec-sqrt -no-prec-div -align all -assume buffered_io -assume byterecl" CACHE STRING "Fortran flags" FORCE)
+#set(CMAKE_Fortran_FLAGS_RELEASE "-axCORE-AVX2 -O3 -mcmodel medium -no-prec-sqrt -no-prec-div -align all -assume buffered_io -assume byterecl" CACHE STRING "Fortran flags" FORCE)
+set(CMAKE_Fortran_FLAGS_RELEASE "-g -O2 -traceback -no-prec-sqrt -no-prec-div -align all -assume buffered_io -assume byterecl" CACHE STRING "Fortran flags" FORCE)
 
