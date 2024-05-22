@@ -1,8 +1,9 @@
 #!/bin/tcsh
-#SBATCH --job-name=R01a
+#SBATCH --job-name=01a
 ##64 cores/nodes. Use sinfo to see system status
 #SBATCH -N 13 --ntasks-per-node=64
 ##Max wall clock time is 2 days
 #SBATCH -t 24:00:00
+##SBATCH --mail-type=all
 
 srun ./pschism_KURO_BLD_STANDALONE_TVD-VL 6

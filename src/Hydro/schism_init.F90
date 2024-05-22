@@ -47,10 +47,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,nout_ba,name_icm,iSilica,iZB,iPh, &
-                    & iCBP,isav_icm,iveg_icm,ised_icm,iBA_icm,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & 
-                    & btemp,bPOC,bPON,bPOP,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bstc,bSTR,bThp,bTox, &
-                    & SOD,JNH4,JNO3,JPO4,JCOD,JSA,BA,nout_d2d,nout_d3d,name_d2d,name_d3d
+      use icm_mod, only : ntrs_icm,nout_icm,nout_icm_3d,wqout,wqhot,nhot_icm
 #endif
 
 #ifdef USE_COSINE
@@ -176,8 +173,9 @@
 #endif
 
 #ifndef USE_ICM
-      integer,parameter :: nout_icm=1,nout_sav=4,nout_veg=12,nout_sed=26,nout_ba=1
+      integer :: nout_icm_3d(2)=(/0,0/)
 #endif
+
 
 #ifdef USE_OIL
 #endif
@@ -185,7 +183,7 @@
 !     Name list
       integer :: ntracer_gen,ntracer_age,sed_class,eco_class !,flag_fib
       namelist /CORE/ipre,ibc,ibtp,ntracer_gen,ntracer_age,sed_class,eco_class, &
-     &nspool,ihfskip,msc2,mdc2,dt,rnday
+     &nspool,ihfskip,msc2,mdc2,dt,rnday,nbins_veg_vert
 
       namelist /OPT/ gen_wsett,flag_fib,ics,rearth_pole,rearth_eq,indvel, &
      &imm,ibdef,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
@@ -209,11 +207,12 @@
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
-     &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz
+     &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
+     &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg,iof_icm_sed, &
-     &iof_icm_ba,iof_icm_dbg,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
+     &iof_icm_ba,iof_icm_clam,iof_icm_dbg,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta,iof_ugrid
 
 !-------------------------------------------------------------------------------
@@ -316,6 +315,7 @@
       if(nspool==0.or.ihfskip==0) call parallel_abort('Zero nspool')
       if(mod(ihfskip,nspool)/=0) call parallel_abort('ihfskip/nspool /= integer')
 !'
+      if(nbins_veg_vert<=0) call parallel_abort('INIT: nbins_veg_vert<=0')
  
 !     m[sd]c2 are checked inside WWM
 
@@ -438,11 +438,11 @@
       !order). Flags for modules other than hydro are only used inside USE_*
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
-     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm(nout_icm),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2), &
-     &iof_icm_ph(4),iof_icm_cbp(4),iof_icm_sav(nout_sav),iof_icm_veg(nout_veg),iof_icm_sed(nout_sed),iof_icm_ba(nout_ba), &
-     &iof_icm_dbg(2),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
+     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), &
+     &iof_icm_cbp(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
-     &srqst7(nscribes+10),stat=istat)
+     &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
+     &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
         srqst7(:)=MPI_REQUEST_NULL
         !Global output on/off flags
@@ -498,31 +498,22 @@
       model_type_pahm=10
       stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
       RADFLAG='VOR'
+      veg_vert_z=(/((i-1)*0.4d0,i=1,nbins_veg_vert+1)/) ![m]
+      veg_vert_scale_cd=(/(1.0d0,i=1,nbins_veg_vert+1)/) !scaling [-]
+      veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
+      veg_vert_scale_D=(/(1.0d0,i=1,nbins_veg_vert+1)/)
 
       !Output elev, hvel by detault
       nc_out=1
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25:26)=1
       iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_cbp=0; iof_icm_sav=0
-      iof_icm_veg=0; iof_icm_sed=0; iof_icm_ba=0; iof_icm_dbg=0; iof_cos=0; iof_fib=0; iof_sed2d=0; iof_ice=0; 
-      iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
+      iof_icm_veg=0; iof_icm_sed=0; iof_icm_ba=0; iof_icm_clam=0;   iof_icm_dbg=0; iof_cos=0; iof_fib=0; iof_sed2d=0
+      iof_ice=0; iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
 
       read(15,nml=OPT)
       read(15,nml=SCHOUT)
       close(15)
-
-#ifdef USE_ICM
-      !get value of iof_icm from ICM submodules
-      iof_icm(1:17)=iof_icm_core
-      if(iSilica==1) iof_icm(itrs_icm(1,2):itrs_icm(2,2))=iof_icm_silica
-      if(iZB==1) iof_icm(itrs_icm(1,3):itrs_icm(2,3))=iof_icm_zb
-      if(iPh==1) iof_icm(itrs_icm(1,4):itrs_icm(2,4))=iof_icm_ph
-      if(iCBP==1) iof_icm(itrs_icm(1,5):itrs_icm(2,5))=iof_icm_cbp
-      if(isav_icm==1) iof_icm(itrs_icm(1,6):itrs_icm(2,6))=iof_icm_sav
-      if(iveg_icm==1) iof_icm(itrs_icm(1,7):itrs_icm(2,7))=iof_icm_veg
-      if(ised_icm==1) iof_icm(itrs_icm(1,8):itrs_icm(2,8))=iof_icm_sed
-      if(iBA_icm==1) iof_icm(itrs_icm(1,9):itrs_icm(2,9))=iof_icm_ba
-#endif
 
       !zcor should be on usually
 !      iof_hydro(25)=1
@@ -977,14 +968,12 @@
 
 !     Kriging option
 !     Choice of generalized covariance fucntion
-!      call get_param('param.in','kr_co',1,kr_co,tmp,stringvalue)
       if(kr_co<=0.or.kr_co>4) then
         write(errmsg,*)'Wrong kr_co:',kr_co
         call parallel_abort(errmsg)
       endif
 
 !...  Max. for vel. magnitude
-!      call get_param('param.in','rmaxvel',2,itmp,tmp,stringvalue)
       if(rmaxvel<1._rkind) then
         write(errmsg,*)'Illegal rmaxvel:',rmaxvel
         call parallel_abort(errmsg)
@@ -994,7 +983,6 @@
       rmaxvel2=rmaxvel*1.013_rkind !v-vel
 
 !...  min. vel for invoking btrack and for abnormal exit in quicksearch
-!      call get_param('param.in','velmin_btrack',2,itmp,velmin_btrack,stringvalue)
       if(velmin_btrack<=0._rkind) then
         write(errmsg,*)'Illegal velmin_btrack:',velmin_btrack
         call parallel_abort(errmsg)
@@ -1004,14 +992,12 @@
 !     to avoid underflow. This should not need to be adjusted
 !     normally; may need to lower it for some benchmark tests
 !     Default: btrack_nudge=1.013e-3
-!      call get_param('param.in','btrack_nudge',2,itmp,btrack_nudge,stringvalue)
       if(btrack_nudge<=0._rkind.or.btrack_nudge>0.5_rkind) then
         write(errmsg,*)'Illegal btrack_nudge:',btrack_nudge
         call parallel_abort(errmsg)
       endif
 
 !     Test btrack alone (1: rotating Gausshill) - can only be used with pure b-tropic model and pure tri
-!      call get_param('param.in','ibtrack_test',1,ibtrack_test,tmp,stringvalue)
       if(ibtrack_test<0.or.ibtrack_test>1) then
         write(errmsg,*)'Illegal ibtrack_test:',ibtrack_test
         call parallel_abort(errmsg)
@@ -1020,7 +1006,6 @@
       if(ibtrack_test==1.and.lhas_quad) call parallel_abort('INIT: btrack cannot have quads')
 
 !     Rouse test
-!      call get_param('param.in','irouse_test',1,irouse_test,tmp,stringvalue)
       if(irouse_test/=0.and.irouse_test/=1) then
         write(errmsg,*)'Illegal irouse_test:',irouse_test
         call parallel_abort(errmsg)
@@ -1035,7 +1020,6 @@
       endif
 
 !...  Inundation algorithm flag (1: better algorithm for fine resolution)
-!      call get_param('param.in','inunfl',1,inunfl,tmp,stringvalue)
       if(inunfl/=0.and.inunfl/=1) then
         write(errmsg,*)'Illegal inunfl:',inunfl
         call parallel_abort(errmsg)
@@ -1044,17 +1028,12 @@
 !...  Numerical shoreline flag (boundary between dry and wet elements) 
       ! 1: the wave forces at the shoreline are set equal to the barotropic gradient, which is calculated on the wet element
       ! 0: the wave forces at the shoreline are calculated using the hgrad_nodes routine (non physical velocities in very shallow cells)
-!      call get_param('param.in','shorewafo',1,shorewafo,tmp,stringvalue)
       if(shorewafo/=0.and.shorewafo/=1) then
         write(errmsg,*)'Illegal shorewafo:',shorewafo
         call parallel_abort(errmsg)
       endif
 
-!     write mode; not used really
-!!      call get_param('param.in','iwrite',1,iwrite,tmp,stringvalue)
-
 !     Elev. i.c. option (elev.ic)
-!      call get_param('param.in','ic_elev',1,ic_elev,tmp,stringvalue)
       if(ic_elev/=0.and.ic_elev/=1) then
         write(errmsg,*)'Illegal ic_elev:',ic_elev
         call parallel_abort(errmsg)
@@ -1068,13 +1047,10 @@
       endif
 
 !     Inverse barometric effects on elev. b.c.
-!      call get_param('param.in','inv_atm_bnd',1,inv_atm_bnd,tmp,stringvalue)
       if(inv_atm_bnd/=0.and.inv_atm_bnd/=1) then
         write(errmsg,*)'Illegal inv_atm_bnd:',inv_atm_bnd
         call parallel_abort(errmsg)
       endif
-      !Reference atmos. pressure 
-!      call get_param('param.in','prmsl_ref',2,itmp,prmsl_ref,stringvalue)
 
 !     Scales for dimensioning in inter-subdomain btrack
 !     mxnbt=s1_mxnbt*nmm*nvrt is the dimension of btlist (nmm is the max. of all
@@ -1083,8 +1059,6 @@
 !       (nbt is the initial # of inter-subdomain trajectories), and
 !     mnbt*nnbr is the dimension of btrecvq() in routine inter_btrack (nnbr is #
 !     of nbr processes).
-!      call get_param('param.in','s1_mxnbt',2,itmp,s1_mxnbt,stringvalue)
-!      call get_param('param.in','s2_mxnbt',2,itmp,s2_mxnbt,stringvalue)
       if(s1_mxnbt<=0._rkind.or.s2_mxnbt<=0._rkind) then
         write(errmsg,*)'Illegal s[12]_mxnbt:',s1_mxnbt,s2_mxnbt
         call parallel_abort(errmsg)
@@ -1092,17 +1066,11 @@
 
 !     Station output option (/=0: need station.in)
 !     If ics=2, the coord. in station.in must be in lat/lon (degrees)
-!      call get_param('param.in','iout_sta',1,iout_sta,tmp,stringvalue)
-
       if(iout_sta/=0) then
-!        call get_param('param.in','nspool_sta',1,nspool_sta,tmp,stringvalue) !output skip
         if(nspool_sta<=0) call parallel_abort('Wrong nspool_sta')
         if(mod(nhot_write,nspool_sta)/=0) call parallel_abort('mod(nhot_write,nspool_sta)/=0')
 !'
       endif
-
-!...  Read harmonic analysis information (Adapted from ADCIRC)
-!      call get_param('param.in','iharind',1,iharind,tmp,stringvalue)
 
 !...  WWM 
 !     Coupling flag
@@ -1115,12 +1083,6 @@
         call parallel_abort(errmsg)
       endif
 
-!...  ramp for the wave forces
-!      if(nrampwafo/=0.and.nrampwafo/=1) then
-!        write(errmsg,*)'Unknown nrampwafo',nrampwafo
-!        call parallel_abort(errmsg)
-!      endif
-
 !     Coupling interval (# of time steps)
       if(nstep_wwm<1) then
         write(errmsg,*)'Wrong coupling interval:',nstep_wwm
@@ -1128,7 +1090,6 @@
       endif
 
 !     Wave boundary layer option
-!      call get_param('param.in','iwbl',1,iwbl,tmp,stringvalue)
       if(iwbl<0.or.iwbl>2) then
         write(errmsg,*)'Wrong iwbl:',iwbl
         call parallel_abort(errmsg)
@@ -1159,8 +1120,17 @@
 
 !     Vegetation
       if(iveg/=0.and.iveg/=1) then
-       write(errmsg,*)'INIT: illegal iveg,',iveg
-       call parallel_abort(errmsg)
+        write(errmsg,*)'INIT: illegal iveg,',iveg
+        call parallel_abort(errmsg)
+      endif
+
+      if(iveg/=0) then
+        do k=1,nbins_veg_vert
+          if(veg_vert_z(k)>=veg_vert_z(k+1)) then
+            write(errmsg,*)'INIT: veg_vert_z not ascending,',veg_vert_z
+            call parallel_abort(errmsg)
+          endif
+        enddo !k
       endif
 
 #ifdef USE_MARSH
@@ -1423,7 +1393,7 @@
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa),epsilon2_elem(ne), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
-         & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),veg_alpha(npa), &
+         & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),veg_alpha0(npa), &
          & veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
          & wwave_force(2,nvrt,nsa),btaun(npa), &
          & rsxx(npa), rsxy(npa), rsyy(npa), stat=istat)
@@ -3782,7 +3752,7 @@
       enddo !k
 
 !     Vegetation inputs: veg_*.gr3
-      veg_alpha=0.d0 !=D*Nv*Cdv/2; init; D is diameter; Cdv is form drag (veg_cd)
+      veg_alpha0=0.d0 !=D*Nv*Cdv/2; init; D is diameter; Cdv is form drag (veg_cd)
       veg_h=0.d0 !veg height; not used at 2D sides
       veg_nv=0.d0 !Nv: # of stems per m^2
       veg_di=0.d0 !D [m]
@@ -3805,19 +3775,6 @@
               call parallel_abort(errmsg)
             endif
             buf3(i)=tmp; buf4(i)=tmp1
-            !Make D, Nv and h consistent at no SAV places
-!            if(tmp*tmp1*tmp2*tmp3==0.d0) then
-!              tmp=0.d0; tmp1=0.d0; tmp2=0.d0; tmp3=0
-!            endif
-         
-!          if(ipgl(i)%rank==myrank) then
-!            nd=ipgl(i)%id
-!            veg_alpha(nd)=tmp*tmp1*tmp3/2.d0
-!            veg_nv(nd)=tmp1
-!            veg_h(nd)=tmp2
-!            veg_di(nd)=tmp
-!            veg_cd(nd)=tmp3
-!          endif
           enddo !i
           close(10)
           close(31)
@@ -3849,10 +3806,6 @@
               call parallel_abort(errmsg)
             endif
             buf3(i)=tmp2; buf4(i)=tmp3
-            !Make D, Nv and h consistent at no SAV places
-!            if(tmp*tmp1*tmp2*tmp3==0.d0) then
-!              tmp=0.d0; tmp1=0.d0; tmp2=0.d0; tmp3=0
-!            endif
           enddo !i
           close(32)
           close(30)
@@ -3863,14 +3816,14 @@
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
             nd=ipgl(i)%id
-            veg_alpha(nd)=veg_di(nd)*veg_nv(nd)*buf4(i)/2.d0 !tmp*tmp1*tmp3/2.d0
             veg_h(nd)=buf3(i) !tmp2
             veg_cd(nd)=buf4(i) !tmp3
 
-            !Make D, Nv and h consistent at no SAV places
+            !Make D, Nv and h consistent at no veg places
             if(veg_di(nd)*veg_nv(nd)*veg_h(nd)*veg_cd(nd)==0.d0) then
               veg_di(nd)=0.d0; veg_nv(nd)=0.d0; veg_h(nd)=0.d0; veg_cd(nd)=0.d0
             endif
+            veg_alpha0(nd)=veg_di(nd)*veg_nv(nd)*veg_cd(nd)/2.d0 !tmp*tmp1*tmp3/2.d0
           endif
         enddo !i
 
@@ -3878,14 +3831,14 @@
         !Assume constant inputs from .gr3; save these values
         veg_di0=veg_di(1); veg_h0=veg_h(1); veg_nv0=veg_nv(1); veg_cd0=veg_cd(1)
         !Reset
-        veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha=0.d0; veg_cd=0.d0
+        veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha0=0.d0; veg_cd=0.d0
         do i=1,nea
           if(imarsh(i)>0) then
             veg_di(elnode(1:i34(i),i))=veg_di0 
             veg_h(elnode(1:i34(i),i))=veg_h0 
             veg_nv(elnode(1:i34(i),i))=veg_nv0
             veg_cd(elnode(1:i34(i),i))=veg_cd0
-            veg_alpha(elnode(1:i34(i),i))=veg_di0*veg_nv0*veg_cd0/2.d0
+            veg_alpha0(elnode(1:i34(i),i))=veg_di0*veg_nv0*veg_cd0/2.d0
           endif
         enddo !i
 #endif
@@ -3923,7 +3876,7 @@
 !     Station output option (/=0: need station.in)
 !     If ics=2, the coord. in station.in must be in lat/lon (degrees)
       if(iout_sta/=0) then
-        nvar_sta=9 !# of output variables
+        nvar_sta=9+ntracers-2 !# of output variables
         if(iorder==0) then
           allocate(iof_sta(nvar_sta),stat=istat)
           if(istat/=0) call parallel_abort('Sta. allocation failure (1)')
@@ -3931,7 +3884,7 @@
 
         if(myrank==0) then
           open(32,file=in_dir(1:len_in_dir)//'station.in',status='old')
-!         Output variables in order: elev, air pressure, windx, windy, T, S, u, v, w
+!         Output variables in order: elev, air pressure, windx, windy, T, S, u, v, w, rest of tracers
           read(32,*)iof_sta(1:nvar_sta) !on-off flag for each variable
           read(32,*)nout_sta
 !         Following is needed for dimension of nwild2
@@ -5598,121 +5551,24 @@
 
 
 #ifdef USE_ICM
-        !gfortran requires all chars have same length
-        ar_name(1:14)=(/'btemp ','bstc  ','bSTR  ','bThp  ','bTox  ', &
-                      & 'bNH4  ','bNH4s ','bNO3  ','bPO4  ','bH2S  ', &
-                      & 'bCH4  ','bPOS  ','bSA   ','sht   '/)
-!'
-        do k=1,14 !# of 1D arrays
-          if(isav_icm==0.and.k==14) cycle
-          if(myrank==0) then
-            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM1')
-            j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM2')
-          endif
-          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-          do i=1,ne_global
-            if(iegl(i)%rank==myrank) then
-              ie=iegl(i)%id
-              if(k==1) then
-                btemp(ie)=buf3(i)
-              else if(k==2) then
-                bstc(ie)=buf3(i)
-              else if(k==3) then
-                bSTR(ie)=buf3(i)
-              else if(k==4) then
-                bThp(ie)=buf3(i)
-              else if(k==5) then
-                bTox(ie)=buf3(i)
-              else if(k==6) then
-                bNH4(ie)=buf3(i)
-              else if(k==7) then
-                bNH4s(ie)=buf3(i)
-              else if(k==8) then
-                bNO3(ie)=buf3(i)
-              else if(k==9) then
-                bPO4(ie)=buf3(i)
-              else if(k==10) then
-                bH2S(ie)=buf3(i)
-              else if(k==11) then
-                bCH4(ie)=buf3(i)
-              else if(k==12) then
-                bPOS(ie)=buf3(i)
-              else if(k==13) then
-                bSA(ie)=buf3(i)
-              else if(k==14) then
-                sht(ie)=buf3(i)
+        do k=1,nhot_icm
+          do m=1,wqhot(k)%dims(1)
+            if(myrank==0) then
+              j=nf90_inq_varid(ncid2,trim(adjustl(wqhot(k)%name)),mm)
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICM1')
+              if(wqhot(k)%ndim==1) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
+              if(wqhot(k)%ndim==2) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
+              if(j/=NF90_NOERR) call parallel_abort('init: nc ICM2')
+            endif
+            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+            do i=1,ne_global
+              if(iegl(i)%rank==myrank) then
+                if(wqhot(k)%ndim==1) wqhot(k)%p1(iegl(i)%id)=buf3(i)
+                if(wqhot(k)%ndim==2) wqhot(k)%p2(m,iegl(i)%id)=buf3(i)
               endif
-            endif !iegl
-          enddo !i
-        enddo !k=1,20
-
-        !gfortran requires all chars have same length
-        ar_name(1:10)=(/'bPOC  ','bPON  ','bPOP  ','sleaf ','sstem ','sroot ','vht   ','vtleaf','vtstem','vtroot'/)
-        do k=1,10 !# of 2D arrays
-          if(isav_icm==0.and.k>=4.and.k<=6) cycle
-          if(iveg_icm==0.and.k>=7.and.k<=10) cycle
-
-          if(myrank==0) then
-            j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ICM3')
-          endif
-
-          if((k>=1.and.k<=3).or.(k>=7.and.k<=10)) then
-            do m=1,3
-              if(myrank==0) then
-                j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
-                if(j/=NF90_NOERR) call parallel_abort('init: nc ICM4')
-              endif
-              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-              do i=1,ne_global
-                if(iegl(i)%rank==myrank) then
-                  ie=iegl(i)%id
-                  if(k==1) then
-                    bPOC(ie,m)=buf3(i)
-                  elseif(k==2) then
-                    bPON(ie,m)=buf3(i)
-                  elseif(k==3) then
-                    bPOP(ie,m)=buf3(i)
-                  elseif(k==7) then
-                    vht(ie,m)=buf3(i)
-                  else if(k==8) then
-                    vtleaf(ie,m)=buf3(i)
-                  else if(k==9) then
-                    vtstem(ie,m)=buf3(i)
-                  else if(k==10) then
-                    vtroot(ie,m)=buf3(i)
-                  endif
-                endif !iegl
-              enddo !i
-            enddo !m
-          elseif(k>=4.and.k<=6) then
-            do m=1,nvrt
-              if(myrank==0) then
-                j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
-                if(j/=NF90_NOERR) call parallel_abort('init: nc ICM5')
-              endif
-              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-              do i=1,ne_global
-                if(iegl(i)%rank==myrank) then
-                  ie=iegl(i)%id
-                  if(k==4) then
-                    sleaf(m,ie)=buf3(i)
-                  else if(k==5) then
-                    sstem(m,ie)=buf3(i)
-                  else if(k==6) then
-                    sroot(m,ie)=buf3(i)
-                  endif
-                endif !iegl
-              enddo !i
-            enddo !m
-          endif!if((k>=1.and.k<=3
+            enddo!i
+          enddo!m
         enddo !k
-
 #endif /*USE_ICM*/
 
 #ifdef USE_COSINE
@@ -6478,58 +6334,14 @@
 #endif
 
 #ifdef USE_ICM
-      if(isav_icm/=0) then
-        do i=1,nout_sav
-          if(iof_icm_sav(i)==1) then
-            ncount_2delem=ncount_2delem+1
-            counter_out_name=counter_out_name+1
-            iout_23d(counter_out_name)=4
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+i-1)))
-          endif !iof
-        enddo !i
-      endif !isav_icm/
-
-      if(iveg_icm/=0) then
-        do i=1,nout_veg
-          if(iof_icm_veg(i)==1) then
-            ncount_2delem=ncount_2delem+1
-            counter_out_name=counter_out_name+1
-            iout_23d(counter_out_name)=4
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+i-1)))
-          endif !iof
-        enddo !i
-      endif !iveg_icm/
-
-      if(ised_icm/=0) then
-        do i=1,nout_sed
-          if(iof_icm_sed(i)==1) then
-            ncount_2delem=ncount_2delem+1
-            counter_out_name=counter_out_name+1
-            iout_23d(counter_out_name)=4
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+i-1)))
-          endif !iof
-        enddo !i
-      endif
-
-      if(iBA_icm/=0) then
-        do i=1,nout_ba
-          if(iof_icm_ba(i)==1) then
-            ncount_2delem=ncount_2delem+1
-            counter_out_name=counter_out_name+1
-            iout_23d(counter_out_name)=4
-            out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(itrs_icm(1,9)+i-1)))
-          endif !iof
-        enddo !i
-      endif
-
-      if(iof_icm_dbg(1)/=0) then
-        do i=1,nout_d2d
+      do i=1,nout_icm
+        if(iof_icm(i)==1.and.wqout(i)%itype==4) then
           ncount_2delem=ncount_2delem+1
           counter_out_name=counter_out_name+1
           iout_23d(counter_out_name)=4
-          out_name(counter_out_name)='ICM_'//trim(adjustl(name_d2d(i)))
-        enddo
-      endif
+          out_name(counter_out_name)=trim(adjustl(wqout(i)%name))
+        endif !iof
+      enddo !i
 #endif
 
 #ifdef USE_MARSH
@@ -6729,12 +6541,12 @@
 #endif
 
 #ifdef USE_ICM
-      do i=1,ntrs(7)
-        if(iof_icm(i)==1) then
+      do i=1,nout_icm
+        if(iof_icm(i)==1.and.wqout(i)%itype==2) then
           ncount_3dnode=ncount_3dnode+1
           counter_out_name=counter_out_name+1
           iout_23d(counter_out_name)=2
-          out_name(counter_out_name)='ICM_'//trim(adjustl(name_icm(i)))
+          out_name(counter_out_name)=trim(adjustl(wqout(i)%name))
         endif
       enddo !i
 #endif/*USE_ICM*/
@@ -6867,14 +6679,14 @@
 
       !Modules
 #ifdef USE_ICM
-      if(iof_icm_dbg(2)/=0) then
-        do i=1,nout_d3d
+      do i=1,nout_icm
+        if(iof_icm(i)==1.and.wqout(i)%itype==6) then
           ncount_3delem=ncount_3delem+1
           counter_out_name=counter_out_name+1
           iout_23d(counter_out_name)=6
-          out_name(counter_out_name)='ICM_'//trim(adjustl(name_d3d(i)))
-        enddo
-      endif
+          out_name(counter_out_name)=trim(adjustl(wqout(i)%name))
+        endif
+      enddo
 #endif
 
 #ifdef USE_DVD
@@ -6966,10 +6778,10 @@
           call mpi_send(start_hour,1,rtype,nproc_schism-i,139,comm_schism,ierr)
           call mpi_send(utc_start,1,rtype,nproc_schism-i,140,comm_schism,ierr)
 #ifdef USE_ICM
-          call mpi_send(nout_icm,1,itype,nproc_schism-i,142,comm_schism,ierr)
-          call mpi_send(nout_d3d,1,itype,nproc_schism-i,143,comm_schism,ierr)
-          call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,144,comm_schism,ierr)
-          call mpi_send(iof_icm_dbg,2,itype,nproc_schism-i,145,comm_schism,ierr)
+          call mpi_send(nout_icm_3d,2,itype,nproc_schism-i,142,comm_schism,ierr)
+          !call mpi_send(nout_d3d,1,itype,nproc_schism-i,143,comm_schism,ierr)
+          !call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,144,comm_schism,ierr)
+          !call mpi_send(iof_icm_dbg,2,itype,nproc_schism-i,145,comm_schism,ierr)
 #endif
         call mpi_send(ics,1,itype,nproc_schism-i,146,comm_schism,ierr)
         call mpi_send(iof_ugrid,1,itype,nproc_schism-i,147,comm_schism,ierr)

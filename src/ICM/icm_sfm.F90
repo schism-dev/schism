@@ -89,7 +89,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
   endif
 
   !------------------------------------------------------------------------
-  !SAV,VEG,BA effects
+  !SAV,VEG,BA,CLAM effects
   !------------------------------------------------------------------------
   SODrt=0.0 !SOD due to SAV/VEG (g.m-2.day-1)
   !SAV: nutrient uptake and DO consumption
@@ -127,6 +127,18 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
     enddo
   endif
 
+  !CLAM effect
+  if(iClam==1.and.cpatch(id)==1) then
+    FPOC(1)=FPOC(1)+cFPOC(id,1)
+    FPON(1)=FPON(1)+cFPON(id,1)
+    FPOP(1)=FPOP(1)+cFPOP(id,1)
+    do m=1,3
+      FPOC(m)=FPOC(m)+cFPOC(id,2)*bFCM(m)
+      FPON(m)=FPON(m)+cFPON(id,2)*bFNM(m)
+      FPOP(m)=FPOP(m)+cFPOP(id,2)*bFPM(m)
+    enddo
+  endif
+
   !------------------------------------------------------------------------
   !diagenesis flux
   !------------------------------------------------------------------------
@@ -135,12 +147,12 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
     rKTC(m)=bKC(m)*bKTC(m)**(btemp(id)-bTR) !decay rate
     rKTN(m)=bKN(m)*bKTN(m)**(btemp(id)-bTR)
     rKTP(m)=bKP(m)*bKTP(m)**(btemp(id)-bTR)
-    bPOC(id,m)=max(bPOC(id,m)+dtw*FPOC(m)/dz-dtw*(bVb/dz+rKTC(m))*bPOC(id,m),0.d0) !update POM
-    bPON(id,m)=max(bPON(id,m)+dtw*FPON(m)/dz-dtw*(bVb/dz+rKTN(m))*bPON(id,m),0.d0)
-    bPOP(id,m)=max(bPOP(id,m)+dtw*FPOP(m)/dz-dtw*(bVb/dz+rKTP(m))*bPOP(id,m),0.d0)
-    XJC=XJC+rKTC(m)*bPOC(id,m)*dz !diagenesis flux
-    XJN=XJN+rKTN(m)*bPON(id,m)*dz
-    XJP=XJP+rKTP(m)*bPOP(id,m)*dz
+    bPOC(m,id)=max(bPOC(m,id)+dtw*FPOC(m)/dz-dtw*(bVb/dz+rKTC(m))*bPOC(m,id),0.d0) !update POM
+    bPON(m,id)=max(bPON(m,id)+dtw*FPON(m)/dz-dtw*(bVb/dz+rKTN(m))*bPON(m,id),0.d0)
+    bPOP(m,id)=max(bPOP(m,id)+dtw*FPOP(m)/dz-dtw*(bVb/dz+rKTP(m))*bPOP(m,id),0.d0)
+    XJC=XJC+rKTC(m)*bPOC(m,id)*dz !diagenesis flux
+    XJN=XJN+rKTN(m)*bPON(m,id)*dz
+    XJP=XJP+rKTP(m)*bPOP(m,id)*dz
   enddo
 
   !------------------------------------------------------------------------
@@ -172,7 +184,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
   fSTR=min(max(0.d0,1.0-bKST*STR),1.d0) !effect of benthic stress
   
   !particle mixing velocity (Kp), diffusion velocity (Kd)
-  Kp=(bVp*bKTVp**(btemp(id)-bTR)/dz)*(bPOC(id,1)/1.0e2)*(wDOX/(bKhDO_Vp+wDOX))*fSTR+bVpmin/dz
+  Kp=(bVp*bKTVp**(btemp(id)-bTR)/dz)*(bPOC(1,id)/1.0e2)*(wDOX/(bKhDO_Vp+wDOX))*fSTR+bVpmin/dz
   Kd=(bVd*bKTVd**(btemp(id)-bTR)/dz)+bp2d*Kp
 
   !------------------------------------------------------------------------
@@ -247,22 +259,22 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
 
     !compute erosion flux
     eH2S(id) =bH2S(id)*erate*ediso/(1.+bsolid(1)*bpieH2Ss)/2.0 !todo: 2.0 (S to O2) unnecessary 
-    eLPOC(id)=bPOC(id,1)*erate*edfrac(1)
-    eRPOC(id)=bPOC(id,2)*erate*edfrac(2)
+    eLPOC(id)=bPOC(1,id)*erate*edfrac(1)
+    eRPOC(id)=bPOC(2,id)*erate*edfrac(2)
     if(ierosion==2) eH2S(id)=0.0
     if(ierosion==1) then; eLPOC(id)=0.0; eRPOC(id)=0.0; endif
 
     !update sediment concentration: H2S, POC
     bH2S(id)  =max(bH2S(id)-2.0*eH2S(id)*dtw/dz,0.d0)
-    bPOC(id,1)=max(bPOC(id,1)-eLPOC(id)*dtw/dz,0.d0)
-    bPOC(id,2)=max(bPOC(id,2)-eRPOC(id)*dtw/dz,0.d0)
+    bPOC(1,id)=max(bPOC(1,id)-eLPOC(id)*dtw/dz,0.d0)
+    bPOC(2,id)=max(bPOC(2,id)-eRPOC(id)*dtw/dz,0.d0)
   endif 
 
   !update sediment temperature
   btemp(id)=btemp(id)+86400.d0*dtw*bdiff*(wtemp-btemp(id))/(dz**2.0)
 
   !check sediment concentrations
-  swild(1:42)=(/bPOC(id,:),bPON(id,:),bPOP(id,:),bNH4(id), &
+  swild(1:42)=(/bPOC(:,id),bPON(:,id),bPOP(:,id),bNH4(id), &
               & bNH4s(id),bNO3(id),bPO4(id),bH2S(id),bCH4(id),bPOS(id),bSA(id),bstc(id),bSTR(id),bThp(id),& 
               & bTox(id),SOD(id),JNH4(id),JNO3(id),JPO4(id),JSA(id),JCOD(id),wTSS,wtemp,wsalt, &
               & wPBS,wRPOC,wLPOC,wRPON,wLPON,wRPOP,wLPOP,wPO4,wNH4,wNO3, &
@@ -284,9 +296,9 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
   if(iout_icm/=0.and.dg%nsta/=0.and.isub==1.and.mod(it,nspool_icm)==0) then
     do i=1,dg%nsta
       if(dg%iep(i)/=id) cycle !check elem. id
-      call icm_output('bPOC', (/bPOC(id,:)/),3,i)
-      call icm_output('bPON', (/bPON(id,:)/),3,i)
-      call icm_output('bPOP', (/bPOP(id,:)/),3,i)
+      call icm_output('bPOC', (/bPOC(:,id)/),3,i)
+      call icm_output('bPON', (/bPON(:,id)/),3,i)
+      call icm_output('bPOP', (/bPOP(:,id)/),3,i)
       call icm_output('bNH4s',(/bNH4s(id)/),1,i)
       call icm_output('bNH4', (/bNH4(id)/),1,i)
       call icm_output('bNO3', (/bNO3(id)/),1,i)

@@ -48,10 +48,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,nout_ba,name_icm,isav_icm,iveg_icm, &
-                        & ised_icm,iBA_icm,sht,sleaf,sstem,sroot,stleaf,ststem,stroot,vht,vtleaf,vtstem,vtroot,& !sav & veg
-                        & btemp,bstc,bSTR,bThp,bTox,bNH4,bNH4s,bNO3,bPO4,bH2S,bCH4,bPOS,bSA,bPOC,bPON,bPOP,& 
-                        & SOD,JNH4,JNO3,JPO4,JCOD,JSA,BA,nout_d2d,nout_d3d,name_d2d,name_d3d,wqc_d2d,wqc_d3d
+      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,wqout,nhot_icm,wqhot,isav_icm,iveg_icm,sht
 #endif
 
 #ifdef USE_COSINE
@@ -128,7 +125,7 @@
                  &four_dim,five_dim,six_dim,seven_dim,eight_dim,nine_dim,nvars_hot, &
                  &MBEDP_dim,Nbed_dim,SED_ntr_dim,ice_ntr_dim,ICM_ntr_dim,ndelay_dim, &
                  &irec2,istack,var1d_dim(1),var2d_dim(2),var3d_dim(3),iscribe_2d, &
-                 &ised_out_sofar,irec4,istack4,nvars_hot_icm
+                 &ised_out_sofar,irec4,istack4,nums_dim(20),names_dim(20)
                  !ncid_schout,ncid_schout2,ncid_schout3,ncid_schout4,ncid_schout5, &
                  !&ncid_schout6,ncid_schout7,ncid_schout_2,ncid_schout2_2,ncid_schout3_2,ncid_schout4_2,ncid_schout5_2, &
                  !&ncid_schout6_2,ncid_schout7_2,
@@ -172,7 +169,7 @@
                      &fluxchan,fluxchan1,fluxchan2,tot_s,flux_s,ah,ubm,aorb,ramp_ss,Cdmax, &
                      &bthick_ori,big_ubstar,big_vbstar,zsurf,tot_bedmass,w1,w2,slr_elev, &
                      &i34inv,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi, &
-                     &veg_cfk,veg_cfpsi,veg_h_sd,veg_alpha_sd,veg_nv_sd,veg_c,beta_bar, &
+                     &veg_cfk,veg_cfpsi,veg_h_sd,veg_alpha_sd,veg_alpha_sd_bot,veg_nv_sd,veg_c,beta_bar, &
                      &bigfa1,bigfa2,vnf,grav3,tf,maxpice, z0_donelan,start_t0,start_t1
 !Tsinghua group: 0821...
       real(rkind) :: dtrdz,apTpxy_up,apTpxy_do,epsffs,epsfbot !8022 +epsffs,epsfbot
@@ -236,6 +233,7 @@
       real(4),allocatable :: swild11(:),swild12(:,:),swild14(:,:,:) !reading schout*
       real(rkind),allocatable :: hp_int(:,:,:),buf1(:,:),buf2(:,:),buf3(:),msource(:,:)
       real(rkind),allocatable :: fluxes_tr(:,:),fluxes_tr_gb(:,:) !fluxes output between regions
+      real(rkind),allocatable :: veg_alpha3D(:,:),veg_alpha_vert_mean(:)
       logical :: ltmp,ltmp1(1),ltmp2(1)
 
       logical,save :: first_call=.true.
@@ -355,6 +353,12 @@
         if(istat/=0) call parallel_abort('STEP: fluxes_tr alloc')
       endif
 !     End alloc.
+
+!     Vertical variation of veg_alpha
+      if(iveg/=0) then
+        allocate(veg_alpha3D(nvrt,npa),veg_alpha_vert_mean(npa),stat=istat)
+        if(istat/=0) call parallel_abort('STEP: veg_alpha3D alloc')
+      endif !iveg
 
 !     Offline transport
 !      if(itransport_only/=0) then
@@ -2482,7 +2486,7 @@
       veg_cfk=0.07d0 !Shimizu & Tsujimoto (1994)
       veg_cfpsi=0.16d0
 
-!$OMP parallel default(shared) private(i,vmax,vmin,tmin,k,drhodz,bvf,k1,k2,dudz,dvdz,shear2, &
+!$OMP parallel default(shared) private(i,vmax,vmin,tmin,k,kk,drhodz,bvf,k1,k2,dudz,dvdz,shear2, &
 !$OMP rich,j,u_taus,u_taub,nlev,klev,h1d,SS1d,NN1d,ztmp, &
 #ifdef USE_GOTM
 !$OMP tke1d,L1d,eps1d,num1d,nuh1d, &
@@ -2490,7 +2494,8 @@
 !$OMP toth,z0s,z0b, &
 !$OMP tmp,dzz,shearbt,rzbt,q2ha,xlha,cpsi3,zctr2,dists,distb,fwall,cpsi2p,xlmax,q2fs,q2bot,xlbot, &
 !$OMP tmp0,zsurf,xlfs,nqdim,kin,alow,bdia,cupp,gam2,prod,buoy,diss,soln2,gam,q2tmp,psi_n,psi_n1, &
-!$OMP q2l,xltmp,upper,xl_max,vd,td,qd1,qd2,zt,veg_prod,zz1,zrat,ub2,vb2,vmag1,vmag2)
+!$OMP q2l,xltmp,upper,xl_max,vd,td,qd1,qd2,zt,veg_prod,zz1,zrat,ub2,vb2,vmag1,vmag2,sum1,sum2, &
+!$OMP ifl,cff1,cff2,cff3,rl10)
 
       if(nchi/=0) then
 !$OMP   do
@@ -2513,7 +2518,63 @@
       enddo !i
 !$OMP end do
 
-!
+!     Add vertical variation to veg_alpha and compute vertical mean
+      if(iveg/=0) then
+!$OMP do
+        do i=1,npa
+          if(idry(i)==1) then
+            veg_alpha3D(:,i)=veg_alpha0(i)
+            veg_alpha_vert_mean(i)=veg_alpha0(i)
+          else !wet
+            do k=kbp(i),nvrt
+              rl10=znl(k,i)-znl(kbp(i),i) !>=0
+              if(rl10>=veg_vert_z(nbins_veg_vert+1)) then
+                cff1=veg_vert_scale_cd(nbins_veg_vert+1)
+                cff2=veg_vert_scale_N(nbins_veg_vert+1)
+                cff3=veg_vert_scale_D(nbins_veg_vert+1)
+              else
+                ifl=0
+                do kk=1,nbins_veg_vert
+                  if(rl10>=veg_vert_z(kk).and.rl10<=veg_vert_z(kk+1)) then
+                    zrat=(rl10-veg_vert_z(kk))/(veg_vert_z(kk+1)-veg_vert_z(kk))
+                    ifl=kk
+                    exit
+                  endif !znl
+                enddo !kk
+                if(ifl==0) then
+                  write(errmsg,*)'STEP: veg vert failed,',veg_vert_z
+                  call parallel_abort(errmsg) 
+                endif
+                cff1=veg_vert_scale_cd(ifl)*(1.d0-zrat)+veg_vert_scale_cd(ifl+1)*zrat
+                cff2=veg_vert_scale_N(ifl)*(1.d0-zrat)+veg_vert_scale_N(ifl+1)*zrat
+                cff3=veg_vert_scale_D(ifl)*(1.d0-zrat)+veg_vert_scale_D(ifl+1)*zrat
+              endif !rl10
+  
+              veg_alpha3D(k,i)=veg_alpha0(i)*cff1*cff2*cff3
+            enddo !k
+  
+            !Mean
+            zt=znl(kbp(i),i)+veg_h(i) !top
+            sum1=0.d0
+            sum2=0.d0
+            do k=kbp(i),nvrt-1
+              if(znl(k+1,i)<=zt) then
+                sum1=sum1+(veg_alpha3D(k,i)+veg_alpha3D(k+1,i))*0.5d0*(znl(k+1,i)-znl(k,i))
+                sum2=sum2+znl(k+1,i)-znl(k,i)
+              else
+                exit
+              endif
+            enddo !k
+            if(sum2==0.d0) then
+              veg_alpha_vert_mean(i)=veg_alpha3D(kbp(i),i)
+            else
+              veg_alpha_vert_mean(i)=sum1/sum2
+            endif
+          endif !idry
+        enddo !i=1,npa
+!$OMP end do
+      endif !iveg/=0
+
 !************************************************************************
 !                                                                       *
 !               Turbulence closure schemes                              *
@@ -2831,7 +2892,8 @@
             vb2=(1.d0-zrat)*vv2(k-1,j)+zrat*vv2(k,j)
             vmag2=sqrt(ub2*ub2+vb2*vb2)             
             vmag1=sqrt(uu2(k-1,j)**2.d0+vv2(k-1,j)**2.d0)
-            veg_prod(k)=veg_alpha(j)*(vmag1**3.d0+vmag2**3.d0)/2.d0
+            !veg_prod(k)=veg_alpha(j)*(vmag1**3.d0+vmag2**3.d0)/2.d0
+            veg_prod(k)=(veg_alpha3D(k,j)+veg_alpha3D(k-1,j))*0.5d0*(vmag1**3.d0+vmag2**3.d0)/2.d0
           endif !iveg
 
 !         Compute c_psi_3
@@ -5056,7 +5118,7 @@
 
 !$OMP parallel default(shared) private(i,n1,n2,htot,tmp,k,veg_h_sd,veg_nv_sd,veg_alpha_sd, &
 !$OMP bigu1,bigv1,uuint,zctr2,zz1,zrat,ub2,vb2,ubar1,ubar2,vmag1,vmag2,bb1,bb2,tmp1, &
-!$OMP tmpx2,tmpy2,veg_c)
+!$OMP tmpx2,tmpy2,veg_c,veg_alpha_sd_bot)
 
 !     Compute b.c. flag for all nodes for the matrix
 !!$OMP do 
@@ -5088,7 +5150,6 @@
         if(htot<=0.d0) call parallel_abort('STEP: htot(9.1)')
         veg_h_sd=sum(veg_h(isidenode(1:2,i)))/2.d0
         veg_nv_sd=sum(veg_nv(isidenode(1:2,i)))/2.d0
-        veg_alpha_sd=sum(veg_alpha(isidenode(1:2,i)))/2.d0
 
 !	bigu1,2 (in ll if ics=2)
         bigu(1,i)=0.d0 !U^n_x
@@ -5102,7 +5163,11 @@
         vmag1=sqrt(sdbt(1,kbs(i)+1,i)**2.d0+sdbt(2,kbs(i)+1,i)**2.d0)
         chi2(i)=Cd(i)*vmag1 !sqrt(sdbt(1,kbs(i)+1,i)**2+sdbt(2,kbs(i)+1,i)**2)
         chi(i)=chi2(i)
-        if(iveg==1) chi(i)=chi(i)/(1.d0+veg_alpha_sd*vmag1*dt)
+        if(iveg==1) then
+          veg_alpha_sd=sum(veg_alpha_vert_mean(isidenode(1:2,i)))/2.d0
+          veg_alpha_sd_bot=(veg_alpha3D(kbp(n1),n1)+veg_alpha3D(kbp(n2),n2))/2.d0
+          chi(i)=chi(i)/(1.d0+veg_alpha_sd_bot*vmag1*dt)
+        endif
 
 !       Calc consts in SAV model; make sure veg_[c2,beta]=0 at 2D, dry
 !       side, and emergent side
@@ -5131,9 +5196,6 @@
 
           veg_c2(i)=veg_alpha_sd*dt*uuint !>=0
           if(veg_h_sd<0.99d0*htot) then !3D wet submergent side with SAV
-            !tmpx1=veg_alpha_sd*dt*uuint !>=0
-            !veg_c=/(1+tmpx1)
-  
             tmpx2=max(1.d-5,chi2(i)*vmag1/grav/htot) !energy gradient
             !\beta_2; arguments checked
             tmpy2=sqrt(sqrt(veg_nv_sd)/veg_h_sd)*(-0.32d0-0.85d0*log10((htot-veg_h_sd)/veg_h_sd*tmpx2))
@@ -6398,7 +6460,7 @@
         node1=isidenode(1,j)
         node2=isidenode(2,j)
         veg_h_sd=sum(veg_h(isidenode(1:2,j)))/2.d0
-        veg_alpha_sd=sum(veg_alpha(isidenode(1:2,j)))/2.d0
+!        veg_alpha_sd=sum(veg_alpha(isidenode(1:2,j)))/2.d0
 !       ll frame at side
 !        swild10(1:3,1:3)=(pframe(:,:,node1)+pframe(:,:,node2))/2
 
@@ -6478,6 +6540,8 @@
               vb2=(1.d0-zrat)*swild98(2,k,j)+zrat*swild98(2,k+1,j)
               vmag2=sqrt(ub2*ub2+vb2*vb2)              
               vmag1=sqrt(swild98(1,k,j)**2.d0+swild98(2,k,j)**2.d0)
+              veg_alpha_sd=0.25d0*(veg_alpha3D(k+1,node1)+veg_alpha3D(k,node1)+ &
+     &veg_alpha3D(k+1,node2)+veg_alpha3D(k,node2))
               cff1=cff1+veg_alpha_sd*dt*(vmag1+vmag2)/2.d0
             endif !iveg
 
@@ -6495,6 +6559,8 @@
               vb2=(1.d0-zrat)*swild98(2,k-1,j)+zrat*swild98(2,k,j)
               vmag2=sqrt(ub2*ub2+vb2*vb2)
               vmag1=sqrt(swild98(1,k-1,j)**2.d0+swild98(2,k-1,j)**2.d0)
+              veg_alpha_sd=0.25d0*(veg_alpha3D(k-1,node1)+veg_alpha3D(k,node1)+ &
+     &veg_alpha3D(k-1,node2)+veg_alpha3D(k,node2))
               cff1=cff1+veg_alpha_sd*dt*(vmag1+vmag2)/2.d0
             endif !iveg
 
@@ -7869,8 +7935,8 @@
 
           do i=1,npa
             !Do not allow SAV to grow out of init patch for the time being
-            if(veg_nv(i)==0.d0.or.veg_alpha(i)==0.d0) then
-              veg_nv(i)=0.d0; veg_alpha(i)=0.d0; veg_h(i)=0.d0
+            if(veg_nv(i)==0.d0.or.veg_alpha0(i)==0.d0) then
+              veg_nv(i)=0.d0; veg_alpha0(i)=0.d0; veg_h(i)=0.d0
             endif
           enddo !i
 
@@ -8124,7 +8190,7 @@
             veg_h(i)=veg_h0
             veg_nv(i)=veg_nv0
             veg_cd(i)=veg_cd0
-            veg_alpha(i)=veg_di0*veg_nv0*veg_cd0/2.d0
+            veg_alpha0(i)=veg_di0*veg_nv0*veg_cd0/2.d0
           endif !imarsh
 
           !drowned marsh: veg_di etc =0
@@ -8154,7 +8220,7 @@
       call exchange_p2d(veg_h)
       call exchange_p2d(veg_nv)
       call exchange_p2d(veg_cd)
-      call exchange_p2d(veg_alpha)
+      call exchange_p2d(veg_alpha0)
 !$OMP end master
 #endif /*USE_MARSH*/
 !$OMP end parallel
@@ -8947,88 +9013,14 @@
 #endif 
 
 #ifdef USE_ICM
-        do i=1,ntrs(7)
-          if(iof_icm(i)==1) call writeout_nc(id_out_var(noutput+i+4),'ICM_'//trim(adjustl(name_icm(i))),2,nvrt,npa,tr_nd(irange_tr(1,7)+i-1,:,:))
-        enddo !i
-        noutput=noutput+ntrs(7)
-         
-        !SAV model
-        if(isav_icm/=0) then
-          if(iof_icm_sav(1)==1) call writeout_nc(id_out_var(noutput+4+1),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+1-1))),4,1,nea,dble(stleaf))
-          if(iof_icm_sav(2)==1) call writeout_nc(id_out_var(noutput+4+2),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+2-1))),4,1,nea,dble(ststem))
-          if(iof_icm_sav(3)==1) call writeout_nc(id_out_var(noutput+4+3),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+3-1))),4,1,nea,dble(stroot))
-          if(iof_icm_sav(4)==1) call writeout_nc(id_out_var(noutput+4+4),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,6)+4-1))),4,1,nea,dble(sht))
-          noutput=noutput+4
-        endif
-
-        !VEG model
-        if(iveg_icm/=0) then
-          if(iof_icm_veg(1)==1)  call writeout_nc(id_out_var(noutput+4+1), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+1-1))),4,1,nea,dble(vtleaf(:,1)))
-          if(iof_icm_veg(2)==1)  call writeout_nc(id_out_var(noutput+4+2), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+2-1))),4,1,nea,dble(vtleaf(:,2)))
-          if(iof_icm_veg(3)==1)  call writeout_nc(id_out_var(noutput+4+3), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+3-1))),4,1,nea,dble(vtleaf(:,3)))
-          if(iof_icm_veg(4)==1)  call writeout_nc(id_out_var(noutput+4+4), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+4-1))),4,1,nea,dble(vtstem(:,1)))
-          if(iof_icm_veg(5)==1)  call writeout_nc(id_out_var(noutput+4+5), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+5-1))),4,1,nea,dble(vtstem(:,2)))
-          if(iof_icm_veg(6)==1)  call writeout_nc(id_out_var(noutput+4+6), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+6-1))),4,1,nea,dble(vtstem(:,3)))
-          if(iof_icm_veg(7)==1)  call writeout_nc(id_out_var(noutput+4+7), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+7-1))),4,1,nea,dble(vtroot(:,1)))
-          if(iof_icm_veg(8)==1)  call writeout_nc(id_out_var(noutput+4+8), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+8-1))),4,1,nea,dble(vtroot(:,2)))
-          if(iof_icm_veg(9)==1)  call writeout_nc(id_out_var(noutput+4+9), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+9-1))),4,1,nea,dble(vtroot(:,3)))
-          if(iof_icm_veg(10)==1) call writeout_nc(id_out_var(noutput+4+10),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+10-1))),4,1,nea,dble(vht(:,1)))
-          if(iof_icm_veg(11)==1) call writeout_nc(id_out_var(noutput+4+11),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+11-1))),4,1,nea,dble(vht(:,2)))
-          if(iof_icm_veg(12)==1) call writeout_nc(id_out_var(noutput+4+12),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,7)+12-1))),4,1,nea,dble(vht(:,3)))
-          noutput=noutput+12
-        endif
-
-        !SFM model
-        if(ised_icm/=0) then
-          if(iof_icm_sed(1)==1)  call writeout_nc(id_out_var(noutput+4+1), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+1-1))),4,1,nea,dble(bPOC(:,1)))
-          if(iof_icm_sed(2)==1)  call writeout_nc(id_out_var(noutput+4+2), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+2-1))),4,1,nea,dble(bPOC(:,2)))
-          if(iof_icm_sed(3)==1)  call writeout_nc(id_out_var(noutput+4+3), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+3-1))),4,1,nea,dble(bPOC(:,3)))
-          if(iof_icm_sed(4)==1)  call writeout_nc(id_out_var(noutput+4+4), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+4-1))),4,1,nea,dble(bPON(:,1)))
-          if(iof_icm_sed(5)==1)  call writeout_nc(id_out_var(noutput+4+5), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+5-1))),4,1,nea,dble(bPON(:,2)))
-          if(iof_icm_sed(6)==1)  call writeout_nc(id_out_var(noutput+4+6), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+6-1))),4,1,nea,dble(bPON(:,3)))
-          if(iof_icm_sed(7)==1)  call writeout_nc(id_out_var(noutput+4+7), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+7-1))),4,1,nea,dble(bPOP(:,1)))
-          if(iof_icm_sed(8)==1)  call writeout_nc(id_out_var(noutput+4+8), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+8-1))),4,1,nea,dble(bPOP(:,2)))
-          if(iof_icm_sed(9)==1)  call writeout_nc(id_out_var(noutput+4+9), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+9-1))),4,1,nea,dble(bPOP(:,3)))
-          if(iof_icm_sed(10)==1) call writeout_nc(id_out_var(noutput+4+10), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+10-1))),4,1,nea,dble(bNH4))
-          if(iof_icm_sed(11)==1) call writeout_nc(id_out_var(noutput+4+11), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+11-1))),4,1,nea,dble(bNO3))
-          if(iof_icm_sed(12)==1) call writeout_nc(id_out_var(noutput+4+12), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+12-1))),4,1,nea,dble(bPO4))
-          if(iof_icm_sed(13)==1) call writeout_nc(id_out_var(noutput+4+13), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+13-1))),4,1,nea,dble(bH2S))
-          if(iof_icm_sed(14)==1) call writeout_nc(id_out_var(noutput+4+14), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+14-1))),4,1,nea,dble(bCH4))
-          if(iof_icm_sed(15)==1) call writeout_nc(id_out_var(noutput+4+15), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+15-1))),4,1,nea,dble(bPOS))
-          if(iof_icm_sed(16)==1) call writeout_nc(id_out_var(noutput+4+16), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+16-1))),4,1,nea,dble(bSA))
-          if(iof_icm_sed(17)==1) call writeout_nc(id_out_var(noutput+4+17), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+17-1))),4,1,nea,dble(bstc))
-          if(iof_icm_sed(18)==1) call writeout_nc(id_out_var(noutput+4+18), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+18-1))),4,1,nea,dble(bSTR))
-          if(iof_icm_sed(19)==1) call writeout_nc(id_out_var(noutput+4+19), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+19-1))),4,1,nea,dble(bThp))
-          if(iof_icm_sed(20)==1) call writeout_nc(id_out_var(noutput+4+20), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+20-1))),4,1,nea,dble(bTox))
-          if(iof_icm_sed(21)==1) call writeout_nc(id_out_var(noutput+4+21), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+21-1))),4,1,nea,dble(SOD))
-          if(iof_icm_sed(22)==1) call writeout_nc(id_out_var(noutput+4+22), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+22-1))),4,1,nea,dble(JNH4))
-          if(iof_icm_sed(23)==1) call writeout_nc(id_out_var(noutput+4+23), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+23-1))),4,1,nea,dble(JNO3))
-          if(iof_icm_sed(24)==1) call writeout_nc(id_out_var(noutput+4+24), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+24-1))),4,1,nea,dble(JPO4))
-          if(iof_icm_sed(25)==1) call writeout_nc(id_out_var(noutput+4+25), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+25-1))),4,1,nea,dble(JSA))
-          if(iof_icm_sed(26)==1) call writeout_nc(id_out_var(noutput+4+26), 'ICM_'//trim(adjustl(name_icm(itrs_icm(1,8)+26-1))),4,1,nea,dble(JCOD))
-          noutput=noutput+26
-        endif
-
-        !Benthic Algea model
-        if(iBA_icm/=0) then
-          if(iof_icm_ba(1)==1)  call writeout_nc(id_out_var(noutput+4+1),'ICM_'//trim(adjustl(name_icm(itrs_icm(1,9)+1-1))),4,1,nea,dble(BA))
-          noutput=noutput+1
-        endif
-
-        !ICM debug option
-        if(iof_icm_dbg(1)/=0) then
-          do i=1,nout_d2d
-            call writeout_nc(id_out_var(noutput+4+i),'ICM_'//trim(adjustl(name_d2d(i))),4,1,nea,dble(wqc_d2d(i,:)))
-          enddo
-          noutput=noutput+nout_d2d
-        endif
-        if(iof_icm_dbg(2)/=0) then
-          do i=1,nout_d3d
-            call writeout_nc(id_out_var(noutput+4+i),'ICM_'//trim(adjustl(name_d3d(i))),6,nvrt,nea,dble(wqc_d3d(i,:,:)))
-          enddo
-          noutput=noutput+nout_d3d
-        endif
-
+        do i=1,nout_icm
+          if(iof_icm(i)==1) then
+            noutput=noutput+1
+            if(wqout(i)%itype==2) call writeout_nc(id_out_var(noutput+4),trim(adjustl(wqout(i)%name)),2,nvrt,npa,dble(wqout(i)%p2))
+            if(wqout(i)%itype==4) call writeout_nc(id_out_var(noutput+4),trim(adjustl(wqout(i)%name)),4,1,   nea,dble(wqout(i)%p1))
+            if(wqout(i)%itype==6) call writeout_nc(id_out_var(noutput+4),trim(adjustl(wqout(i)%name)),6,nvrt,nea,dble(wqout(i)%p2))
+          endif
+        enddo
 #endif /*USE_ICM*/
 
 #ifdef USE_COSINE
@@ -9543,140 +9535,12 @@
 #endif
 
 #ifdef USE_ICM
-      if(isav_icm/=0) then
-        do i=1,nout_sav
-          if(iof_icm_sav(i)==1) then
-            icount=icount+1
-            if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.131)')
-            select case(i)
-              case(1)
-                varout_2delem(icount,:)=stleaf(1:ne)
-              case(2)
-                varout_2delem(icount,:)=ststem(1:ne)
-              case(3)
-                varout_2delem(icount,:)=stroot(1:ne)
-              case(4)
-                varout_2delem(icount,:)=sht(1:ne)
-            end select
-          endif !iof_icm
-        enddo !i
-      endif !isav_icm/
-
-      if(iveg_icm/=0) then
-        do i=1,nout_veg
-          if(iof_icm_veg(i)==1) then
-            icount=icount+1
-            if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.132)')
-            select case(i)
-              case(1)
-                varout_2delem(icount,:)=vtleaf(1:ne,1)
-              case(2)
-                varout_2delem(icount,:)=vtleaf(1:ne,2)
-              case(3)
-                varout_2delem(icount,:)=vtleaf(1:ne,3)
-              case(4)
-                varout_2delem(icount,:)=vtstem(1:ne,1)
-              case(5)
-                varout_2delem(icount,:)=vtstem(1:ne,2)
-              case(6)
-                varout_2delem(icount,:)=vtstem(1:ne,3)
-              case(7)
-                varout_2delem(icount,:)=vtroot(1:ne,1)
-              case(8)
-                varout_2delem(icount,:)=vtroot(1:ne,2)
-              case(9)
-                varout_2delem(icount,:)=vtroot(1:ne,3)
-              case(10)
-                varout_2delem(icount,:)=vht(1:ne,1)
-              case(11)
-                varout_2delem(icount,:)=vht(1:ne,2)
-              case(12)
-                varout_2delem(icount,:)=vht(1:ne,3)
-            end select     
-          endif !iof_icm
-        enddo !i
-      endif !iveg_icm/
-
-      if(ised_icm/=0) then
-        do i=1,nout_sed
-          if(iof_icm_sed(i)==1) then
-            icount=icount+1
-            if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.134)')
-            select case(i)
-              case(1)
-                varout_2delem(icount,:)=bPOC(1:ne,1)
-              case(2)
-                varout_2delem(icount,:)=bPOC(1:ne,2)
-              case(3)
-                varout_2delem(icount,:)=bPOC(1:ne,3)
-              case(4)
-                varout_2delem(icount,:)=bPON(1:ne,1)
-              case(5)
-                varout_2delem(icount,:)=bPON(1:ne,2)
-              case(6)
-                varout_2delem(icount,:)=bPON(1:ne,3)
-              case(7)
-                varout_2delem(icount,:)=bPOP(1:ne,1)
-              case(8)
-                varout_2delem(icount,:)=bPOP(1:ne,2)
-              case(9)
-                varout_2delem(icount,:)=bPOP(1:ne,3)
-              case(10)
-                varout_2delem(icount,:)=bNH4(1:ne)
-              case(11)
-                varout_2delem(icount,:)=bNO3(1:ne)
-              case(12)
-                varout_2delem(icount,:)=bPO4(1:ne)
-              case(13)
-                varout_2delem(icount,:)=bH2S(1:ne)
-              case(14)
-                varout_2delem(icount,:)=bCH4(1:ne)
-              case(15)
-                varout_2delem(icount,:)=bPOS(1:ne)
-              case(16)
-                varout_2delem(icount,:)=bSA(1:ne)
-              case(17)
-                varout_2delem(icount,:)=bstc(1:ne)
-              case(18)
-                varout_2delem(icount,:)=bSTR(1:ne)
-              case(19)
-                varout_2delem(icount,:)=bThp(1:ne)
-              case(20)
-                varout_2delem(icount,:)=bTox(1:ne)
-              case(21)
-                varout_2delem(icount,:)=SOD(1:ne)
-              case(22)
-                varout_2delem(icount,:)=JNH4(1:ne)
-              case(23)
-                varout_2delem(icount,:)=JNO3(1:ne)
-              case(24)
-                varout_2delem(icount,:)=JPO4(1:ne)
-              case(25)
-                varout_2delem(icount,:)=JSA(1:ne)
-              case(26)
-                varout_2delem(icount,:)=JCOD(1:ne)
-            end select
-          endif
-        enddo
-      endif
-
-      if(iBA_icm/=0) then
-        do i=1,nout_ba
-          if(iof_icm_ba(i)==1) then
-            icount=icount+1
-            if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.135)')
-            if(i==1) varout_2delem(icount,:)=BA(1:ne)
-          endif !iof_icm_ba
-        enddo
-      endif
-
-      if(iof_icm_dbg(1)/=0) then
-        do i=1,nout_d2d
+      do i=1,nout_icm
+        if(iof_icm(i)==1.and.wqout(i)%itype==4) then
           icount=icount+1
-          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.136)')
-          varout_2delem(icount,:)=wqc_d2d(i,1:ne)
-        enddo
-      endif
+          varout_2delem(icount,:)=wqout(i)%p1(1:ne)
+        endif
+      enddo
 #endif
 
 #ifdef USE_MARSH
@@ -9935,12 +9799,11 @@
 #endif /*USE_ECO*/
 
 #ifdef USE_ICM
-        do i=1,ntrs(7)
-          if(iof_icm(i)==1) then
-            itmp=irange_tr(1,7)+i-1 !tracer #
-            call savensend3D_scribe(icount,1,1,nvrt,np,tr_nd(itmp,:,1:np))
+        do i=1,nout_icm
+          if(iof_icm(i)==1.and.wqout(i)%itype==2) then
+            call savensend3D_scribe(icount,1,1,nvrt,np,wqout(i)%p2(:,1:np))
           endif
-        enddo !i
+        enddo
 #endif/*USE_ICM*/
 
 #ifdef USE_COSINE
@@ -10120,11 +9983,11 @@
 
         !Modules
 #ifdef USE_ICM
-      if(iof_icm_dbg(2)/=0) then
-        do i=1,nout_d3d
-          call savensend3D_scribe(icount,2,1,nvrt,ne,wqc_d3d(i,:,1:ne))
-        enddo 
-      endif !ICM 3D debug
+      do i=1,nout_icm
+        if(iof_icm(i)==1.and.wqout(i)%itype==6) then
+          call savensend3D_scribe(icount,2,1,nvrt,ne,wqout(i)%p2(:,1:ne))
+        endif
+      enddo
 #endif
 
 #ifdef USE_DVD
@@ -10180,7 +10043,7 @@
 
           do i=1,nout_sta
             ie=iep_sta(i)
-            if(ie==0) then !not parent
+            if(ie==0) then !no parent in this rank
               iep_flag(i)=0 !for comm. later
               sta_out(i,j)=0.d0
               sta_out3d(:,i,j)=0.d0
@@ -10188,29 +10051,30 @@
             else !is parent
               iep_flag(i)=1
               sta_out(i,j)=0.d0 !initialize
-              select case(j)
-                case(1) !elev.
-                  swild2(1,1:i34(ie))=eta2(elnode(1:i34(ie),ie))
-                case(2) !air pressure
-                  swild2(1,1:i34(ie))=pr(elnode(1:i34(ie),ie))
-                case(3) !wind x
-                  swild2(1,1:i34(ie))=windx(elnode(1:i34(ie),ie))
-                case(4) !wind y
-                  swild2(1,1:i34(ie))=windy(elnode(1:i34(ie),ie))
-                case(5) !T
-                  swild2(1:nvrt,1:i34(ie))=tr_nd(1,1:nvrt,elnode(1:i34(ie),ie))
-                case(6) !S
-                  swild2(1:nvrt,1:i34(ie))=tr_nd(2,1:nvrt,elnode(1:i34(ie),ie))
-                case(7) !u
+              if(j==1) then !elev.
+                swild2(1,1:i34(ie))=eta2(elnode(1:i34(ie),ie))
+              else if(j==2) then !air pressure
+                swild2(1,1:i34(ie))=pr(elnode(1:i34(ie),ie))
+              else if(j==3) then !wind x
+                swild2(1,1:i34(ie))=windx(elnode(1:i34(ie),ie))
+              else if(j==4) then !wind y
+                swild2(1,1:i34(ie))=windy(elnode(1:i34(ie),ie))
+              else if(j==5) then !T
+                swild2(1:nvrt,1:i34(ie))=tr_nd(1,1:nvrt,elnode(1:i34(ie),ie))
+              else if(j==6) then !S
+                swild2(1:nvrt,1:i34(ie))=tr_nd(2,1:nvrt,elnode(1:i34(ie),ie))
+              else if(j==7) then !u
 !Error: may not be accurate near poles as pframe changes rapidly there
-                  swild2(1:nvrt,1:i34(ie))=uu2(1:nvrt,elnode(1:i34(ie),ie))
-                case(8) !v
-                  swild2(1:nvrt,1:i34(ie))=vv2(1:nvrt,elnode(1:i34(ie),ie))
-                case(9) !w
-                  swild2(1:nvrt,1:i34(ie))=ww2(1:nvrt,elnode(1:i34(ie),ie))
-                case default
-                  call parallel_abort('MAIN: unknown sta. output')
-              end select
+                swild2(1:nvrt,1:i34(ie))=uu2(1:nvrt,elnode(1:i34(ie),ie))
+              else if(j==8) then !v
+                swild2(1:nvrt,1:i34(ie))=vv2(1:nvrt,elnode(1:i34(ie),ie))
+              else if(j==9) then !w
+                swild2(1:nvrt,1:i34(ie))=ww2(1:nvrt,elnode(1:i34(ie),ie))
+              else if(j<=9+ntracers-2) then 
+                swild2(1:nvrt,1:i34(ie))=tr_nd(j-7,1:nvrt,elnode(1:i34(ie),ie))
+              else
+                call parallel_abort('STEP: unknown sta. output')
+              endif !j
 
               if(j<=4) then !2D var.
                 sta_out(i,j)=sum(arco_sta(i,1:i34(ie))*swild2(1,1:i34(ie)))
@@ -10288,7 +10152,7 @@
                   zta_out3d_gb(:,j,i)=-9999.d0
                 endif
               else
-                sta_out_gb(j,i)=sta_out_gb(j,i)/nwild2(j)
+                sta_out_gb(j,i)=sta_out_gb(j,i)/dble(nwild2(j))
                 if(i>4) then !3D only
                   sta_out3d_gb(:,j,i)=sta_out3d_gb(:,j,i)/dble(nwild2(j))
                   zta_out3d_gb(:,j,i)=zta_out3d_gb(:,j,i)/dble(nwild2(j))
@@ -10471,83 +10335,31 @@
         j=nf90_redef(ncid_hot)
         j=nf90_def_dim(ncid_hot,'ICM_ntr',ntrs(7),ICM_ntr_dim)
 
-        var1d_dim(1)=elem_dim; 
-        j=nf90_def_var(ncid_hot,'btemp',NF90_DOUBLE,var1d_dim,nwild(nvars_hot+1))
-        j=nf90_def_var(ncid_hot,'bstc', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+2))
-        j=nf90_def_var(ncid_hot,'bSTR',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+3))
-        j=nf90_def_var(ncid_hot,'bThp',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+4))
-        j=nf90_def_var(ncid_hot,'bTox',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+5))
-        j=nf90_def_var(ncid_hot,'bNH4',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+6))
-        j=nf90_def_var(ncid_hot,'bNH4s',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+7))
-        j=nf90_def_var(ncid_hot,'bNO3',   NF90_DOUBLE,var1d_dim,nwild(nvars_hot+8))
-        j=nf90_def_var(ncid_hot,'bPO4',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+9))
-        j=nf90_def_var(ncid_hot,'bH2S', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+10))
-        j=nf90_def_var(ncid_hot,'bCH4',  NF90_DOUBLE,var1d_dim,nwild(nvars_hot+11))
-        j=nf90_def_var(ncid_hot,'bPOS', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+12))
-        j=nf90_def_var(ncid_hot,'bSA', NF90_DOUBLE,var1d_dim,nwild(nvars_hot+13))
-        !last dim must be node/elem/side- I suggest we swap indices for these
-        !2D arrays
-        var2d_dim(1)=three_dim; var2d_dim(2)=elem_dim
-        j=nf90_def_var(ncid_hot,'bPOC',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+14))
-        j=nf90_def_var(ncid_hot,'bPON',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+15))
-        j=nf90_def_var(ncid_hot,'bPOP',NF90_DOUBLE,var2d_dim,nwild(nvars_hot+16))
-        nvars_hot_icm=nvars_hot+16
-
-        if(isav_icm==1) then
-          var1d_dim(1)=elem_dim;  !1D array
-          j=nf90_def_var(ncid_hot,'sht',NF90_DOUBLE,var1d_dim,nwild(nvars_hot_icm+1))
-          var2d_dim(1)=nvrt_dim; var2d_dim(2)=elem_dim !2D array
-          j=nf90_def_var(ncid_hot,'sleaf',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+2))
-          j=nf90_def_var(ncid_hot,'sstem',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+3))
-          j=nf90_def_var(ncid_hot,'sroot',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+4))
-          nvars_hot_icm=nvars_hot_icm+4
-        endif
-        
-        if(iveg_icm==1) then
-          var2d_dim(1)=three_dim; var2d_dim(2)=elem_dim !2D array
-          j=nf90_def_var(ncid_hot,'vht',   NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+1))
-          j=nf90_def_var(ncid_hot,'vtleaf',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+2))
-          j=nf90_def_var(ncid_hot,'vtstem',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+3))
-          j=nf90_def_var(ncid_hot,'vtroot',NF90_DOUBLE,var2d_dim,nwild(nvars_hot_icm+4))
-          nvars_hot_icm=nvars_hot_icm+4
-        endif
+        !define variables; last dim must be nea, or need to modify the code
+        nums_dim(1:11)=(/1,2,3,4,5,6,7,8,9,nvrt,nea/)
+        names_dim(1:11)=(/one_dim,two_dim,three_dim,four_dim,five_dim,six_dim,seven_dim, &
+                         & eight_dim,nine_dim,nvrt_dim,elem_dim/)
+        do i=1,nhot_icm
+          if(wqhot(i)%ndim==1) then
+            var1d_dim(1)=elem_dim
+            j=nf90_def_var(ncid_hot,trim(adjustl(wqhot(i)%name)),NF90_DOUBLE,var1d_dim,wqhot(i)%id)
+          elseif(wqhot(i)%ndim==2) then
+            do k=1,11
+              if(wqhot(i)%dims(1)==nums_dim(k)) then
+                var2d_dim(1)=names_dim(k); exit
+              endif
+            enddo !k
+            var2d_dim(2)=elem_dim
+            j=nf90_def_var(ncid_hot,trim(adjustl(wqhot(i)%name)),NF90_DOUBLE,var2d_dim,wqhot(i)%id)
+          endif !wqhot(i)%ndim
+        enddo !i
         j=nf90_enddef(ncid_hot)
 
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+1), dble(btemp),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+2), dble(bstc),(/1/),(/ne/))  
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+3), dble(bSTR),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+4), dble(bThp),(/1/),(/ne/)) 
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+5), dble(bTox),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+6), dble(bNH4),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+7), dble(bNH4s),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+8), dble(bNO3),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+9), dble(bPO4),(/1/),(/ne/)) 
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+10),dble(bH2S),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+11),dble(bCH4),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+12),dble(bPOS),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+13),dble(bSA),(/1/),(/ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+14),dble(transpose(bPOC(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+15),dble(transpose(bPON(1:ne,1:3))),(/1,1/),(/3,ne/))
-        j=nf90_put_var(ncid_hot,nwild(nvars_hot+16),dble(transpose(bPOP(1:ne,1:3))),(/1,1/),(/3,ne/))
-        nvars_hot_icm=nvars_hot+16
-
-        if(isav_icm==1) then
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+1),dble(sht),(/1/),(/ne/))
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+2),dble(sleaf(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+3),dble(sstem(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+4),dble(sroot(1:nvrt,1:ne)),(/1,1/),(/nvrt,ne/))
-          nvars_hot_icm=nvars_hot_icm+4
-        endif
-
-        if(iveg_icm==1) then
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+1),dble(transpose(vht(1:ne,1:3))),(/1,1/),(/3,ne/))
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+2),dble(transpose(vtleaf(1:ne,1:3))),(/1,1/),(/3,ne/))
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+3),dble(transpose(vtstem(1:ne,1:3))),(/1,1/),(/3,ne/))
-          j=nf90_put_var(ncid_hot,nwild(nvars_hot_icm+4),dble(transpose(vtroot(1:ne,1:3))),(/1,1/),(/3,ne/))
-          nvars_hot_icm=nvars_hot_icm+4
-        endif
-        
-        nvars_hot=nvars_hot_icm !update
+        !put variables
+        do i=1,nhot_icm
+          if(wqhot(i)%ndim==1) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p1),(/1/),(/ne/))
+          if(wqhot(i)%ndim==2) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p2),(/1,1/),(/wqhot(i)%dims(1),ne/))
+        enddo !i
 #endif /*USE_ICM*/
 
         !write(12,*)'After hot trcr:',it,real(trel),real(tr_nd0)
@@ -10791,6 +10603,9 @@
 
       if(ibtrack_test==1) deallocate(tsd)
       if(iflux/=0) deallocate(fluxes_tr, fluxes_tr_gb)
+
+      if(allocated(veg_alpha3D)) deallocate(veg_alpha3D)
+      if(allocated(veg_alpha_vert_mean)) deallocate(veg_alpha_vert_mean)
 
 #ifdef TIMER2
       tmp=mpi_wtime()
