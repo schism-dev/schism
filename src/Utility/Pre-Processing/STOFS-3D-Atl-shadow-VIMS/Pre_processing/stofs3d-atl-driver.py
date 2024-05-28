@@ -1,33 +1,41 @@
+#!/usr/bin/env python3
 '''
 This is the driver script to run the STOFS3D-ATL model.
+Simpler tasks such as generating uniform *.gr3 are included in this script.
+More complex tasks such as generating source_sink are imported as modules from subfolders.
+
+Usage:
+    python stofs3d-atl-driver.py in any directory
+
+Set run parameters at the beginning of the main function.
+
+The script will prepare the model folders and keep a record of itself in the
+model input folder.
 '''
 
 
 # Import modules
 import os
-import numpy as np
-from glob import glob
-import subprocess
-from scipy.spatial import cKDTree
-import geopandas as gpd
-import copy
-from datetime import datetime
-from pyproj import Transformer
 from pathlib import Path
 import shutil
-import shapefile
-import hgrid_pybind
+from datetime import datetime
+import subprocess
+import copy
+
+import numpy as np
+from scipy.spatial import cKDTree
+import shapefile  # from pyshp
 
 # self-defined modules
-from pylib_essentials.schism_file import read_schism_reg, source_sink
-from pylib_essentials.schism_file import schism_grid, read_schism_hgrid_cached, cread_schism_hgrid
-from pylib_essentials.utility_functions import inside_polygon
+from pylib import schism_grid, inside_polygon, read_schism_reg
+from pylib_experimental.schism_file import cread_schism_hgrid
 from pyschism.mesh import Hgrid
 
 # import from the sub folders, not from installed packages
 from Source_sink.NWM.gen_sourcesink import gen_sourcesink
 from Source_sink.Constant_sinks.set_constant_sink import set_constant_sink
-from Source_sink.Relocate.relocate_source_feeder import relocate_sources, v19p2_mandatory_sources_coor
+from Source_sink.Relocate.relocate_source_feeder import relocate_sources
+from Source_sink.Relocate.relocate_source_feeder import v19p2_mandatory_sources_coor
 from Bctides.bctides.bctides import Bctides  # temporary, bctides.py will be merged into pyschism
 # from pyschism.forcing.bctides import Bctides
 
@@ -37,28 +45,24 @@ from Bctides.bctides.bctides import Bctides  # temporary, bctides.py will be mer
 # If you are running this script in the schism repo, you can also use the following line:
 script_path = Path('./').absolute()
 
+
 # Classes and functions:
-class Config_stofs3d_atlantic():
+class ConfigStofs3dAtlantic():
     '''A class to handle the configuration of STOFS-3D-ATL model,
     i.e., processing the parameters and storing the factory settings.
     '''
     def __init__(self,
-        startdate = datetime(2017, 12, 1),  # start date of the model
-        rnday = 60,  # number of days to run the model
-        nudging_zone_width = 1.5,  # in degrees
-        nudging_day = 1.0,  # in days
-        shapiro_zone_width = 2.5,  # in degrees
-        shapiro_tilt = 2.0,  # more abrupt transition in the shapiro zone
-        nwm_cache_folder = None,
-        feeder_info_file = None,  # the file that contains the feeder info, made by make_feeder_channel.py in RiverMapper
-        gr3_values = {  # uniform gr3 values
-            'albedo': 0.1,
-            'diffmax': 1.0,
-            'diffmin': 1e-6,
-            'watertype': 1.0,
-            'windrot_geo2proj': 0.0
-        }
-    ):
+                 startdate=datetime(2017, 12, 1),  # start date of the model
+                 rnday=60,  # number of days to run the model
+                 nudging_zone_width=1.5,  # in degrees
+                 nudging_day=1.0,  # in days
+                 shapiro_zone_width=2.5,  # in degrees
+                 shapiro_tilt=2.0,  # more abrupt transition in the shapiro zone
+                 nwm_cache_folder=None,
+                 feeder_info_file=None,  # file containing feeder info, made by make_feeder_channel.py in RiverMapper
+                 gr3_values=None
+                 ):
+
         self.startdate = startdate
         self.rnday = rnday
         self.nudging_zone_width = nudging_zone_width
@@ -67,43 +71,55 @@ class Config_stofs3d_atlantic():
         self.shapiro_tilt = shapiro_tilt
         self.nwm_cache_folder = nwm_cache_folder
         self.feeder_info_file = feeder_info_file
-        self.gr3_values = gr3_values
+        if gr3_values is None:
+            self.gr3_values = {  # uniform gr3 values
+                'albedo': 0.1,
+                'diffmax': 1.0,
+                'diffmin': 1e-6,
+                'watertype': 1.0,
+                'windrot_geo2proj': 0.0
+            }
+        else:
+            self.gr3_values = gr3_values
 
     @classmethod
     def v6(cls):
-        return cls(
-            nudging_zone_width = 7.3,  # very wide nudging zone
-            shapiro_zone_width = 11.5,  # very wide shapiro zone
-            shapiro_tilt = 3.5,  # very abrupt transition in the shapiro zone
-            feeder_info_file = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/feeder.pkl'
-        )
+        '''Factory method to create a configuration for STOFS3D-v6'''
+        return cls(nudging_zone_width=.3,  # very wide nudging zone
+                   shapiro_zone_width=11.5,  # very wide shapiro zone
+                   shapiro_tilt=3.5,  # very abrupt transition in the shapiro zone
+                   feeder_info_file='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/feeder.pkl')
 
     @classmethod
     def v7(cls):
-        return cls(
-            nudging_zone_width = 7.3,  # default nudging zone
-            shapiro_zone_width = 11.5,  # default shapiro zone
-            shapiro_tilt = 3.5,  # default abrupt transition in the shapiro zone
-            feeder_info_file = f'/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v20.0/Feeder/feeder_heads_bases.xy',
-            nwm_cache_folder = Path('/sciclone/schism10/whuang07/schism20/NWM_v2.1/')
-        )
+        '''Factory method to create a configuration for STOFS3D-v7'''
+        return cls(nudging_zone_width=7.3,  # default nudging zone
+                   shapiro_zone_width=11.5,  # default shapiro zone
+                   shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
+                   feeder_info_file='/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v20.0/Feeder/feeder_heads_bases.xy',
+                   nwm_cache_folder=Path('/sciclone/schism10/whuang07/schism20/NWM_v2.1/'))
+
 
 def mkcd_new_dir(path):
+    '''Make a new directory and change to it'''
     remove_folder(path)
     os.makedirs(path)
     os.chdir(path)
 
+
 def remove_folder(path):
-    import shutil
+    '''Remove a folder and all its contents'''
     try:
         shutil.rmtree(path)
         print(f"{path} and all contents removed successfully")
     except FileNotFoundError:
-        print(f"{path} does not exist, and that's okay.")
-    except Exception as error:
+        print(f"{path} does not exist, no need to remove.")
+    except OSError as error:
         print(f"Error removing {path}: {error}")
 
+
 def try_remove(file):
+    '''Try to remove a file, ignore if it does not exist'''
     try:
         os.remove(file)
     except FileNotFoundError:
@@ -112,7 +128,9 @@ def try_remove(file):
         print("Error removing path:", file)
         print("Error message:", str(e))
 
+
 def find_points_in_polyshp(pt_xy, shapefile_names):
+    '''Find points inside polygons defined in shapefiles'''
     ind = np.zeros(pt_xy[:, 0].shape)
     for shapefile_name in shapefile_names:
         # shapefile # records = sf.records() # sf.shapeType # len(sf) # s = sf.shape(idx)
@@ -127,34 +145,40 @@ def find_points_in_polyshp(pt_xy, shapefile_names):
     ind = ind.astype('bool')
     return ind
 
-def gen_nudge_coef(hgrid:schism_grid, rlmax = 1.5, rnu_day=0.25, open_bnd_list=[0, 1]):
-        """
-        Set up nudge zone within rlmax distance from the ocean boundary:
-        - schism_grid (from pylib) must be in lon/lat coordinates
-        - rlmax can be a uniform value, e.g., rl_max = 1.5,
-          or a 2D array of the same size as the hgrid's number of nodes,
-          e.g., rl_max = np.zeros(NP) with further tuning of the nudging zone width.
-        - If there are more than one ocean boundary, specify the boundary index in open_bnd_list as a list
-        """
 
-        # maximum nudging strength
-        rnu_max = 1.0 / rnu_day / 86400.0
+def gen_nudge_coef(hgrid: schism_grid, rlmax=1.5, rnu_day=0.25, open_bnd_list=None):
+    """
+    Set up nudge zone within rlmax distance from the ocean boundary:
+    - schism_grid (from pylib) must be in lon/lat coordinates
+    - rlmax can be a uniform value, e.g., rl_max = 1.5,
+        or a 2D array of the same size as the hgrid's number of nodes,
+        e.g., rl_max = np.zeros(NP) with further tuning of the nudging zone width.
+    - If there are more than one ocean boundary, specify the boundary index in open_bnd_list as a list
+    """
+    if open_bnd_list is None:
+        open_bnd_list = [0, 1]
 
-        nudge_coeff = np.zeros((hgrid.np, ), dtype=float)
-        for open_bnd_idx in open_bnd_list:
-            print(f'boundary {open_bnd_idx}: {len(hgrid.iobn[open_bnd_idx])} open boundary nodes')
-            bnd_node_idx = hgrid.iobn[open_bnd_idx]
+    # maximum nudging strength
+    rnu_max = 1.0 / rnu_day / 86400.0
 
-            # distance between each node to its nearest open boundary node
-            distance, _ = cKDTree(np.c_[hgrid.x[bnd_node_idx], hgrid.y[bnd_node_idx]]).query(np.c_[hgrid.x, hgrid.y])
+    nudge_coeff = np.zeros((hgrid.np, ), dtype=float)
+    for open_bnd_idx in open_bnd_list:
+        print(f'boundary {open_bnd_idx}: {len(hgrid.iobn[open_bnd_idx])} open boundary nodes')
+        bnd_node_idx = hgrid.iobn[open_bnd_idx]
 
-            # nudge coefficient based on the current open boundary
-            this_nudge_coeff = np.clip((1.0-distance/rlmax)*rnu_max, 0.0, rnu_max)
-            nudge_coeff = np.maximum(this_nudge_coeff, nudge_coeff)
+        # distance between each node to its nearest open boundary node
+        distance, _ = cKDTree(np.c_[hgrid.x[bnd_node_idx], hgrid.y[bnd_node_idx]]).query(np.c_[hgrid.x, hgrid.y])
 
-        return nudge_coeff
+        # nudge coefficient based on the current open boundary
+        this_nudge_coeff = np.clip((1.0-distance/rlmax)*rnu_max, 0.0, rnu_max)
+        nudge_coeff = np.maximum(this_nudge_coeff, nudge_coeff)
 
-def gen_drag(hgrid:schism_grid):
+    return nudge_coeff
+
+
+def gen_drag(hgrid: schism_grid):
+    '''generate drag coefficient based on the depth and regions'''
+
     # 1) overall: depth based
     grid_depths = [-3, -1]
     drag_coef = [0.025, 0.0025]
@@ -187,7 +211,7 @@ def gen_drag(hgrid:schism_grid):
         idx = inside_polygon(np.c_[hgrid.x, hgrid.y], bp.x, bp.y).astype(bool)
         drag[idx] = np.minimum(drag[idx], 0.0025)
 
-    # 3) tweak: regions with constant drag but only for river nodes 
+    # 3) tweak: regions with constant drag but only for river nodes
     region_tweaks = {
         'Mississippi_0': {
             'drag': 1e-8,
@@ -202,7 +226,7 @@ def gen_drag(hgrid:schism_grid):
             'region_file': f'{script_path}/Gr3/Drag/Eastport_0.reg'
         }
     }
-    for keys, tweak in region_tweaks.items():
+    for _, tweak in region_tweaks.items():
         print(f"Applying drag {tweak['drag']} in {tweak['region_file']}")
         reg = read_schism_reg(tweak['region_file'])
         idx = inside_polygon(np.c_[hgrid.x, hgrid.y], reg.x, reg.y).astype(bool)
@@ -211,12 +235,16 @@ def gen_drag(hgrid:schism_grid):
 
     return drag
 
-def gen_shapiro_strength(hgrid:schism_grid, init_shapiro_dist:np.ndarray=None, tilt=2.5):
 
-    shapiro_min=100; shapiro_max=1000
+def gen_shapiro_strength(hgrid: schism_grid, init_shapiro_dist: np.ndarray = None, tilt=2.5):
+    '''generate shapiro strength based on the depth and regions'''
+
+    shapiro_min = 100
+    shapiro_max = 1000
 
     # ---------- dependency on the ocean nudging zone ------------
     if init_shapiro_dist is None:
+        # no depency on nudging zone, will be set to shapiro_min eventually
         shapiro_ocean_bnd = np.zeros((hgrid.np, ), dtype=float)
     else:
         # scale nudging strength (actually shapiro strength) so that the max equals shapiro_max
@@ -228,22 +256,31 @@ def gen_shapiro_strength(hgrid:schism_grid, init_shapiro_dist:np.ndarray=None, t
 
     # ---------- dependency on regions ------------
     shapiro_region = np.zeros(hgrid.np)
-    region_files = [
-        f'{script_path}/Gr3/Shapiro/coastal_0.2.lonlat.reg',
-        f'{script_path}/Gr3/Shapiro/coastal_0.5_1.lonlat.reg',
-        f'{script_path}/Gr3/Shapiro/coastal_0.5_2.lonlat.reg'
-    ]  # the order matters
-    region_tweaks = [200, 300, 300]
-    for region_tweak, region_file in zip(region_tweaks, region_files):
-        reg = read_schism_reg(region_file)
+    region_tweaks = {
+        'coastal_buffer_1:': {
+            'filename': f'{script_path}/Gr3/Shapiro/coastal_0.2.lonlat.reg',
+            'strength': 200
+        },
+        'coastal_buffer_2:': {
+            'filename': f'{script_path}/Gr3/Shapiro/coastal_0.5_1.lonlat.reg',
+            'strength': 300
+        },
+        'coastal_buffer_3:': {
+            'filename': f'{script_path}/Gr3/Shapiro/coastal_0.5_2.lonlat.reg',
+            'strength': 300
+        }
+    }
+    for _, tweak in region_tweaks.items():
+        reg = read_schism_reg(tweak['filename'])
         idx = inside_polygon(np.c_[hgrid.x, hgrid.y], reg.x, reg.y).astype(bool)
-        shapiro_region[idx] = region_tweak
+        shapiro_region[idx] = tweak['strength']
 
     # -------- combine all shapiro tweaks ---------
     shapiro = shapiro_region + shapiro_ocean_bnd
     shapiro = np.clip(shapiro, shapiro_min, shapiro_max)
 
     return shapiro
+
 
 def gen_elev_ic(hgrid=None, h0=0.1, city_shape_fnames=None):
     '''
@@ -266,62 +303,63 @@ def gen_elev_ic(hgrid=None, h0=0.1, city_shape_fnames=None):
 
     return elev_ic
 
+
 def prep_run_dir(parent_dir, runid):
-    model_input_path = f'{parent_dir}/Inputs/I{runid}'
+    '''Prepare the run directory and return the path to the model input folder'''
+
+    model_input_path = f'{parent_dir}/I{runid}'
     os.makedirs(model_input_path, exist_ok=True)
     os.makedirs(f'/sciclone/scr10/feiye/R{runid}/outputs', exist_ok=True)
 
-    rundir = f'{parent_dir}/Runs/R{runid}'
+    rundir = f'{parent_dir}/R{runid}'
     output_dir = f'/sciclone/scr10/feiye/R{runid}/outputs'
 
     os.makedirs(rundir, exist_ok=True)
     os.chdir(rundir)
     os.system(f'ln -sf {output_dir} .')
 
-    os.makedirs(f'{parent_dir}/Outputs/O{runid}', exist_ok=True)
-    os.chdir(f'{parent_dir}/Outputs/O{runid}')
+    os.makedirs(f'{parent_dir}/O{runid}', exist_ok=True)
+    os.chdir(f'{parent_dir}/O{runid}')
     os.system(f'ln -sf {output_dir} .')
     os.system(f'ln -sf {model_input_path}/hgrid.gr3 .')
     os.system(f'ln -sf {model_input_path}/vgrid.in .')
 
     return model_input_path
 
+
 def main(is_test=False):
-    # prepare a configuration
-    config = Config_stofs3d_atlantic.v7()
+    '''
+    Main function to generate inputs for STOFS3D-ATL.
+
+    Set the configuration parameters at the beginning of this function,
+    i.e., between "---------input---------" and "---------end input---------".
+
+    hgrid.gr3 (in lon/lat) must be prepared before running this script
+    '''
+
+    # -----------------input---------------------
+    # hgrid generated by SMS, pre-processed, and converted to *.gr3
+    hgrid_path = '/sciclone/schism10/feiye/STOFS3D-v8/Inputs/v20p2s2v7/hgrid.gr3'
+
+    # get a default configuration and make changes if necessary
+    config = ConfigStofs3dAtlantic.v7()
     config.nwm_cache_folder = None
     config.rnday = 37
     config.startdate = datetime(2024, 3, 5)
 
-    driver_print_prefix = '-----------------STOFS3D-ATL driver:---------------------\n'
     # define the path where the model inputs are generated
-    project_dir = '/sciclone/schism10/feiye/STOFS3D-v7/'
-    runid = '15f'
+    project_dir = '/sciclone/schism10/feiye/STOFS3D-v8/'
 
-    # define and make the model_input_path, the run_dir and the output dir
-    model_input_path = prep_run_dir(project_dir, runid)
-    
-    # make a copy of the script itself to the model_input_path
-    os.system(f'cp {script_path}/stofs3d-atl-driver.py {model_input_path}')
+    runid = '02d'
 
-    # hgrid must be prepared before running this script
-    # temporary tests
-    if is_test:
-        hgrid = cread_schism_hgrid(hgrid_pybind.HGrid(f'{model_input_path}/hgrid.gr3'))
-        test(config, model_input_path, hgrid)
-        return
-
-    hgrid = cread_schism_hgrid(f'{model_input_path}/hgrid.gr3')
-    hgrid_pyschism = Hgrid.open(f'{model_input_path}/hgrid.gr3', crs='epsg:4326')
-
-    # set a dict to indicate input files to be generated
+    # swithes to generate different input files
     input_files = {
         'bctides': False,
-        'vgrid': False,
+        'vgrid': True,
         'gr3': False,
         'nudge_gr3': False,
         'shapiro': False,
-        'drag': True,
+        'drag': False,
         'elev_ic': False,
         'source_sink': False,
         # 'hotstart.nc``
@@ -329,6 +367,25 @@ def main(is_test=False):
         # '*nu.nc'
         # '*.prop'
     }
+    # -----------------end input---------------------
+
+    # -----------------begin generating model inputs---------------------
+    driver_print_prefix = '-----------------STOFS3D-ATL driver:---------------------\n'
+    # define and make the model_input_path, the run_dir and the output dir
+    model_input_path = prep_run_dir(project_dir, runid)
+
+    # make a copy of the script itself to the model_input_path
+    os.system(f'cp -r {script_path} {model_input_path}/')
+    os.system(f'cp {hgrid_path} {model_input_path}/')
+
+    # hgrid = schism_grid(f'{model_input_path}/hgrid.gr3')
+    hgrid = cread_schism_hgrid(f'{model_input_path}/hgrid.gr3')
+    hgrid_pyschism = Hgrid.open(f'{model_input_path}/hgrid.gr3', crs='epsg:4326')
+
+    # -----------------temporary test---------------------
+    if is_test:
+        test(config, model_input_path, hgrid)
+        return
 
     # -----------------bctides---------------------
     if input_files['bctides']:
@@ -337,7 +394,7 @@ def main(is_test=False):
         mkcd_new_dir(f'{model_input_path}/{sub_dir}')
         Bctides(
             hgrid=hgrid_pyschism,  # needs hgrid in pyschism's Hgrid class
-            flags=[[5,3,0,0],[3,3,0,0],[0,1,0,0]],
+            flags=[[3, 3, 0, 0]],
             database='fes2014'
         ).write(
             output_directory=f'{model_input_path}/{sub_dir}',
@@ -350,7 +407,7 @@ def main(is_test=False):
         sub_dir = 'Vgrid'
         print(f'{driver_print_prefix}Generating vgrid.in ...')
         mkcd_new_dir(f'{model_input_path}/{sub_dir}')
-        os.system(f'ln -sf ../hgrid.gr3 .')
+        os.system('ln -sf ../hgrid.gr3 .')
 
         # call a fortran program to generate vgrid.in
         # compile the fortran program if necessary
@@ -415,9 +472,10 @@ def main(is_test=False):
         mkcd_new_dir(f'{model_input_path}/{sub_dir}')
 
         # use the same method for nudge.gr3 to generate a buffer zone along the open boundaries
-        nudge_coef = gen_nudge_coef(hgrid, rlmax=config.shapiro_zone_width)
+        # nudge_coef = gen_nudge_coef(hgrid, rlmax=config.shapiro_zone_width)
+        nudge_coef = None
         # using nudging coefficient as a proxy for the distribution of shapiro strength
-        shapiro = gen_shapiro_strength(hgrid, nudge_coef, tilt=config.shapiro_tilt)
+        shapiro = gen_shapiro_strength(hgrid, init_shapiro_dist=nudge_coef, tilt=config.shapiro_tilt)
 
         hgrid.save(f'{model_input_path}/{sub_dir}/shapiro.gr3', value=shapiro)
 
@@ -500,7 +558,19 @@ def main(is_test=False):
 
         os.chdir(model_input_path)
 
+    # -----------------*prop---------------------
+    if input_files['*prop']:
+        sub_dir = 'Prop'
+        print(f'{driver_print_prefix}Generating *prop files ...')
+        mkcd_new_dir(f'{model_input_path}/{sub_dir}')
+
+        # generate tvd.prop
+        os.chdir(model_input_path)
+
+
 def test(config, model_input_path, hgrid):
+    '''temporary tests'''
+
     sub_dir = 'Source_sink'
     relocated_ss = relocate_sources(
         old_ss_dir=f'{model_input_path}/{sub_dir}/original_source_sink/',
@@ -534,6 +604,7 @@ def test(config, model_input_path, hgrid):
     )
 
     os.chdir(model_input_path)
+
 
 if __name__ == '__main__':
     main(is_test=False)

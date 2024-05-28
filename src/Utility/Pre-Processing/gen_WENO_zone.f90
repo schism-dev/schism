@@ -3,7 +3,7 @@
 !     minimize the direct 'contact' between WENO and ELM cells, which can cause dispersion.
 !     Inputs: 
 !             (1) hgrid.gr3 (in any projection or lon/lat; b.c. part not needed)
-!             (2) gen_tvd_WENO.in:
+!             (2) gen_WENO_zone.in:
 !                   hmin_estu: cut-off depth for estuaries (e.g. same as h_tvd)
 !                   nreg: # of regions (nearshore + estuaries; >=1)
 !                   list of region names: 1st region is coastal region (e.g. using 20m isobath); the rest
@@ -14,7 +14,7 @@
 !     Output: tvd.prop.0 (may be further edited, e.g. look for very skew elem nearby,
 !              and connectivity)
 
-!     ifort -O2 -o gen_tvd_WENO ../UtilLib/schism_geometry.f90 ../UtilLib/pt_in_poly_test.f90 gen_tvd_WENO.f90
+!     ifort -O2 -o gen_WENO_zone ../UtilLib/schism_geometry.f90 ../UtilLib/pt_in_poly_test.f90 gen_WENO_zone.f90
 
       use schism_geometry_mod
       use pt_in_poly_test
@@ -22,7 +22,7 @@
       real*8, parameter :: small1=1.d-4
       real*8, parameter :: ray_angle=3.13192d0
 
-      character(len=100) :: file_reg(200)
+      character(len=100) :: file_reg(2000)
       integer :: nwild(3)
       integer, allocatable :: i34(:),elnode(:,:),nne(:),indel(:,:),nnp(:), &
      &indnd(:,:),isbnd(:),itvd(:),itvd0(:),iest(:),iest_e(:),inear(:),inear_e(:)
@@ -35,10 +35,10 @@
       type(poly_vertex),allocatable :: poly(:)
 
       !Read in control input
-      open(9,file='gen_tvd_WENO.in',status='old')
+      open(9,file='gen_WENO_zone.in',status='old')
       read(9,*) hmin_estu !cut-off depth for estuaries (e.g. h_tvd)
       read(9,*) nreg
-      if(nreg<1.or.nreg>200) stop 'nreg<1 or nreg>200'
+      if(nreg<1.or.nreg>2000) stop 'nreg<1 or nreg>2000'
       do i=1,nreg
         read(9,*)file_reg(i)
       enddo !i
@@ -170,6 +170,7 @@
 
         !Estuaries
         do irgn=1,nestuaries
+          print*, irgn, i
           call pt_in_poly_ray_method_double(nvertices(irgn+1),small1,ray_angle, &
      &poly(irgn+1)%xy(1:nvertices(irgn+1),1),poly(irgn+1)%xy(1:nvertices(irgn+1),2), &
      &xnd(i),ynd(i),in_out,inters,npoly)
