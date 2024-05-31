@@ -161,7 +161,7 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !Benthic Algea model (BA) parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: gpatch0,BA0,gGPM,gTGP,gKTGP(2),gMTB,gPRR,gTR,gKTR,galpha
+  real(rkind),save,target :: gpatch0,gBA0,gGPM,gTGP,gKTGP(2),gMTB,gPRR,gTR,gKTR,galpha
   real(rkind),save,target :: gKSED,gKBA,gKhN,gKhP,gp2c,gn2c,go2c,gFCP(3),gFNP(3),gFPP(3)
 
   integer,save,allocatable,dimension(:) :: gpatch
