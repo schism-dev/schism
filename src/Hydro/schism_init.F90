@@ -5555,10 +5555,10 @@
           do m=1,wqhot(k)%dims(1)
             if(myrank==0) then
               j=nf90_inq_varid(ncid2,trim(adjustl(wqhot(k)%name)),mm)
-              if(j/=NF90_NOERR) call parallel_abort('init: nc ICM1')
+              if(j/=NF90_NOERR) call parallel_abort('hotstart.nc, ICM 1: '//trim(adjustl(wqhot(k)%name)))
               if(wqhot(k)%ndim==1) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
               if(wqhot(k)%ndim==2) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
-              if(j/=NF90_NOERR) call parallel_abort('init: nc ICM2')
+              if(j/=NF90_NOERR) call parallel_abort('hotstart.nc, ICM 2: '//trim(adjustl(wqhot(k)%name)))
             endif
             call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
             do i=1,ne_global

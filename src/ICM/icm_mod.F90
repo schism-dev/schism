@@ -165,7 +165,7 @@ module icm_mod
   real(rkind),save,target :: gKSED,gKBA,gKhN,gKhP,gp2c,gn2c,go2c,gFCP(3),gFNP(3),gFPP(3)
 
   integer,save,allocatable,dimension(:) :: gpatch
-  real(rkind),save,target,allocatable,dimension(:) :: BA,gPR
+  real(rkind),save,target,allocatable,dimension(:) :: gBA,gGP,gMT,gPR
 
   !-------------------------------------------------------------------------------
   !Clam model (CLAM) parameters and variables

@@ -362,8 +362,15 @@ subroutine read_icm_param(imode)
 
     !Benthic Algea: 9
     if(iBA==1) then
-      p=>wqout(nout+1);   p%name='ICM_BA';   p%p1=>BA;  p%itype=4
-      nb=1; nouts(9)=nb; iout(1,9)=nout+1; iout(2,9)=nout+nb; nout=nout+nb
+      p=>wqout(nout+1);   p%name='ICM_gBA';  p%p1=>gBA;  p%itype=4
+      p=>wqout(nout+2);   p%name='ICM_gGP';  p%p1=>gGP; p%itype=4
+      p=>wqout(nout+3);   p%name='ICM_gMT';  p%p1=>gMT; p%itype=4
+      p=>wqout(nout+4);   p%name='ICM_gPR';  p%p1=>gPR; p%itype=4
+      nb=4; nouts(9)=nb; iout(1,9)=nout+1; iout(2,9)=nout+nb; nout=nout+nb
+     
+      !hotstart
+      p=>wqhot(nhot+1); p%name='BA';   p%p1=>gBA
+      nhot=nhot+1
     endif
 
     !CLAM module: 10
@@ -714,8 +721,8 @@ subroutine icm_vars_init
   !BA init
   !-------------------------------------------------------------------------------
   if(iBA==1) then
-    allocate(BA(nea),gPR(nea), stat=istat)
-    if(istat/=0) call parallel_abort('failed in alloc. BA') 
+    allocate(gBA(nea),gGP(nea),gMT(nea),gPR(nea), stat=istat)
+    if(istat/=0) call parallel_abort('failed in alloc. gBA') 
   else
     gpatch0=0; BA0=0  !reset parameter values
   endif
@@ -940,7 +947,7 @@ subroutine icm_vars_init
       vpatch(i)=nint(vpatch0); vtleaf(:,i)=vtleaf0; vtstem(:,i)=vtstem0; vtroot(:,i)=vtroot0
     endif
     if(iBA==1) then
-      gpatch(i)=nint(gpatch0); BA(i)=BA0
+      gpatch(i)=nint(gpatch0); gBA(i)=BA0
     endif
     if(iClam==1) then
       cpatch(i)=nint(cpatch0); CLAM(i,1:nclam)=clam0
