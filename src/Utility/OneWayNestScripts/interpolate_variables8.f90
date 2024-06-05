@@ -443,7 +443,7 @@
         count_2d(1)=np; count_2d(2)=1
         iret=nf90_get_var(ncid4,itmp,eta2,start_2d,count_2d)
         if(iret/=NoErr) stop 'Failed to fetch elev'
-        write(98,*)it1,eta2
+        if(idebug==1) write(98,*)it1,eta2
 
         if(ifile>1) then !get 3D vars
           do ii=1,n_vars

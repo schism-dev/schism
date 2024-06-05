@@ -268,14 +268,14 @@ subroutine ecosystem(it)
       !VEG
       if(jveg==1.and.vpatch(id)==1) call veg_calc(id,kb,zid,dz,vhtz,rIa,tdep,rKe0,rKeS) 
 
-      !BA module
-      if(iBA==1) call ba_calc(id,kb,dz(kb+1))
-
       !CLAM
       if(iClam==1) call clam_calc(id,kb,dz(kb+1),TSS)
 
       !sediment flux module
       if(iSed==1) call sfm_calc(id,kb,tdep,dz(kb+1),TSS,it,isub)
+
+      !BA module
+      if(iBA==1) call ba_calc(id,kb,dz(kb+1))
 
       !zooplankton
       if(iZB==1) call zoo_calc(kb,PR)
@@ -1117,51 +1117,56 @@ subroutine ba_calc(id,kb,wdz)
 
   !local variables
   integer :: i,j,k
-  real(rkind) :: xT,mLight,rIK,wNH4,wNO3,wPO4,sNH4,sNO3,sPO4,gNH4,gNO3,gDIN,gPO4
-  real(rkind) :: fT,fR,fN,fP,fPN,GP,MT,PR
+  real(rkind) :: xT,mLight,rIK,wNH4,wNO3,wPO4,sNH4,sNO3,sPO4,tNH4,tNO3,tDIN,tPO4
+  real(rkind) :: fT,fR,fN,fP,fPN,rc,fWN,fWP,mGP,mMT
   real(rkind),parameter :: mval=1.d-16
-
+  real(rkind),pointer :: BA,GP,MT,PR
+  
   if(iBA==1.and.gpatch(id)/=0) then
+    !pre-proc
+    BA=>gBA(id); GP=>gGP(id); MT=>gMT(id); PR=>gPR(id); rc=dtw/wdz
+
     !temp. effect
     xT=temp(kb+1)-gTGP; fT=exp(-max(-gKTGP(1)*signf(xT),gKTGP(2)*signf(xT))*xT*xT) 
 
     !light effect
-    mLight=bLight(id)*exp(-gKSED)*exp(-gKBA*BA(id))
+    mLight=bLight(id)*exp(-gKSED)*exp(-gKBA*BA)
     rIK=gGPM/galpha
     fR=mLight/sqrt(mLight*mLight+rIK*rIK+mval)
 
     !nutrient effect
-    wNH4=NH4(kb+1)*wdz; sNH4=max(JNH4(id),0.d0)*dtw; gNH4=wNH4+sNH4 !g[N]/m2
-    wNO3=NO3(kb+1)*wdz; sNO3=max(JNO3(id),0.d0)*dtw; gNO3=wNO3+sNO3 !g[N]/m2
-    wPO4=PO4(kb+1)*wdz; sPO4=max(JPO4(id),0.d0)*dtw; gPO4=wPO4+sPO4 !g[P]/m2
-    gDIN=gNH4+gNO3; fPN=(gNH4/(gKhN+gNO3+mval))*(gNO3/(gKhN+gNH4+mval)+gKhN/(gDIN+mval)) !NH4 preference
-    fN=gDIN/(gDIN+gKhN+mval); fP=gPO4/(gPO4+gKhP+mval)
+    wNH4=NH4(kb+1); sNH4=max(JNH4(id),0.d0)*rc; tNH4=wNH4+sNH4 !g[N]/m3
+    wNO3=NO3(kb+1); sNO3=max(JNO3(id),0.d0)*rc; tNO3=wNO3+sNO3 !g[N]/m3
+    wPO4=PO4(kb+1); sPO4=max(JPO4(id),0.d0)*rc; tPO4=wPO4+sPO4 !g[P]/m3
+    tDIN=tNH4+tNO3; fPN=(tNH4/(gKhN+tNO3+mval))*(tNO3/(gKhN+tNH4+mval)+gKhN/(tDIN+mval)) !NH4 preference
+    fWN=(wNH4+wNO3)/(tNH4+tNO3+mval); fWP=wPO4/(tPO4+mval) !preference of water nutrients
+    fN=tDIN/(tDIN+gKhN+mval); fP=tPO4/(tPO4+gKhP+mval)
 
-    !growth,metabolism and predation
-    GP=gGPM*fT*fR*min(fN,fP)*BA(id)*dtw
-    MT=gMTB*exp(gKTR*(temp(kb+1)-gTR))*BA(id)*dtw
-    PR=gPRR*exp(gKTR*(temp(kb+1)-gTR))*BA(id)*dtw
-    if((GP*gn2c*fPN>gNH4).or.(GP*gn2c*(1.0-fPN)>gNO3).or.(GP*gp2c>gPO4)) then !check BA growth term
-      GP=min(gNH4/(gn2c*max(fPN,mval)),gNO3/(gn2c*max(1.0-fPN,mval)),gPO4/gp2c)
-    endif
-    if((MT+PR)>BA(id)) then !check sink terms 
-      MT=BA(id)*(gMTB/(gMTB+gPRR)); PR=BA(id)*(gPRR/(gMTB+gPRR))
+    !growth,metabolism and predation (g.m-2.day-1)
+    GP=gGPM*fT*fR*min(fN,fP)*BA
+    MT=gMTB*exp(gKTR*(temp(kb+1)-gTR))*BA
+    PR=gPRR*exp(gKTR*(temp(kb+1)-gTR))*BA
+
+    !growth limit by total nutrients; metabolism/predation limits
+    mGP=min(tDIN/(gn2c*rc+mval), tPO4/(gp2c*rc+mval)); mMT=BA/dtw 
+    if(GP>0.25*mGP) GP=0.25*mGP
+    if((MT+PR)>0.25*mMT) then !check sink terms 
+      MT=0.25*(gMTB/(gMTB+gPRR))*mMT; PR=0.25*(gPRR/(gMTB+gPRR))*mMT
     endif
 
     !update BA biomass
-    BA(id)=BA(id)+GP-MT-PR
+    BA=BA+(GP-MT-PR)*dtw
 
     !BA effect on bottom water
-    gdwqc(iPO4,kb+1)=gp2c*(MT-GP*wPO4/(gPO4+mval))/(wdz*dtw)
-    gdwqc(iNH4,kb+1)=gn2c*(MT-GP*fPN*wNH4/(gNH4+mval))/(wdz*dtw)
-    gdwqc(iNO3,kb+1)=gn2c*(-GP*(1.0-fPN)*wNO3/(gNO3+mval))/(wdz*dtw)
-    gdwqc(iDOX,kb+1)=go2c*(GP-MT)/(wdz*dtw)
+    gdwqc(iPO4,kb+1)=gp2c*(MT-GP*fWP)/wdz
+    gdwqc(iNH4,kb+1)=gn2c*(MT-GP*fPN*fWN)/wdz
+    gdwqc(iNO3,kb+1)=gn2c*(-GP*(1.0-fPN)*fWN)/wdz
+    gdwqc(iDOX,kb+1)=go2c*(GP-MT)/wdz
 
     !BA effect on benthic N/P flux (JN*dtw is normally much samller than wN*wdz)
-    JNH4(id)=JNH4(id)-gn2c*GP*fPN*sNH4/(gNH4*dtw+mval)
-    JNO3(id)=JNO3(id)-gn2c*GP*(1.0-fPN)*sNO3/(gNO3*dtw+mval)
-    JPO4(id)=JPO4(id)-gp2c*GP*sPO4/(gPO4*dtw+mval)
-    gPR(id)=PR/dtw
+    JNH4(id)=JNH4(id)-gn2c*GP*fPN*(1.0-fWN)
+    JNO3(id)=JNO3(id)-gn2c*GP*(1.0-fPN)*(1.0-fWN)
+    JPO4(id)=JPO4(id)-gp2c*GP*(1.0-fWP)
   endif !iBA==1
 
 end subroutine ba_calc

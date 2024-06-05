@@ -306,7 +306,7 @@ def relocate_sources(
 
     return new_source_sink
 
-if __name__ == "__main__":
+def samples():
     '''
     Sample usage: relocate sources/sinks in a region of the Florence mesh.
     The mesh is same as the mesh of STOFS-3D-Atl v2.1 in the Florence region and coarser elsewhere.
@@ -352,3 +352,20 @@ if __name__ == "__main__":
     combined_ss = outside_ss + relocated_ss
     combined_ss.writer(f'{wdir}/combined_source_sink/')
     # combined_ss.diag_writer(hgrid, f'{wdir}/combined_source_sink/')
+
+def test():
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I12x/Source_sink1/relocated_source_sink/'
+    relocated_ss = relocate_sources(
+        old_ss_dir=f'/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I12x/Source_sink1/original_source_sink/',
+        feeder_info_file = f'/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v20.0/Feeder/feeder_heads_bases.xy',
+        hgrid_fname=f'{wdir}/hgrid.gr3',
+        outdir=wdir,
+        max_search_radius=2100, mandatory_sources_coor=v19p2_mandatory_sources_coor, relocate_map=None,
+        allow_neglection=True
+    )
+    relocated_ss.writer(wdir)
+
+
+if __name__ == "__main__":
+    test()
+    pass

@@ -8175,7 +8175,7 @@
 
       !Set Cd etc for marsh and also drowned marsh
 !$OMP workshare
-      veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha=0.d0
+      veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha0=0.d0
 !$OMP end workshare
 !$OMP do 
       do i=1,np

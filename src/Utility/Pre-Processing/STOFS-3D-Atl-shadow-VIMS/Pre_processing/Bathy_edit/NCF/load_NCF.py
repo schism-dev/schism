@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 from pylib_essentials.schism_file import read_schism_hgrid_cached, grd2sms, schism_grid
 
 
-def load_NCF(hgrid_obj:schism_grid, NCF_shpfile:Path, expansion:float=4.0):
+def load_NCF(hgrid_obj:schism_grid, NCF_shpfile:Path, buf:float=4.0):
     '''
     Load the maintained depth from National Channel Framework data into the hgrid.
     The original NCF polygons are enlarged to accommodate the mismatch between the hgrid and the NCF data.
@@ -24,7 +24,7 @@ def load_NCF(hgrid_obj:schism_grid, NCF_shpfile:Path, expansion:float=4.0):
     NCF_data = NCF_data.explode(index_parts=True)
 
     print('Enlarging the NCF polygons...\n')
-    NCF_data['geometry'] = NCF_data['geometry'].to_crs('esri:102008').buffer(expansion).to_crs('epsg:4326')
+    NCF_data['geometry'] = NCF_data['geometry'].to_crs('esri:102008').buffer(buf).to_crs('epsg:4326')
 
     print('setting dp at points inside the NCF polygons...\n')
     # put hgrid points into a Point GeoDataFrame
@@ -35,12 +35,12 @@ def load_NCF(hgrid_obj:schism_grid, NCF_shpfile:Path, expansion:float=4.0):
     dp_NCF = np.ones_like(hgrid_obj.dp, dtype=float) * -9999  # initialize with a large negative number
     dp_NCF[idx] = joined_gdf['depthmaint'].to_numpy() * 0.3048  # convert from feet to meters
 
+    hgrid_obj.dp = dp_NCF
+
     # diagnostic plot
     # plt.figure()
     # hgrid_obj.plot(value=dp_NCF.astype(int), fmt=1)
     # plt.show()
-
-    hgrid_obj.dp = dp_NCF
 
     return hgrid_obj
 

@@ -13,23 +13,23 @@ import os
 import geopandas as gpd
 
 # ------------------------- inputs ---------------------------
-wdir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2v2/Clip/'
+wdir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2v7/Clip/'
 crs = 'esri:102008'
 
 # manual polygons defined in the coastal coverage
-coastal_shpfile = f'{wdir}/coastal.shp'  # esri:102008
+coastal_shpfile = f'{wdir}/inputs/coastal.shp'  # esri:102008
 
 # land boundary + coastal, i.e., watershed region between the coastline and the land boundary + manual polygons in the coastal coverage
-lbnd_coastal_shpfile = f'{wdir}/lbnd_coastal.shp'  # esri:102008
+lbnd_coastal_shpfile = f'{wdir}/inputs/lbnd_coastal.shp'  # esri:102008
 
 # use linestring as the levee shapefile
-levee_shpfile = f'{wdir}/levee.shp'  # esri:102008
+levee_shpfile = f'{wdir}/inputs/levee.shp'  # esri:102008
 
 # used to select manual polygons that are supposedly better refined than the auto arcs
-select_nearshore_shpfile = f'{wdir}/select_nearshore_v3.shp'  # esri:102008
+select_nearshore_shpfile = f'{wdir}/inputs/select_nearshore_v3.shp'  # esri:102008
 
-auto_arcs_file = f'{wdir}/total_arcs.shp'  # lonlat
-auto_polys_file = f'{wdir}/total_river_polys.shp'  # lonlat
+auto_arcs_file = f'{wdir}/inputs/total_arcs.shp'  # lonlat
+auto_polys_file = f'{wdir}/inputs/total_river_polys.shp'  # lonlat
 # ------------------------- end inputs ---------------------------
 
 # make outputs directory

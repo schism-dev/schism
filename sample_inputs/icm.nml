@@ -544,7 +544,7 @@ vo2c   = 2.67   2.67   2.67   !oxygen to carbon ratio
 !Benthic Algae
 !-----------------------------------------------------------------------
 gpatch0 =  -999          !region flag for BA. (1: ON all elem.; -999: spatial) 
-BA0     =  5.0           !initial BA concentration (g[C].m-2)
+gBA0    =  5.0           !initial BA concentration (g[C].m-2)
 gGPM    =  2.25          !BA maximum growth rate (day-1) 
 gTGP    =  20.0          !optimal temp. for BA growth (oC)
 gKTGP   =  0.004  0.006  !temp. dependence for BA growth (oC-2)
@@ -555,8 +555,8 @@ gKTR    =  0.069         !temp. dependence for BA respiration (oC-1)
 galpha  =  0.1           !init. slope of P-I curve (m2/E)
 gKSED   =  0.0           !light attenuation due to sediment (None)
 gKBA    =  0.01          !light attenuation coef. due to BA self-shading (g[C]-1.m2)
-gKhN    =  0.01          !nitrogen half saturation for BA growth (g[N]/m2)
-gKhP    =  0.001         !phosphorus half saturation for BA growth (g[P]/2)
+gKhN    =  0.01          !nitrogen half saturation for BA growth (g[N]/m3)
+gKhP    =  0.001         !phosphorus half saturation for BA growth (g[P]/m3)
 gp2c    = 0.0167         !phosphorus to carbon ratio
 gn2c    = 0.167          !nitrogen to carbon ratio
 go2c    = 2.67           !oxygen to carbon ratio

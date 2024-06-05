@@ -83,7 +83,8 @@
      &                         STOKES_WVEL, STOKES_WVEL_SIDE, & !vertical Stokes drift velocities
      &                         ROLLER_STOKES_HVEL,ROLLER_STOKES_HVEL_SIDE, & ! horizontal Stokes drift velocities (u,v)for the surface rollers
      &                         SHOREWAFO,                    & ! wave forces at the shoreline
-     &                         SAV_ALPHA, SAV_H, SAV_DI, SAV_NV, SAV_CD,  &  !Vegetation characteristics  
+!     &                         SAV_ALPHA, SAV_H, SAV_DI, SAV_NV, SAV_CD,  &  !Vegetation characteristics  
+     &                         SAV_ALPHA=>veg_alpha0, SAV_H=>veg_h,SAV_NV=>veg_nv,SAV_DI=>veg_di,SAV_CD=>veg_cd, &
      &                         fwvor_advxy_stokes,            & ! BM: accounting (1) or not (0) for the different 
      &                         fwvor_advz_stokes,             & ! terms involved in the vortex force formalism (RADFLAG='VOR')
      &                         fwvor_gradpress,               &

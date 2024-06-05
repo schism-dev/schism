@@ -94,7 +94,7 @@
   start_month = 1 !int
   start_day = 1 !int
   start_hour = 0 !double
-  utc_start = 8 !double
+  utc_start = 0 !double
 
 !-----------------------------------------------------------------------
 ! Coordinate option: 1: Cartesian; 2: lon/lat (hgrid.gr3=hgrid.ll in this case,

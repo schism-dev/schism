@@ -67,7 +67,7 @@ subroutine read_icm_param(imode)
            & bKNO3s,bKNO3,bKTNO3,bKH2Sd,bKH2Sp,bpieH2Ss,bpieH2Sb,bKTH2S,bKhDO_H2S,bSIsat, &
            & bKOSI,bpieSI,bKhPOS,bDOc_SI,bJPOSa,bKOPO4f,bKOPO4s,bpiePO4,bDOc_PO4, &
            & bKST,bSTmax,bp2d,bVpmin,bKhDO_Vp,bDOc_ST,banoxic,boxic,bKCH4,bKTCH4,bKhDO_CH4,bo2n
-  namelist /BAG/ gpatch0,BA0,gGPM,gTGP,gKTGP,gMTB,gPRR,gTR,gKTR,galpha,gKSED,gKBA,gKhN,gKhP, &
+  namelist /BAG/ gpatch0,gBA0,gGPM,gTGP,gKTGP,gMTB,gPRR,gTR,gKTR,galpha,gKSED,gKBA,gKhN,gKhP, &
            & gp2c,gn2c,go2c,gFCP,gFNP,gFPP
   namelist /CLAM_ICM/ cpatch0,clam0,clam0,cfrmax,cTFR,csalt,cKDO,cDOh,cfTSSm,cRF,cIFmax,cMTB, &
            & cTMT,cKTMT,cMRT,cn2c,cp2c,cKTFR,cKTSS,cTSS,calpha
@@ -150,7 +150,7 @@ subroutine read_icm_param(imode)
     bKhDO_Vp=0; bDOc_ST=0;  banoxic=0; boxic=0; bKCH4=0;  bKTCH4=0;  bKhDO_CH4=0;  bo2n=0;  
 
     !init. BA module
-    gpatch0=1; BA0=0; gGPM=0; gTGP=0; gKTGP=0; gMTB=0; gPRR=0; gTR=0; gKTR=0; galpha=0
+    gpatch0=1; gBA0=0; gGPM=0; gTGP=0; gKTGP=0; gMTB=0; gPRR=0; gTR=0; gKTR=0; galpha=0
     gKSED=0; gKBA=0; gKhN=0; gKhP=0; gp2c=0; gn2c=0; go2c=0; gFCP=0; gFNP=0; gFPP=0
 
     !init. CLAM module
@@ -362,8 +362,15 @@ subroutine read_icm_param(imode)
 
     !Benthic Algea: 9
     if(iBA==1) then
-      p=>wqout(nout+1);   p%name='ICM_BA';   p%p1=>BA;  p%itype=4
-      nb=1; nouts(9)=nb; iout(1,9)=nout+1; iout(2,9)=nout+nb; nout=nout+nb
+      p=>wqout(nout+1);   p%name='ICM_gBA';  p%p1=>gBA;  p%itype=4
+      p=>wqout(nout+2);   p%name='ICM_gGP';  p%p1=>gGP; p%itype=4
+      p=>wqout(nout+3);   p%name='ICM_gMT';  p%p1=>gMT; p%itype=4
+      p=>wqout(nout+4);   p%name='ICM_gPR';  p%p1=>gPR; p%itype=4
+      nb=4; nouts(9)=nb; iout(1,9)=nout+1; iout(2,9)=nout+nb; nout=nout+nb
+     
+      !hotstart
+      p=>wqhot(nhot+1); p%name='gBA';   p%p1=>gBA
+      nhot=nhot+1
     endif
 
     !CLAM module: 10
@@ -714,10 +721,8 @@ subroutine icm_vars_init
   !BA init
   !-------------------------------------------------------------------------------
   if(iBA==1) then
-    allocate(BA(nea),gPR(nea), stat=istat)
-    if(istat/=0) call parallel_abort('failed in alloc. BA') 
-  else
-    gpatch0=0; BA0=0  !reset parameter values
+    allocate(gBA(nea),gGP(nea),gMT(nea),gPR(nea), stat=istat)
+    if(istat/=0) call parallel_abort('failed in alloc. gBA') 
   endif
 
   !-------------------------------------------------------------------------------
@@ -726,8 +731,6 @@ subroutine icm_vars_init
   if(iClam==1) then
     allocate(CLAM(nea,nclam),cFPOC(nea,2),cFPON(nea,2),cFPOP(nea,2), stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. CLAM')
-  else
-    cpatch0=0;  !reset parameter values
   endif
 
   !-------------------------------------------------------------------------------
@@ -754,7 +757,7 @@ subroutine icm_vars_init
   !  2). make links by piointing p/p1/p2 for scalar/1D/2D variable
   !---------------------------------------------------------------------------
   !define spatial varying parameters 
-  fname='ICM_param.nc';  nsp=180
+  fname='ICM_param.nc';  nsp=200
   allocate(pname(nsp),sp(nsp),stat=istat)
   if(istat/=0) call parallel_abort('Failed in alloc. pname')
 
@@ -825,13 +828,23 @@ subroutine icm_vars_init
   sp(m+1)%p1=>bFNs;    sp(m+2)%p1=>bFPs;  sp(m+3)%p2=>bFCv;   sp(m+4)%p2=>bFNv;    sp(m+5)%p2=>bFPv;    m=m+5
 
   !SAV,VEG,BA,pH,CLAM modules
-  pname((m+1):(m+11))=&
+  pname((m+1):(m+9))=&
     & (/'spatch0','stleaf0','ststem0','stroot0','vpatch0',&
-      & 'vtleaf0','vtstem0','vtroot0','gpatch0','ppatch0',& 
-      & 'BA0    '/)
+      & 'vtleaf0','vtstem0','vtroot0','ppatch0'/)
   sp(m+1)%p=>spatch0;  sp(m+2)%p=>stleaf0;  sp(m+3)%p=>ststem0;  sp(m+4)%p=>stroot0; sp(m+5)%p=>vpatch0;  m=m+5
-  sp(m+1)%p1=>vtleaf0; sp(m+2)%p1=>vtstem0; sp(m+3)%p1=>vtroot0; sp(m+4)%p=>gpatch0; sp(m+5)%p=>ppatch0;  m=m+5
-  sp(m+1)%p=>BA0;      m=m+1
+  sp(m+1)%p1=>vtleaf0; sp(m+2)%p1=>vtstem0; sp(m+3)%p1=>vtroot0; sp(m+4)%p=>ppatch0;  m=m+4
+
+  if(iBA==1) then
+    pname((m+1):(m+20))=&
+      & (/'gpatch0','gBA0   ','gGPM   ','gTGP   ','gKTGP  ',&
+        & 'gMTB   ','gPRR   ','gTR    ','gKTR   ','galpha ',&
+        & 'gKSED  ','gKBA   ','gKhN   ','gKhP   ','gp2c   ',&
+        & 'gn2c   ','go2c   ','gFCP   ','gFNP   ','gFPP   '/)
+    sp(m+1)%p=>gpatch0; sp(m+2)%p=>gBA0; sp(m+3)%p=>gGPM;  sp(m+4)%p=>gTGP;  sp(m+5)%p1=>gKTGP; m=m+5
+    sp(m+1)%p=>gMTB;    sp(m+2)%p=>gPRR; sp(m+3)%p=>gTR;   sp(m+4)%p=>gKTR;  sp(m+5)%p=>galpha; m=m+5
+    sp(m+1)%p=>gKSED;   sp(m+2)%p=>gKBA; sp(m+3)%p=>gKhN;  sp(m+4)%p=>gKhP;  sp(m+5)%p=>gp2c;   m=m+5
+    sp(m+1)%p=>gn2c;    sp(m+2)%p=>go2c; sp(m+3)%p1=>gFCP; sp(m+4)%p1=>gFNP; sp(m+5)%p1=>gFPP;  m=m+5
+  endif
 
   if(iClam==1) then
     pname((m+1):(m+20))=&
@@ -940,7 +953,7 @@ subroutine icm_vars_init
       vpatch(i)=nint(vpatch0); vtleaf(:,i)=vtleaf0; vtstem(:,i)=vtstem0; vtroot(:,i)=vtroot0
     endif
     if(iBA==1) then
-      gpatch(i)=nint(gpatch0); BA(i)=BA0
+      gpatch(i)=nint(gpatch0); gBA(i)=gBA0
     endif
     if(iClam==1) then
       cpatch(i)=nint(cpatch0); CLAM(i,1:nclam)=clam0
