@@ -155,7 +155,7 @@ for i=1:nfiles
   netcdf.reDef(ncid2);
   % Create an attribute associated with the variable.
   netcdf.putAtt(ncid2,timeid,'units',strcat('days since 2003-09-',num2str(i+7))); %This is not needed really
-  netcdf.putAtt(ncid2,timeid,'base_date',int32([2003 9 i+7 0])); %must use int32
+  netcdf.putAtt(ncid2,timeid,'base_date',int32([2003 9 i+7])); %must use int32
   netcdf.endDef(ncid2)
 
   %Good idea to add a check to make sure the quad is counter-clockwise
