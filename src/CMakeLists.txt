@@ -75,6 +75,7 @@ define_opt(USE_AGE "Enable age tracer module" OFF)
 define_opt(ICM_PH "Enable pH module in ICM" OFF)
 define_opt(USE_DVD "Enable DVD module" OFF)
 define_opt(BLD_STANDALONE "Standalone build mode" ON)
+define_opt(BUILD_TOOLS "Build pschism and all the utilities" ON)
 
 if(NOT DEFINED TVD_LIM)
   message(WARNING "TVD_LIM must be provided, either in the cache. It must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher. Default is VL")
@@ -172,17 +173,25 @@ endif()
 
 ########### Put each type of output (exe, libraries, modules) in the normal places
 ###         This file is untested for compilers with no output module directory option
+message(STATUS "\n### Assigning output directories for binaries (bin), modules (include) and libraries (lib)")
 if (BLD_STANDALONE)
-  message(STATUS "\n### Assigning output directories for binaries (bin), modules (include) and libraries (lib)")
-  set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin
-    CACHE PATH "Output Directory for executables.")
+  set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
+#  set ( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin
+#    CACHE PATH "Output Directory for executables.")
 
-  set ( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
-    CACHE PATH "Output Directory for all static libraries.")
+  set ( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+#  set ( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
+#    CACHE PATH "Output Directory for all static libraries.")
 
-  set ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
-    CACHE PATH "Output Directory for all shared libraries.")
-endif()
+  set ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+#  set ( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
+#    CACHE PATH "Output Directory for all shared libraries.")
+else(BLD_STANDALONE)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+endif(BLD_STANDALONE)
+
 if( CMAKE_Fortran_MODDIR_FLAG)
   SET( CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/include
   CACHE PATH "Output location for include files and fortran modules")
@@ -351,14 +360,14 @@ set_property( DIRECTORY ${moddir} APPEND PROPERTY COMPILE_DEFINITIONS ${all_defi
 endforeach()
 
 # Set the driver information for BLD_STANDALONE
-if (BLD_STANDALONE)
+if (BLD_STANDALONE OR BUILD_TOOLS)
   message(STATUS "\n### Configuring Driver")
   add_subdirectory( Driver )
   set_property( DIRECTORY "Driver" APPEND PROPERTY COMPILE_DEFINITIONS ${all_define_options} ${all_use_mod_defs})
 endif()
 
 ######## Utilities ########
-if (BLD_STANDALONE)
+if (BLD_STANDALONE OR BUILD_TOOLS)
 message(STATUS "\n### Configuring Utilities")
 add_subdirectory( Utility )
 endif()
