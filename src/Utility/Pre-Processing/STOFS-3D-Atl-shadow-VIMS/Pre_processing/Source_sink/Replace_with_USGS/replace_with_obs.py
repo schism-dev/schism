@@ -9,6 +9,7 @@ from glob import glob
 import json
 import pickle
 
+from scipy.spatial import cKDTree
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -20,7 +21,8 @@ from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
 from schism_py_pre_post.Utilities.util import b_in_a
 from schism_py_pre_post.Download.Data import ObsData
 from schism_py_pre_post.Download.download_usgs_with_api import \
-    download_stations, usgs_var_dict, convert_to_ObsData
+    download_stations, usgs_var_dict, convert_to_ObsData, \
+    get_usgs_stations_from_state
 from pylib import schism_grid
 
 
@@ -162,45 +164,97 @@ def find_usgs_along_nwm(
                                 vsource=vsource, total_seg_length=total_seg_length, order=order+1, nwm_shp=nwm_shp)
 
 
-def source_nwm2usgs(
-    start_time_str="2017-12-01 00:00:00",
-    f_shapefile="/sciclone/schism10/feiye/schism20/REPO/NWM/Shapefiles/ecgc/ecgc.shp",
-    run_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/',
-    nwm_data_dir='/sciclone/schism10/whuang07/schism20/NWM_v2.1/',
-    output_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/USGS_adjusted_sources/',
-):
+def prepare_usgs_stations(diag_output=None):
     '''
-    This script is to adjust the vsource.th file based on USGS data.
-    The adjustment is done by comparing the NWM data near the vsource and the USGS data near the vsource.
-    The USGS data is downloaded from USGS website using the API.
-    The NWM data is pre-downloaded during the original NWM to source/sink conversion by gen_source_sink.py.
-    See the Atlas paper draft for details of how USGS stations are selected for each vsource.
-    In short, the USGS stations are selected along the upstream and downstream branches of the vsource.
-    The NWM shapefile provides the information of the upstream and downstream branches,
-    as well as the location of the USGS stations.
-    However, only NWM v1's shapefile has the USGS station information.
-    This is acceptable because the segment IDs are the same between NWM v1 and later versions.
+    Prepare USGS stations for a spatial range larger than the model domain,
+    so that stations within the search range can be selected for each vsource.
+    '''
+    # get station info
+    station_info = get_usgs_stations_from_state(
+        states=['LA', 'MS', 'TX'], parameter=usgs_var_dict["streamflow"]["id"])
+
+    station_ids = station_info["site_no"].to_numpy()
+    station_lon = station_info['dec_long_va'].to_numpy()
+    station_lat = station_info['dec_lat_va'].to_numpy()
+
+    # get rid of invalid stations
+    valid = (station_lon != '') & (station_lat != '')
+    station_ids = station_ids[valid]
+    station_lon = station_lon[valid].astype(float)
+    station_lat = station_lat[valid].astype(float)
+
+    if diag_output is not None:
+        with open(diag_output, 'w', encoding='utf-8') as f:
+            f.write('lon, lat, id\n')
+            for i, _ in enumerate(station_ids):
+                f.write(f'{station_lon[i]}, {station_lat[i]}, {station_ids[i]}\n')
+
+    return station_ids, np.c_[station_lon, station_lat]
+
+
+def associate_poi_with_nwm(
+    nwm_shp, poi: np.ndarray,
+    poi_names: list = None,
+    poi_label: str = 'poi',
+    diag_output: str = None
+) -> gpd.geodataframe.GeoDataFrame:
+    '''
+    Associate USGS stations with NWM segment fid.
+    This is done by finding the nearest NWM segment to each USGS station,
+    then excluding the USGS stations that are too far away from the NWM segment.
+
+    Input:
+    nwm_shp: geopandas dataframe of NWM hydrofabric shapefile
+    poi: point of interest, a numpy array of [lon, lat], e.g., of USGS stations
     '''
 
-    usgs_data_fname = f'{output_dir}/usgs_data.pkl'
+    if poi_names is None:
+        poi_names = [f'{i}' for i in range(len(poi))]
 
-    # test
-    # my_obs = ObsData(usgs_data_fname, from_raw_data=False)  # testing pickle
-    # ids = [station.id for station in my_obs.stations]
-    # with open(f'{run_dir}/ele_fid_dict') as json_file:
-    #     mysrc_nwm_fid = json.load(json_file)
+    nwm_seg_center_lon = nwm_shp.geometry.centroid.x.to_numpy()
+    nwm_seg_center_lat = nwm_shp.geometry.centroid.y.to_numpy()
+    seg_tree = cKDTree(np.c_[nwm_seg_center_lon, nwm_seg_center_lat])
+    dist, poi2nwm_idx = seg_tree.query(poi)
+    poi2nwm_idx[dist > 0.1] = -1  # exclude points that > 10 km away from the NWM segment
 
-    # with open(f'/sciclone/schism10/lcui01/schism20/ICOGS/ICOGS3D/Scripts/RUN24/NWM/sources.json') as json_file:
-    #     mysrc_nwm_fid = json.load(json_file)
-    # n = 0
-    # for key, value in mysrc_nwm_fid.items():
-    #     if len(value) > 1:
-    #         n += 1
-    #     mysrc_nwm_fid[key] = int(value[0])
+    # finer screening
+    for i, this_idx in enumerate(poi2nwm_idx):
+        if this_idx != -1:
+            idx = nwm_shp.index[this_idx]
+            if nwm_shp.loc[idx].geometry.distance(gpd.points_from_xy([poi[i, 0]], [poi[i, 1]])) > 0.01:
+                poi2nwm_idx[i] = -1
 
-    # -----------------------------------------------------------------------------------
-    # ------Read and process NWM shapefile------
-    # -----------------------------------------------------------------------------------
+    # create a new column in the nwm_shp dataframe to store the associated poi
+    if poi_label not in nwm_shp.columns:
+        nwm_shp[poi_label] = None
+    for i, this_idx in enumerate(poi2nwm_idx):
+        if this_idx != -1:  # valid poi
+            idx = nwm_shp.index[this_idx]
+            if nwm_shp.loc[idx, 'gages'] is not None:
+                if nwm_shp.loc[idx, 'gages'] != poi_names[i]:
+                    print(f'warning: segment {nwm_shp.loc[idx].featureID} has inconsistent gages:')
+                    print(f'gage: {nwm_shp.loc[idx].gages} vs. {poi_label}: {poi_names[i]}')
+            nwm_shp.loc[idx, poi_label] = poi_names[i]
+
+    idx = nwm_shp[poi_label].notnull()
+    print(f'{sum(idx)} {poi_label} associated with NWM segments')
+
+    # save diagnostic file
+    if diag_output is not None:
+        with open(diag_output, 'w', encoding='utf-8') as f:
+            for i, this_idx in enumerate(poi2nwm_idx):
+                if this_idx != -1:
+                    idx = nwm_shp.index[this_idx]
+                    f.write(f'{poi[i, 0]}, {poi[i, 1]}, {poi_names[i]}, {nwm_shp.loc[idx].featureID}\n')
+
+    return nwm_shp
+
+
+def preprocess_nwm_shp(f_shapefile):
+    '''
+    Preprocess the NWM hydrofabric shapefile.
+    Add a "from" property to each segment, i.e., the featureID of the upstream segments.
+    '''
     t1 = time.time()
 
     if os.path.exists(f'{f_shapefile}.pkl'):  # cached
@@ -233,6 +287,61 @@ def source_nwm2usgs(
             pickle.dump(nwm_shp, file)
 
     print(f'---------------loading and processing shapefile took: {time.time()-t1} s ---------------\n')
+    return nwm_shp
+
+
+def test():
+    '''test function for debugging'''
+
+    # my_obs = ObsData(usgs_data_cache_fname, from_raw_data=False)
+
+    # ids = [station.id for station in my_obs.stations]
+
+    # with open(f'{original_ss_dir}/ele_fid_dict', encoding='utf-8') as json_file:
+    #     mysrc_nwm_fid = json.load(json_file)
+
+    with open('/sciclone/schism10/lcui01/schism20/ICOGS/ICOGS3D/Scripts/RUN24/NWM/sources.json',
+              encoding='utf-8') as json_file:
+        mysrc_nwm_fid = json.load(json_file)
+    n = 0
+    for key, value in mysrc_nwm_fid.items():
+        if len(value) > 1:
+            n += 1
+        mysrc_nwm_fid[key] = int(value[0])
+
+
+def source_nwm2usgs(
+    start_time_str="2017-12-01 00:00:00",
+    f_shapefile="/sciclone/schism10/feiye/schism20/REPO/NWM/Shapefiles/ecgc/ecgc.shp",
+    original_ss_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/',
+    nwm_data_dir='/sciclone/schism10/whuang07/schism20/NWM_v2.1/',
+    output_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/USGS_adjusted_sources/',
+):
+    '''
+    This script is to adjust the vsource.th file based on USGS data.
+    The adjustment is done by comparing the NWM data near the vsource and the USGS data near the vsource.
+    The USGS data is downloaded from USGS website using the API.
+    The NWM data is pre-downloaded during the original NWM to source/sink conversion by gen_source_sink.py.
+    See the Atlas paper draft for details of how USGS stations are selected for each vsource.
+    In short, the USGS stations are selected along the upstream and downstream branches of the vsource.
+    The NWM shapefile provides the information of the upstream and downstream branches,
+    as well as the location of the USGS stations.
+    However, only NWM v1's shapefile has the USGS station information.
+    This is acceptable because the segment IDs are the same between NWM v1 and later versions.
+    '''
+
+    usgs_stations, usgs_stations_coords = prepare_usgs_stations(diag_output=f'{output_dir}/usgs_stations.txt')
+
+    nwm_shp = preprocess_nwm_shp(f_shapefile)
+
+    # associate USGS stations with NWM segment fid
+    nwm_shp = associate_poi_with_nwm(
+        nwm_shp, poi=usgs_stations_coords, poi_names=usgs_stations.tolist(),
+        poi_label='gage', diag_output=f'{output_dir}/gage.txt')
+    
+    # print diagnostic info
+    idx = nwm_shp['gage'].notnull()
+    print(f'{nwm_shp.loc[idx]}')
 
     # -----------------------------------------------------------------------------------
     # ------load vsource------
@@ -240,23 +349,23 @@ def source_nwm2usgs(
 
     # read hgrid to determine vsource locations
     t1 = time.time()
-    hg = schism_grid(f'{run_dir}/hgrid.gr3')  # hg.save()
+    hg = schism_grid(f'{original_ss_dir}/hgrid.gr3')  # hg.save()
     hg.compute_ctr()
 
     # read featureID at vsource elements
-    if os.path.exists(f'{run_dir}/ele_fid_dict.json'):
-        with open(f'{run_dir}/ele_fid_dict.json', encoding='utf-8') as json_file:
+    if os.path.exists(f'{original_ss_dir}/ele_fid_dict.json'):
+        with open(f'{original_ss_dir}/ele_fid_dict.json', encoding='utf-8') as json_file:
             mysrc_nwm_fid = json.load(json_file)
-    elif os.path.exists(f'{run_dir}/sources.json'):
-        with open(f'{run_dir}/sources.json', encoding='utf-8') as json_file:
+    elif os.path.exists(f'{original_ss_dir}/sources.json'):
+        with open(f'{original_ss_dir}/sources.json', encoding='utf-8') as json_file:
             mysrc_nwm_fid = json.load(json_file)
         for key, value in mysrc_nwm_fid.items():
             mysrc_nwm_fid[key] = int(value[0])
     else:
         raise FileNotFoundError('no ele_fid_dict or sources.json found')
 
-    source_eles = Prop(f'{run_dir}/source_sink.in', 2).ip_group[0]
-    my_th = TimeHistory(f'{run_dir}/vsource.th', start_time_str=start_time_str, mask_val=None)
+    source_eles = Prop(f'{original_ss_dir}/source_sink.in', 2).ip_group[0]
+    my_th = TimeHistory(f'{original_ss_dir}/vsource.th', start_time_str=start_time_str, mask_val=None)
     end_time_str = my_th.df.iloc[-1, 0].strftime("%m/%d/%Y, %H:%M:%S")
 
     my_sources = np.empty((len(source_eles)), dtype=Vsource)
@@ -298,18 +407,21 @@ def source_nwm2usgs(
     # Download USGS data
     # -----------------------------------------------------------------------------------
     t1 = time.time()
+
+    usgs_data_cache_fname = f'{output_dir}/usgs_data.pkl'
+
     # pad one day before and after the start and end time
     padded_start_time = pd.to_datetime(start_time_str) - pd.Timedelta('1 day')
     padded_end_time = pd.to_datetime(end_time_str) + pd.Timedelta('1 day')
-    if os.path.exists(usgs_data_fname):
-        my_obs = ObsData(usgs_data_fname, from_raw_data=False)
+    if os.path.exists(usgs_data_cache_fname):
+        my_obs = ObsData(usgs_data_cache_fname, from_raw_data=False)
     else:
         usgs_data = download_stations(
             param_id=usgs_var_dict['streamflow']['id'],
             station_ids=usgs_stations,
             datelist=pd.date_range(start=padded_start_time, end=padded_end_time),
         )
-        my_obs = convert_to_ObsData(usgs_data, cache_fname=usgs_data_fname)
+        my_obs = convert_to_ObsData(usgs_data, cache_fname=usgs_data_cache_fname)
 
     print(f'---------------collecting usgs data took: {time.time()-t1} s ---------------\n')
 
@@ -428,7 +540,7 @@ if __name__ == "__main__":
     source_nwm2usgs(
         start_time_str="2024-03-05 00:00:00",
         f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
-        run_dir='/sciclone/schism10/feiye/STOFS3D-v8/I03/Source_sink/original_source_sink/',
+        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I03/Source_sink/original_source_sink/',
         nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I03/Source_sink/original_source_sink/20240305/',
-        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I03/Source_sink/USGS_adjusted_sources/',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I03c/Source_sink/USGS_adjusted_sources/',
     )
