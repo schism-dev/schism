@@ -48,7 +48,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,wqout,nhot_icm,wqhot,isav_icm,iveg_icm,sht
+      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,wqout,nhot_icm,wqhot,isav_icm,sht
 #endif
 
 #ifdef USE_COSINE
@@ -10340,18 +10340,14 @@
         names_dim(1:11)=(/one_dim,two_dim,three_dim,four_dim,five_dim,six_dim,seven_dim, &
                          & eight_dim,nine_dim,nvrt_dim,elem_dim/)
         do i=1,nhot_icm
-          if(wqhot(i)%ndim==1) then
-            var1d_dim(1)=elem_dim
-            j=nf90_def_var(ncid_hot,trim(adjustl(wqhot(i)%name)),NF90_DOUBLE,var1d_dim,wqhot(i)%id)
-          elseif(wqhot(i)%ndim==2) then
+          do m=1,wqhot(i)%ndim !get variable dimension info.
             do k=1,11
-              if(wqhot(i)%dims(1)==nums_dim(k)) then
-                var2d_dim(1)=names_dim(k); exit
+              if(wqhot(i)%dims(m+(3-wqhot(i)%ndim))==nums_dim(k)) then
+                var3d_dim(m)=names_dim(k); exit
               endif
             enddo !k
-            var2d_dim(2)=elem_dim
-            j=nf90_def_var(ncid_hot,trim(adjustl(wqhot(i)%name)),NF90_DOUBLE,var2d_dim,wqhot(i)%id)
-          endif !wqhot(i)%ndim
+          enddo !m
+          j=nf90_def_var(ncid_hot,trim(adjustl(wqhot(i)%name)),NF90_DOUBLE,var3d_dim(1:wqhot(i)%ndim),wqhot(i)%id)
         enddo !i
         j=nf90_enddef(ncid_hot)
 
@@ -10359,6 +10355,7 @@
         do i=1,nhot_icm
           if(wqhot(i)%ndim==1) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p1),(/1/),(/ne/))
           if(wqhot(i)%ndim==2) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p2),(/1,1/),(/wqhot(i)%dims(1),ne/))
+          if(wqhot(i)%ndim==3) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p3),(/1,1,1/),(/wqhot(i)%dims(1:2),ne/))
         enddo !i
 #endif /*USE_ICM*/
 

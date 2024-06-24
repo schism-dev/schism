@@ -211,7 +211,7 @@
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
-     &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg,iof_icm_sed, &
+     &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_marsh,iof_icm_sed, &
      &iof_icm_ba,iof_icm_clam,iof_icm_dbg,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta,iof_ugrid
 
@@ -508,7 +508,7 @@
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25:26)=1
       iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_cbp=0; iof_icm_sav=0
-      iof_icm_veg=0; iof_icm_sed=0; iof_icm_ba=0; iof_icm_clam=0;   iof_icm_dbg=0; iof_cos=0; iof_fib=0; iof_sed2d=0
+      iof_icm_marsh=0; iof_icm_sed=0; iof_icm_ba=0; iof_icm_clam=0;   iof_icm_dbg=0; iof_cos=0; iof_fib=0; iof_sed2d=0
       iof_ice=0; iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
 
       read(15,nml=OPT)
@@ -5553,20 +5553,24 @@
 #ifdef USE_ICM
         do k=1,nhot_icm
           do m=1,wqhot(k)%dims(1)
-            if(myrank==0) then
-              j=nf90_inq_varid(ncid2,trim(adjustl(wqhot(k)%name)),mm)
-              if(j/=NF90_NOERR) call parallel_abort('hotstart.nc, ICM 1: '//trim(adjustl(wqhot(k)%name)))
-              if(wqhot(k)%ndim==1) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
-              if(wqhot(k)%ndim==2) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
-              if(j/=NF90_NOERR) call parallel_abort('hotstart.nc, ICM 2: '//trim(adjustl(wqhot(k)%name)))
-            endif
-            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-            do i=1,ne_global
-              if(iegl(i)%rank==myrank) then
-                if(wqhot(k)%ndim==1) wqhot(k)%p1(iegl(i)%id)=buf3(i)
-                if(wqhot(k)%ndim==2) wqhot(k)%p2(m,iegl(i)%id)=buf3(i)
+            do l=1,wqhot(k)%dims(2)
+              if(myrank==0) then
+                j=nf90_inq_varid(ncid2,trim(adjustl(wqhot(k)%name)),mm)
+                if(j/=NF90_NOERR) call parallel_abort('hotstart.nc, ICM 1: '//trim(adjustl(wqhot(k)%name)))
+                if(wqhot(k)%ndim==1) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
+                if(wqhot(k)%ndim==2) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/l,1/),(/1,ne_global/))
+                if(wqhot(k)%ndim==3) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,l,1/),(/1,1,ne_global/))
+                if(j/=NF90_NOERR) call parallel_abort('hotstart.nc, ICM 2: '//trim(adjustl(wqhot(k)%name)))
               endif
-            enddo!i
+              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+              do i=1,ne_global
+                if(iegl(i)%rank==myrank) then
+                  if(wqhot(k)%ndim==1) wqhot(k)%p1(iegl(i)%id)=buf3(i)
+                  if(wqhot(k)%ndim==2) wqhot(k)%p2(l,iegl(i)%id)=buf3(i)
+                  if(wqhot(k)%ndim==3) wqhot(k)%p3(m,l,iegl(i)%id)=buf3(i)
+                endif
+              enddo!i
+            enddo !l
           enddo!m
         enddo !k
 #endif /*USE_ICM*/

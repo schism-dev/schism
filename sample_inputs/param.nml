@@ -1012,12 +1012,12 @@
 !  !-------------------------------------------------------------
 !  iof_icm_sav    = 1
 !
-!  !VEG model
+!  !MARSH model
 !  !-------------------------------------------------------------
-!  !vtleaf/vtstem/vtroot(1:3): leaf/stem/root biomass for 3 groups [gC/m^2]
-!  !vht(1:3): canopy height group 1-3 [m]
+!  !vleaf/vstem/vroot(1:nmarsh): leaf/stem/root biomass for nmarsh groups (g[C].m-2)
+!  !vht(1:nmarsh): canopy height (m)
 !  !-------------------------------------------------------------
-!  iof_icm_veg     = 1
+!  iof_icm_marsh     = 1
 !
 !  !SFM model
 !  !-------------------------------------------------------------

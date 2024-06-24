@@ -93,7 +93,7 @@ module schism_glbl
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,iveg, &
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
-                  &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_veg,iof_icm_sed,iof_icm_ba,&
+                  &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sed,iof_icm_ba,&
                   &iof_icm_clam,iof_icm_dbg,nbins_veg_vert
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &

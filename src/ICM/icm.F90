@@ -23,7 +23,7 @@
 !zoo_calc:    zooplankton module
 !ph_calc:     pH module
 !sav_cal      SAV module
-!veg_calc:    Marsh module
+!marsh_calc:  Marsh module
 !get_ph:      pH calculation based on TIC and ALK
 !ph_f:        pH equation
 
@@ -64,11 +64,11 @@
 !     2  SRPON :  Slow Refractory Particulate Organic Nitro. g/m^3
 !     3  SRPOP :  Slow Refractory Particulate Organic Phosp. g/m^3
 !     4  PIP   :  Particulate Inorganic Phosphate            g/m^3
-!SAV  Module (no transport variables) (6)
-!VEG  Module (no transport variables) (7)
-!SFM  Module (no transport variables) (8)
-!BA   Module (no transport variables) (9)
-!CLAM Module (no transport variables) (10)
+!SAV   Module (no transport variables) (6)
+!MARSH Module (no transport variables) (7)
+!SFM   Module (no transport variables) (8)
+!BA    Module (no transport variables) (9)
+!CLAM  Module (no transport variables) (10)
 !---------------------------------------------------------------------------------
 
 subroutine ecosystem(it)
@@ -79,7 +79,6 @@ subroutine ecosystem(it)
                         & ielg,kbe,ze,elnode,srad,airt1,pi,dt,iof_icm_dbg,rho0, &
                         & total_sus_conc,btaun,rnday
   use schism_msgp, only : myrank,parallel_abort
-  use icm_misc, only : signf
   use icm_mod
   implicit none
   integer, intent(in) :: it
@@ -88,8 +87,8 @@ subroutine ecosystem(it)
   integer :: i,j,k,m,istat,isub
   integer :: id,kb
   real(rkind) :: tmp,time,rat,s,z1,z2,dzb,zs,T
-  real(rkind) :: xT,xS,rKSR(3)
-  real(rkind) :: usf,wspd,tdep,mKhN,mKhP,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(3)
+  real(rkind) :: xT,xS,rKSR(3),vKeC(nmarsh),vLight(nmarsh)
+  real(rkind) :: usf,wspd,rIa,tdep,mKhN,mKhP,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(nmarsh)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV,mLight,chl
   real(rkind),dimension(nvrt) :: TSS,srat,brat,PO4d,PO4p,SAd,SAp,pH,rKHR,rDenit,rNit,rKCOD
   real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,MT,PR,GP,fPN,fT,fST,fR,fN,fP,fS,fC,rIK
@@ -100,9 +99,10 @@ subroutine ecosystem(it)
   do isub=1,nsub  !sub-cycling
     time=(it+isub/dble(nsub)-1)*dt; call update_icm_input(time) !update ICM inputs 
     do id=1,nea
-      if(jdry==0.and.idry_e(id)==1.and.(jveg==0.or.vpatch(id)==0)) cycle
+      if(jdry==0.and.idry_e(id)==1.and.jmarsh==0) cycle
       !update parameter and variable values for current element
       call update_vars(id,usf,wspd)
+      if(jmarsh==1) call get_marsh_canopy(id)
 
       !-----------------------------------------------------------------------------------
       !link ICM variables to SCHISM variables
@@ -112,7 +112,7 @@ subroutine ecosystem(it)
       do k=kb+1,nvrt; dz(k)=max(zid(k)-zid(k-1),1.d-2); enddo !dz : depth of each layer
       tdep=sum(dz((kb+1):nvrt))                               !tdep: total water depth
       if(jsav==1) shtz=sht(id)+zid(kb)                        !shtz: zcoor of SAV canopy 
-      if(jveg==1) vhtz(1:3)=vht(1:3,id)+zid(kb)               !vhtz: zcoor of VEG canopy
+      if(jmarsh==1) vhtz(1:nmarsh)=vht(1:nmarsh,id)+zid(kb)   !vhtz: zcoor of marsh canopy
 
       srat=0; brat=0 !distribute surface/bottom fluxes to aviod large value in thin layer
       do k=kb+1,nvrt
@@ -160,15 +160,16 @@ subroutine ecosystem(it)
         mtime=>time_icm(:,1); rat=max(min((time-mtime(1))/(mtime(2)-mtime(1)),1.d0),0.d0)
         rIa=rad_in(id,1)+rat*(rad_in(id,2)-rad_in(id,1))
       endif
-      Light(nvrt)=rIa
+      Light(nvrt)=C2_PAR*rIa !C2_PAR: convert W.m-2 to E.m-2.day-1
 
-      if(jveg==1.and.vpatch(id)==1) then !light attenuation due to VEG above water
-        s=sum(vKe(:)*(vtleaf(:,id)+vtstem(:,id))*max(vht(:,id)-tdep,0.d0)/max(1.d-5,vht(:,id)))
-        Light(nvrt)=max(rIa*exp(-s),1.d-8)
+      if(jmarsh==1.and.vpatch(id)==1) then !light attenuation due to Marsh above water
+        vKeC=vKe(:)*sum(vmarsh(:,1:2,id))/max(vht(:,id),1.d-5) !light attenuation (m-1)
+        do m=1,nmarsh; vLight(m)=Light(nvrt)*exp(-sum(vKeC*max(vht(:,id)-vht(m,id),0.d0))); enddo !init. light@canopy
+        Light(nvrt)=max(Light(nvrt)*exp(-sum(vKeC*max(vht(:,id)-tdep,0.d0))),1.d-8)  !light@surface
       endif
 
       !compute light attenuation
-      do k=kb+1,nvrt
+      do k=nvrt,kb+1,-1
         !light attenuation due to (water,chlorophyll,TSS)
         chl(k)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0)
         if(iKe==0.or.iKe==1) then
@@ -178,19 +179,26 @@ subroutine ecosystem(it)
         endif !iKe
 
         !light attenuation due to SAV 
-        if(jsav==1.and.spatch(id)==1.and.zid(k-1)<shtz) rKeS(k)=sKe*(sleaf(k,id)+sstem(k,id))
+        if(jsav==1.and.spatch(id)==1) then
+          rKeS(k)=sKe*(sleaf(k,id)+sstem(k,id))*min(max(shtz-zid(k-1),0.d0),dz(k))/dz(k)
+          !tmp=zid(k)-shtz #todo: compute SAV light here
+        endif
 
-        !light attenuation due to VEG
-        if(jveg==1.and.vpatch(id)==1) then
-          do j=1,3
-            if(idry_e(id)==0.and.zid(k-1)>=vhtz(j)) cycle
-            rKeV(k)=rKeV(k)+vKe(j)*(vtleaf(j,id)+vtstem(j,id))/max(1.d-5,min(tdep,vht(j,id)))
+        !light attenuation due to marsh
+        if(jmarsh==1.and.vpatch(id)==1) then
+          rKeV(k)=sum(vKeC*min(max(vhtz-zid(k-1),0.d0),dz(k))/dz(k))
+          do m=1,nmarsh !get light intension @ marsh canopy
+            s=zid(k)-vhtz(m)
+            if((vhtz(m)>=zid(k-1)).and.(s>0)) then
+              vLight(m)=Light(k)*exp(-s*rKe0(k)-min(max(shtz-vhtz(m),0.d0),s)*rKeS(k)-sum(min(max(vhtz-vhtz(m),0.d0),s)*vKeC))
+            endif
           enddo
-        endif 
+        endif
 
+        !compute light for PB, Marsh
         rKe(k)=rKe0(k)+rKeS(k)+rKeV(k) !total light attenuation
+        Light(k-1)=Light(k)*exp(-max(rKe(k)*dz(k),0.d0)) !light at bottom level
       enddo !k
-      do k=nvrt,kb+1,-1; Light(k-1)=Light(k)*exp(-max(rKe(k)*dz(k),0.d0)); enddo
       bLight(id)=Light(kb) !light @sediment (e.g. benthic algae)
 
       !----------------------------------------------------------------------------------
@@ -203,7 +211,7 @@ subroutine ecosystem(it)
           fS=1.0; fST=1.0; fC=1.0;  xT=temp(k)-TGP(i)
           
           !limitation factors: T/N/P/Si/Sal/CO2
-          fT(i,k)=exp(-max(-KTGP(i,1)*signf(xT),KTGP(i,2)*signf(xT))*xT*xT) !temperature
+          fT(i,k)=exp(-max(-KTGP(i,1)*xT,KTGP(i,2)*xT)*abs(xT)) !temperature
           fN(i,k)=DIN(k)/(DIN(k)+KhN(i))   !nitrogen
           fP(i,k)=PO4d(k)/(PO4d(k)+KhP(i)) !phosphorus
           if(iSilica==1.and.KhS(i)>1.d-10) fS(i,k)=SAd(k)/(SAd(k)+KhS(i)) !silica
@@ -212,7 +220,7 @@ subroutine ecosystem(it)
 
           !light factor
           if(iLight==0) then !Cerco
-            mLight(k)=C2_PAR*(Light(k-1)+Light(k))/2.0 !(W.m-2=> E.m-2.day-1)
+            mLight(k)=(Light(k-1)+Light(k))/2.0
             rIK(i,k)=(1.d3*c2chl(i))*GPM(i)/alpha(i)
             fR(i,k)=mLight(k)/sqrt(mLight(k)*mLight(k)+rIK(i,k)*rIK(i,k)+1.e-12)
           else
@@ -246,8 +254,8 @@ subroutine ecosystem(it)
         rKHR(k)=rKC(3,k)*DOX(k)/(KhDOox+DOX(k))
         rKCOD(k)=(DOX(k)/(KhCOD+DOX(k)))*KCD*exp(KTRCOD*(temp(k)-TRCOD))
         rDenit(k)=an2c*rKC(3,k)*KhDOox*NO3(k)/(KhDOox+DOX(k))/(KhNO3dn+NO3(k))
-        !rNit(k)=(DOX(k)*Nit*KhNH4n/((KhNH4n+NH4(k))*(KhDOn+DOX(k))))*exp(-max(-KTNit(1)*signf(xT),KTNit(2)*signf(xT))*xT*xT)
-        rNit(k)=(DOX(k)*Nit/(KhDOn+DOX(k)))*exp(-max(-KTNit(1)*signf(xT),KTNit(2)*signf(xT))*xT*xT)
+        !rNit(k)=(DOX(k)*Nit*KhNH4n/((KhNH4n+NH4(k))*(KhDOn+DOX(k))))*exp(-max(-KTNit(1)*xT,KTNit(2)*xT)*abs(xT))
+        rNit(k)=(DOX(k)*Nit/(KhDOn+DOX(k)))*exp(-max(-KTNit(1)*xT,KTNit(2)*xT)*abs(xT))
       enddo !k
 
       !saturated DO,(USGS, 2010, Carl Cerco,2019)
@@ -265,8 +273,8 @@ subroutine ecosystem(it)
       !SAV
       if(jsav==1.and.spatch(id)==1) call sav_calc(id,kb,dz,zid,rIa,shtz,tdep,rKe0,rKeV,PO4d)
 
-      !VEG
-      if(jveg==1.and.vpatch(id)==1) call veg_calc(id,kb,zid,dz,vhtz,rIa,tdep,rKe0,rKeS) 
+      !Marsh
+      if(jmarsh==1) call marsh_calc(id,kb,zid,dz,vhtz,vLight,tdep)
 
       !CLAM
       if(iClam==1) call clam_calc(id,kb,dz(kb+1),TSS)
@@ -644,198 +652,125 @@ subroutine ph_calc(id,kb,dz,usf,wspd,MT,GP,rKHR,rNit,fPN)
 
 end subroutine ph_calc
 
-subroutine veg_calc(id,kb,zid,dz,vhtz,rIa0,tdep,rKe0,rKeS) 
+subroutine marsh_calc(id,kb,zid,dz,vhtz,vLight,tdep)
 !--------------------------------------------------------------------------------------
-!VEG computation
+!marsh computation
 !--------------------------------------------------------------------------------------
   use schism_glbl,only : rkind,nvrt,idry_e
   use schism_msgp, only : myrank,parallel_abort
-  use icm_misc, only : signf
   use icm_mod
   implicit none
   integer,intent(in) :: id,kb
-  real(rkind),intent(in) :: vhtz(3),rIa0,tdep,zid(nvrt),dz(nvrt),rKe0(nvrt),rKeS(nvrt)
+  real(rkind),intent(in) :: zid(nvrt),dz(nvrt),vhtz(nmarsh),vLight(nmarsh),tdep
 
   !local variables
-  integer :: k,j,m
-  real(rkind) :: rKehV(3,2),atemp,asalt,xT,xS,vfT,vfST,vrat,vfI,vLight,tmp,mLight
-  real(rkind) :: rIK,vfR,vfN,vfP,sdveg,vGP(3),vfMT(3,3),rtmp,vdzm,vdz,vPBM(3,3),a,b
-  real(rkind) :: vBM(3),vGM(3)
+  integer :: i,j,k,m
+  real(rkind) :: fR,fT,fST,fI,fN,fP,mLight,mtemp,msalt,rIK,Kd,xT,xS
+  real(rkind),dimension(nmarsh) :: BMw,BMb,srat,orat
+  real(rkind) :: GP(nmarsh),MT(3,nmarsh)
+  real(rkind),pointer,dimension(:) :: vleaf,vstem,vroot
 
-  !light attenuation for veg growth
-  rKehV=0.0; vGP=0.0
-  if(rIa0>30) then
-    !pre-compute light for VEG
-    do k=nvrt,kb+1,-1
-      if(idry_e(id)==1) then !dry elem
-        do j=1,3
-          if(tdep-vht(j,id)>1.e-5) then
-            !if canopy is in this layer !potentail bug, dep-> tdep
-            rKehV(j,1)=rKehV(j,1)+(rKe0(k)+rKeS(k))*(dz(k)-vht(j,id))
-            rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*vht(j,id)
-          else
-            !if this layer is under canopy
-            rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*dz(k)
-          endif !tdep
-        enddo !j::veg species
-      else !wet elem
-        do j=1,3
-          if(zid(k-1)>=vhtz(j)) then
-            !if there are layers above canopy
-            rKehV(j,1)=rKehV(j,1)+(rKe0(k)+rKeS(k))*dz(k)
-          elseif(zid(k-1)<vhtz(j).and.zid(k)>=vhtz(j)) then
-            !if canopy is in this layer
-            rKehV(j,1)=rKehV(j,1)+(rKe0(k)+rKeS(k))*(dz(k)-(vhtz(j)-zid(k-1)))
-            rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*(vhtz(j)-zid(k-1))
-          else
-            !if this layer is under canopy
-            rKehV(j,2)=rKehV(j,2)+(rKe0(k)+rKeS(k))*dz(k)
-          endif !zid
-        enddo !j::veg species
-      endif !idry_e
-    enddo !k
+  if(vpatch(id)==1) then
+    !pre_proc
+    vleaf=>vmarsh(:,1,id); vstem=>vmarsh(:,2,id); vroot=>vmarsh(:,3,id)
 
-    sdveg=dot_product(vKe(1:3),vtleaf(1:3,id)+vtstem(1:3,id)/2) !shading effect
-    do j=1,3
+    !compute marsh limitation factor, growth/metabolism rate
+    GP=0.0; MT=0.0; BMw=0.0; BMb=0.0
+    do i=1,nmarsh
+      !light factor
+      Kd=sum(vKe*(vleaf+vstem)); mLight=vLight(i)*(1.d0-exp(-Kd))/max(Kd,1.d-5) !additional shading effect
+      rIK=vGPM(i)/valpha(i); fR=mLight/sqrt(mLight*mLight+rIK*rIK+1.d-8)
+
       !tempreture effect
-      atemp=0.0; do k=kb+1,nvrt; atemp=atemp+temp(k)*dz(k); enddo
-      xT=atemp/max(tdep,1.d-2)-vTGP(j) !tdep checked at init
-      vfT=exp(-max(-vKTGP(j,1)*signf(xT),vKTGP(j,2)*signf(xT))*xT*xT)
+      mtemp=0.0; do k=kb+1,nvrt; mtemp=mtemp+temp(k)*dz(k)/max(tdep,1.d-2); enddo
+      xT=mtemp-vTGP(i); fT=exp(-max(-vKTGP(i,1)*xT,vKTGP(i,2)*xT)*abs(xT))
 
       !salinty stress
-      asalt=0.0; do k=kb+1,nvrt; asalt=asalt+salt(k)*dz(k); enddo
-      xS=asalt/max(tdep,1.d-2)-vSopt(j)
-      vfST=vScr(j)/(max(vScr(j)+xS*xS,1.d-2))
+      msalt=0.0; do k=kb+1,nvrt; msalt=msalt+salt(k)*dz(k)/max(tdep,1.d-2); enddo
+      xS=msalt-vSopt(i); fST=1.d0/(1.d0+vKs(i)*xS*xS)
 
-      !inundation stress in wet elem !ratio of tdep versus vht, tdep>0 checked
-      vrat=vht(j,id)/tdep
-      vfI=vrat/max(vInun(j)+vrat,1.d-2)
+      !inundation stress
+      fI=vht(i,id)/(vht(i,id)+vInun(i)*tdep+1.d-5)
 
-      !light supply
-      vLight=rIa0*exp(-rKehV(j,1)) !accumulated attenuation from PB, sav and other marsh species
-      tmp=sdveg+rKehV(j,2)
-
-      if(tmp>20) then
-        mLight=vLight*C2_PAR/tmp
-      elseif(tmp<0.02)then
-        mLight=vLight*C2_PAR
+      !nutrient limitation
+      if(iNmarsh==1) then
+        fN=bNH4(id)/(vKhN(i)+bNH4(id)+1.d-8)
+        fP=bPO4(id)/(vKhP(i)+bPO4(id)+1.d-8)
       else
-        mLight=vLight*C2_PAR*(1-exp(-tmp))/tmp
-      endif
-      rIK=vGPM(j)/valpha(j) !check valpha >0
-      vfR=mLight/sqrt(mLight*mLight+rIK*rIK) !>0
-
-      vfN=bNH4(id)/(vKhNs(j)+bNH4(id))
-      vfP=bPO4(id)/(vKhPs(j)+bPO4(id))
-      if(ivNs==0) vfN=1
-      if(ivPs==0) vfP=1
-
-      !lf growth rate as function of temp, salinty stress, inundation
-      !stress, light and nutrients
-      vGP(j)=vGPM(j)*vfT*vfST*vfI*vfR*min(vfN,vfP)/vc2dw(j)
-    enddo !j::veg species
-  endif !rIa>30
-
-  do k=kb+1,nvrt
-    if(k==(kb+1)) then
-      !read in inputs of mtemp for wetlands;  seasonal mortality coefficient
-      vfMT=1.0
-      do j=1,3
-        if(ivMRT==1) then
-          rtmp=vKTMR(j,1)*(mtemp-vTMR(j,1))-vMR0(j,1)
-          vfMT(j,1)=1+vMRcr(j,1)/(1+exp(rtmp))
-
-          rtmp=vKTMR(j,2)*(mtemp-vTMR(j,2))-vMR0(j,2)
-          vfMT(j,2)=1+vMRcr(j,2)/(1+exp(rtmp))
-        endif !iMortvey
-
-        !----------metabolism rate----------
-        do m=1,3; vPBM(j,m)=vfMT(j,m)*vMTB(j,m)*exp(vKTMT(j,m)*(mtemp-vTMT(j,m))); enddo
-
-        !calculation of biomass, lfveg(j)
-        a=vGP(j)*(1-vFAM(j))*vFCP(j,1)-vPBM(j,1) !1/day
-        vtleaf(j,id)=(1+dtw*a)*vtleaf(j,id)
-
-        !stveg
-        a=-vPBM(j,2)
-        b=vGP(j)*(1.-vFAM(j))*vFCP(j,2)*vtleaf(j,id)
-        vtstem(j,id)=(1+dtw*a)*vtstem(j,id)+dtw*b
-
-        !rtveg
-        a=-vPBM(j,3)
-        b=vGP(j)*(1.-vFAM(j))*vFCP(j,3)*vtleaf(j,id)
-        vtroot(j,id)=(1+dtw*a)*vtroot(j,id)+dtw*b
-
-        !compute veg canopy height
-        if(vtleaf(j,id)+vtstem(j,id)<vcrit(j)) then
-          vht(j,id)=vht0(j)+v2ht(j,1)*(vtleaf(j,id)+vtstem(j,id))
-        else
-          vht(j,id)=max(vht0(j)+v2ht(j,1)*vcrit(j)-v2ht(j,2)*(vtleaf(j,id)+vtstem(j,id)-vcrit(j)),1.d-2)
-        endif !
-        if(vht(j,id)<1.d-8) call parallel_abort('check vht computation')
-
-        !seeds
-        vtleaf(j,id)=max(vtleaf(j,id),1.d-5)
-        vtstem(j,id)=max(vtstem(j,id),1.d-5)
-        vtroot(j,id)=max(vtroot(j,id),1.d-5)
-
-        !nutrient fluxes, sum of (g/m^2/day)
-        vBM(j)=(vPBM(j,1)+vGP(j)*vFAM(j))*vtleaf(j,id)+vPBM(j,2)*vtstem(j,id)
-        vGM(j)=vGP(j)*vtleaf(j,id)
-
-        !nutrient fluxes into sediment ( g/m^2/day)
-        vleaf_NH4(id,j)=vn2c(j)*vGM(j)
-        vleaf_PO4(id,j)=vp2c(j)*vGM(j)
-        vroot_POC(id,j)=(1-vFCM(j,4))*vPBM(j,3)*vtroot(j,id)
-        vroot_PON(id,j)=vn2c(j)*vPBM(j,3)*vtroot(j,id)
-        vroot_POP(id,j)=vp2c(j)*vPBM(j,3)*vtroot(j,id)
-        vroot_DOX(id,j)=vo2c(j)*vFCM(j,4)*vPBM(j,3)*vtroot(j,id)
-        if(ivNc==0) then
-          vleaf_NH4(id,j)=vleaf_NH4(id,j)-vn2c(j)*vFNM(j,4)*vBM(j)
-          vroot_PON(id,j)=vroot_PON(id,j)+vn2c(j)*(1-vFNM(j,4))*vBM(j)
-        endif
-        if(ivPc==0) then
-          vleaf_PO4(id,j)=vleaf_PO4(id,j)-vp2c(j)*vFPM(j,4)*vBM(j)
-          vroot_POP(id,j)=vroot_POP(id,j)+vp2c(j)*(1-vFPM(j,4))*vBM(j)
-        endif
-      enddo !
-    endif !k==1
-
-    !compute VEG metabolism into C/N/P/DO
-    vdzm=max(1.e-5,min(tdep,vht(j,id))); vdz=max(1.e-5,vht(j,id))
-
-    do j=1,3
-      if(idry_e(id)==1.or.(idry_e(id)==0.and.zid(k-1)<vhtz(j))) then
-        vdwqc(iRPOC,k)=vdwqc(iRPOC,k)+vFCM(j,1)*vBM(j)/vdzm
-        vdwqc(iLPOC,k)=vdwqc(iLPOC,k)+vFCM(j,2)*vBM(j)/vdzm
-        vdwqc(iDOC,k) =vdwqc(iDOC,k) +vFCM(j,3)*vBM(j)/vdzm
-        vdwqc(iDOX,k) =vdwqc(iDOX,k) -vo2c(j)*vFCM(j,4)*vBM(j)/vdzm 
-        if(ivNc==1) then
-          vdwqc(iRPON,k)=vdwqc(iRPON,k)+vn2c(j)*vFNM(j,1)*vBM(j)/vdzm
-          vdwqc(iLPON,k)=vdwqc(iLPON,k)+vn2c(j)*vFNM(j,2)*vBM(j)/vdzm
-          vdwqc(iDON,k) =vdwqc(iDON,k) +vn2c(j)*vFNM(j,3)*vBM(j)/vdzm
-          vdwqc(iNH4,k) =vdwqc(iNH4,k) +vn2c(j)*vFNM(j,4)*vBM(j)/vdzm
-        endif 
-        if(ivPc==1) then
-          vdwqc(iRPOP,k)=vdwqc(iRPOP,k)+vp2c(j)*vFPM(j,1)*vBM(j)/vdzm
-          vdwqc(iLPOP,k)=vdwqc(iLPOP,k)+vp2c(j)*vFPM(j,2)*vBM(j)/vdzm
-          vdwqc(iDOP,k) =vdwqc(iDOP,k) +vp2c(j)*vFPM(j,3)*vBM(j)/vdzm
-          vdwqc(iPO4,k) =vdwqc(iPO4,k) +vp2c(j)*vFPM(j,4)*vBM(j)/vdzm
-        endif 
+        fN=1.0; fP=1.0
       endif
 
-      if(tdep-vht(j,id)>1.e-5.or.(tdep-vht(j,id)<=1.e-5.and.zid(k-1)<vhtz(j))) then
-        vdwqc(iDOX,k) =vdwqc(iDOX,k)+vo2c(j)*vGM(j)/vdz 
+      !growth, metabolsim (g[C].m-2.day-1)
+      GP(i)=vGPM(i)*fR*fT*fST*fI*min(fN,fP)*vleaf(i) !growth
+      do m=1,3; MT(i,m)=vMTB(i,m)*exp(vKTMT(i,m)*(mtemp-vTMT(i,m)))*vmarsh(i,m,id); enddo !metabolism
+      BMw(i)=vFW(i)*(MT(i,1)+MT(i,2))  !metabolism into water
+      BMb(i)=(1.0-vFW(i))*(MT(i,1)+MT(i,2))+MT(i,3) !metabolism into sediment
+
+      !mass-balance equations of leaf, stem and root
+      do m=1,3
+         vmarsh(i,m,id)=vmarsh(i,m,id)+(vFCP(i,m)*(1-vFAM(i))*GP(i)-MT(i,m))*dtw
+      enddo !m
+    enddo !i
+
+    !interaction with water column
+    orat=max(tdep-vht(:,id),0.d0)/max(tdep-vht(:,id),1.d-8) !oxygen released to air if canopy above water
+    do k=kb+1,nvrt
+      srat=max(min(vhtz-zid(k-1),dz(k)),0.d0)/max(dz(k)*vht(:,id),1.d-8) !fraction into current layer
+      vdwqc(iRPOC,k)=vdwqc(iRPOC,k)+sum(srat*vFCM(:,1)*BMw)
+      vdwqc(iLPOC,k)=vdwqc(iLPOC,k)+sum(srat*vFCM(:,2)*BMw)
+      vdwqc(iDOC,k) =vdwqc(iDOC,k) +sum(srat*vFCM(:,3)*BMw)
+      vdwqc(iDOX,k) =vdwqc(iDOX,k) +sum(vo2c*srat*(orat*GP-vFCM(:,4)*BMw-vFAM*GP))
+      if(iNmarsh==1) then
+        vdwqc(iRPON,k)=vdwqc(iRPON,k)+sum(vn2c*srat*vFNM(:,1)*BMw)
+        vdwqc(iLPON,k)=vdwqc(iLPON,k)+sum(vn2c*srat*vFNM(:,2)*BMw)
+        vdwqc(iDON,k) =vdwqc(iDON,k) +sum(vn2c*srat*vFNM(:,3)*BMw)
+        vdwqc(iNH4,k) =vdwqc(iNH4,k) +sum(vn2c*srat*(vFNM(:,4)*BMw+vFAM*GP))
+        vdwqc(iRPOP,k)=vdwqc(iRPOP,k)+sum(vp2c*srat*vFNM(:,1)*BMw)
+        vdwqc(iLPOP,k)=vdwqc(iLPOP,k)+sum(vp2c*srat*vFNM(:,2)*BMw)
+        vdwqc(iDOP,k) =vdwqc(iDOP,k) +sum(vp2c*srat*vFNM(:,3)*BMw)
+        vdwqc(iPO4,k) =vdwqc(iPO4,k) +sum(vp2c*srat*(vFNM(:,4)*BMw+vFAM*GP))
       endif
-    enddo !j
-  enddo !k
+    enddo !k
 
- !total canopy height for hydro
-  !do j=1,3
-  !  densveg(j)=(vtleaf(j,id)+vtstem(j,id))/(v2den(j)*max(vht(j,id),1.e-4))
-  !enddo 
+    !interaction with sediment
+    vFPOC(:,id)=0; vFPON(:,id)=0; vFPOP(:,id)=0; vbNH4(id)=0; vbPO4(id)=0; vSOD(id)=0
+    vFPOC(1,id)=sum((vFCM(:,2)+vFCM(:,3))*BMb)
+    vFPOC(2,id)=sum(vFCM(:,1)*BMb)
+    vSOD(id)=sum(vo2c*vFCM(:,4)*BMb)
+    if(iNmarsh==1) then
+      vbNH4(id)=sum(vn2c*(vFNM(:,4)*BMb-GP))
+      vbPO4(id)=sum(vp2c*(vFPM(:,4)*BMb-GP))
+      vFPON(1,id)=sum(vn2c*(vFNM(:,2)+vFNM(:,3))*BMb)
+      vFPON(2,id)=sum(vn2c*vFNM(:,1)*BMb)
+      vFPOP(1,id)=sum(vp2c*(vFPM(:,2)+vFPM(:,3))*BMb)
+      vFPOP(2,id)=sum(vp2c*vFPM(:,1)*BMb)
+    endif
 
-end subroutine veg_calc
+    !update canopy height
+    call get_marsh_canopy(id)
+  endif !vpatch(id)
+end subroutine marsh_calc
+
+subroutine get_marsh_canopy(id)
+!---------------------------------------------------------
+!compute marsh canopy
+!---------------------------------------------------------
+  use schism_glbl,only : rkind
+  use icm_mod
+  implicit none
+  integer,intent(in) :: id
+
+  !local variables
+  integer :: i
+  real(rkind) :: c12
+
+  if(vpatch(id)==1) then
+    do i=1,nmarsh
+      c12=sum(vmarsh(i,1:2,id))/max(vc2dw(i),1.d-8)
+      vht(i,id)=vht0(i)+v2ht(i,1)*min(c12,vcrit(i))+v2ht(i,2)*max(c12-vcrit(i),0.d0)
+    enddo
+  endif
+end subroutine get_marsh_canopy
 
 subroutine zoo_calc(kb,PR)
 !--------------------------------------------------------------------------------------
@@ -843,7 +778,6 @@ subroutine zoo_calc(kb,PR)
 !other zooplanktons, all phytoplankton and carbon species
 !--------------------------------------------------------------------------------------
   use schism_glbl, only : rkind,nvrt
-  use icm_misc, only : signf
   use icm_mod
   implicit none
   integer,intent(in) :: kb
@@ -863,7 +797,7 @@ subroutine zoo_calc(kb,PR)
    do i=1,2
      !temp. effect
      xT=temp(k)-zTGP(i)
-     fT=exp(-max(-zKTGP(i,1)*signf(xT),zKTGP(i,2)*signf(xT))*xT*xT)
+     fT=exp(-max(-zKTGP(i,1)*xT,zKTGP(i,2)*xT)*abs(xT))
 
      !growth rate (predation rate)
      do j=1,8
@@ -914,7 +848,6 @@ end subroutine zoo_calc
 
 subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
   use schism_glbl, only : rkind,errmsg,idry_e,nvrt
-  use icm_misc, only : signf
   use icm_mod
   implicit none
   integer,intent(in) :: id,kb
@@ -973,7 +906,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
 
       if(zid(k-1)<shtz) then
         xT=temp(k)-sTGP !adjust sav  maximum growth rate by temperature
-        sfT=exp(-max(-sKTGP(1)*signf(xT),sKTGP(2)*signf(xT))*xT*xT)
+        sfT=exp(-max(-sKTGP(1)*xT,sKTGP(2)*xT)*abs(xT))
 
         sLight0=max(rIa0*exp(-rKeh0),0.d0) !account from light at water surface light at canopy height
         if (k==knp) then!k from surface downwards, knp is the first, so no need to over init
@@ -993,7 +926,7 @@ subroutine sav_calc(id,kb,dz,zid,rIa0,shtz,tdep,rKe0,rKeV,PO4d)
             rKeh2=rKeh2+2.*(rKe0(k)+rKeV(k))*dzt !accumulation from canopy downwards
           endif !knp
 
-          mLight=max(sLight*C2_PAR*(1-exp(-tmp))/tmp,1.d-5)
+          mLight=max(sLight*(1-exp(-tmp))/tmp,1.d-5)
           rIK=sGPM/salpha
 
           !light limitation function for sav
@@ -1110,7 +1043,6 @@ subroutine ba_calc(id,kb,wdz)
 !----------------------------------------------------------------------------
   use schism_glbl,only : rkind
   use icm_mod
-  use icm_misc, only : signf
   implicit none
   integer,intent(in) :: id,kb
   real(rkind),intent(in) :: wdz
@@ -1127,7 +1059,7 @@ subroutine ba_calc(id,kb,wdz)
     BA=>gBA(id); GP=>gGP(id); MT=>gMT(id); PR=>gPR(id); rc=dtw/wdz
 
     !temp. effect
-    xT=temp(kb+1)-gTGP; fT=exp(-max(-gKTGP(1)*signf(xT),gKTGP(2)*signf(xT))*xT*xT) 
+    xT=temp(kb+1)-gTGP; fT=exp(-max(-gKTGP(1)*xT,gKTGP(2)*xT)*abs(xT))
 
     !light effect
     mLight=bLight(id)*exp(-gKSED)*exp(-gKBA*BA)
@@ -1177,7 +1109,6 @@ subroutine clam_calc(id,kb,wdz,TSS)
 !----------------------------------------------------------------------------
   use schism_glbl,only : rkind,nvrt
   use icm_mod
-  use icm_misc, only : signf
   implicit none
   integer,intent(in) :: id,kb
   real(rkind),intent(in) :: wdz,TSS(nvrt)
@@ -1185,7 +1116,7 @@ subroutine clam_calc(id,kb,wdz,TSS)
   !local variables
   integer :: i,j,k,m
   real(rkind) :: xT,TSSc,wTSS,wtemp,wsalt,wDOX
-  real(rkind),dimension(nclam) :: cGP,cMT,cRT,fT,fS,fDO,fTSS,cIF,fN,Fr,TFC,TFN,TFP,ATFC,ATFN,ATFP
+  real(rkind),dimension(nclam) :: GP,MT,RT,fT,fS,fDO,fTSS,cIF,fN,Fr,TFC,TFN,TFP,ATFC,ATFN,ATFP
   real(rkind),dimension(5) :: PC,PN,PP
   real(rkind),parameter :: mval=1.d-16
 
@@ -1199,7 +1130,7 @@ subroutine clam_calc(id,kb,wdz,TSS)
     do i=1,nclam
       !compute filtration
       xT=wtemp-cTFR(i); TSSc=cKTSS(i,1)*sum(PC)+cKTSS(i,2)*wTSS
-      fT(i)=exp(-max(-cKTFR(i,1)*signf(xT),cKTFR(i,2)*signf(xT))*xT*xT) !T. effect
+      fT(i)=exp(-max(-cKTFR(i,1)*xT,cKTFR(i,2)*xT)*abs(xT)) !T. effect
       fS(i)=(1.d0+tanh(wsalt-csalt(i)))/2.d0 !salt effect
       fDO(i)=1.d0/(1.d0+exp(-cKDO(i)*(wDOX-cDOh(i)))) !DO effect
       if(TSSc<=cTSS(i,1).or.TSSc>=cTSS(i,4)) then !TSS effect
@@ -1224,10 +1155,10 @@ subroutine clam_calc(id,kb,wdz,TSS)
       fN(i)=min(1.d0, ATFN(i)/(cn2c(i)*ATFC(i)),ATFP(i)/(cp2c(i)*ATFC(i))) !nutrient(N,P) limitation
 
       !growth, metabolism, and mortality
-      cGP(i)=sum(fN(i)*calpha(i,1:5)*cIF(i)*(1.0-cRF(i))*PC(1:5)*Fr(i)*CLAM(id,i)) !growth (g[C].m-2.day-1)
-      cMT(i)=cMTB(i)*exp(cKTMT(i)*(wtemp-cTMT(i)))*fDO(i)*CLAM(id,i) !metabolism (g[C].m-2.day-1)
-      cRT(i)=cMRT(i)*(1.d0-fDO(i))*CLAM(id,i) !mortality (g[C].m-2.day-1)
-      CLAM(id,i)=CLAM(id,i)+(cGP(i)-cMT(i)-cRT(i))*dtw !update clam biomass
+      GP(i)=sum(fN(i)*calpha(i,1:5)*cIF(i)*(1.0-cRF(i))*PC(1:5)*Fr(i)*CLAM(id,i)) !growth (g[C].m-2.day-1)
+      MT(i)=cMTB(i)*exp(cKTMT(i)*(wtemp-cTMT(i)))*fDO(i)*CLAM(id,i) !metabolism (g[C].m-2.day-1)
+      RT(i)=cMRT(i)*(1.d0-fDO(i))*CLAM(id,i) !mortality (g[C].m-2.day-1)
+      CLAM(id,i)=CLAM(id,i)+(GP(i)-MT(i)-RT(i))*dtw !update clam biomass
     enddo !i=1,nclam
 
     !interaction with water column variables;  change rate of conc. (g.m-3.day-1)
@@ -1240,16 +1171,16 @@ subroutine clam_calc(id,kb,wdz,TSS)
     cdwqc(iRPON,kb+1)=sum(PN(5)*Fr*CLAM(id,1:nclam))/wdz
     cdwqc(iLPOP,kb+1)=sum(PP(4)*Fr*CLAM(id,1:nclam))/wdz
     cdwqc(iRPOP,kb+1)=sum(PP(5)*Fr*CLAM(id,1:nclam))/wdz
-    cdwqc(iNH4, kb+1)=sum((ATFN-cn2c*cGP)+cn2c*cMT)/wdz
-    cdwqc(iPO4, kb+1)=sum((ATFP-cp2c*cGP)+cp2c*cMT)/wdz
-    cdwqc(iDOX, kb+1)=o2c*sum((ATFC-cGP)+cMT)/wdz
+    cdwqc(iNH4, kb+1)=sum((ATFN-cn2c*GP)+cn2c*MT)/wdz
+    cdwqc(iPO4, kb+1)=sum((ATFP-cp2c*GP)+cp2c*MT)/wdz
+    cdwqc(iDOX, kb+1)=o2c*sum((ATFC-GP)+MT)/wdz
 
     !interaction with sediment layer
     cFPOC(id,1:2)=0; cFPON(id,1:2)=0; cFPOP(id,1:2)=0
     do i=1,nclam
-      cFPOC(id,1)=cFPOC(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PC(1:4))+sum(cRT)
-      cFPON(id,1)=cFPON(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PN(1:4))+sum(cn2c(i)*cRT)
-      cFPOP(id,1)=cFPOP(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PP(1:4))+sum(cp2c(i)*cRT)
+      cFPOC(id,1)=cFPOC(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PC(1:4))+sum(RT)
+      cFPON(id,1)=cFPON(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PN(1:4))+sum(cn2c(i)*RT)
+      cFPOP(id,1)=cFPOP(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PP(1:4))+sum(cp2c(i)*RT)
     enddo !i
     cFPOC(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(id,1:nclam)*PC(5))
     cFPON(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(id,1:nclam)*PN(5))

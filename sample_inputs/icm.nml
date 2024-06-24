@@ -48,10 +48,10 @@
 !     2  SRPON :  Slow Refractory Particulate Organic Nitro. g/m^3
 !     3  SRPOP :  Slow Refractory Particulate Organic Phosp. g/m^3
 !     4  PIP   :  Particulate Inorganic Phosphate            g/m^3
-!SAV Module (no transport variables)
-!VEG Module (no transport variables)
-!SFM Module (no transport variables)
-!BA  Module (no transport variables)
+!SAV   Module (no transport variables)
+!MARSH Module (no transport variables)
+!SFM   Module (no transport variables)
+!BA    Module (no transport variables)
 !---------------------------------------------------------------------------------
 
 &MARCO
@@ -80,14 +80,12 @@ tss2c  = 6.0             !TSS to carbon ratio
 !  iLight=1: todo (add other options)
 !-----------------------------------------------------------------------
 iLight = 0
-
 alpha  = 8.0   8.0  8.0  !init. slope of P-I curve (g[C]*m2/g[Chl]/E), (iLight=0)
 
 !-----------------------------------------------------------------------
 !options of phytoplankton' predation term
 !-----------------------------------------------------------------------
 iPR = 1   !(0: linear formulation; 1: quadratic)
-
 PRR = 0.1  0.2  0.05   !predation rate by higher trophic level (day-1, or day-1.g-1.m3)
 
 !-----------------------------------------------------------------------
@@ -124,9 +122,10 @@ iCBP = 0
 isav_icm = 0
 
 !-----------------------------------------------------------------------
-!Intertidal vegetation switch
+!Intertidal marsh switch; nmarsh: number of marsh species
 !-----------------------------------------------------------------------
-iveg_icm = 0                   !0: VEG off;  1: VEG on
+imarsh_icm = 0   !0: off;  1: on
+nmarsh     = 3   !parameters in marsh module must be consistent with
 
 !-----------------------------------------------------------------------
 !Sediment module switch. iSed=1: Use sediment flux model
@@ -176,7 +175,7 @@ iLimit   = 0
 
 !-----------------------------------------------------------------------
 !idry_icm=1: turn on shallow kinetic biochemical process
-!idry_icm=0: jump dry elems, keep last wet value; jump won't happen if iveg_icm is turn on and this elem is veg
+!idry_icm=0: jump dry elems, keep last wet value; jump won't happen if imarsh_icm is turn on at this elem
 !-----------------------------------------------------------------------
 idry_icm = 0
 /
@@ -366,13 +365,10 @@ bKhPOS    = 5.0e4   !POS half saturation for POS dissolution (g/m3)
 bDOc_SI   = 1.0     !DO criteria for silica sorptiona (g[O2]/m3)
 bJPOSa    = 0.0     !additional POS flux associated with POM detrius beside algea (g.m-2.day-1)
 
-!SAV and VEG contribution to sediment POM (for isav_icm=1, iveg_icm=1)
+!SAV into sediment POM (for isav_icm=1)
 bFCs = 0.65  0.255  0.095         !SAV POC into 3G sed 3G POC
 bFNs = 0.65  0.300  0.050         !SAV PON into 3G sed 3G PON  
 bFPs = 0.65  0.255  0.095         !SAV POP into 3G sed 3G POP
-bFCv = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !VEG POC into sed POC (G3,PB=1:3) 
-bFNv = 0.65  0.300  0.050   0.65  0.300  0.050   0.65  0.300  0.050   !VEG PON into sed PON (G3,PB=1:3)  
-bFPv = 0.65  0.255  0.095   0.65  0.255  0.095   0.65  0.255  0.095   !VEG POP into sed POP (G3,PB=1:3)   
 /
 
 &Silica
@@ -484,59 +480,47 @@ sp2c   = 0.01               !phosphorus to carbon ratio
 so2c   = 2.67               !oxygen to carbon ratio
 /
 
-&VEG
+&MARSH
 !-----------------------------------------------------------------------
-!Intertidal Vegetation (VEG), paramters
+!Marsh modele, paramters
 !-----------------------------------------------------------------------
-vpatch0 = -999                 !region flag for VEG. (1: ON all elem.; -999: spatial)
-vtleaf0 = 100.0  100.0  100.0  !init conc to total veg leaf
-vtstem0 = 100.0  100.0  100.0  !init conc to total veg stem
-vtroot0 = 30.0   30.0   30.0   !init conc to total veg root
+iNmarsh = 1  !whether turn on nitrogen/phosphorus dynamics in Marsh kenetics (0: OFF; 1: ON)
+vpatch0 = -999  !region flag for marsh. (1: ON all elem.; -999: spatial)
+vmarsh0 = 100.0 100.0 100.0   100.0 100.0 100.0   30.0 30.0 30.0 !init. leaf/stem/root conc. [nmarsh,3]
 
-!growth coefficients: see description of variable meanings above
+!growth coefficients
 vGPM  = 0.1    0.1    0.1      !maximum growth rate (day-1)
 vFAM  = 0.2    0.2    0.2      !fractions of leaf production to active metabolism
 vTGP  = 32.0   32.0   32.0     !optimal growth temperature (oC)
-vKTGP = 0.003  0.003  0.003   0.005  0.005  0.005   !temp. dependence(3,2) for growth (T<=vTGP & T>vTGP)
-vFCP  = 0.6    0.6    0.6     0.3    0.3    0.3     0.1   0.1  0.1  !fractions of production to leaf/stem/root biomass; dim(veg,leaf/stem/root)
+vKTGP = 0.003  0.003  0.003   0.005  0.005  0.005   !temp. dependence for growth (oC-2) [nmarsh,2]
+vFCP  = 0.6    0.6    0.6     0.3    0.3    0.3     0.1   0.1  0.1  !partitioning of production to leaf/stem/root [nmarsh,3]
 
-!metabolism coefficients: see description of variable meanings above
-vMTB  = 0.02  0.02  0.02    0.02  0.02  0.02    0.01  0.01  0.01  !metabolism rates of leaf/stem/root; dim(veg,leaf/stem/root)
-vTMT  = 20.0  20.0  20.0    20.0  20.0  20.0    20.0  20.0  20.0  !reference temp. for leaf/stem/root metabolism
-vKTMT = 0.069 0.069 0.069   0.069 0.069 0.069   0.069 0.069 0.069 !temp. depdenpence for leaf/stem/root metabolism
-vFNM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5 !fractions(3,4) of metabolism N into (RPON,LPON,DON,NH4)
-vFPM  = 0.05  0.05  0.05    0.1   0.1   0.1     0.35 0.35 0.35   0.5 0.5 0.5 !fractions(3,4) of metabolism P into (RPOP,LPOP,DOP,PO4)
-vFCM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5 !fractions(3,4) of metabolism N into (RPOC,LPOC,DOC,CO2)
-ivNc  = 1                   !recycled veg N goes to (0: sediment; 1: water)
-ivPc  = 1                   !recycled veg P goes to (0: sediment; 1: water)
+!metabolism coefficients
+vMTB  = 0.02  0.02  0.02    0.02  0.02  0.02    0.01  0.01  0.01  !metabolism rates of leaf/stem/root (day-1)[nmarsh,3]
+vTMT  = 20.0  20.0  20.0    20.0  20.0  20.0    20.0  20.0  20.0  !reference temp. for metabolism (oC) [nmarsh,3]
+vKTMT = 0.069 0.069 0.069   0.069 0.069 0.069   0.069 0.069 0.069 !temp. depdenpence for metabolism (oC-1) [nmarsh,3]
+vFCM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5 !partition of metabolism N into (RPOC,LPOC,DOC,CO2) [nmarsh,4]
+vFNM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5 !partition of metabolism N into (RPON,LPON,DON,NH4) [nmarsh,4]
+vFPM  = 0.05  0.05  0.05    0.1   0.1   0.1     0.35 0.35 0.35   0.5 0.5 0.5 !partition of metabolism P into (RPOP,LPOP,DOP,PO4) [nmarsh,4]
+vFW   = 0.5   0.5   0.5     !partitioning of leaf/stem metabolsim to water [nmarsh]
 
-!nutrient limitation & salinity/inundation stress
-vKhNs = 0.1   0.1   0.1     !nitrogen half saturation in sediments
-vKhPs = 0.01  0.01  0.01    !phosphorus half saturation in sediments
-vScr  = 35.0  35.0  35.0    !reference sality for computing veg growth
-vSopt = 35.0  15.0  0.0     !optimal salinity for veg growth
-vInun = 1.0   1.0   1.0     !reference value for inundation stress (nondimensional)
-ivNs  = 1                   !N limitation on veg growth(0: OFF; 1: ON)
-ivPs  = 1                   !P limitation on veg growth(0: OFF; 1: ON)
-
-!mortality (seasonal?)
-ivMRT = 0                    !veg mortality term (0: OFF;  1: ON)
-vTMR  = 17.0   17.0  17.0    17.0  17.0  17.0  !reference temp(3,2) for leaf/stem mortality
-vKTMR = 4.0    4.0   4.0     4.0   4.0   4.0   !temp dependence(3,2) for leaf/stem mortality
-vMR0  = 12.8   12.8  12.8    12.8  12.8  12.8  !base value(3,2) of temp effect on mortality (unit: None)
-vMRcr = 15.0   15.0  15.0    15.0  15.0  15.0  !reference value(3,2) for computing mortality (unit: None)
+!nutrient/light limitation & salinity/inundation stress
+vKhN   = 0.1    0.1    0.1     !nitrogen half saturation in sediments (mg/L) [nmarsh]
+vKhP   = 0.01   0.01   0.01    !phosphorus half saturation in sediments (mg/L) [nmarsh]
+valpha = 0.006  0.006  0.006   !init. slope of P-I curve (E-1.m2) [nmarsh]
+vKe    = 0.045  0.045  0.045   !light attenuation from leaf/stem absorption (g-1[C].m2) [nmarsh]
+vSopt  = 35.0   15.0   0.0     !optimal salinity for marsh growth (PSU) [nmarsh]
+vKs    = 0.03   0.03   0.03    !coefficient for salinity stress (PSU-2) [nmarsh]
+vInun  = 1.0    1.0    1.0     !reference value for inundation stress (nondimensional) [nmarsh]
 
 !misc. coefficients
-valpha = 0.006  0.006  0.006  !init. slope of P-I curve
-vKe    = 0.045  0.045  0.045  !light attenuation from veg absorption
-vht0   = 0.054  0.054  0.054  !base veg canopy hgt (vht)
-vcrit  = 250.0  250.0  250.0  !critical mass for computing vht
-v2ht   = 0.0036 0.0036 0.0036 0.001 0.001 0.001   !coefs. convert mass(3,2) to canopy height
-vc2dw  = 0.38   0.38   0.38   !carbon to dry weight ratio of VEG
-v2den  = 10     10     10     !coeff. computing veg density
-vp2c   = 0.01   0.01   0.01   !phosphorus to carbon ratio
-vn2c   = 0.09   0.09   0.09   !nitrogen to carbon ratio
-vo2c   = 2.67   2.67   2.67   !oxygen to carbon ratio
+vht0   = 0.054  0.054  0.054  !base marsh canopy height (m)
+vcrit  = 250.0  250.0  250.0  !critical mass for computing vht (g[C].m-2) [nmarsh]
+v2ht   = 0.0036 0.0036 0.0036   0.001 0.001 0.001   !coefs. convert leaf/stem to canopy height (m3.g[C]-1) [nmarsh,2]
+vc2dw  = 0.38   0.38   0.38   !dry to wet ratio of marsh biomass [nmarsh]
+vn2c   = 0.09   0.09   0.09   !nitrogen to carbon ratio [nmarsh]
+vp2c   = 0.01   0.01   0.01   !phosphorus to carbon ratio [nmarsh]
+vo2c   = 2.67   2.67   2.67   !oxygen to carbon ratio [nmarsh]
 /
 
 &BAG
@@ -590,6 +574,7 @@ cKTMT   =  0.069  0.069  0.069  0.069  0.069   !temperature dependence for metab
 cMRT    =  0.3    0.3    0.3    0.3    0.3     !mortality rate (day-1)
 cn2c    =  0.167  0.167  0.167  0.167  0.167   !nitrogen to carbon ratio
 cp2c    =  0.011  0.011  0.011  0.011  0.011   !phosphorus to carbon ratio
+/
 
 &ERO
 !-----------------------------------------------------------------------

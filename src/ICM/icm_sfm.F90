@@ -89,9 +89,9 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
   endif
 
   !------------------------------------------------------------------------
-  !SAV,VEG,BA,CLAM effects
+  !SAV,MARSH,BA,CLAM effects
   !------------------------------------------------------------------------
-  SODrt=0.0 !SOD due to SAV/VEG (g.m-2.day-1)
+  SODrt=0.0 !SOD due to SAV/MARSH (g.m-2.day-1)
   !SAV: nutrient uptake and DO consumption
   if(jsav==1.and.spatch(id)==1)then
     do i=1,3
@@ -104,18 +104,14 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
     SODrt=SODrt+sroot_DOX(id)
   endif
 
-  !VEG: nutrient uptake and DO consumption
-  if(jveg==1.and.vpatch(id)==1)then
-    do m=1,3
-      do j=1,3
-        FPOC(m)=FPOC(m)+vroot_POC(id,j)*bFCv(m,j)
-        FPON(m)=FPON(m)+vroot_PON(id,j)*bFNv(m,j)
-        FPOP(m)=FPOP(m)+vroot_POP(id,j)*bFPv(m,j)
-      enddo 
-    enddo 
-    bNH4(id)=max(bNH4(id)-sum(vleaf_NH4(id,1:3))*dtw/dz,0.d0)
-    bPO4(id)=max(bPO4(id)-sum(vleaf_PO4(id,1:3))*dtw/dz,0.d0)
-    SODrt=SODrt+sum(vroot_DOX(id,1:3))
+  !Marsh: nutrient uptake, DO consumption, nutrient deposition
+  if(jmarsh==1.and.vpatch(id)==1)then
+    FPOC=FPOC+vFPOC(:,id)
+    FPON=FPON+vFPON(:,id)
+    FPOP=FPOP+vFPOP(:,id)
+    bNH4(id)=max(bNH4(id)-vbNH4(id)*dtw/dz,0.d0)
+    bPO4(id)=max(bPO4(id)-vbPO4(id)*dtw/dz,0.d0)
+    SODrt=SODrt+vSOD(id)
   endif
 
   !BA effect: organic depostion
