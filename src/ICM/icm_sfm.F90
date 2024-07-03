@@ -17,7 +17,7 @@
 !sfm_calc: sediment flux; sub-models
 !sod_calc: calculate SOD
 
-subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
+subroutine sfm_calc(id,kb,tdep,wdz,it,isub)
 !-----------------------------------------------------------------------
 !sediment flux model (two-layer)
 !-----------------------------------------------------------------------
@@ -28,7 +28,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
   use icm_interface
   implicit none
   integer,intent(in) :: id,kb,it,isub
-  real(rkind),intent(in) :: tdep,wdz,TSS(nvrt)
+  real(rkind),intent(in) :: tdep,wdz
 
   !local variables
   integer :: i,j,k,m,ierr,iPBS(3)
@@ -94,14 +94,12 @@ subroutine sfm_calc(id,kb,tdep,wdz,TSS,it,isub)
   SODrt=0.0 !SOD due to SAV/MARSH (g.m-2.day-1)
   !SAV: nutrient uptake and DO consumption
   if(jsav==1.and.spatch(id)==1)then
-    do i=1,3
-      FPOC(i)=FPOC(i)+sroot_POC(id)*bFCs(i)
-      FPON(i)=FPON(i)+sroot_PON(id)*bFNs(i)
-      FPOP(i)=FPOP(i)+sroot_POP(id)*bFPs(i)
-    enddo
-    bNH4(id)=max(bNH4(id)-sleaf_NH4(id)*dtw/dz,0.d0)
-    bPO4(id)=max(bPO4(id)-sleaf_PO4(id)*dtw/dz,0.d0)
-    SODrt=SODrt+sroot_DOX(id)
+    FPOC(1:3)=FPOC(1:3)+sFPOC(1:3,id)
+    FPON(1:3)=FPON(1:3)+sFPON(1:3,id)
+    FPOP(1:3)=FPOP(1:3)+sFPOP(1:3,id)
+    SODrt=SODrt+sSOD(id)
+    bNH4(id)=max(bNH4(id)+sbNH4(id)*dtw/dz,0.d0)
+    bPO4(id)=max(bPO4(id)+sbPO4(id)*dtw/dz,0.d0)
   endif
 
   !Marsh: nutrient uptake, DO consumption, nutrient deposition

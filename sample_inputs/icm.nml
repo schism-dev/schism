@@ -365,10 +365,6 @@ bKhPOS    = 5.0e4   !POS half saturation for POS dissolution (g/m3)
 bDOc_SI   = 1.0     !DO criteria for silica sorptiona (g[O2]/m3)
 bJPOSa    = 0.0     !additional POS flux associated with POM detrius beside algea (g.m-2.day-1)
 
-!SAV into sediment POM (for isav_icm=1)
-bFCs = 0.65  0.255  0.095         !SAV POC into 3G sed 3G POC
-bFNs = 0.65  0.300  0.050         !SAV PON into 3G sed 3G PON  
-bFPs = 0.65  0.255  0.095         !SAV POP into 3G sed 3G POP
 /
 
 &Silica
@@ -437,14 +433,12 @@ pRea     = 1.0                !reaeration rate for CO2
 inu_ph   = 0                  !nudge option for pH model
 /
 
-&SAV
+&SAV_ICM
 !-----------------------------------------------------------------------
 !Submerged Aquatic Vegetation (SAV) parameters
 !-----------------------------------------------------------------------
 spatch0 = -999              !region flag for SAV. (1: ON all elem.; -999: spatial)
-stleaf0 = -999              !init conc of total sav leaf
-ststem0 = -999              !init conc of total sav stem
-stroot0 = -999              !init conc of total sav root
+sav0    = 100.0  50.0  10.0 !init. SAV leaf/stem/root conc. (g[C].m-2)
 
 !growth coefficients
 sGPM  = 0.1                 !maximum growth rate (day-1)
@@ -454,27 +448,24 @@ sFAM  = 0.2                 !fraction of leaf production to active metabolism
 sFCP  = 0.6    0.3    0.1   !fractions of production to leaf/stem/root biomass
 
 !metabolism coefficients
-sMTB  = 0.02   0.02   0.02  !metabolism rates of leaf/stem/root
-sTMT  = 20     20     20    !reference temp. for leaf/stem/root metabolism
-sKTMT = 0.069  0.069  0.069 !temp. dependence of leaf/stem/root metabolism
-sFCM  = 0.05   0.15   0.3   0.5  !fractions of metabolism C into (RPOC,LPOC,DOC,CO2)
-sFNM  = 0.05   0.15   0.3   0.5  !fractions of metabolism N into (RPON,LPON,DON,NH4)
-sFPM  = 0.05   0.1    0.35  0.5  !fractions of metabolism P into (RPOP,LPOP,DOP,PO4)
-
-!nutrient limitation
-sKhNw  = 0.01               !nitrogen half saturation in water column
-sKhNs  = 0.1                !nitrogen half saturation in sediments
-sKhNH4 = 0.1                !ammonium half saturation
-sKhPw  = 0.001              !phosphorus half saturation in water column
-sKhPs  = 0.01               !phosphorus half saturation in sediments
+sMTB  = 0.02   0.02   0.02  !metabolism rates of leaf/stem/root (day-1)
+sTMT  = 20     20     20    !reference temp. for leaf/stem/root metabolism (oC)
+sKTMT = 0.069  0.069  0.069 !temp. dependence of leaf/stem/root metabolism (oC-1)
+sFCM  = 0.05   0.15   0.3   0.5  !fractions of metabolism leaf/stem C into (RPOC,LPOC,DOC,CO2)
+sFNM  = 0.05   0.15   0.3   0.5  !fractions of metabolism leaf/stem N into (RPON,LPON,DON,NH4)
+sFPM  = 0.05   0.1    0.35  0.5  !fractions of metabolism leaf/stem P into (RPOP,LPOP,DOP,PO4)
+sFCMb = 0.65   0.255  0.095 0.0  !fractions of metabolism root C into (G1/G2/G3 POC, CO2) in sediment
+sFNMb = 0.65   0.300  0.050 0.0  !fractions of metabolism root N into (G1/G2/G3 PON, NH4) in sediment
+sFPMb = 0.65   0.255  0.095 0.0  !fractions of metabolism root P into (G1/G2/G3 POP, PO4) in sediment
 
 !misc. coefficients
-salpha = 0.006              !init. slope of P-I curve (g[C]*m2/g[Chl]/E)
-sKe    = 0.045              !light attenuation due to sav absorption
-shtm   = 0.054  2.0         !minimum (base) and  maximium canopy height
-s2ht   = 0.0036 0.0036 0.0  !coeffs. converting (leaf,stem,root) to canopy height
-sc2dw  = 0.38               !carbon to dry weight ratio of SAV
-s2den  = 10                 !coeff. computing SAV density from leaf&stem
+sKhN   = 0.01   0.1         !reference N conc. in water and sediment (mg/L)
+sKhP   = 0.001  0.01        !reference P conc. in water and sediment (mg/L)
+salpha = 0.006              !init. slope of P-I curve (g[C].m2.g[Chl]-1.E-1)
+sKe    = 0.045              !light attenuation from leaf/stem absorption (g-1[C].m2)
+shtm   = 0.054  2.0         !minimum (base) and  maximium canopy height (m)
+s2ht   = 0.0036 0.0036 0.0  !coeffs. converting (leaf,stem,root) to canopy height (g-1[C].m3)
+sc2dw  = 0.38               !carbon to dry weight ratio of sav
 sn2c   = 0.09               !nitrogen to carbon ratio of sav
 sp2c   = 0.01               !phosphorus to carbon ratio
 so2c   = 2.67               !oxygen to carbon ratio
@@ -486,7 +477,7 @@ so2c   = 2.67               !oxygen to carbon ratio
 !-----------------------------------------------------------------------
 iNmarsh = 1  !whether turn on nitrogen/phosphorus dynamics in Marsh kenetics (0: OFF; 1: ON)
 vpatch0 = -999  !region flag for marsh. (1: ON all elem.; -999: spatial)
-vmarsh0 = 100.0 100.0 100.0   100.0 100.0 100.0   30.0 30.0 30.0 !init. leaf/stem/root conc. [nmarsh,3]
+vmarsh0 = 100.0 100.0 100.0   100.0 100.0 100.0   30.0 30.0 30.0 !init. leaf/stem/root conc. (g[C].m-3) [nmarsh,3]
 
 !growth coefficients
 vGPM  = 0.1    0.1    0.1      !maximum growth rate (day-1)
@@ -499,7 +490,7 @@ vFCP  = 0.6    0.6    0.6     0.3    0.3    0.3     0.1   0.1  0.1  !partitionin
 vMTB  = 0.02  0.02  0.02    0.02  0.02  0.02    0.01  0.01  0.01  !metabolism rates of leaf/stem/root (day-1)[nmarsh,3]
 vTMT  = 20.0  20.0  20.0    20.0  20.0  20.0    20.0  20.0  20.0  !reference temp. for metabolism (oC) [nmarsh,3]
 vKTMT = 0.069 0.069 0.069   0.069 0.069 0.069   0.069 0.069 0.069 !temp. depdenpence for metabolism (oC-1) [nmarsh,3]
-vFCM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5 !partition of metabolism N into (RPOC,LPOC,DOC,CO2) [nmarsh,4]
+vFCM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5 !partition of metabolism C into (RPOC,LPOC,DOC,CO2) [nmarsh,4]
 vFNM  = 0.05  0.05  0.05    0.15  0.15  0.15    0.3  0.3  0.3    0.5 0.5 0.5 !partition of metabolism N into (RPON,LPON,DON,NH4) [nmarsh,4]
 vFPM  = 0.05  0.05  0.05    0.1   0.1   0.1     0.35 0.35 0.35   0.5 0.5 0.5 !partition of metabolism P into (RPOP,LPOP,DOP,PO4) [nmarsh,4]
 vFW   = 0.5   0.5   0.5     !partitioning of leaf/stem metabolsim to water [nmarsh]

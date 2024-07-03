@@ -52,15 +52,14 @@ subroutine read_icm_param(imode)
   namelist /ZB/ zGPM,zKhG,zTGP,zKTGP,zAG,zRG,zMRT,zMTB,zTMT,zKTMT,zFCP,zFNP,zFPP, &
            & zFSP,zFCM,zFNM,zFPM,zFSM,zKhDO,zn2c,zp2c,zs2c,z2pr,p2pr 
   namelist /PH_ICM/ ppatch0,inu_ph,pKCACO3,pKCA,pRea
-  namelist /SAV/ spatch0,stleaf0,ststem0,stroot0,sGPM,sTGP,sKTGP,sFAM,sFCP,sMTB,sTMT,sKTMT,&
-           & sFNM,sFPM,sFCM,sKhNw,sKhNs,sKhNH4,sKhPw,sKhPs,salpha,sKe,shtm,s2ht, &
-           & sc2dw,s2den,sn2c,sp2c,so2c
+  namelist /SAV_ICM/ spatch0,sav0,sGPM,sTGP,sKTGP,sFAM,sFCP,sMTB,sTMT,sKTMT,sFNM,sFPM,sFCM,sFNMb, &
+           & sFPMb,sFCMb,sKhN,sKhP,salpha,sKe,shtm,s2ht,sc2dw,sn2c,sp2c,so2c
   namelist /MARSH/ iNmarsh,vpatch0,vmarsh0,vGPM,vFAM,vTGP,vKTGP,vFCP,vMTB,vTMT,vKTMT,vFCM,vFNM, &
            & vFPM,vFW,vKhN,vKhP,valpha,vKe,vSopt,vKs,vInun,vht0,vcrit,v2ht,vc2dw,vn2c,vp2c,vo2c
   namelist /SFM/ bdz,bVb,bdiff,bsaltc,bsaltn,bsaltp,bsolid,bKTVp,bKTVd,bVp,bVd,bTR,&
            & btemp0,bstc0,bSTR0,bThp0,bTox0,bNH40,bNO30,bPO40,bH2S0,bCH40,bPOS0,bSA0,&
            & bPOP0,bPON0,bPOC0,bPOS0,bKC,bKN,bKP,bKTC,bKTN,bKTP,bKS,bKTS,bFPP,&
-           & bFNP,bFCP,bFCs,bFNs,bFPs,bFCM,bFNM,bFPM,&
+           & bFNP,bFCP,bFCM,bFNM,bFPM,&
            & bKNH4f,bKNH4s,bpieNH4,bKTNH4,bKhNH4,bKhDO_NH4,bKNO3f,&
            & bKNO3s,bKNO3,bKTNO3,bKH2Sd,bKH2Sp,bpieH2Ss,bpieH2Sb,bKTH2S,bKhDO_H2S,bSIsat, &
            & bKOSI,bpieSI,bKhPOS,bDOc_SI,bJPOSa,bKOPO4f,bKOPO4s,bpiePO4,bDOc_PO4, &
@@ -129,9 +128,9 @@ subroutine read_icm_param(imode)
     ppatch0=0; inu_ph=0; pKCACO3=0; pKCA=0; pRea=0
 
     !init. SAV module
-    spatch0=0; stleaf0=0; ststem0=0; stroot0=0; sGPM=0; sTGP=0; sKTGP=0; sFAM=0; sFCP=0; sMTB=0;
-    sTMT=0; sKTMT=0; sFNM=0; sFPM=0; sFCM=0; sKhNw=0; sKhNs=0; sKhNH4=0; sKhPw=0;
-    sKhPs=0; salpha=0; sKe=0; shtm=0; s2ht=0; sc2dw=0; s2den=0; sn2c=0; sp2c=0; so2c=0
+    spatch0=0; sav0=0; sGPM=0; sTGP=0; sKTGP=0; sFAM=0; sFCP=0; sMTB=0; sTMT=0; sKTMT=0;
+    sFNM=0; sFPM=0; sFCM=0; sFNMb=0; sFPMb=0; sFCMb=0;  sKhN=0; sKhP=0; salpha=0; sKe=0;
+    shtm=0; s2ht=0; sc2dw=0; sn2c=0; sp2c=0; so2c=0
     
     !init. MARSH module
     iNmarsh=1; vpatch0=0; vmarsh0=0; vGPM=0; vFAM=0; vTGP=0; vKTGP=0; vFCP=0; vMTB=0; vTMT=0;
@@ -143,8 +142,7 @@ subroutine read_icm_param(imode)
     bVp=0;  bVd=0;  bTR=0;  btemp0=0; bstc0=0;  bSTR0=0;  bThp0=0;  bTox0=0; bNH40=0;  
     bNO30=0; bPO40=0;  bH2S0=0;  bCH40=0;  bPOS0=0;  bSA0=0;   bPOP0=0; bPON0=0;  bPOC0=0;  
     bKC=0;  bKN=0;  bKP=0;  bKTC=0;  bKTN=0;  bKTP=0;  bKS=0;  bKTS=0;
-    bFPP=0;  bFNP=0;  bFCP=0; bFCs=0; bFNs=0; bFPs=0
-    bFCM=0; bFNM=0; bFPM=0;  bKNH4f=0;
+    bFPP=0;  bFNP=0;  bFCP=0; bFCM=0; bFNM=0; bFPM=0;  bKNH4f=0;
     bKNH4s=0;  bpieNH4=0;  bKTNH4=0;  bKhNH4=0;  bKhDO_NH4=0;  bKNO3f=0;  bKNO3s=0;  
     bKNO3=0;  bKTNO3=0;  bKH2Sd=0;  bKH2Sp=0;  bpieH2Ss=0; bpieH2Sb=0; bKTH2S=0; bKhDO_H2S=0; 
     bSIsat=0;  bKOSI=0;  bpieSI=0;  bKhPOS=0;  bDOc_SI=0;  bJPOSa=0;  bKOPO4f=0;  
@@ -164,7 +162,7 @@ subroutine read_icm_param(imode)
 
     open(31,file=in_dir(1:len_in_dir)//'icm.nml',delim='apostrophe',status='old')
     read(31,nml=CORE); read(31,nml=SFM); read(31,nml=ZB); read(31,nml=PH_ICM); 
-    read(31,nml=SAV);  read(31,nml=MARSH); read(31,nml=BAG); read(31,nml=CLAM_ICM); read(31,nml=ERO)
+    read(31,nml=SAV_ICM);  read(31,nml=MARSH); read(31,nml=BAG); read(31,nml=CLAM_ICM); read(31,nml=ERO)
     close(31)
     if(myrank==0) write(16,*) 'done read ICM parameters'
     call check_icm_param() !check ICM parameters
@@ -260,25 +258,15 @@ subroutine read_icm_param(imode)
 
     !SAV module: 6
     if(jsav==1) then
-      p=>wqout(nout+1); p%name='ICM_stleaf'; p%p1=>stleaf; p%itype=4
-      p=>wqout(nout+2); p%name='ICM_ststem'; p%p1=>ststem; p%itype=4
-      p=>wqout(nout+3); p%name='ICM_stroot'; p%p1=>stroot; p%itype=4
-      p=>wqout(nout+4); p%name='ICM_sht';    p%p1=>sht;    p%itype=4
+      p=>wqout(nout+1); p%name='ICM_sleaf'; p%p1=>sav(1,:); p%itype=4
+      p=>wqout(nout+2); p%name='ICM_sstem'; p%p1=>sav(2,:); p%itype=4
+      p=>wqout(nout+3); p%name='ICM_sroot'; p%p1=>sav(3,:); p%itype=4
+      p=>wqout(nout+4); p%name='ICM_sht';   p%p1=>sht;      p%itype=4
       nb=4; nouts(6)=nb;  iout(1,6)=nout+1; iout(2,6)=nout+nb; nout=nout+nb
 
-      !debug variable
-      p=>wqout(nout+1); p%name='ICM_sleaf'; p%p2=>sleaf; p%itype=6
-      p=>wqout(nout+2); p%name='ICM_sstem'; p%p2=>sstem; p%itype=6
-      p=>wqout(nout+3); p%name='ICM_sroot'; p%p2=>sroot; p%itype=6
-      !nb=3; nouts(6)=nouts(6)+nb;  iout(2,6)=iout(2,6)+nb; nout=nout+nb
-      nb=3; nouts(6)=nouts(6)+nb;  nout=nout+nb
-
       !hotstart variable
-      p=>wqhot(nhot+1); p%name='sleaf';  p%p2=>sleaf
-      p=>wqhot(nhot+2); p%name='sstem';  p%p2=>sstem
-      p=>wqhot(nhot+3); p%name='sroot';  p%p2=>sroot
-      p=>wqhot(nhot+4); p%name='sht';    p%p1=>sht
-      nhot=nhot+4
+      p=>wqhot(nhot+1); p%name='sav';  p%p2=>sav
+      nhot=nhot+1
     endif
 
     !MARSH module: 7
@@ -412,27 +400,6 @@ subroutine read_icm_param(imode)
         call read_gr3_prop('ph_nudge',-999.d0,ph_nudge,npa)
       endif
     endif
-
-    !sav init
-    if(jsav==1.and.ihot==0) then
-      !distribute init mass into different layes
-      do i=1,nea
-        sleaf(:,i)=1.d-5; sstem(:,i)=1.d-5; sroot(:,i)=1.d-5
-        if(idry_e(i)/=1)then !wet elem
-          sht(i)=min(s2ht(1)*stleaf(i)+s2ht(2)*ststem(i)+s2ht(3)*stroot(i)+shtm(1),ze(nvrt,i)-ze(kbe(i),i),shtm(2))
-          do k=kbe(i)+1,nvrt
-            if((ze(k-1,i)-ze(kbe(i),i))<sht(i)) then
-              rat=min(ze(k,i)-ze(k-1,i),sht(i)-(ze(k-1,i)-ze(kbe(i),i)))/sht(i)
-              sleaf(k,i)=stleaf(i)*rat !unit: g/m2
-              sstem(k,i)=ststem(i)*rat
-              sroot(k,i)=stroot(i)*rat
-            endif !ze
-          enddo !k=kbe(i)+1,nvrt
-        else !dry elem
-          spatch(i)=-1
-        endif !wet elem
-      enddo !i=1,nea
-    endif!jsav
 
     !------------------------------------------------------------------------------------
     !time varying input of ICM model
@@ -640,11 +607,11 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   !ICM variables
   !-------------------------------------------------------------------------------
-  allocate(DIN(nvrt),temp(nvrt),dwqc(ntrs_icm,nvrt),zdwqc(ntrs_icm,nvrt),sdwqc(ntrs_icm,nvrt), &
-           & vdwqc(ntrs_icm,nvrt),gdwqc(ntrs_icm,nvrt),cdwqc(ntrs_icm,nvrt),rad_in(nea,2), &
-           & sflux_in(nea,ntrs_icm,2),bflux_in(nea,ntrs_icm,2),elem_in(nea,3),stat=istat)
+  allocate(DIN(nvrt),temp(nvrt),PO4d(nvrt),TSS(nvrt),dwqc(ntrs_icm,nvrt),zdwqc(ntrs_icm,nvrt), &
+         & sdwqc(ntrs_icm,nvrt),vdwqc(ntrs_icm,nvrt),gdwqc(ntrs_icm,nvrt),cdwqc(ntrs_icm,nvrt), &
+         & rad_in(nea,2),sflux_in(nea,ntrs_icm,2),bflux_in(nea,ntrs_icm,2),elem_in(nea,3),stat=istat)
   if(istat/=0) call parallel_abort('Failed in alloc. ICM variables')
-  DIN=0.0; temp=0.0; rad_in=0.0; sflux_in=0.0; bflux_in=0.0
+  DIN=0.0; temp=0.0; PO4d=0.0; TSS=0.0; rad_in=0.0; sflux_in=0.0; bflux_in=0.0
 
   !-------------------------------------------------------------------------------
   !pH variables
@@ -665,19 +632,10 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   allocate(spatch(nea)); spatch=0
   if(jsav==1) then
-    allocate(stleaf(nea),ststem(nea),stroot(nea),sleaf(nvrt,nea), &
-      & sstem(nvrt,nea),sroot(nvrt,nea),sht(nea), &
-      & sroot_POC(nea),sroot_PON(nea), &
-      & sroot_POP(nea),sroot_DOX(nea),sleaf_NH4(nea),sleaf_PO4(nea), stat=istat)
+    allocate(sht(nea),sav(3,nea),sFPOC(3,nea),sFPON(3,nea),sFPOP(3,nea),sbNH4(nea), &
+           & sbPO4(nea),sSOD(nea),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. SAV variables ')
-
-    !init
-    stleaf=0.0;   ststem=0.0;     stroot=0.0;    sleaf=0.0;
-    sstem=0.0;    sroot=0.0;    sht=0.0;        
-    sroot_POC=0.0; sroot_PON=0.0;
-    sroot_POP=0.0; sroot_DOX=0.0; sleaf_NH4=0.0;  sleaf_PO4=0.0;
-  else
-    spatch0=0; stleaf0=0; ststem0=0; stroot0=0  !reset parameter values
+    sht=0.0; sav=0.0; sFPOC=0.0; sFPON=0.0; sFPOP=0.0; sbNH4=0.0; sbPO4=0.0; sSOD=0.0
   endif
 
   !-------------------------------------------------------------------------------
@@ -688,7 +646,7 @@ subroutine icm_vars_init
     allocate(vht(nmarsh,nea),vmarsh(nmarsh,3,nea),vFPOC(3,nea),vFPON(3,nea),vFPOP(3,nea), &
            & vbNH4(nea),vbPO4(nea),vSOD(nea),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. vht variables')
-    vht=0.0;   vmarsh=0.0 !init
+    vht=0.0; vmarsh=0.0; vFPOC=0.0; vFPON=0.0; vFPOP=0.0; vbNH4=0.0; vbPO4=0.0; vSOD=0.0
   endif
 
   !-------------------------------------------------------------------------------
@@ -767,7 +725,7 @@ subroutine icm_vars_init
   sp(m+1)%p1=>wqc0;  m=m+1
 
   !SFM modules
-  pname((m+1):(m+82))=&
+  pname((m+1):(m+79))=&
     & (/'bdz      ','bVb      ','bsolid   ','bdiff    ','bTR      ',&
       & 'bVpmin   ','bVp      ','bVd      ','bKTVp    ','bKTVd    ',&
       & 'bKST     ','bSTmax   ','bKhDO_Vp ','bDOc_ST  ','banoxic  ',&
@@ -783,8 +741,7 @@ subroutine icm_vars_init
       & 'bKhDO_H2S','bsaltc   ','bKCH4    ','bKTCH4   ','bKhDO_CH4',&
       & 'bo2n     ','bpiePO4  ','bKOPO4f  ','bKOPO4s  ','bDOc_PO4 ',&
       & 'bsaltp   ','bKS      ','bKTS     ','bSIsat   ','bpieSI   ',&
-      & 'bKOSI    ','bKhPOS   ','bDOc_SI  ','bJPOSa   ','bFCs     ',&
-      & 'bFNs     ','bFPs     '/)
+      & 'bKOSI    ','bKhPOS   ','bDOc_SI  ','bJPOSa   '/)
   sp(m+1)%p=>bdz;      sp(m+2)%p=>bVb;    sp(m+3)%p1=>bsolid; sp(m+4)%p=>bdiff;    sp(m+5)%p=>bTR;      m=m+5
   sp(m+1)%p=>bVpmin;   sp(m+2)%p=>bVp;    sp(m+3)%p=>bVd;     sp(m+4)%p=>bKTVp;    sp(m+5)%p=>bKTVd;    m=m+5
   sp(m+1)%p=>bKST;     sp(m+2)%p=>bSTmax; sp(m+3)%p=>bKhDO_Vp;sp(m+4)%p=>bDOc_ST;  sp(m+5)%p=>banoxic;  m=m+5
@@ -800,13 +757,24 @@ subroutine icm_vars_init
   sp(m+1)%p=>bKhDO_H2S;sp(m+2)%p=>bsaltc; sp(m+3)%p=>bKCH4;   sp(m+4)%p=>bKTCH4;   sp(m+5)%p=>bKhDO_CH4;m=m+5
   sp(m+1)%p=>bo2n;     sp(m+2)%p=>bpiePO4;sp(m+3)%p=>bKOPO4f; sp(m+4)%p=>bKOPO4s;  sp(m+5)%p=>bDOc_PO4; m=m+5
   sp(m+1)%p=>bsaltp;   sp(m+2)%p=>bKS;    sp(m+3)%p=>bKTS;    sp(m+4)%p=>bSIsat;   sp(m+5)%p=>bpieSI;   m=m+5
-  sp(m+1)%p=>bKOSI;    sp(m+2)%p=>bKhPOS; sp(m+3)%p=>bDOc_SI; sp(m+4)%p=>bJPOSa;   sp(m+5)%p1=>bFCs;    m=m+5
-  sp(m+1)%p1=>bFNs;    sp(m+2)%p1=>bFPs;  m=m+2
+  sp(m+1)%p=>bKOSI;    sp(m+2)%p=>bKhPOS; sp(m+3)%p=>bDOc_SI; sp(m+4)%p=>bJPOSa;   m=m+4
 
   !SAV,MARSH,BA,pH,CLAM modules
-  pname((m+1):(m+5))=&
-    & (/'spatch0','stleaf0','ststem0','stroot0','ppatch0'/)
-  sp(m+1)%p=>spatch0;  sp(m+2)%p=>stleaf0;  sp(m+3)%p=>ststem0;  sp(m+4)%p=>stroot0; sp(m+1)%p=>ppatch0;  m=m+5
+  if(jsav==1) then
+    pname((m+1):(m+26))=&
+      & (/'spatch0','sav0   ','sGPM   ','sTGP   ','sKTGP  ',&
+        & 'sFAM   ','sFCP   ','sMTB   ','sTMT   ','sKTMT  ',&
+        & 'sFCM   ','sFNM   ','sFPM   ','sFCMb  ','sFNMb  ',&
+        & 'sFPMb  ','sKhN   ','sKhP   ','salpha ','sKe    ',&
+        & 'shtm   ','s2ht   ','sc2dw  ','sn2c   ','sp2c   ',&
+        & 'so2c   '/)
+    sp(m+1)%p=>spatch0;  sp(m+2)%p1=>sav0;  sp(m+3)%p=>sGPM;   sp(m+4)%p=>sTGP;    sp(m+1)%p1=>sKTGP;  m=m+5
+    sp(m+1)%p=>sFAM;     sp(m+2)%p1=>sFCP;  sp(m+3)%p1=>sMTB;  sp(m+4)%p1=>sTMT;   sp(m+1)%p1=>sKTMT;  m=m+5
+    sp(m+1)%p1=>sFCM;    sp(m+2)%p1=>sFNM;  sp(m+3)%p1=>sFPM;  sp(m+4)%p1=>sFCMb;  sp(m+1)%p1=>sFNMb;  m=m+5
+    sp(m+1)%p1=>sFPMb;   sp(m+2)%p1=>sKhN;  sp(m+3)%p1=>sKhP;  sp(m+4)%p=>salpha;  sp(m+1)%p=>sKe;     m=m+5
+    sp(m+1)%p1=>shtm;    sp(m+2)%p1=>s2ht;  sp(m+3)%p=>sc2dw;  sp(m+4)%p=>sn2c;    sp(m+1)%p=>sp2c;    m=m+5
+    sp(m+1)%p=>so2c;     m=m+1
+  endif
 
   if(jmarsh==1) then
     pname((m+1):(m+28))=&
@@ -939,10 +907,10 @@ subroutine icm_vars_init
     !PH/SAV/MARSH/BA init
     if(iPh==1) ppatch(i)=nint(ppatch0)
     if(jsav==1) then
-      spatch(i)=nint(spatch0); stleaf(i)=stleaf0; ststem(i)=ststem0; stroot(i)=stroot0  
+      spatch(i)=nint(spatch0); sav(:,i)=sav0; call get_canopy(i)
     endif
     if(jmarsh==1) then
-      vpatch(i)=nint(vpatch0); vmarsh(:,:,i)=vmarsh0; call get_marsh_canopy(i)
+      vpatch(i)=nint(vpatch0); vmarsh(:,:,i)=vmarsh0; call get_canopy(i)
     endif
     if(iBA==1) then
       gpatch(i)=nint(gpatch0); gBA(i)=gBA0
@@ -1010,12 +978,6 @@ subroutine update_vars(id,usf,wspd)
   endif
   if(iCBP==1) then
     SRPOC=>wqc(iSRPOC,:); SRPON=>wqc(iSRPON,:); SRPOP=>wqc(iSRPOP,:); PIP=>wqc(iPIP,:)
-  endif
-
-  !SAV and MARSH
-  if(jsav/=0) then
-    sleaf_NH4(id)=0;   sleaf_PO4(id)=0;   sroot_POC(id)=0
-    sroot_PON(id)=0;   sroot_POP(id)=0;   sroot_DOX(id)=0
   endif
 
   !spatial varying parameters

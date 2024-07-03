@@ -40,13 +40,14 @@ module icm_mod
   character(len=6),save :: name_icm(100),name_d2d(100),name_d3d(100)
   integer,save,target :: ncid_icm(3),npt_icm(3)
   real(rkind),target,save :: time_icm(2,3),dt_icm(3)
-  real(rkind),target,save,allocatable :: rad_in(:,:),sflux_in(:,:,:),bflux_in(:,:,:),wqc_d2d(:,:),wqc_d3d(:,:,:)
+  real(rkind),target,save,allocatable :: rad_in(:,:),sflux_in(:,:,:),bflux_in(:,:,:)
 
   !declear temporary variables to increase code readability (can be put in main loop)
   real(rkind),save,pointer,dimension(:,:) :: wqc,ZBS,PBS 
-  real(rkind),save,pointer,dimension(:) :: temp,salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
+  real(rkind),save,pointer,dimension(:) :: salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
                               & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3,SRPOC,SRPON,SRPOP,PIP
-  real(rkind),save,target,allocatable :: DIN(:),dwqc(:,:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:),gdwqc(:,:),cdwqc(:,:)
+  real(rkind),save,target,allocatable :: temp(:),DIN(:),PO4d(:),TSS(:),dwqc(:,:),zdwqc(:,:),sdwqc(:,:), &
+                              & vdwqc(:,:),gdwqc(:,:),cdwqc(:,:)
   real(rkind),save,pointer,dimension(:,:) :: zdPBS,zdC,zdN,zdP,zdS
   real(rkind),save,pointer,dimension(:) :: zdDOX 
 
@@ -97,19 +98,17 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !SAV parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: spatch0,stleaf0,ststem0,stroot0
+  real(rkind),save,target :: spatch0,sav0(3)  !sav patch, and init conc.
   real(rkind),save,target :: sGPM,sTGP,sKTGP(2),sFAM,sFCP(3) !growth related coefficients
   real(rkind),save,target :: sMTB(3),sTMT(3),sKTMT(3)        !meta. coefficients (rate, temp, temp dependence)
-  real(rkind),save,target :: sFCM(4),sFNM(4),sFPM(4)         !metabolism to (RPOM,RLOM,DOM,DIM)
-  real(rkind),save,target :: sKhNw,sKhNs,sKhNH4,sKhPw,sKhPs  !half-saturation conc. of N&P
+  real(rkind),save,target :: sFCM(4),sFNM(4),sFPM(4)         !metabolism of leaf/stem to (RPOM,RLOM,DOM,DIM)
+  real(rkind),save,target :: sFCMb(4),sFNMb(4),sFPMb(4)      !metabolism of root to (POM(G1-G3),dissolved nutrients)
+  real(rkind),save,target :: sKhN(2),sKhP(2)                 !half-saturation conc. of N, P
   real(rkind),save,target :: salpha,sKe,shtm(2),s2ht(3)      !(P-I curve, light attenu., canopy height)
-  real(rkind),save,target :: sc2dw,s2den,sn2c,sp2c,so2c      !convert ratios
+  real(rkind),save,target :: sc2dw,sn2c,sp2c,so2c      !convert ratios
 
   integer,save,allocatable :: spatch(:)               !sav region
-  real(rkind),save,target,allocatable,dimension(:) :: stleaf,ststem,stroot,sht
-  real(rkind),save,target,allocatable,dimension(:,:) :: sleaf,sstem,sroot !(nvrt,nea), unit: g/m^2
-  real(rkind),save,target,allocatable,dimension(:) :: sroot_POC,sroot_PON,sroot_POP,sroot_DOX !(nea), unit: g/m^2/day
-  real(rkind),save,target,allocatable,dimension(:) :: sleaf_NH4,sleaf_PO4  !(nea), unit: g/m^2/day
+  real(rkind),save,target,allocatable :: sht(:),sav(:,:),sFPOC(:,:),sFPON(:,:),sFPOP(:,:),sbNH4(:),sbPO4(:),sSOD(:)
 
   !-------------------------------------------------------------------------------
   !marsh parameters and variables
@@ -121,7 +120,6 @@ module icm_mod
   !metabolism partition, growth limit of nutrient,light,salinity,inundation
   real(rkind),save,target,allocatable,dimension(:) :: vFW,vKhN,vKhP,valpha,vKe,vSopt,vKs,vInun
   real(rkind),save,target,allocatable :: vht0(:),vcrit(:),v2ht(:,:),vc2dw(:),vn2c(:),vp2c(:),vo2c(:) !misc
-
 
   integer,save,allocatable :: vpatch(:)  !marsh regions
   real(rkind),save,target,allocatable :: vmarsh(:,:,:),vht(:,:) !marsh biomass
@@ -137,7 +135,7 @@ module icm_mod
   real(rkind),save,target,dimension(3) :: bKC,bKN,bKP,bKTC,bKTN,bKTP
   real(rkind),save,target :: bKS,bKTS
   real(rkind),save,target,dimension(3,3) :: bFPP,bFNP,bFCP!(G1:G3,PB)
-  real(rkind),save,target,dimension(3) :: bFCs,bFNs,bFPs,bFCM,bFNM,bFPM !(G1:G3)
+  real(rkind),save,target,dimension(3) :: bFCM,bFNM,bFPM !(G1:G3)
   real(rkind),save,target :: bKNH4f,bKNH4s,bpieNH4,bKTNH4,bKhNH4,bKhDO_NH4 !!nitrification
   real(rkind),save,target :: bKNO3f,bKNO3s,bKNO3,bKTNO3 !denitrification
   real(rkind),save,target :: bKH2Sd,bKH2Sp,bpieH2Ss,bpieH2Sb,bKTH2S,bKhDO_H2S !H2S oxidation
