@@ -77,8 +77,9 @@ subroutine ecosystem(it)
 !---------------------------------------------------------------------------------
   use schism_glbl, only : rkind,errmsg,dt,ne,nea,tr_el,i34,nvrt,irange_tr,ntrs,idry_e, &
                         & ielg,kbe,ze,elnode,srad,airt1,pi,dt,iof_icm_dbg,rho0, &
-                        & total_sus_conc,btaun,rnday
+                        & total_sus_conc,btaun,rnday,start_year,start_month,start_day
   use schism_msgp, only : myrank,parallel_abort
+  use icm_misc, only : datetime,julian
   use icm_mod
   implicit none
   integer, intent(in) :: it
@@ -98,6 +99,7 @@ subroutine ecosystem(it)
 
   do isub=1,nsub  !sub-cycling
     time=(it+isub/dble(nsub)-1)*dt; call update_icm_input(time) !update ICM inputs 
+    call datetime(julian(start_year,start_month,start_day)+int(time/86400),iyear,imonth,iday,idoy)
     do id=1,nea
       if(jdry==0.and.idry_e(id)==1.and.jmarsh==0) cycle
       !update parameter and variable values for current element

@@ -37,6 +37,7 @@ module icm_mod
   integer,save,pointer :: itrs_icm(:,:),elem_in(:,:),nout_icm
   integer,save :: iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP,iLPOP, &
         & iDOP,iPO4,iCOD,iDOX,iSU,iSA,iZB1,iZB2,iTIC,iALK,iCA,iCACO3,iSRPOC,iSRPON,iSRPOP,iPIP
+  integer,save,target :: iyear,imonth,iday,idoy
   character(len=6),save :: name_icm(100),name_d2d(100),name_d3d(100)
   integer,save,target :: ncid_icm(3),npt_icm(3)
   real(rkind),target,save :: time_icm(2,3),dt_icm(3)
