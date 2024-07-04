@@ -166,8 +166,8 @@ module icm_mod
   !-------------------------------------------------------------------------------
   real(rkind),save,target :: cpatch0
   real(rkind),save,target,allocatable,dimension(:) :: clam0,cfrmax,cTFR,csalt,cKDO,cDOh,cfTSSm,cRF, &
-                                                    & cIFmax,cMTB,cTMT,cKTMT,cMRT,cn2c,cp2c
-  real(rkind),save,target,allocatable,dimension(:,:) :: cKTFR,cKTSS,cTSS,calpha
+                                                    & cIFmax,cMTB,cTMT,cKTMT,cMRT,cPRR,cHSR,cn2c,cp2c
+  real(rkind),save,target,allocatable,dimension(:,:) :: cKTFR,cKTSS,cTSS,calpha,cDoyp,cDoyh
 
   integer,save,allocatable,dimension(:) :: cpatch
   real(rkind),save,target,allocatable,dimension(:,:) :: CLAM,cFPOC,cFPON,cFPOP

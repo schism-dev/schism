@@ -1041,7 +1041,7 @@ subroutine clam_calc(id,kb,wdz)
   !local variables
   integer :: i,j,k,m
   real(rkind) :: xT,TSSc,wTSS,wtemp,wsalt,wDOX
-  real(rkind),dimension(nclam) :: GP,MT,RT,fT,fS,fDO,fTSS,cIF,fN,Fr,TFC,TFN,TFP,ATFC,ATFN,ATFP
+  real(rkind),dimension(nclam) :: GP,MT,RT,PR,HST,fT,fS,fDO,fTSS,cIF,fN,Fr,TFC,TFN,TFP,ATFC,ATFN,ATFP
   real(rkind),dimension(5) :: PC,PN,PP
   real(rkind),parameter :: mval=1.d-16
 
@@ -1052,6 +1052,7 @@ subroutine clam_calc(id,kb,wdz)
     PC(4)=LPOC(kb+1); PC(5)=RPOC(kb+1); PN(4)=LPON(kb+1); PN(5)=RPON(kb+1); PP(4)=LPOP(kb+1); PP(5)=RPOP(kb+1)
 
     !kinetics of each clam
+    PR=0.0; HST=0.0
     do i=1,nclam
       !compute filtration
       xT=wtemp-cTFR(i); TSSc=cKTSS(i,1)*sum(PC)+cKTSS(i,2)*wTSS
@@ -1083,7 +1084,9 @@ subroutine clam_calc(id,kb,wdz)
       GP(i)=sum(fN(i)*calpha(i,1:5)*cIF(i)*(1.0-cRF(i))*PC(1:5)*Fr(i)*CLAM(id,i)) !growth (g[C].m-2.day-1)
       MT(i)=cMTB(i)*exp(cKTMT(i)*(wtemp-cTMT(i)))*fDO(i)*CLAM(id,i) !metabolism (g[C].m-2.day-1)
       RT(i)=cMRT(i)*(1.d0-fDO(i))*CLAM(id,i) !mortality (g[C].m-2.day-1)
-      CLAM(id,i)=CLAM(id,i)+(GP(i)-MT(i)-RT(i))*dtw !update clam biomass
+      if(idoy>=cDoyp(i,1).and.idoy<=cDoyp(i,2)) PR(i) =cPRR(i)*CLAM(id,i) !predation (g[C].m-2.day-1)
+      if(idoy>=cDoyh(i,1).and.idoy<=cDoyh(i,2)) HST(i)=cHSR(i)*CLAM(id,i) !harvest (g[C].m-2.day-1)
+      CLAM(id,i)=CLAM(id,i)+(GP(i)-MT(i)-RT(i)-PR(i)-HST(i))*dtw !update clam biomass
     enddo !i=1,nclam
 
     !interaction with water column variables;  change rate of conc. (g.m-3.day-1)
@@ -1103,9 +1106,9 @@ subroutine clam_calc(id,kb,wdz)
     !interaction with sediment layer
     cFPOC(id,1:2)=0; cFPON(id,1:2)=0; cFPOP(id,1:2)=0
     do i=1,nclam
-      cFPOC(id,1)=cFPOC(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PC(1:4))+sum(RT)
-      cFPON(id,1)=cFPON(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PN(1:4))+sum(cn2c(i)*RT)
-      cFPOP(id,1)=cFPOP(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PP(1:4))+sum(cp2c(i)*RT)
+      cFPOC(id,1)=cFPOC(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PC(1:4))+sum(RT+PR)
+      cFPON(id,1)=cFPON(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PN(1:4))+sum(cn2c(i)*(RT+PR))
+      cFPOP(id,1)=cFPOP(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PP(1:4))+sum(cp2c(i)*(RT+PR))
     enddo !i
     cFPOC(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(id,1:nclam)*PC(5))
     cFPON(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(id,1:nclam)*PN(5))

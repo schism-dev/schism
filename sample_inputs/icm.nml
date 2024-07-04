@@ -563,6 +563,10 @@ cMTB    =  0.008  0.008  0.008  0.008  0.008   !basal metabolism rate (day-1)
 cTMT    =  20.0   20.0   20.0   20.0   20.0    !reference temperature for metabolism (oC)
 cKTMT   =  0.069  0.069  0.069  0.069  0.069   !temperature dependence for metabolism (oC-1)
 cMRT    =  0.3    0.3    0.3    0.3    0.3     !mortality rate (day-1)
+cPRR    =  0.005  0.005  0.005  0.005  0.005   !seasonal predation rate (day-1)
+cHSR    =  0.001  0.001  0.001  0.001  0.001   !seasonal harvest rate (day-1)
+cDoyp   =  152 152 152 152 152    304 304 304 304 304 !date range for predation (day of year)
+cDoyh   =  122 122 122 122 122    274 274 274 274 274 !date range for predation (day of year)
 cn2c    =  0.167  0.167  0.167  0.167  0.167   !nitrogen to carbon ratio
 cp2c    =  0.011  0.011  0.011  0.011  0.011   !phosphorus to carbon ratio
 /
