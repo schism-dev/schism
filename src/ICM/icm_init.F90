@@ -357,9 +357,13 @@ subroutine read_icm_param(imode)
     if(iClam==1) then
       do i=1,nclam
         write(stmp,"(I3)") i
-        p=>wqout(nout+i); p%name='ICM_CLAM'//trim(adjustl(stmp)); p%p1=>CLAM(:,i); p%itype=4
+        p=>wqout(nout+i); p%name='ICM_CLAM'//trim(adjustl(stmp)); p%p1=>CLAM(i,:); p%itype=4
       enddo
       nb=nclam; nouts(10)=nb; iout(1,10)=nout+1; iout(2,10)=nout+nb; nout=nout+nb
+
+      !hotstart
+      p=>wqhot(nhot+1); p%name='clam';   p%p2=>CLAM
+      nhot=nhot+1
     endif
 
     !allocate iof_icm, and get output information
@@ -665,7 +669,7 @@ subroutine icm_vars_init
   !-------------------------------------------------------------------------------
   allocate(cpatch(nea)); cpatch=0
   if(iClam==1) then
-    allocate(CLAM(nea,nclam),cFPOC(nea,2),cFPON(nea,2),cFPOP(nea,2), stat=istat)
+    allocate(CLAM(nclam,nea),cFPOC(nea,2),cFPON(nea,2),cFPOP(nea,2), stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. CLAM')
   endif
 
@@ -920,7 +924,7 @@ subroutine icm_vars_init
       gpatch(i)=nint(gpatch0); gBA(i)=gBA0
     endif
     if(iClam==1) then
-      cpatch(i)=nint(cpatch0); CLAM(i,1:nclam)=clam0
+      cpatch(i)=nint(cpatch0); CLAM(1:nclam,i)=clam0
     endif
   enddo
 

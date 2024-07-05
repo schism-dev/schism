@@ -1033,6 +1033,7 @@ subroutine clam_calc(id,kb,wdz)
 !clam model computation
 !----------------------------------------------------------------------------
   use schism_glbl,only : rkind,nvrt
+  use schism_msgp, only : myrank,parallel_abort
   use icm_mod
   implicit none
   integer,intent(in) :: id,kb
@@ -1069,36 +1070,36 @@ subroutine clam_calc(id,kb,wdz)
         fTSS(i)=1.0-(1.0-cfTSSm(i))*(TSSc-cTSS(i,3))/(cTSS(i,4)-cTSS(i,3))
       endif
       Fr(i)=cfrmax(i)*fT(i)*fS(i)*fDO(i)*fTSS(i) !filtration rate (m3.g[C_clam].day-1)
-      cIF(i)=min(1.d0,cIFmax(i)/sum(Fr(i)*PC)) !ingestion rate
+      cIF(i)=min(1.d0,cIFmax(i)/max(sum(Fr(i)*PC),1.d-5)) !ingestion rate
 
       !filtered matters
-      TFC(i)=sum(PC*Fr(i)*CLAM(id,i))   !POC filtered (g[C].m-2.day-1)
-      TFN(i)=sum(PN*Fr(i)*CLAM(id,i))   !PON filtered (g[N].m-2.day-1)
-      TFP(i)=sum(PP*Fr(i)*CLAM(id,i))   !POP filtered (g[P].m-2.day-1)
-      ATFC(i)=sum(calpha(i,1:5)*PC*Fr(i)*cIF(i)*CLAM(id,i))   !potential POC assimilated (g[C].m-2.day-1)
-      ATFN(i)=sum(calpha(i,1:5)*PN*Fr(i)*cIF(i)*CLAM(id,i))   !potential PON assimilated (g[N].m-2.day-1)
-      ATFP(i)=sum(calpha(i,1:5)*PP*Fr(i)*cIF(i)*CLAM(id,i))   !potential POP assimilated (g[P].m-2.day-1)
-      fN(i)=min(1.d0, ATFN(i)/(cn2c(i)*ATFC(i)),ATFP(i)/(cp2c(i)*ATFC(i))) !nutrient(N,P) limitation
+      TFC(i)=sum(PC*Fr(i)*CLAM(i,id))   !POC filtered (g[C].m-2.day-1)
+      TFN(i)=sum(PN*Fr(i)*CLAM(i,id))   !PON filtered (g[N].m-2.day-1)
+      TFP(i)=sum(PP*Fr(i)*CLAM(i,id))   !POP filtered (g[P].m-2.day-1)
+      ATFC(i)=sum(calpha(i,1:5)*PC*Fr(i)*cIF(i)*CLAM(i,id))   !potential POC assimilated (g[C].m-2.day-1)
+      ATFN(i)=sum(calpha(i,1:5)*PN*Fr(i)*cIF(i)*CLAM(i,id))   !potential PON assimilated (g[N].m-2.day-1)
+      ATFP(i)=sum(calpha(i,1:5)*PP*Fr(i)*cIF(i)*CLAM(i,id))   !potential POP assimilated (g[P].m-2.day-1)
+      fN(i)=min(1.d0, ATFN(i)/max(cn2c(i)*ATFC(i),1.d-5),ATFP(i)/max(cp2c(i)*ATFC(i),1.d-5)) !nutrient(N,P) limitation
 
       !growth, metabolism, and mortality
-      GP(i)=sum(fN(i)*calpha(i,1:5)*cIF(i)*(1.0-cRF(i))*PC(1:5)*Fr(i)*CLAM(id,i)) !growth (g[C].m-2.day-1)
-      MT(i)=cMTB(i)*exp(cKTMT(i)*(wtemp-cTMT(i)))*fDO(i)*CLAM(id,i) !metabolism (g[C].m-2.day-1)
-      RT(i)=cMRT(i)*(1.d0-fDO(i))*CLAM(id,i) !mortality (g[C].m-2.day-1)
-      if(idoy>=cDoyp(i,1).and.idoy<=cDoyp(i,2)) PR(i) =cPRR(i)*CLAM(id,i) !predation (g[C].m-2.day-1)
-      if(idoy>=cDoyh(i,1).and.idoy<=cDoyh(i,2)) HST(i)=cHSR(i)*CLAM(id,i) !harvest (g[C].m-2.day-1)
-      CLAM(id,i)=CLAM(id,i)+(GP(i)-MT(i)-RT(i)-PR(i)-HST(i))*dtw !update clam biomass
+      GP(i)=sum(fN(i)*calpha(i,1:5)*cIF(i)*(1.0-cRF(i))*PC(1:5)*Fr(i)*CLAM(i,id)) !growth (g[C].m-2.day-1)
+      MT(i)=cMTB(i)*exp(cKTMT(i)*(wtemp-cTMT(i)))*fDO(i)*CLAM(i,id) !metabolism (g[C].m-2.day-1)
+      RT(i)=cMRT(i)*(1.d0-fDO(i))*CLAM(i,id) !mortality (g[C].m-2.day-1)
+      if(idoy>=cDoyp(i,1).and.idoy<=cDoyp(i,2)) PR(i) =cPRR(i)*CLAM(i,id) !predation (g[C].m-2.day-1)
+      if(idoy>=cDoyh(i,1).and.idoy<=cDoyh(i,2)) HST(i)=cHSR(i)*CLAM(i,id) !harvest (g[C].m-2.day-1)
+      CLAM(i,id)=CLAM(i,id)+(GP(i)-MT(i)-RT(i)-PR(i)-HST(i))*dtw !update clam biomass
     enddo !i=1,nclam
 
     !interaction with water column variables;  change rate of conc. (g.m-3.day-1)
-    cdwqc(iPB1, kb+1)=sum(PC(1)*Fr*CLAM(id,1:nclam))/wdz
-    cdwqc(iPB2, kb+1)=sum(PC(2)*Fr*CLAM(id,1:nclam))/wdz
-    cdwqc(iPB3, kb+1)=sum(PC(3)*Fr*CLAM(id,1:nclam))/wdz
-    cdwqc(iLPOC,kb+1)=sum(PC(4)*Fr*CLAM(id,1:nclam))/wdz
-    cdwqc(iRPOC,kb+1)=sum(PC(5)*Fr*CLAM(id,1:nclam))/wdz
-    cdwqc(iLPON,kb+1)=sum(PN(4)*Fr*CLAM(id,1:nclam))/wdz
-    cdwqc(iRPON,kb+1)=sum(PN(5)*Fr*CLAM(id,1:nclam))/wdz
-    cdwqc(iLPOP,kb+1)=sum(PP(4)*Fr*CLAM(id,1:nclam))/wdz
-    cdwqc(iRPOP,kb+1)=sum(PP(5)*Fr*CLAM(id,1:nclam))/wdz
+    cdwqc(iPB1, kb+1)=sum(PC(1)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iPB2, kb+1)=sum(PC(2)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iPB3, kb+1)=sum(PC(3)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iLPOC,kb+1)=sum(PC(4)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iRPOC,kb+1)=sum(PC(5)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iLPON,kb+1)=sum(PN(4)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iRPON,kb+1)=sum(PN(5)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iLPOP,kb+1)=sum(PP(4)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iRPOP,kb+1)=sum(PP(5)*Fr*CLAM(1:nclam,id))/wdz
     cdwqc(iNH4, kb+1)=sum((ATFN-cn2c*GP)+cn2c*MT)/wdz
     cdwqc(iPO4, kb+1)=sum((ATFP-cp2c*GP)+cp2c*MT)/wdz
     cdwqc(iDOX, kb+1)=o2c*sum((ATFC-GP)+MT)/wdz
@@ -1106,13 +1107,13 @@ subroutine clam_calc(id,kb,wdz)
     !interaction with sediment layer
     cFPOC(id,1:2)=0; cFPON(id,1:2)=0; cFPOP(id,1:2)=0
     do i=1,nclam
-      cFPOC(id,1)=cFPOC(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PC(1:4))+sum(RT+PR)
-      cFPON(id,1)=cFPON(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PN(1:4))+sum(cn2c(i)*(RT+PR))
-      cFPOP(id,1)=cFPOP(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(id,i)*PP(1:4))+sum(cp2c(i)*(RT+PR))
+      cFPOC(id,1)=cFPOC(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PC(1:4))+sum(RT+PR)
+      cFPON(id,1)=cFPON(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PN(1:4))+sum(cn2c(i)*(RT+PR))
+      cFPOP(id,1)=cFPOP(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PP(1:4))+sum(cp2c(i)*(RT+PR))
     enddo !i
-    cFPOC(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(id,1:nclam)*PC(5))
-    cFPON(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(id,1:nclam)*PN(5))
-    cFPOP(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(id,1:nclam)*PP(5))
+    cFPOC(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PC(5))
+    cFPON(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PN(5))
+    cFPOP(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PP(5))
 
   endif !iClam
 end subroutine clam_calc
