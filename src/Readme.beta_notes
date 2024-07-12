@@ -10,7 +10,7 @@ This beta notes are divided into 5 part:
 Github versions:
 
 - `0fec598` (20 May 2024): added nbins_veg_vert as a mandatory input; veg_vert_z*(1:nbins_veg_vert+1) 
-                           etc as optional. These are required if iveg/=0;
+                           etc as optional. The latter are required if iveg/=0;
 - `56b88ae` (17 May 2024): added station outputs for all tracers (flags in station.in after w);
 - `e66f1b3` (3 May 2024): renamed sav_*.gr3 as veg_*.gr3; also MARSH module now requires iveg/=0;
 - `ca44ba0` (1 May 2024): removed isav and replaced it with iveg
@@ -605,6 +605,7 @@ git versions:
 150. `66242aa` (Sept 13, 2023): removed goto in harm.F90
 151. `5914ae2` (Mar 26, 2024): fix an init error for diffm* (c/o Ufuk)
 161. `ca44ba0` (1 May 2024): fixed bugs in vegetation&marsh module (uninited sav_h0 etc) 
+162. `cfb58a5` [5 July 2024] replace fatal errors with warning in btrack (no intersecting edges). These are exaordinary exceptions that occur rarely.
 
 ================================================================================================
 (D) Auto-test history:

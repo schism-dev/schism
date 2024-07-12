@@ -480,7 +480,8 @@ $(FABMINSTALLDIR)/lib/libfabm.a:
 
 
 src_extension := .f90
-util_lib_src := schism_geometry.f90 pt_in_poly.f90 pt_in_poly2.f90 extract_mod.f90 compute_zcor.f90 stat_pool.f90 stat_pool.f90 stripsearch_unstr.f90 argparse.f90 netcdf_var_names.f90 moving_average_filter.f90
+util_lib_src := schism_geometry.f90 argparse.f90  extract_mod2.f90  interpolate_unstructured_module.f90  pt_in_poly_test.f90  stripesearch_unstr.f90 compute_zcor.f90 extract_mod.f90 julian_date.f90                     
+
 util_lib_obj := $(subst $(src_extension),.o,$(util_lib_src))
 util_lib_config_objs := $(addprefix o/$(config)/, $(util_lib_obj))
 

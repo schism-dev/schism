@@ -198,10 +198,13 @@
       do i=1,np
         write(12,'(i12,2(1x,e22.14),1x,e16.5)')i,xnd(i),ynd(i),dp(i) 
       enddo !i
+      nquads=0
       do i=1,ne
         write(12,*)i,i34_new(i),elnode_new(1:i34_new(i),i)
+        if(i34_new(i)==4) nquads=nquads+1
       enddo !i
       close(12)
+      print*, '# of quads remaining=',nquads
 
       stop
       end

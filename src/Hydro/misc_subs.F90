@@ -6398,7 +6398,7 @@
         wave_dir(1:np)=WW3__DIR !mean wave dir [deg]
         wave_tm1(1:np)=WW3_T0M1 !mean wave period [s]
         wave_wnm(1:np)=WW3__WNM !mean wave number [1/m]
-        wave_pres(1:np)=WW3__BHD !wave-induced Bernoulli head pressure [N/m or Pa?]
+        wave_pres(1:np)=WW3__BHD !wave-induced Bernoulli head pressure [m^2/s/s]
         wave_stokes_x(1:np)=WW3_USSX !Stokes drift [m/s]
         wave_stokes_y(1:np)=WW3_USSY 
         wave_ocean_flux_x(1:np)=WW3_TWOX !wave-ocean mom flux [m2/s2]
