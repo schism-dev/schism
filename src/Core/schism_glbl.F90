@@ -566,6 +566,7 @@ module schism_glbl
 
   ! Station and other output arrays
   real(rkind),save,allocatable :: xsta(:),ysta(:),zstal(:),zsta(:),arco_sta(:,:), &
+                                  xsta_bmi(:),ysta_bmi(:),zsta_bmi(:), &
                                   &sta_out(:,:),sta_out_gb(:,:),sta_out3d(:,:,:), &
                                   &zta_out3d(:,:,:),sta_out3d_gb(:,:,:),zta_out3d_gb(:,:,:)
   integer,save,allocatable :: iep_sta(:),iep_flag(:),iof_sta(:),indx_out(:,:),indx_wwm_out(:)

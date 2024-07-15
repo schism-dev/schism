@@ -60,6 +60,7 @@ program schism_driver_test
     double precision, allocatable                    :: grid_y_mesh(:), grid_y_wlbnd(:), grid_y_qbnd(:) ! Y coordinate of grid nodes (change dims if multiple nodes)
     double precision, allocatable                    :: grid_z_mesh(:), grid_z_wlbnd(:), grid_z_qbnd(:) ! Z coordinate of grid nodes (change dims if multiple nodes)
     double precision, allocatable                    :: grid_x_rain(:), grid_y_rain(:)
+    double precision, allocatable                    :: grid_x_station(:), grid_y_station(:)
     integer                                           :: grid_node_count ! Get the number of nodes in the grid 
     integer                                           :: grid_edge_count ! Get the number of edges in the grid
     integer                                           :: grid_face_count ! Get the number of faces in the grid
@@ -77,7 +78,7 @@ program schism_driver_test
     double precision, allocatable            :: ETA2_bnd_t0(:), ETA2_bnd_t1(:) ! Open water level Boundary condition terms
     double precision, allocatable            :: SFCPRS_t0(:), SFCPRS_t1(:), TMP2m_t0(:), TMP2m_t1(:)
     double precision, allocatable            :: UU10m_t0(:), UU10m_t1(:), VV10m_t0(:), VV10m_t1(:)
-    double precision, allocatable            :: SPFH2m_t0(:), SPFH2m_t1(:), RAINRATE_t0(:), RAINRATE_t1(:)
+    double precision, allocatable            :: SPFH2m_t0(:), SPFH2m_t1(:), RAINRATE_t0(:), RAINRATE_t1(:), TROUTE_ETA2(:)
 
 
     integer, dimension(3)                             :: grid_indices       ! grid indices (change dims as needed)
@@ -359,12 +360,19 @@ program schism_driver_test
     ! Loop through the output vars
     ! and just test get value functionality
     do iBMI = 1, n_outputs
-      status = m%get_value(trim(names_outputs(iBMI)), var_value_get)
-      print*, trim(names_outputs(iBMI)), " from get_value = ", var_value_get
+      if(trim(names_outputs(iBMI)) .ne. "TROUTE_ETA2") then
+          status = m%get_value(trim(names_outputs(iBMI)), var_value_get)
+          print*, trim(names_outputs(iBMI)), " from get_value = ", var_value_get
+      endif
     end do
  
     deallocate(var_value_get)
 
+    ! Now quickly test the value get method for TROUTE ETA2
+    allocate(var_value_get(nout_sta))
+    status = m%get_value("TROUTE_ETA2", var_value_get)
+    print*, "TROUTE_ETA2 from get_value = ", var_value_get
+    deallocate(var_value_get)
 
     ETA2_bnd_t1(:) = 2.5
     status = m%set_value('ETA2_bnd_t1', ETA2_bnd_t1)
@@ -631,6 +639,36 @@ program schism_driver_test
     deallocate(grid_x_mesh)
     deallocate(grid_y_mesh)
     deallocate(grid_z_mesh)
+
+
+    !!!!!!!!!!!!!!! Now Evaluate the TRoute station id point grid !!!!!!!!!!!!
+    if(nout_sta > 0) then
+        status = m%get_var_grid('TROUTE_ETA2', grid_int)
+        print*, "The integer value for the ", 'TROUTE_ETA2', " grid is ", grid_int
+
+        ! get_grid_type
+        status = m%get_grid_type(grid_int, grid_type)
+        print*, "The grid type for ", 'TROUTE_ETA2', " is ", trim(grid_type)
+
+        ! get_grid_rank
+        status = m%get_grid_rank(grid_int, grid_rank)
+
+        allocate(grid_x_station(nout_sta))
+        allocate(grid_y_station(nout_sta))
+
+        status = m%get_grid_x(grid_int, grid_x_station)
+        status = m%get_grid_y(grid_int, grid_y_station)
+
+        print*, "The X coord for grid ", grid_int, " is ", grid_x_station(:)
+        print*, "The Y coord for grid ", grid_int, " is ", grid_y_station(:)
+
+        print*, "schism glbl arrays"
+        print*, xsta(:)
+        print*, ysta(:)
+        deallocate(grid_x_station)
+        deallocate(grid_y_station)
+    endif
+
     !!!!!!!!!!!!!!!! Now Evalute the water level open boundary point grid !!!!!!!!!!
     status = m%get_var_grid('ETA2_bnd_t1', grid_int)
     print*, "The integer value for the ", 'ETA2_bnd1_t1', " grid is ", grid_int
@@ -711,6 +749,7 @@ program schism_driver_test
     !print*, "The Z coord for grid ", grid_int, " is ", grid_z_qbnd(1:5)
     deallocate(grid_x_qbnd)
     deallocate(grid_y_qbnd)
+
   !---------------------------------------------------------------------
   ! The following functions are not implemented/only return BMI_FAILURE
   ! Change if your model implements them

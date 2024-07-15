@@ -21,6 +21,7 @@ module bmischism
   use schism_glbl, only: windx2, windy2, pr2, airt2, shum2
   use schism_glbl, only: srad, fluxevp, fluxprc, tr_nd, uu2
   use schism_glbl, only: dt, rnday, vv2, nvrt,ifile,nc_out, eta2
+  use schism_glbl, only: nout_sta, xsta_bmi, ysta_bmi, zsta_bmi, sta_out_gb
   use schism_msgp, only: parallel_init, task_id, parallel_finalize, nscribes
 
   use, intrinsic :: iso_c_binding, only: c_ptr, c_loc, c_f_pointer
@@ -115,7 +116,7 @@ module bmischism
 
   ! Exchange items
   integer, parameter :: input_item_count = 18
-  integer, parameter :: output_item_count = 5
+  integer, parameter :: output_item_count = 6
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -277,6 +278,7 @@ end subroutine read_init_config
     output_items(3) = 'VX'      ! current vector velocity in eastward direction (m/s)
     output_items(4) = 'Q_bnd_ind'   ! Source (discharge and rainfall) boundary condition indices (N/A)
     output_items(5) = 'ETA2_bnd_ind'! Water level open boundary condition indices (N/A)
+    output_items(6) = 'TROUTE_ETA2'    ! Total water level T-Route boundaries at SCHISM pre-determined stations (m)
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -375,7 +377,7 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2','VX','VY','Q_bnd_source_t0','Q_bnd_sink_t0','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','RAINRATE_t0','Q_bnd_source_t1','Q_bnd_sink_t1','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','RAINRATE_t1')
+    case('ETA2','TROUTE_ETA2','VX','VY','Q_bnd_source_t0','Q_bnd_sink_t0','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','RAINRATE_t0','Q_bnd_source_t1','Q_bnd_sink_t1','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','RAINRATE_t1')
        type = "double precision"
        bmi_status = BMI_SUCCESS
     case('Q_bnd_ind','ETA2_bnd_ind')
@@ -411,7 +413,7 @@ end function schism_finalizer
     case("SPFH2m_t0","SPFH2m_t1")
        units = "kg kg-1"
        bmi_status = BMI_SUCCESS
-    case("ETA2",'ETA2_bnd_t0','ETA2_bnd_t1')
+    case("ETA2",'ETA2_bnd_t0','ETA2_bnd_t1','TROUTE_ETA2')
        units = "m"
        bmi_status = BMI_SUCCESS
     case('Q_bnd_source_t0','Q_bnd_source_t1','Q_bnd_sink_t0','Q_bnd_sink_t1')
@@ -438,7 +440,7 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2_bnd_ind','ETA2','VX','VY','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1')
+    case('ETA2_bnd_ind','ETA2','TROUTE_ETA2','VX','VY','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1')
        location = "node"
        bmi_status = BMI_SUCCESS
     case('Q_bnd_ind','RAINRATE_t0','RAINRATE_t1','Q_bnd_source_t0','Q_bnd_source_t1','Q_bnd_sink_t0','Q_bnd_sink_t1')
@@ -474,6 +476,9 @@ end function schism_finalizer
     case('Q_bnd_sink_t0','Q_bnd_sink_t1')
        grid = 5
        bmi_status = BMI_SUCCESS
+    case('TROUTE_ETA2')
+       grid = 6
+       bmi_status = BMI_SUCCESS
     case default
        grid = -1
        bmi_status = BMI_FAILURE
@@ -489,7 +494,7 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(grid)
-    case(1,2,3)
+    case(1,2,3,6)
        rank = 2
        bmi_status = BMI_SUCCESS
     case(4,5)
@@ -523,6 +528,9 @@ end function schism_finalizer
        bmi_status = BMI_SUCCESS
     case(5)
        size = nsinks
+       bmi_status = BMI_SUCCESS
+    case(6)
+       size = nout_sta
        bmi_status = BMI_SUCCESS
     case default
        size = -1
@@ -679,6 +687,9 @@ end function schism_finalizer
         x(:) = -1.d0
         bmi_status = BMI_FAILURE
       endif
+    case(6)
+        x(:) = xsta_bmi(:)
+        bmi_status = BMI_SUCCESS
     case default
        x(:) = -1.d0
        bmi_status = BMI_FAILURE
@@ -772,6 +783,9 @@ end function schism_finalizer
         y(:) = -1.d0
         bmi_status = BMI_FAILURE
       endif
+    case(6)
+        y(:) = ysta_bmi(:)
+        bmi_status = BMI_SUCCESS
     case default
        y(:) = -1.d0
        bmi_status = BMI_FAILURE
@@ -845,7 +859,12 @@ end function schism_finalizer
       z(:) = -1.d0
       bmi_status = BMI_FAILURE
     endif
-
+    case(6)
+        z(:) = zsta_bmi(:)
+        bmi_status = BMI_SUCCESS
+    case default
+       z(:) = -1.d0
+       bmi_status = BMI_FAILURE
     end select
   end function schism_grid_z
 
@@ -1026,7 +1045,7 @@ end function schism_finalizer
     case(1)
        type = "unstructured"
        bmi_status = BMI_SUCCESS
-    case(2,3,4,5)
+    case(2,3,4,5,6)
        type = "points"
        bmi_status = BMI_SUCCESS
     case default
@@ -1046,6 +1065,9 @@ end function schism_finalizer
     select case(name)
     case("ETA2")
        size = sizeof(eta2)
+       bmi_status = BMI_SUCCESS
+    case("TROUTE_ETA2")
+       size = sizeof(sta_out_gb(:,1))
        bmi_status = BMI_SUCCESS
     case("ETA2_bnd_t0","ETA2_bnd_t1")
        size = sizeof(ath2(1,1,:,1,1))
@@ -1225,7 +1247,7 @@ end function schism_finalizer
       if(SUM(ath3(:,1,1,2)) .eq. 0.0) then
         ! Allow model engine to set data
         ! after model initialization phase
-        ath3(:,1,1,2) = src(:)*-1
+        ath3(:,1,1,2) = src(:)
         bmi_status=BMI_SUCCESS
       else
         ! Return BMI failure and dont allow
@@ -1241,7 +1263,7 @@ end function schism_finalizer
         ! this was completed by the model
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
-        ath3(:,1,2,2) = src(:)*-1
+        ath3(:,1,2,2) = src(:)
         bmi_status=BMI_SUCCESS
       else
         ! Since this is now after first model iteration
@@ -1249,7 +1271,7 @@ end function schism_finalizer
         ! of "t1" and then update "t1" from the following
         ! values given by the model engine coupler
         ath3(:,1,1,2) = ath3(:,1,2,2)
-        ath3(:,1,2,2) = src(:)*-1
+        ath3(:,1,2,2) = src(:)
         bmi_status=BMI_SUCCESS
       endif
     case("SFCPRS_t0")
@@ -1590,7 +1612,7 @@ end function schism_finalizer
         ! Allow model engine to set data
         ! after model initialization phase
         do i = 1, size(inds)
-            ath3(inds(i),1,1,2) = src(i)*-1
+            ath3(inds(i),1,1,2) = src(i)
         enddo
         bmi_status=BMI_SUCCESS
       else
@@ -1608,7 +1630,7 @@ end function schism_finalizer
         ! engine during the model initializaion
         ! phase where "t0" was forced by hot start
         do i = 1, size(inds)
-            ath3(inds(i),1,2,2) = src(i)*-1
+            ath3(inds(i),1,2,2) = src(i)
         enddo
         bmi_status=BMI_SUCCESS
       else
@@ -1618,7 +1640,7 @@ end function schism_finalizer
         ! values given by the model engine coupler
         do i = 1, size(inds)
             ath3(inds(i),1,1,2) = ath3(inds(i),1,2,2)
-            ath3(inds(i),1,2,2) = src(i)*-1
+            ath3(inds(i),1,2,2) = src(i)
         enddo
         bmi_status=BMI_SUCCESS
       endif
@@ -1953,6 +1975,9 @@ end function schism_finalizer
     case("ETA2")
       dest = [eta2]
       bmi_status=BMI_SUCCESS
+    case("TROUTE_ETA2")
+      dest = [sta_out_gb(:,1)]
+      bmi_status=BMI_SUCCESS
     case("VX")
       dest = [uu2(1,:)]
       bmi_status=BMI_SUCCESS
@@ -2060,6 +2085,11 @@ end function schism_finalizer
     case("ETA2")
       do i = 1, size(inds)
           dest(i) = eta2(inds(i))
+      enddo
+      bmi_status=BMI_SUCCESS
+    case("TROUTE_ETA2")
+      do i = 1, size(inds)
+          dest(i) = sta_out_gb(inds(i),1)
       enddo
       bmi_status=BMI_SUCCESS
     case("VX")
