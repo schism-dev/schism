@@ -53,8 +53,8 @@ module icm_mod
   real(rkind),save,pointer,dimension(:) :: zdDOX 
 
   !debug variables
-  real(rkind),save,pointer,dimension(:,:) :: dbCHLA
-  real(rkind),save,pointer,dimension(:) :: dbTN,dbTP
+  real(rkind),save,pointer,dimension(:,:) :: db_CHLA,db_Ke
+  real(rkind),save,pointer,dimension(:) :: db_TN,db_TP
  
   !-------------------------------------------------------------------------------
   !ICM parameters and variables
@@ -110,6 +110,8 @@ module icm_mod
 
   integer,save,allocatable :: spatch(:)               !sav region
   real(rkind),save,target,allocatable :: sht(:),sav(:,:),sFPOC(:,:),sFPON(:,:),sFPOP(:,:),sbNH4(:),sbPO4(:),sSOD(:)
+  real(rkind),save,pointer,dimension(:,:) :: db_sGP,db_sMT1,db_sMT2
+  real(rkind),save,pointer,dimension(:) :: db_sMT01,db_sMT02,db_sMT03,db_sfT,db_sfI,db_sfN,db_sfP
 
   !-------------------------------------------------------------------------------
   !marsh parameters and variables
@@ -160,7 +162,7 @@ module icm_mod
 
   integer,save,allocatable,dimension(:) :: gpatch
   real(rkind),save,target,allocatable,dimension(:) :: gBA,gGP,gMT,gPR
-
+  real(rkind),save,pointer,dimension(:) :: db_gfT,db_gfI,db_gfN,db_gfP
   !-------------------------------------------------------------------------------
   !Clam model (CLAM) parameters and variables
   !-------------------------------------------------------------------------------
@@ -171,6 +173,11 @@ module icm_mod
 
   integer,save,allocatable,dimension(:) :: cpatch
   real(rkind),save,target,allocatable,dimension(:,:) :: CLAM,cFPOC,cFPON,cFPOP
+
+  !debug
+  real(rkind),save,pointer,dimension(:,:) :: db_cfT,db_cfS,db_cfDO,db_cfTSS,db_cFr,db_cIF,db_cTFC,db_cATFC,db_cfN, &
+                                           & db_cGP,db_cMT,db_cRT,db_cPR,db_cHST
+
   !-------------------------------------------------------------------------------
   !benthic erosion (ERO) parameters and variables
   !-------------------------------------------------------------------------------

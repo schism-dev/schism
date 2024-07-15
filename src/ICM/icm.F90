@@ -523,18 +523,19 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       if(iof_icm_dbg/=0) then
         !Core
-        dbTN=0; dbTP=0 !TN, TP
+        db_TN=0; db_TP=0 !TN, TP
         do k=kb+1,nvrt
           dzb=(zid(k)-zid(k-1))
-          dbTN(id)=dzb*(RPON(k)+LPON(k)+DON(k)+NH4(k)+NO3(k)+sum(n2c*PBS(1:3,k)))
-          dbTP(id)=dzb*(RPOP(k)+LPOP(k)+DOP(k)+PO4(k)+sum(p2c*PBS(1:3,k)))
+          db_TN(id)=dzb*(RPON(k)+LPON(k)+DON(k)+NH4(k)+NO3(k)+sum(n2c*PBS(1:3,k)))
+          db_TP(id)=dzb*(RPOP(k)+LPOP(k)+DOP(k)+PO4(k)+sum(p2c*PBS(1:3,k)))
           if(iCBP==1) then
-            dbTN(id)=dbTN(id)+dzb*SRPON(k)
-            dbTP(id)=dbTP(id)+dzb*SRPOP(k)
+            db_TN(id)=db_TN(id)+dzb*SRPON(k)
+            db_TP(id)=db_TP(id)+dzb*SRPOP(k)
           endif
         enddo
         do k=kb+1,nvrt
-          dbCHLA(k,id)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0) !CHLA
+          db_CHLA(k,id)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0) !CHLA
+          db_Ke(k,id)=rKe(k)
         enddo
       endif !iof_icm_dbg/=0
 
@@ -859,7 +860,7 @@ subroutine zoo_calc(kb,PR)
 end subroutine zoo_calc
 
 subroutine sav_calc(id,kb,zid,shtz,tdep,sLight)
-  use schism_glbl, only : rkind,errmsg,idry_e,nvrt
+  use schism_glbl, only : rkind,errmsg,idry_e,nvrt,iof_icm_dbg
   use icm_mod
   implicit none
   integer,intent(in) :: id,kb
@@ -910,6 +911,12 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight)
        leaf0=leaf0-MT0(1)*dtw
        stem0=stem0-MT0(2)*dtw
        sroot=sroot+(sFCP(3)*(1.0-sFAM)*sum(GP((kb+1):nvrt)*dz((kb+1):nvrt))-MT0(3))*dtw
+    endif
+
+    !debug
+    if(iof_icm_dbg/=0) then
+      db_sGP(k,id)=GP(k);  db_sMT1(k,id)=MT1(k); db_sMT2(k,id)=MT2(k); db_sMT01(id)=MT0(1); db_sMT02(id)=MT0(2)
+      db_sMT03(id)=MT0(3); db_sfT=fT; db_sfI=fR; db_sfN=fN; db_sfP=fP
     endif
   enddo
   sleaf=max(leaf0+sum(zleaf*dz),1.d-5)
@@ -966,7 +973,7 @@ subroutine ba_calc(id,kb,wdz)
 !----------------------------------------------------------------------------
 !Benthic algae computation
 !----------------------------------------------------------------------------
-  use schism_glbl,only : rkind
+  use schism_glbl,only : rkind,iof_icm_dbg
   use icm_mod
   implicit none
   integer,intent(in) :: id,kb
@@ -1024,6 +1031,10 @@ subroutine ba_calc(id,kb,wdz)
     JNH4(id)=JNH4(id)-gn2c*GP*fPN*(1.0-fWN)
     JNO3(id)=JNO3(id)-gn2c*GP*(1.0-fPN)*(1.0-fWN)
     JPO4(id)=JPO4(id)-gp2c*GP*(1.0-fWP)
+
+    if(iof_icm_dbg/=0) then
+      db_gfT(id)=fT; db_gfI(id)=fR; db_gfN(id)=fN; db_gfP(id)=fP
+    endif
   endif !iBA==1
 
 end subroutine ba_calc
@@ -1032,7 +1043,7 @@ subroutine clam_calc(id,kb,wdz)
 !----------------------------------------------------------------------------
 !clam model computation
 !----------------------------------------------------------------------------
-  use schism_glbl,only : rkind,nvrt
+  use schism_glbl,only : rkind,nvrt,iof_icm_dbg
   use schism_msgp, only : myrank,parallel_abort
   use icm_mod
   implicit none
@@ -1088,18 +1099,25 @@ subroutine clam_calc(id,kb,wdz)
       if(idoy>=cDoyp(i,1).and.idoy<=cDoyp(i,2)) PR(i) =cPRR(i)*CLAM(i,id) !predation (g[C].m-2.day-1)
       if(idoy>=cDoyh(i,1).and.idoy<=cDoyh(i,2)) HST(i)=cHSR(i)*CLAM(i,id) !harvest (g[C].m-2.day-1)
       CLAM(i,id)=CLAM(i,id)+(GP(i)-MT(i)-RT(i)-PR(i)-HST(i))*dtw !update clam biomass
+
+      !debug
+      if(iof_icm_dbg/=0) then
+        db_cfT(i,id)=fT(i);  db_cfS(i,id)=fS(i);   db_cfDO(i,id)=fDO(i);   db_cfTSS(i,id)=fTSS(i);  db_cFr(i,id)=Fr(i)
+        db_cIF(i,id)=cIF(i); db_cTFC(i,id)=TFC(i); db_cATFC(i,id)=ATFC(i); db_cfN(i,id)=fN(i);      db_cGP(i,id)=GP(i)
+        db_cMT(i,id)=MT(i);  db_cRT(i,id)=RT(i);   db_cPR(i,id)=PR(i);     db_cHST(i,id) =HST(i)
+      endif
     enddo !i=1,nclam
 
     !interaction with water column variables;  change rate of conc. (g.m-3.day-1)
-    cdwqc(iPB1, kb+1)=sum(PC(1)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iPB2, kb+1)=sum(PC(2)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iPB3, kb+1)=sum(PC(3)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iLPOC,kb+1)=sum(PC(4)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iRPOC,kb+1)=sum(PC(5)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iLPON,kb+1)=sum(PN(4)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iRPON,kb+1)=sum(PN(5)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iLPOP,kb+1)=sum(PP(4)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iRPOP,kb+1)=sum(PP(5)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iPB1, kb+1)=-sum(PC(1)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iPB2, kb+1)=-sum(PC(2)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iPB3, kb+1)=-sum(PC(3)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iLPOC,kb+1)=-sum(PC(4)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iRPOC,kb+1)=-sum(PC(5)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iLPON,kb+1)=-sum(PN(4)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iRPON,kb+1)=-sum(PN(5)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iLPOP,kb+1)=-sum(PP(4)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iRPOP,kb+1)=-sum(PP(5)*Fr*CLAM(1:nclam,id))/wdz
     cdwqc(iNH4, kb+1)=sum((ATFN-cn2c*GP)+cn2c*MT)/wdz
     cdwqc(iPO4, kb+1)=sum((ATFP-cp2c*GP)+cp2c*MT)/wdz
     cdwqc(iDOX, kb+1)=o2c*sum((ATFC-GP)+MT)/wdz

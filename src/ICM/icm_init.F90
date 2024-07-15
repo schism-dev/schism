@@ -180,7 +180,7 @@ subroutine read_icm_param(imode)
     !p%itype is consistent with the output type in SCHISM hydro
     !-----------------------------------------------------------------------------------------
     !allocate variables
-    allocate(wqout(100),wqhot(50),stat=istat)
+    allocate(wqout(200),wqhot(50),stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. wqout')
 
     nouts=0; nout=0; iout=0; nhot_icm=0 !init
@@ -199,11 +199,13 @@ subroutine read_icm_param(imode)
       nb=17; nouts(1)=nb; iout(1,1)=1; iout(2,1)=nb; nout=nout+nb
 
       !debug variable
-      p=>wqout(nout+1); p%name='ICM_TN';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); dbTN=>p%p1;   p%itype=4
-      p=>wqout(nout+2); p%name='ICM_TP';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); dbTP=>p%p1;   p%itype=4
-      p=>wqout(nout+3); p%name='ICM_CHLA'; allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); dbCHLA=>p%p2; p%itype=6
-      !nb=3; nouts(1)=nouts(1)+nb; iout(2,1)=iout(2,1)+nb; nout=nout+nb
-      nb=3; nouts(1)=nouts(1)+nb; nout=nout+nb
+      if(iof_icm_dbg/=0) then
+        p=>wqout(nout+1); p%name='ICM_TN';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_TN=>p%p1;   p%itype=4
+        p=>wqout(nout+2); p%name='ICM_TP';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_TP=>p%p1;   p%itype=4
+        p=>wqout(nout+3); p%name='ICM_CHLA'; allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); db_CHLA=>p%p2; p%itype=6
+        p=>wqout(nout+4); p%name='ICM_Ke';   allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); db_Ke=>p%p2;   p%itype=6
+        nb=4; nouts(1)=nouts(1)+nb; nout=nout+nb
+      endif
     endif
 
     !Silica module:2
@@ -265,6 +267,21 @@ subroutine read_icm_param(imode)
       p=>wqout(nout+3); p%name='ICM_sroot'; p%p1=>sav(3,:); p%itype=4
       p=>wqout(nout+4); p%name='ICM_sht';   p%p1=>sht;      p%itype=4
       nb=4; nouts(6)=nb;  iout(1,6)=nout+1; iout(2,6)=nout+nb; nout=nout+nb
+
+      !debug variable
+      if(iof_icm_dbg/=0) then
+        p=>wqout(nout+1);  p%name='ICM_sGP';   allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); db_sGP=>p%p2;   p%itype=6
+        p=>wqout(nout+2);  p%name='ICM_sMT1';  allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); db_sMT1=>p%p2;  p%itype=6
+        p=>wqout(nout+3);  p%name='ICM_sMT2';  allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); db_sMT2=>p%p2;  p%itype=6
+        p=>wqout(nout+4);  p%name='ICM_sMT01'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sMT01=>p%p1; p%itype=4
+        p=>wqout(nout+5);  p%name='ICM_sMT02'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sMT02=>p%p1; p%itype=4
+        p=>wqout(nout+6);  p%name='ICM_sMT03'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sMT03=>p%p1; p%itype=4
+        p=>wqout(nout+7);  p%name='ICM_sfT';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sfT=>p%p1;   p%itype=4
+        p=>wqout(nout+8);  p%name='ICM_sfI';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sfI=>p%p1;   p%itype=4
+        p=>wqout(nout+9);  p%name='ICM_sfN';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sfN=>p%p1;   p%itype=4
+        p=>wqout(nout+10); p%name='ICM_sfP';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sfP=>p%p1;   p%itype=4
+        nb=10; nouts(1)=nouts(1)+nb; nout=nout+nb
+      endif
 
       !hotstart variable
       p=>wqhot(nhot+1); p%name='sav';  p%p2=>sav
@@ -342,11 +359,20 @@ subroutine read_icm_param(imode)
 
     !Benthic Algea: 9
     if(iBA==1) then
-      p=>wqout(nout+1);   p%name='ICM_gBA';  p%p1=>gBA;  p%itype=4
+      p=>wqout(nout+1);   p%name='ICM_gBA';  p%p1=>gBA; p%itype=4
       p=>wqout(nout+2);   p%name='ICM_gGP';  p%p1=>gGP; p%itype=4
       p=>wqout(nout+3);   p%name='ICM_gMT';  p%p1=>gMT; p%itype=4
       p=>wqout(nout+4);   p%name='ICM_gPR';  p%p1=>gPR; p%itype=4
       nb=4; nouts(9)=nb; iout(1,9)=nout+1; iout(2,9)=nout+nb; nout=nout+nb
+
+      !debug variable
+      if(iof_icm_dbg/=0) then
+        p=>wqout(nout+1); p%name='ICM_gfT'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_gfT=>p%p1;   p%itype=4
+        p=>wqout(nout+2); p%name='ICM_gfI'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_gfI=>p%p1;   p%itype=4
+        p=>wqout(nout+3); p%name='ICM_gfN'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_gfN=>p%p1;   p%itype=4
+        p=>wqout(nout+4); p%name='ICM_gfP'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_gfP=>p%p1;   p%itype=4
+        nb=4; nouts(1)=nouts(1)+nb; nout=nout+nb
+      endif
      
       !hotstart
       p=>wqhot(nhot+1); p%name='gBA';   p%p1=>gBA
@@ -360,6 +386,28 @@ subroutine read_icm_param(imode)
         p=>wqout(nout+i); p%name='ICM_CLAM'//trim(adjustl(stmp)); p%p1=>CLAM(i,:); p%itype=4
       enddo
       nb=nclam; nouts(10)=nb; iout(1,10)=nout+1; iout(2,10)=nout+nb; nout=nout+nb
+
+      !debug variable
+      if(iof_icm_dbg/=0) then
+        do i=1,nclam
+          write(stmp,"(I3)") i
+          p=>wqout(nout+(i-1)*14+1);  p%name='ICM_cfT'//trim(adjustl(stmp));     p%p1=>db_cfT(i,:);   p%itype=4
+          p=>wqout(nout+(i-1)*14+2);  p%name='ICM_cfS'//trim(adjustl(stmp));     p%p1=>db_cfS(i,:);   p%itype=4
+          p=>wqout(nout+(i-1)*14+3);  p%name='ICM_cfDO'//trim(adjustl(stmp));    p%p1=>db_cfDO(i,:);  p%itype=4
+          p=>wqout(nout+(i-1)*14+4);  p%name='ICM_cfTSS'//trim(adjustl(stmp));   p%p1=>db_cfTSS(i,:); p%itype=4
+          p=>wqout(nout+(i-1)*14+5);  p%name='ICM_cFr'//trim(adjustl(stmp));     p%p1=>db_cFr(i,:);   p%itype=4
+          p=>wqout(nout+(i-1)*14+6);  p%name='ICM_cIF'//trim(adjustl(stmp));     p%p1=>db_cIF(i,:);   p%itype=4
+          p=>wqout(nout+(i-1)*14+7);  p%name='ICM_cTFC'//trim(adjustl(stmp));    p%p1=>db_cTFC(i,:);  p%itype=4
+          p=>wqout(nout+(i-1)*14+8);  p%name='ICM_cATFC'//trim(adjustl(stmp));   p%p1=>db_cATFC(i,:); p%itype=4
+          p=>wqout(nout+(i-1)*14+9);  p%name='ICM_cfN'//trim(adjustl(stmp));     p%p1=>db_cfN(i,:);   p%itype=4
+          p=>wqout(nout+(i-1)*14+10); p%name='ICM_cGP'//trim(adjustl(stmp));     p%p1=>db_cGP(i,:);   p%itype=4
+          p=>wqout(nout+(i-1)*14+11); p%name='ICM_cMT'//trim(adjustl(stmp));     p%p1=>db_cMT(i,:);   p%itype=4
+          p=>wqout(nout+(i-1)*14+12); p%name='ICM_cRT'//trim(adjustl(stmp));     p%p1=>db_cRT(i,:);   p%itype=4
+          p=>wqout(nout+(i-1)*14+13); p%name='ICM_cPR'//trim(adjustl(stmp));     p%p1=>db_cPR(i,:);   p%itype=4
+          p=>wqout(nout+(i-1)*14+14); p%name='ICM_cHST'//trim(adjustl(stmp));    p%p1=>db_cHST(i,:);  p%itype=4
+        enddo
+        nb=14*nclam; nouts(1)=nouts(1)+nb; nout=nout+nb
+      endif
 
       !hotstart
       p=>wqhot(nhot+1); p%name='clam';   p%p2=>CLAM
@@ -393,7 +441,7 @@ subroutine read_icm_param(imode)
       elseif(associated(p%p3)) then
         p%ndim=3; p%dims(1:3)=shape(p%p3)
       endif
-      if(p%dims(3)/=nea) call parallel_abort('ICM hotstart variable dim/=nea')
+      if(p%dims(3)/=nea) call parallel_abort('ICM hotstart variable dim/=nea: '//trim(adjustl(p%name)))
     enddo
 
     !------------------------------------------------------------------------------------
@@ -595,7 +643,8 @@ subroutine icm_vars_init
   !allocate ICM variables and initialize; read ICM spatial parameters
   !--------------------------------------------------------------------------------
   use schism_glbl, only : rkind,nea,npa,nvrt,irange_tr,ntrs,in_dir,len_in_dir,np_global, &
-                        & ne_global,ielg,iplg,i34,elnode,flag_ic,tr_nd,tr_el,indel,np,nne
+                        & ne_global,ielg,iplg,i34,elnode,flag_ic,tr_nd,tr_el,indel,np, &
+                        & nne,iof_icm_dbg
   use schism_msgp, only : exchange_p3d_tr,parallel_abort,myrank,comm,itype,rtype
   use netcdf
   use icm_mod
@@ -671,6 +720,15 @@ subroutine icm_vars_init
   if(iClam==1) then
     allocate(CLAM(nclam,nea),cFPOC(nea,2),cFPON(nea,2),cFPOP(nea,2), stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. CLAM')
+    if(iof_icm_dbg/=0) then
+      allocate(db_cfT(nclam,nea),db_cfS(nclam,nea),db_cfDO(nclam,nea),db_cfTSS(nclam,nea), &
+             & db_cFr(nclam,nea),db_cIF(nclam,nea),db_cTFC(nclam,nea),db_cATFC(nclam,nea),&
+             & db_cfN(nclam,nea),db_cGP(nclam,nea),db_cMT(nclam,nea), db_cRT(nclam,nea), &
+             & db_cPR(nclam,nea),db_cHST(nclam,nea), stat=istat)
+      if(istat/=0) call parallel_abort('failed in alloc. db_cfT')
+      db_cfT=0; db_cfS=0; db_cfDO=0; db_cfTSS=0; db_cFr=0; db_cIF=0; db_cTFC=0; db_cATFC=0
+      db_cfN=0; db_cGP=0; db_cMT=0;  db_cRT=0;   db_cPR=0; db_cHST=0
+    endif
   endif
 
   !-------------------------------------------------------------------------------
