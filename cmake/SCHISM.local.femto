@@ -1,6 +1,6 @@
 ###W&M kuro cluster
 
-set (SCHISM_EXE_BASENAME pschism_KURO CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
+set (SCHISM_EXE_BASENAME pschism_FEMTO CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
 
 ###Relative paths won't work
 #set(CMAKE_Fortran_COMPILER ifort CACHE PATH "Path to serial Fortran compiler")
