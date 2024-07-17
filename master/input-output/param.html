@@ -2129,6 +2129,7 @@ steps and # of records for volume/mass source/sinks. If <code>if_source/=0</code
 <p class="admonition-title">Note</p>
 <ol>
 <li>With <code>ihot=2</code>,you do not need to adjust other inputs but you do need to make sure <code>flux.out</code> is inside <code>outputs/</code> (even if you used <code>iflux=0</code>). If you used <span class="arithmatex">\(iout\_sta \neq 0\)</span>, make sure <code>staout_*</code> are inside <code>outputs/</code> as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them. On the other hand, you don't need to have the global outputs in <code>outputs/</code> because <code>nhot_write</code> is a multiple of <code>ihfskip</code> so the new outputs will be written into a new stack. In fact, you can change the core count upon hotstart this way.</li>
+<li>Under <code>ihot=1</code>, beware the use of ramps. Since the time origin has been reset, the ramps need to be adjusted accordingly. For example, if the field has been fully warmed up at the hotstart, then set ramps=0.</li>
 </ol>
 </div>
 <h3 id="ihydraulics0-int">ihydraulics=0 (int)<a class="headerlink" href="#ihydraulics0-int" title="Permanent link">&para;</a></h3>
