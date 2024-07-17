@@ -9,6 +9,8 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `` (17 July 2024): added Ganthy option for flex vegetation (iveg=2); related optional parameters 
+                           are: veg_cw and veg_lai;
 - `0fec598` (20 May 2024): added nbins_veg_vert as a mandatory input; veg_vert_z*(1:nbins_veg_vert+1) 
                            etc as optional. The latter are required if iveg/=0;
 - `56b88ae` (17 May 2024): added station outputs for all tracers (flags in station.in after w);

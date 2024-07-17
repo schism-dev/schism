@@ -94,7 +94,7 @@ module schism_glbl
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
                   &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sed,iof_icm_ba,&
-                  &iof_icm_clam,iof_icm_dbg,nbins_veg_vert
+                  &iof_icm_clam,iof_icm_dbg,nbins_veg_vert,veg_lai,veg_cw
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_cos,iof_fib, &
@@ -664,9 +664,9 @@ module schism_glbl
 ! Marsh model
   integer,save,allocatable     :: imarsh(:),ibarrier_m(:)
 
-! SAV
-  real(rkind),save,allocatable     :: veg_alpha0(:),veg_h(:),veg_nv(:),veg_di(:),veg_cd(:)
-
+! Vegetation
+  real(rkind),save,allocatable     :: veg_alpha0(:),veg_h(:),veg_nv(:),veg_di(:),veg_cd(:), &
+ &veg_h_unbent(:),veg_nv_unbent(:),veg_di_unbent(:)
 !Tsinghua group:0825
   REAL(rkind),save :: Cbeta,beta0,c_miu,Cv_max,ecol,ecol1,sigf,sigepsf,Ceps1,Ceps2,Ceps3,Acol,sig_s,fi_c,ksi_c,kpz !1013+kpz
   REAL(rkind),save,ALLOCATABLE :: Dpzz(:,:)     !at nodes & whole levels 

@@ -151,6 +151,7 @@ Hot start flag. If `ihot=0`, cold start; if $ihot \neq 0$, hot start from `hotst
 
 !!! note
     1. With `ihot=2`,you do not need to adjust other inputs but you do need to make sure `flux.out` is inside `outputs/` (even if you used `iflux=0`). If you used $iout\_sta \neq 0$, make sure `staout_*` are inside `outputs/` as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them. On the other hand, you don't need to have the global outputs in `outputs/` because `nhot_write` is a multiple of `ihfskip` so the new outputs will be written into a new stack. In fact, you can change the core count upon hotstart this way.
+    2. Under `ihot=1`, beware the use of ramps. Since the time origin has been reset, the ramps need to be adjusted accordingly. For example, if the field has been fully warmed up at the hotstart, then set ramps=0.
 
 ### ihydraulics=0 (int)
 Hydraulic model option. If $ihydraulics \neq 0$, `hydraulics.in` is required (cf. hydraulics user manual).

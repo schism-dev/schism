@@ -208,7 +208,7 @@
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
-     &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D
+     &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_marsh,iof_icm_sed, &
@@ -502,6 +502,7 @@
       veg_vert_scale_cd=(/(1.0d0,i=1,nbins_veg_vert+1)/) !scaling [-]
       veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
       veg_vert_scale_D=(/(1.0d0,i=1,nbins_veg_vert+1)/)
+      veg_lai=1.d0; veg_cw=1.5d0
 
       !Output elev, hvel by detault
       nc_out=1
@@ -1119,12 +1120,12 @@
 !      endif
 
 !     Vegetation
-      if(iveg/=0.and.iveg/=1) then
+      if(iveg<0.or.iveg>2) then
         write(errmsg,*)'INIT: illegal iveg,',iveg
         call parallel_abort(errmsg)
       endif
 
-      if(iveg/=0) then
+      if(iveg==1) then !specify vertical variation
         do k=1,nbins_veg_vert
           if(veg_vert_z(k)>=veg_vert_z(k+1)) then
             write(errmsg,*)'INIT: veg_vert_z not ascending,',veg_vert_z
@@ -1393,10 +1394,11 @@
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa),epsilon2_elem(ne), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
-         & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),veg_alpha0(npa), &
-         & veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
-         & wwave_force(2,nvrt,nsa),btaun(npa), &
-         & rsxx(npa), rsxy(npa), rsyy(npa), stat=istat)
+         &  surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),veg_alpha0(npa), &
+         &  veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
+         &  veg_h_unbent(npa),veg_nv_unbent(npa),veg_di_unbent(npa), &
+         &  wwave_force(2,nvrt,nsa),btaun(npa), &
+         &  rsxx(npa), rsxy(npa), rsyy(npa), stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -1708,7 +1710,7 @@
       tempmin=-2.d0; tempmax=40.d0; saltmin=0.d0; saltmax=42.d0
       pr1=0.d0; pr2=0.d0; pr=prmsl_ref !uniform pressure (the const. is unimportant)
       uthnd=-99.d0; vthnd=-99.d0; eta_mean=-99.d0; !uth=-99.d0; vth=-99.d0; !flags
-      elevmax=-1.d34; dav_maxmag=-1.d0; dav_max=0.d0
+      elevmax=-1.d34; dav=0.d0; dav_maxmag=-1.d0; dav_max=0.d0
       tr_el=0.d0
       timer_ns=0.d0
       iwsett=0; wsett=0.d0 !settling vel.
@@ -3752,12 +3754,12 @@
       enddo !k
 
 !     Vegetation inputs: veg_*.gr3
-      veg_alpha0=0.d0 !=D*Nv*Cdv/2; init; D is diameter; Cdv is form drag (veg_cd)
+      veg_alpha0=0.d0 !=D*Nv*Cdv/2; init; D is diameter or leaf width; Cdv is form drag (veg_cd)
       veg_h=0.d0 !veg height; not used at 2D sides
       veg_nv=0.d0 !Nv: # of stems per m^2
       veg_di=0.d0 !D [m]
       veg_cd=0.d0 !Cdv : drag coefficient
-      if(iveg==1) then
+      if(iveg/=0) then
         !\lambda=D*Nv [1/m]
         if(myrank==0) then
           open(10,file=in_dir(1:len_in_dir)//'veg_D.gr3',status='old')
@@ -3791,7 +3793,7 @@
         enddo !i
 
         if(myrank==0) then
-          !SAV height [m]
+          !Veg height [m]
           open(32,file=in_dir(1:len_in_dir)//'veg_h.gr3',status='old')
           !Drag coefficient
           open(30,file=in_dir(1:len_in_dir)//'veg_cd.gr3',status='old')
@@ -3827,6 +3829,11 @@
           endif
         enddo !i
 
+        !Save unbent (original) values
+        veg_h_unbent=veg_h
+        veg_nv_unbent=veg_nv
+        veg_di_unbent=veg_di
+
 #ifdef USE_MARSH
         !Assume constant inputs from .gr3; save these values
         veg_di0=veg_di(1); veg_h0=veg_h(1); veg_nv0=veg_nv(1); veg_cd0=veg_cd(1)
@@ -3842,7 +3849,7 @@
           endif
         enddo !i
 #endif
-      endif !iveg=1 
+      endif !iveg/=0
 
 !...  Surface min. mixing length for f.s. and max. for all; inactive 
 !      read(15,*) !xlmax00
