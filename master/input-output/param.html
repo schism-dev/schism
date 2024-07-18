@@ -970,6 +970,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#nbins_veg_vert-int" class="md-nav__link">
+    nbins_veg_vert (int)
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1040,20 +1047,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters" class="md-nav__link">
-    i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#i_hmin_salt_ex-int-hmin_salt_ex-double" class="md-nav__link">
-    i_hmin_salt_ex (int), hmin_salt_ex (double)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#ielm_transport-0-max_subcyc-10-int" class="md-nav__link">
     ielm_transport = 0, max_subcyc = 10 (int)
   </a>
@@ -1098,6 +1091,34 @@
           <li class="md-nav__item">
   <a href="#ihconsv0-isconsv0-int" class="md-nav__link">
     ihconsv=0, isconsv=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters" class="md-nav__link">
+    i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#i_hmin_salt_ex-int-hmin_salt_ex-double-in-meters" class="md-nav__link">
+    i_hmin_salt_ex (int), hmin_salt_ex (double; in meters)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iprecip_off_bnd-int" class="md-nav__link">
+    iprecip_off_bnd (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stemp_stc-double-stemp_dz12-double" class="md-nav__link">
+    stemp_stc (double), stemp_dz(1:2) (double)
   </a>
   
 </li>
@@ -1173,8 +1194,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#isav0-int" class="md-nav__link">
-    isav=0 (int)
+  <a href="#iveg0-int" class="md-nav__link">
+    iveg=0 (int)
   </a>
   
 </li>
@@ -1189,13 +1210,6 @@
           <li class="md-nav__item">
   <a href="#itur0-int" class="md-nav__link">
     itur=0 (int)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#meth_sink1-int" class="md-nav__link">
-    meth_sink=1 (int)
   </a>
   
 </li>
@@ -1286,6 +1300,13 @@
           <li class="md-nav__item">
   <a href="#iout_sta0-nspool_sta10-int" class="md-nav__link">
     iout_sta=0, nspool_sta=10 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iof_ugrid-int" class="md-nav__link">
+    iof_ugrid (int)
   </a>
   
 </li>
@@ -2050,6 +2071,8 @@ for easier explanation, but you should specify them on separate lines. Also you'
 <p>These parameters set the # of tracer ‘classes’ for each tracer module (EcoSim, GEN, AGE and SED), and are required if these modules are invoked in makefile. Note that other tracers modules (ICM, CoSiNE) set their own # of classes.</p>
 <h3 id="nspool-ihfskip-int">nspool, ihfskip (int)<a class="headerlink" href="#nspool-ihfskip-int" title="Permanent link">&para;</a></h3>
 <p>These two flags control the global netcdf outputs. Output is done every <code>nspool</code> steps, and a new output stack is opened every <code>ihfskip</code> steps. The code requires that <code>ihfskip</code> is a multiple of <code>nspool</code>, and <code>nhot_write</code> (see SCHOUT section) is a a multiple of <code>ihfskip</code>.</p>
+<h3 id="nbins_veg_vert-int">nbins_veg_vert (int)<a class="headerlink" href="#nbins_veg_vert-int" title="Permanent link">&para;</a></h3>
+<p>Number of vertical bins used in vegetation option <code>iveg=1</code>.</p>
 <h2 id="opt-block">OPT block<a class="headerlink" href="#opt-block" title="Permanent link">&para;</a></h2>
 <p>The optional parameters below are explained in alphabetical order. The default values can be seen below and also in the sample file (sample_inputs/).</p>
 <h3 id="dramp1-double-drampbc1-double">dramp=1. (double), drampbc=1. (double)<a class="headerlink" href="#dramp1-double-drampbc1-double" title="Permanent link">&para;</a></h3>
@@ -2083,14 +2106,6 @@ If <code>ic_elev=1</code>, the user can ramp up the elevation
 <p>In addition, there are parameters related to Vortex Formalism of Bennice and Ardhuin (2008).</p>
 <h3 id="ics1-int">ics=1 (int)<a class="headerlink" href="#ics1-int" title="Permanent link">&para;</a></h3>
 <p>Coordinate frame flag. If <code>ics=1</code>, Cartesian coordinates are used; if <code>ics=2</code>, both <code>hgrid.ll</code> and <code>hgrid.gr3</code> use degrees latitude/longitude (and they should be identical to each other in this case).</p>
-<h3 id="i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters">i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)<a class="headerlink" href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters" title="Permanent link">&para;</a></h3>
-<p>Option to locally turn off heat exchange.</p>
-<ul>
-<li><code>i_hmin_airsea_ex=1</code>: exchange turned off if <code>local grid depth&lt;hmin_airsea_ex</code></li>
-<li><code>i_hmin_airsea_ex=2</code>: exchange turned off if <code>local water depth&lt;hmin_airsea_ex</code></li>
-</ul>
-<h3 id="i_hmin_salt_ex-int-hmin_salt_ex-double">i_hmin_salt_ex (int), hmin_salt_ex (double)<a class="headerlink" href="#i_hmin_salt_ex-int-hmin_salt_ex-double" title="Permanent link">&para;</a></h3>
-<p>Simialr tpo <code>i_hmin_airsea_ex</code> and <code>hmin_airsea_ex</code>.</p>
 <h3 id="ielm_transport-0-max_subcyc-10-int">ielm_transport = 0, max_subcyc = 10 (int)<a class="headerlink" href="#ielm_transport-0-max_subcyc-10-int" title="Permanent link">&para;</a></h3>
 <p>Hybrid ELM-FV transport for performance. If <code>ielm_transport=1</code>, 
 the hybrid scheme is invoked and <code>max_subcyc</code> represents the max # of subcycling per time step in 
@@ -2116,11 +2131,28 @@ steps and # of records for volume/mass source/sinks. If <code>if_source/=0</code
 <p>If <code>USE_AGE</code> is on, this array specifies the vertical level indices used to inject age tracers. You only need to 
  specify this for the first half of the tracer classes. Use -999 to inject the tracer at all levels.</p>
 <h3 id="iflux0-int">iflux=0 (int)<a class="headerlink" href="#iflux0-int" title="Permanent link">&para;</a></h3>
-<p>Parameter for checking volume and tracer mass conservation. If turned on (<code>=1</code>), the conservation will be checked in regions specified by <code>fluxflag.prop</code>.</p>
+<p>Parameter for checking volume and tracer mass conservation. If turned on (<code>=1</code> or <code>2</code>), the 
+conservation will be checked in regions specified by <code>fluxflag.prop</code>. <code>iflux=2</code> would produce mroe detailed volume/mass
+ fluxes outputs.</p>
 <h3 id="iharind0-int">iharind=0 (int)<a class="headerlink" href="#iharind0-int" title="Permanent link">&para;</a></h3>
 <p>Harmonic analysis flag. If <span class="arithmatex">\(iharind \neq 0\)</span>, an input <code>harm.in</code> is needed.</p>
 <h3 id="ihconsv0-isconsv0-int">ihconsv=0, isconsv=0 (int)<a class="headerlink" href="#ihconsv0-isconsv0-int" title="Permanent link">&para;</a></h3>
 <p>Heat budget and salt conservation models flags. If <code>ihconsv=0</code>, the heat budget model is not used. If <code>ihconsv=1</code>, a heat budget model is invoked, and a number of netcdf files for radiation flux input are read in from <code>sflux/sflux_rad*.nc</code>. If <code>isconsv=1</code>, the evaporation and precipitation model is evoked but the user needs to turn on the pre-processing flag <code>PREC_EVAP</code> in makefile and recompile. In this case, <code>ihconsv</code> must be <code>1</code>, and additional netcdf inputs for precipitation (<code>sflux/sflux_prc*.nc</code>) are required. The user can also turn on <code>USE_BULK_FAIRALL</code> in the makefile to use COARE algorithm  instead of the default Zeng's bulk aerodynamic module.</p>
+<h3 id="i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters">i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)<a class="headerlink" href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters" title="Permanent link">&para;</a></h3>
+<p>Option to locally turn off heat exchange.</p>
+<ul>
+<li><code>i_hmin_airsea_ex=1</code>: exchange turned off if <code>local grid depth&lt;hmin_airsea_ex</code></li>
+<li><code>i_hmin_airsea_ex=2</code>: exchange turned off if <code>local water depth&lt;hmin_airsea_ex</code></li>
+</ul>
+<h3 id="i_hmin_salt_ex-int-hmin_salt_ex-double-in-meters">i_hmin_salt_ex (int), hmin_salt_ex (double; in meters)<a class="headerlink" href="#i_hmin_salt_ex-int-hmin_salt_ex-double-in-meters" title="Permanent link">&para;</a></h3>
+<p>Similar to <code>i_hmin_airsea_ex</code> and <code>hmin_airsea_ex</code>.</p>
+<h3 id="iprecip_off_bnd-int">iprecip_off_bnd (int)<a class="headerlink" href="#iprecip_off_bnd-int" title="Permanent link">&para;</a></h3>
+<p>If <code>iprecip_off_bnd</code>/=0, preciptation will be turned off near land boundary. This is useful for islands sitting on very steep slopes.</p>
+<h3 id="stemp_stc-double-stemp_dz12-double">stemp_stc (double), stemp_dz(1:2) (double)<a class="headerlink" href="#stemp_stc-double-stemp_dz12-double" title="Permanent link">&para;</a></h3>
+<p>Option to account for sediment-water heat exchange on bottom temperature.
+  <code>stemp_stc</code> is  heat transfer coefficient W.m-2.K-1 (so <code>stemp_stc=0</code> would turn this option off).
+  stemp_dz(1) is the equivalent sediment buffer depth (m) for heat into sediment, and
+  stemp_dz(2) is the equivalent sediment buffer depth (m) for heat out of sediment.</p>
 <h3 id="ihdif0-int">ihdif=0 (int)<a class="headerlink" href="#ihdif0-int" title="Permanent link">&para;</a></h3>
 <p>Flag to use non-zero horizontal diffusivity. If <code>ihdif=0</code>, it is not used. If <span class="arithmatex">\(ihdif \neq 0\)</span>, input <code>hdif.gr3</code> is needed.</p>
 <h3 id="ihot0-int">ihot=0 (int)<a class="headerlink" href="#ihot0-int" title="Permanent link">&para;</a></h3>
@@ -2152,7 +2184,14 @@ the gravity. If <code>iloadtide=3</code>, the scaling is dependent on the local 
 <h3 id="indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double">indvel=0 (int), ihorcon=0 (int), hvis_coef0=0.025 (double), ishapiro=1, niter_shap=1 (int), shapiro0=0.5 (double)<a class="headerlink" href="#indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double" title="Permanent link">&para;</a></h3>
 <p>These parameters (and <code>inter_mom</code> below) control the numerical dissipation in momentum solver; see SCHISM paper (Zhang et al. 2016) for details.</p>
 <p><code>indvel</code> determines the method of converting side velocity to node velocity. If <code>indvel=0</code>, the node velocity is allowed to be discontinuous across elements and additional viscosity/filter is needed to filter out grid-scale noises (spurious 'modes'). If <code>indvel=1</code>, an inverse-distance interpolation procedure is used instead and the node velocity is continuous across elements; this method requires no additional viscosity/filter unless kriging ELM is used (<code>inter_mom &gt;0</code>). In general, <code>indvel=0</code> leads to smaller numerical dissipation and better accuracy, but does generally require a velocity B.C.</p>
-<p>Due to spurious modes or dispersion (oscillation), viscosity/filter should be applied. <code>ihorcon=0</code>:no horizontal viscosity; <code>=1</code>: Laplacian (implemented as a filter); <code>=2</code>: bi-harmonic. For <code>ihorcon/=0</code>, <code>hvis_coef0</code> specifies the non-dimensional viscosity. In addition to the viscosity, one can add the Shapiro filter, which is specified by <code>ishapiro</code> =0,±1, 2 (turn off/on Shapiro filter). If <code>ishapiro=1</code>, <code>shapiro0</code> specifies the Shapiro filter strength. If <code>ishapiro=-1</code>, an input called <code>shapiro.gr3</code> is required which specifies the filter strength at each node (there is a pre-proc script <code>gen_slope_filter2.f90</code> for this). If <code>ishapiro=2</code>, a Smagorinsky-like filter is applied and <code>shapiro0</code> is a coefficient <span class="arithmatex">\((\gamma_0)\)</span>, which is on the order of <span class="arithmatex">\(10^3\)</span>:</p>
+<p>Due to spurious modes or dispersion (oscillation), viscosity/filter should be applied. <code>ihorcon=0</code>:no horizontal viscosity;
+ <code>=1</code>: Laplacian (implemented as a filter); <code>=2</code>: bi-harmonic. For <code>ihorcon/=0</code>, <code>hvis_coef0</code> 
+specifies the non-dimensional viscosity. In addition to the viscosity, one can add the Shapiro filter, 
+which is specified by <code>ishapiro</code> =0,±1, 2 (turn off/on Shapiro filter). If <code>ishapiro=1</code>, <code>shapiro0</code> 
+specifies the Shapiro filter strength. If <code>ishapiro=-1</code>, an input called <code>shapiro.gr3</code> is 
+required which specifies the filter strength at each node (there is a pre-proc script <code>gen_slope_filter2.f90</code> 
+for this). If <code>ishapiro=2</code>, a Smagorinsky-like filter is applied and <code>shpiro.gr3</code> specifies the coefficient <span class="arithmatex">\((\gamma_0)\)</span>, 
+which is typically 10-<span class="arithmatex">\(10^3\)</span>:</p>
 <div class="arithmatex">\[\begin{equation}
 \label{eq01}
 \begin{aligned}
@@ -2189,8 +2228,16 @@ constant is either the sum (if <code>nu_sum_mult=1</code>) or product (if <code>
 i.e. (horizontal <code>+ or *</code> vertical relaxation factors) times <code>dt</code>.</p>
 <h3 id="inunfl0-int">inunfl=0 (int)<a class="headerlink" href="#inunfl0-int" title="Permanent link">&para;</a></h3>
 <p>Choice of inundation algorithm. <code>inunfl=1</code> can be used if the horizontal resolution is fine enough, and this is critical for tsunami simulations. Otherwise use <code>inunfl=0</code>.</p>
-<h3 id="isav0-int">isav=0 (int)<a class="headerlink" href="#isav0-int" title="Permanent link">&para;</a></h3>
-<p>Parameters for submerged or emergent vegetation. If <code>isav=1</code> (module on), you need to supply 4 extra inputs: <code>sav_cd.gr3</code> (form drag coefficient), <code>sav_D.gr3</code> (depth is stem diameter in meters); <code>sav_N.gr3</code> (depth is # of stems per m2); and <code>sav_h.gr3</code> (height of canopy in meters).</p>
+<h3 id="iveg0-int">iveg=0 (int)<a class="headerlink" href="#iveg0-int" title="Permanent link">&para;</a></h3>
+<p>Parameters for submerged or emergent vegetation. If <code>iveg/=0</code>, you need to supply 4 extra inputs: 
+<code>veg_cd.gr3</code> (form drag coefficient), <code>veg_D.gr3</code> (depth is stem diameter in meters);
+ <code>veg_N.gr3</code> (depth is # of stems per m2); and <code>veg_h.gr3</code> (height of canopy in meters). These are original, unbent
+  values for the vegetation.</p>
+<p>If <code>iveg=1</code>, the vertical variation/scalings for these parameters are specified for <code>nbins_veg_vert</code> vertical bins, with
+ <code>veg_vert_z(1:nbins_veg_vert+1)</code> specifying the distance from bed (in meters) for each bin 
+ (ascending order starting from 0). The vertical scalings are given by <code>veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1)</code>.</p>
+<p>If <code>iveg=2</code>, flexible vegetation formulation of Ganthy et al. (2011) is used. Parameters needed for this case are:
+  non-dimensional Leaf Area Index <code>veg_lai</code> and <code>veg_cw</code> (a non-dimensional calibration coefficient for diameter of bent leaf).</p>
 <h3 id="itr_met3-int-h_tvd5-double">itr_met=3 (int), h_tvd=5. (double)<a class="headerlink" href="#itr_met3-int-h_tvd5-double" title="Permanent link">&para;</a></h3>
 <p>Transport option for all tracers. <code>itr_met=3</code> for TVD, and <code>itr_met=4</code> for 3rd order WENO. <code>h_tvd</code> specifies the transition depth (in meters) between upwind and higher-order schemes; i.e. more efficient upwind is used when the <code>local depth &lt; h_tvd</code>. 
 Also in this case, you can additionally toggle between upwind and TVD by specifying regions in <code>tvd.prop</code>. The TVD limiter function is specified in <code>TVD_LIM</code> in <code>mk/include_modules</code> (for code efficiency purpose). </p>
@@ -2217,9 +2264,6 @@ inside, you may consult <a href="https://gotm.net">gotm.net</a> for more details
 <li>GOTM has only been tested up to v5.2, not newer versions of GOTM. Using <code>itur=3</code> generally gave similar results, but GOTM can produce substantially better stratification in some cases.</li>
 </ol>
 </div>
-<h3 id="meth_sink1-int">meth_sink=1 (int)<a class="headerlink" href="#meth_sink1-int" title="Permanent link">&para;</a></h3>
-<p>Option for sinks. If <code>meth_sink =1</code>, the sink value is reset to <code>0</code> if an element is dry with 
-a net sink value locally to prevent further drawdown of groundwater.</p>
 <h3 id="nadv1-int-dtb_min10-dtb_max30-double">nadv=1 (int), dtb_min=10, dtb_max=30 (double)<a class="headerlink" href="#nadv1-int-dtb_min10-dtb_max30-double" title="Permanent link">&para;</a></h3>
 <p>Advection on/off option. If <code>nadv=0</code>, advection is selectively turned off based on the input file <code>adv.gr3</code>. 
 If <code>nadv=1</code> or <code>2</code>, advection is on for the whole domain, and backtracking is done using either 
@@ -2238,7 +2282,8 @@ wind is applied (and <code>wtiminc</code> becomes unused). If <code>nws=1</code>
 at any given time, and the time history of wind is read in from <code>wind.th</code>. If <code>nws=2</code>, spatially 
 and temporally variable wind is applied and the input consists of a number of netcdf files in the directory
  <code>sflux/</code>. The option <code>nws=3</code> is reserved for coupling with atmospheric model via ESMF caps. If <code>nws=4</code>, 
-the required input <code>wind.th</code> specifies wind and pressure at each node and at time of multiple of <code>wtiminc</code>. 
+the required input <code>atmos.nc</code> specifies wind and pressure at each node and at time of multiple of <code>wtiminc</code>. 
+Additional inputs (e.g. heat fluxes) are needed if heat/salt exchange module is invoked.
 If <code>nws=-1</code> (requires USE_PAHM), use Holland parametric wind model (barotropic only with wind and atmos. pressure).
  In this case, the Holland model is called every step so wtiminc is not used. An extra
  input is needed: <code>hurricane-track.dat</code>.</p>
@@ -2272,6 +2317,9 @@ If <code>nws=-1</code> (requires USE_PAHM), use Holland parametric wind model (b
 <h2 id="schout-block">SCHOUT block<a class="headerlink" href="#schout-block" title="Permanent link">&para;</a></h2>
 <h3 id="iout_sta0-nspool_sta10-int">iout_sta=0, nspool_sta=10 (int)<a class="headerlink" href="#iout_sta0-nspool_sta10-int" title="Permanent link">&para;</a></h3>
 <p>Station output flag. If <code>iout_sta≠0</code>, an input <code>station.in</code> is needed. In addition, <code>nspool_sta</code> specifies the spool for station output. In this case, <strong>make sure <code>nhot_write</code> is a multiple of <code>nspool_sta</code></strong>.</p>
+<h3 id="iof_ugrid-int">iof_ugrid (int)<a class="headerlink" href="#iof_ugrid-int" title="Permanent link">&para;</a></h3>
+<p>UGRID option for outputs under scribed IO. If iof_ugrid/=0, outputs will also have UGRID metadata (at
+the expense of file size).</p>
 <h3 id="nc_out-1int">nc_out =1(int)<a class="headerlink" href="#nc_out-1int" title="Permanent link">&para;</a></h3>
 <p>Main switch to turn on/off netcdf outputs, useful for other programs (e.g., ESMF) to control outputs.</p>
 <h3 id="nhot0-nhot_write8640-int">nhot=0, nhot_write=8640 (int)<a class="headerlink" href="#nhot0-nhot_write8640-int" title="Permanent link">&para;</a></h3>
