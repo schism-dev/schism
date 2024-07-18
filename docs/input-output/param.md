@@ -51,6 +51,9 @@ These parameters set the # of tracer ‘classes’ for each tracer module (EcoSi
 ### nspool, ihfskip (int)
 These two flags control the global netcdf outputs. Output is done every `nspool` steps, and a new output stack is opened every `ihfskip` steps. The code requires that `ihfskip` is a multiple of `nspool`, and `nhot_write` (see SCHOUT section) is a a multiple of `ihfskip`.
 
+### nbins_veg_vert (int)
+Number of vertical bins used in vegetation option `iveg=1`.
+
 ## OPT block
 The optional parameters below are explained in alphabetical order. The default values can be seen below and also in the sample file (sample_inputs/).
 
@@ -96,15 +99,6 @@ In addition, there are parameters related to Vortex Formalism of Bennice and Ard
 ### ics=1 (int)
 Coordinate frame flag. If `ics=1`, Cartesian coordinates are used; if `ics=2`, both `hgrid.ll` and `hgrid.gr3` use degrees latitude/longitude (and they should be identical to each other in this case).
 
-### i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)
-Option to locally turn off heat exchange.
-
-- `i_hmin_airsea_ex=1`: exchange turned off if `local grid depth<hmin_airsea_ex`
-- `i_hmin_airsea_ex=2`: exchange turned off if `local water depth<hmin_airsea_ex`
-
-### i_hmin_salt_ex (int), hmin_salt_ex (double)
-Simialr tpo `i_hmin_airsea_ex` and `hmin_airsea_ex`.
-
 ### ielm_transport = 0, max_subcyc = 10 (int)
 Hybrid ELM-FV transport for performance. If `ielm_transport=1`, 
 the hybrid scheme is invoked and `max_subcyc` represents the max # of subcycling per time step in 
@@ -135,13 +129,34 @@ If `USE_AGE` is on, this array specifies the vertical level indices used to inje
  specify this for the first half of the tracer classes. Use -999 to inject the tracer at all levels.
 
 ### iflux=0 (int)
-Parameter for checking volume and tracer mass conservation. If turned on (`=1`), the conservation will be checked in regions specified by `fluxflag.prop`.
+Parameter for checking volume and tracer mass conservation. If turned on (`=1` or `2`), the 
+conservation will be checked in regions specified by `fluxflag.prop`. `iflux=2` would produce mroe detailed volume/mass
+ fluxes outputs.
 
 ### iharind=0 (int)
 Harmonic analysis flag. If $iharind \neq 0$, an input `harm.in` is needed.
 
 ### ihconsv=0, isconsv=0 (int)
 Heat budget and salt conservation models flags. If `ihconsv=0`, the heat budget model is not used. If `ihconsv=1`, a heat budget model is invoked, and a number of netcdf files for radiation flux input are read in from `sflux/sflux_rad*.nc`. If `isconsv=1`, the evaporation and precipitation model is evoked but the user needs to turn on the pre-processing flag `PREC_EVAP` in makefile and recompile. In this case, `ihconsv` must be `1`, and additional netcdf inputs for precipitation (`sflux/sflux_prc*.nc`) are required. The user can also turn on `USE_BULK_FAIRALL` in the makefile to use COARE algorithm  instead of the default Zeng's bulk aerodynamic module.
+
+### i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)
+Option to locally turn off heat exchange.
+
+- `i_hmin_airsea_ex=1`: exchange turned off if `local grid depth<hmin_airsea_ex`
+- `i_hmin_airsea_ex=2`: exchange turned off if `local water depth<hmin_airsea_ex`
+
+### i_hmin_salt_ex (int), hmin_salt_ex (double; in meters)
+Similar to `i_hmin_airsea_ex` and `hmin_airsea_ex`.
+
+### iprecip_off_bnd (int)
+If `iprecip_off_bnd`/=0, preciptation will be turned off near land boundary. This is useful for islands sitting on very steep slopes.
+
+### stemp_stc (double), stemp_dz(1:2) (double)
+ Option to account for sediment-water heat exchange on bottom temperature.
+  `stemp_stc` is  heat transfer coefficient W.m-2.K-1 (so `stemp_stc=0` would turn this option off).
+  stemp_dz(1) is the equivalent sediment buffer depth (m) for heat into sediment, and
+  stemp_dz(2) is the equivalent sediment buffer depth (m) for heat out of sediment.
+
 
 ### ihdif=0 (int)
 Flag to use non-zero horizontal diffusivity. If `ihdif=0`, it is not used. If $ihdif \neq 0$, input `hdif.gr3` is needed.
@@ -180,7 +195,14 @@ These parameters (and `inter_mom` below) control the numerical dissipation in mo
 
 `indvel` determines the method of converting side velocity to node velocity. If `indvel=0`, the node velocity is allowed to be discontinuous across elements and additional viscosity/filter is needed to filter out grid-scale noises (spurious 'modes'). If `indvel=1`, an inverse-distance interpolation procedure is used instead and the node velocity is continuous across elements; this method requires no additional viscosity/filter unless kriging ELM is used (`inter_mom >0`). In general, `indvel=0` leads to smaller numerical dissipation and better accuracy, but does generally require a velocity B.C.
 
-Due to spurious modes or dispersion (oscillation), viscosity/filter should be applied. `ihorcon=0`:no horizontal viscosity; `=1`: Laplacian (implemented as a filter); `=2`: bi-harmonic. For `ihorcon/=0`, `hvis_coef0` specifies the non-dimensional viscosity. In addition to the viscosity, one can add the Shapiro filter, which is specified by `ishapiro` =0,±1, 2 (turn off/on Shapiro filter). If `ishapiro=1`, `shapiro0` specifies the Shapiro filter strength. If `ishapiro=-1`, an input called `shapiro.gr3` is required which specifies the filter strength at each node (there is a pre-proc script `gen_slope_filter2.f90` for this). If `ishapiro=2`, a Smagorinsky-like filter is applied and `shapiro0` is a coefficient $(\gamma_0)$, which is on the order of $10^3$:
+Due to spurious modes or dispersion (oscillation), viscosity/filter should be applied. `ihorcon=0`:no horizontal viscosity;
+ `=1`: Laplacian (implemented as a filter); `=2`: bi-harmonic. For `ihorcon/=0`, `hvis_coef0` 
+specifies the non-dimensional viscosity. In addition to the viscosity, one can add the Shapiro filter, 
+which is specified by `ishapiro` =0,±1, 2 (turn off/on Shapiro filter). If `ishapiro=1`, `shapiro0` 
+specifies the Shapiro filter strength. If `ishapiro=-1`, an input called `shapiro.gr3` is 
+required which specifies the filter strength at each node (there is a pre-proc script `gen_slope_filter2.f90` 
+for this). If `ishapiro=2`, a Smagorinsky-like filter is applied and `shpiro.gr3` specifies the coefficient $(\gamma_0)$, 
+which is typically 10-$10^3$:
 
 \begin{equation}
 \label{eq01}
@@ -235,8 +257,18 @@ i.e. (horizontal `+ or *` vertical relaxation factors) times `dt`.
 Choice of inundation algorithm. `inunfl=1` can be used if the horizontal resolution is fine enough, and this is critical for tsunami simulations. Otherwise use `inunfl=0`.
 
 
-### isav=0 (int)
-Parameters for submerged or emergent vegetation. If `isav=1` (module on), you need to supply 4 extra inputs: `sav_cd.gr3` (form drag coefficient), `sav_D.gr3` (depth is stem diameter in meters); `sav_N.gr3` (depth is # of stems per m2); and `sav_h.gr3` (height of canopy in meters).
+### iveg=0 (int)
+Parameters for submerged or emergent vegetation. If `iveg/=0`, you need to supply 4 extra inputs: 
+`veg_cd.gr3` (form drag coefficient), `veg_D.gr3` (depth is stem diameter in meters);
+ `veg_N.gr3` (depth is # of stems per m2); and `veg_h.gr3` (height of canopy in meters). These are original, unbent
+  values for the vegetation.
+
+If `iveg=1`, the vertical variation/scalings for these parameters are specified for `nbins_veg_vert` vertical bins, with
+ `veg_vert_z(1:nbins_veg_vert+1)` specifying the distance from bed (in meters) for each bin 
+ (ascending order starting from 0). The vertical scalings are given by `veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1)`.
+
+If `iveg=2`, flexible vegetation formulation of Ganthy et al. (2011) is used. Parameters needed for this case are:
+  non-dimensional Leaf Area Index `veg_lai` and `veg_cw` (a non-dimensional calibration coefficient for diameter of bent leaf).
 
 ### itr_met=3 (int), h_tvd=5. (double)
 Transport option for all tracers. `itr_met=3` for TVD, and `itr_met=4` for 3rd order WENO. `h_tvd` specifies the transition depth (in meters) between upwind and higher-order schemes; i.e. more efficient upwind is used when the `local depth < h_tvd`. 
@@ -270,9 +302,6 @@ inside, you may consult [gotm.net](https://gotm.net) for more details.
 !!! note
     1. GOTM has only been tested up to v5.2, not newer versions of GOTM. Using `itur=3` generally gave similar results, but GOTM can produce substantially better stratification in some cases.
 
-### meth_sink=1 (int)
-Option for sinks. If `meth_sink =1`, the sink value is reset to `0` if an element is dry with 
-a net sink value locally to prevent further drawdown of groundwater.
 
 ### nadv=1 (int), dtb_min=10, dtb_max=30 (double) 
 Advection on/off option. If `nadv=0`, advection is selectively turned off based on the input file `adv.gr3`. 
@@ -298,7 +327,8 @@ wind is applied (and `wtiminc` becomes unused). If `nws=1`, constant wind is app
 at any given time, and the time history of wind is read in from `wind.th`. If `nws=2`, spatially 
 and temporally variable wind is applied and the input consists of a number of netcdf files in the directory
  `sflux/`. The option `nws=3` is reserved for coupling with atmospheric model via ESMF caps. If `nws=4`, 
-the required input `wind.th` specifies wind and pressure at each node and at time of multiple of `wtiminc`. 
+the required input `atmos.nc` specifies wind and pressure at each node and at time of multiple of `wtiminc`. 
+Additional inputs (e.g. heat fluxes) are needed if heat/salt exchange module is invoked.
 If `nws=-1` (requires USE_PAHM), use Holland parametric wind model (barotropic only with wind and atmos. pressure).
  In this case, the Holland model is called every step so wtiminc is not used. An extra
  input is needed: `hurricane-track.dat`.
@@ -338,6 +368,10 @@ Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to g
 ## SCHOUT block
 ### iout_sta=0, nspool_sta=10 (int)
 Station output flag. If `iout_sta≠0`, an input `station.in` is needed. In addition, `nspool_sta` specifies the spool for station output. In this case, **make sure `nhot_write` is a multiple of `nspool_sta`**.
+
+### iof_ugrid (int)
+UGRID option for outputs under scribed IO. If iof_ugrid/=0, outputs will also have UGRID metadata (at
+the expense of file size).
 
 ### nc_out =1(int)
 Main switch to turn on/off netcdf outputs, useful for other programs (e.g., ESMF) to control outputs.

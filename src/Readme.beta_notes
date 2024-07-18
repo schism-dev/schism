@@ -24,10 +24,10 @@ Github versions:
 - `376b3a45` (14 Sept, 2023) : removed iflux_out_format (folded it into iflux);
 
 Tag stofs3d-atl.v2.1.0 (identical to v5.11.0): for NOAA STOFS3D Atlantic operational forecast release
-Tag v5.11.0: (Aug 2022)
+Tag v5.11.0: (Aug 2023)
 
 - `ae1c210` (14 June 2023): ishapiro=2 now needs shapiro.gr3 (variable coefficients);
-- `a6fd5cb` (15 May, 2023): revamped nws=4; input is 'atmos'nc'. It needs wind and air pressure at least.
+- `a6fd5cb` (15 May, 2023): revamped nws=4; input is 'atmos.nc'. It needs wind and air pressure at least.
                         If ihconsv/=0, it should also contain 2 heat fluxes ('solar' and 'downwardNetFlux';
                         the latter is the net surface heat flux). 
                         If isconsv/=0, it should also contain 2 salt fluxes: 'prate' and 'evap'.
