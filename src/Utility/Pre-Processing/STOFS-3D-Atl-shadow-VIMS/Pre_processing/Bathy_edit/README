@@ -1,0 +1,9 @@
+1) Use dem_edit.py to apply edits. The usage should be self-evident in the script.
+   This script drives the scripts in subfolders, each applying one type of edits.
+
+2) For STOFS3D-v7 (NOAA v3):
+  2.1) run the scripts under Temporary_fix_v7/ as the last step.
+    This fixes the depths of some rivers/canals.
+    The meshing in those rivers/canals needs to be improved in the next version
+  2.2) set dp = min(dp, -8.975) in outfall_canal_fix_min_-8.957_depth.reg to prevent leakage into New Orleans
+
