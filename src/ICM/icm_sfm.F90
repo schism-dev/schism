@@ -93,7 +93,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,it,isub)
   !------------------------------------------------------------------------
   SODrt=0.0 !SOD due to SAV/MARSH (g.m-2.day-1)
   !SAV: nutrient uptake and DO consumption
-  if(jsav==1.and.spatch(id)==1)then
+  if(jsav/=0.and.spatch(id)==1)then
     FPOC(1:3)=FPOC(1:3)+sFPOC(1:3,id)
     FPON(1:3)=FPON(1:3)+sFPON(1:3,id)
     FPOP(1:3)=FPOP(1:3)+sFPOP(1:3,id)
@@ -133,136 +133,146 @@ subroutine sfm_calc(id,kb,tdep,wdz,it,isub)
     enddo
   endif
 
+  !Silica module
+  if(iSilica==1) then
+    wSU=SU(kb+1); wSA=SA(kb+1); wSAd=wSA/(1.0+KSAp*wTSS)!bottom water conc.
+    FPOS=WSPn(iSU)*wSU+WSPn(iSA)*wSAd                       !depositional flux due to SU/SA
+    do j=1,3; FPOS=FPOS+s2c(j)*WSPn(iPBS(j))*wPBS(j); enddo !depositional flux due to algae
+    if(idry_e(id)==1) then !dry condition
+      bPOS(id)=bPOS(id)+dtw*FPOS/dz
+    endif
+  endif
+
   !------------------------------------------------------------------------
-  !diagenesis flux
+  !diagenesis flux: POM accumulate without decay under dry condition
   !------------------------------------------------------------------------
-  XJC=0.0; XJN=0.0; XJP=0.0
+  XJC=0.0; XJN=0.0; XJP=0.0; rKTC=0.0; rKTN=0.0; rKTP=0.0; rKTS=0.0
   do m=1,3
-    rKTC(m)=bKC(m)*bKTC(m)**(btemp(id)-bTR) !decay rate
-    rKTN(m)=bKN(m)*bKTN(m)**(btemp(id)-bTR)
-    rKTP(m)=bKP(m)*bKTP(m)**(btemp(id)-bTR)
+    if(idry_e(id)==0) then
+      rKTC(m)=bKC(m)*bKTC(m)**(btemp(id)-bTR) !decay rate
+      rKTN(m)=bKN(m)*bKTN(m)**(btemp(id)-bTR)
+      rKTP(m)=bKP(m)*bKTP(m)**(btemp(id)-bTR)
+      XJC=XJC+rKTC(m)*bPOC(m,id)*dz !diagenesis flux
+      XJN=XJN+rKTN(m)*bPON(m,id)*dz
+      XJP=XJP+rKTP(m)*bPOP(m,id)*dz
+    endif
     bPOC(m,id)=max(bPOC(m,id)+dtw*FPOC(m)/dz-dtw*(bVb/dz+rKTC(m))*bPOC(m,id),0.d0) !update POM
     bPON(m,id)=max(bPON(m,id)+dtw*FPON(m)/dz-dtw*(bVb/dz+rKTN(m))*bPON(m,id),0.d0)
     bPOP(m,id)=max(bPOP(m,id)+dtw*FPOP(m)/dz-dtw*(bVb/dz+rKTP(m))*bPOP(m,id),0.d0)
-    XJC=XJC+rKTC(m)*bPOC(m,id)*dz !diagenesis flux
-    XJN=XJN+rKTN(m)*bPON(m,id)*dz
-    XJP=XJP+rKTP(m)*bPOP(m,id)*dz
   enddo
 
-  !------------------------------------------------------------------------
-  !particle mixing velocity and diffusion velocity between two layers (m.day-1)
-  !------------------------------------------------------------------------
-  !compute consective days of anoxic (Tp) and oxic (To) conditions (Park, 1995)
-  Tp=>bThp(id); To=>bTox(id); STR=>bSTR(id)
-  if(Tp>=(banoxic-1.d-10)) then !anoxia event
-    if(wDOX<bDOc_ST) then !anoxic condition
-      To=0.0; Tp=banoxic
-    else !oxic condition
-      To=min(To+dtw,boxic)
-      if(To>=(boxic-1.d-10)) then !end of anoxia event
-        Tp=0.0; To=0.0 
+  if(idry_e(id)==0) then
+    !------------------------------------------------------------------------
+    !particle mixing velocity and diffusion velocity between two layers (m.day-1)
+    !------------------------------------------------------------------------
+    !compute consective days of anoxic (Tp) and oxic (To) conditions (Park, 1995)
+    Tp=>bThp(id); To=>bTox(id); STR=>bSTR(id)
+    if(Tp>=(banoxic-1.d-10)) then !anoxia event
+      if(wDOX<bDOc_ST) then !anoxic condition
+        To=0.0; Tp=banoxic
+      else !oxic condition
+        To=min(To+dtw,boxic)
+        if(To>=(boxic-1.d-10)) then !end of anoxia event
+          Tp=0.0; To=0.0 
+        endif
+      endif
+    else !non-anoxia event
+      To=0.0
+      if(wDOX<bDOc_ST) then 
+        Tp=min(Tp+dtw,banoxic) !count consective days of anoxia
+      else
+        Tp=0.0 
       endif
     endif
-  else !non-anoxia event
-    To=0.0
-    if(wDOX<bDOc_ST) then 
-      Tp=min(Tp+dtw,banoxic) !count consective days of anoxia
-    else
-      Tp=0.0 
+
+    !compute bethic stress
+    STR=min(STR+dtw*(max(1.0-wDOX/bKhDO_Vp,0.0)-bKST*STR),bSTmax)
+    if(abs(Tp-banoxic)<=1.d-6) STR=bSTmax !under anoxia event
+    fSTR=min(max(0.d0,1.0-bKST*STR),1.d0) !effect of benthic stress
+    
+    !particle mixing velocity (Kp), diffusion velocity (Kd)
+    Kp=(bVp*bKTVp**(btemp(id)-bTR)/dz)*(bPOC(1,id)/1.0e2)*(wDOX/(bKhDO_Vp+wDOX))*fSTR+bVpmin/dz
+    Kd=(bVd*bKTVd**(btemp(id)-bTR)/dz)+bp2d*Kp
+
+    !------------------------------------------------------------------------
+    !SOD calculation (todo: bypass the brent iteration by using priveous stc)
+    !------------------------------------------------------------------------
+    !input for brent method
+    P%id=id; P%tdep=tdep; P%wsalt=wsalt; P%Kd=Kd; P%Kp=Kp; P%wNH4=wNH4
+    P%wNO3=wNO3; P%wCOD=wCOD; P%wDOX=wDOX; P%XJC=XJC; P%XJN=XJN; P%SODrt=SODrt
+
+    !brent method in computing SOD and stc
+    P%imed=0; P%vmin=1.d-8; P%vmax=100.0; call brent(P)
+    stc=P%SOD/max(wDOX,1.d-2)
+
+    if(P%ierr/=0) then !SOD computing fails, use previous stc value
+      stc=bstc(id)
+      write(12,*)'fail in computing SOD',it,id,ielg(id),P%ierr,P%SOD,wDOX
+      !if(wDOX<1.d-2) then
+      !  stc=bstc(id)
+      !else
+      !  call parallel_abort('wrong in computing SOD')
+      !endif
     endif
-  endif
 
-  !compute bethic stress
-  STR=min(STR+dtw*(max(1.0-wDOX/bKhDO_Vp,0.0)-bKST*STR),bSTmax)
-  if(abs(Tp-banoxic)<=1.d-6) STR=bSTmax !under anoxia event
-  fSTR=min(max(0.d0,1.0-bKST*STR),1.d0) !effect of benthic stress
-  
-  !particle mixing velocity (Kp), diffusion velocity (Kd)
-  Kp=(bVp*bKTVp**(btemp(id)-bTR)/dz)*(bPOC(1,id)/1.0e2)*(wDOX/(bKhDO_Vp+wDOX))*fSTR+bVpmin/dz
-  Kd=(bVd*bKTVd**(btemp(id)-bTR)/dz)+bp2d*Kp
+    !update sediment concentrations (NH4,NO3,H2S,CH4)
+    bstc(id)=stc;  P%stc=stc;  call sod_calc(P)
 
-  !------------------------------------------------------------------------
-  !SOD calculation (todo: bypass the brent iteration by using priveous stc)
-  !------------------------------------------------------------------------
-  !input for brent method
-  P%id=id; P%tdep=tdep; P%wsalt=wsalt; P%Kd=Kd; P%Kp=Kp; P%wNH4=wNH4
-  P%wNO3=wNO3; P%wCOD=wCOD; P%wDOX=wDOX; P%XJC=XJC; P%XJN=XJN; P%SODrt=SODrt
+    !------------------------------------------------------------------
+    !mass balance equation for Silica (SU/POS, SA)
+    !------------------------------------------------------------------
+    if(iSilica==1) then
+      !POS(SU) and SA in sediment
+      rKTS=bKS*bKTS**(btemp(id)-bTR)*bPOS(id)/(bPOS(id)+bKhPOS)    !decay rate of POS
+      fd1=1.0/(1.0+bpieSI*(bKOSI**min(wDOX/bDOc_SI,1.d0))*bsolid(1)) !partition of SA in layer 1
+      fd2=1.0/(1.0+bpieSI*bsolid(2))                                 !partition of SA in layer 2
+      bPOS(id)=bPOS(id)+dtw*((FPOS+bJPOSa)/dz-rKTS*max(bSIsat-fd2*bSA(id),0.d0)-bVb*bPOS(id)/dz) !update POS
+      j1=0.0;  j2=rKTS*bSIsat*dz   !source terms 
+      k1=0.0;  k2=rKTS*fd2*dz      !reaction rates
+      call sfm_eq(1,SA1,SA2,wSAd,bSA(id),stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2)
+      JSA(id)=stc*(fd1*SA1-wSAd);  bSA(id)=SA2
+    endif
 
-  !brent method in computing SOD and stc
-  P%imed=0; P%vmin=1.d-8; P%vmax=100.0; call brent(P)
-  stc=P%SOD/max(wDOX,1.d-2)
+    !------------------------------------------------------------------
+    !mass balance equation for PO4
+    !------------------------------------------------------------------
+    if(wsalt<=bsaltp) then
+      fd1=1.0/(1.0+bpiePO4*bKOPO4f**min(wDOX/bDOc_PO4,1.d0)*bsolid(1))
+    else
+      fd1=1.0/(1.0+bpiePO4*bKOPO4s**min(wDOX/bDOc_PO4,1.d0)*bsolid(1))
+    endif
+    fd2=1.0/(1.0+bpiePO4*bsolid(2))
+    j1=0.0;  j2=XJP+WSPn(iPO4)*wPO4p
+    k1=0.0;  k2=0.0  !no reactions 
+    call sfm_eq(2,PO41,PO42,wPO4d,bPO4(id),stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2)
+    JPO4(id)=stc*(fd1*PO41-wPO4d);  bPO4(id)=PO42
 
-  if(P%ierr/=0) then !SOD computing fails, use previous stc value
-    stc=bstc(id)
-    write(12,*)'fail in computing SOD',it,id,ielg(id),P%ierr,P%SOD,wDOX
-    !if(wDOX<1.d-2) then
-    !  stc=bstc(id)
-    !else
-    !  call parallel_abort('wrong in computing SOD')
-    !endif
-  endif
+    !------------------------------------------------------------------
+    !sediment erosion: this part needs more documentation
+    !------------------------------------------------------------------
+    eH2S(id)=0; eLPOC(id)=0;  eRPOC(id)=0
+    if(ierosion>0.and.idry_e(id)/=1)then
+      tau=sum(tau_bot_node(3,elnode(1:i34(id),id)))/i34(id) !bottom shear stress 
+      erate=erosion*(1-eporo)*efrac*max((tau-etau),0.d0)/(2650*etau) !erosion rate 
 
-  !update sediment concentrations (NH4,NO3,H2S,CH4)
-  bstc(id)=stc;  P%stc=stc;  call sod_calc(P)
+      !compute depostion fraction: E/(k+W)
+      edfrac=dfrac
+      if(dfrac(1)<0.d0) edfrac(1)=erate/(WSP(iRPOC)*dWS_POC(1)/max(1.d-7,wdz)+KP0(1)*exp(KTRM(1)*(wtemp-TRM(1))))
+      if(dfrac(2)<0.d0) edfrac(2)=erate/(WSP(iLPOC)*dWS_POC(2)/max(1.d-7,wdz)+KP0(2)*exp(KTRM(2)*(wtemp-TRM(2))))
 
-  !------------------------------------------------------------------
-  !mass balance equation for Silica (SU/POS, SA)
-  !------------------------------------------------------------------
-  if(iSilica==1) then
-    wSU=SU(kb+1); wSA=SA(kb+1); wSAd=wSA/(1.0+KSAp*wTSS)!bottom water conc.
-    FPOS=WSPn(iSU)*wSU+WSPn(iSA)*wSAd                       !depositional flux due to SU/SA 
-    do j=1,3; FPOS=FPOS+s2c(j)*WSPn(iPBS(j))*wPBS(j); enddo !depositional flux due to algae
+      !compute erosion flux
+      eH2S(id) =bH2S(id)*erate*ediso/(1.+bsolid(1)*bpieH2Ss)/2.0 !todo: 2.0 (S to O2) unnecessary 
+      eLPOC(id)=bPOC(1,id)*erate*edfrac(1)
+      eRPOC(id)=bPOC(2,id)*erate*edfrac(2)
+      if(ierosion==2) eH2S(id)=0.0
+      if(ierosion==1) then; eLPOC(id)=0.0; eRPOC(id)=0.0; endif
 
-    !POS(SU) and SA in sediment
-    rKTS=bKS*bKTS**(btemp(id)-bTR)*bPOS(id)/(bPOS(id)+bKhPOS)    !decay rate of POS
-    fd1=1.0/(1.0+bpieSI*(bKOSI**min(wDOX/bDOc_SI,1.d0))*bsolid(1)) !partition of SA in layer 1
-    fd2=1.0/(1.0+bpieSI*bsolid(2))                                 !partition of SA in layer 2
-    bPOS(id)=bPOS(id)+dtw*((FPOS+bJPOSa)/dz-rKTS*max(bSIsat-fd2*bSA(id),0.d0)-bVb*bPOS(id)/dz) !update POS
-    j1=0.0;  j2=rKTS*bSIsat*dz   !source terms 
-    k1=0.0;  k2=rKTS*fd2*dz      !reaction rates
-    call sfm_eq(1,SA1,SA2,wSAd,bSA(id),stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2)
-    JSA(id)=stc*(fd1*SA1-wSAd);  bSA(id)=SA2
-  endif
-
-  !------------------------------------------------------------------
-  !mass balance equation for PO4
-  !------------------------------------------------------------------
-  if(wsalt<=bsaltp) then
-    fd1=1.0/(1.0+bpiePO4*bKOPO4f**min(wDOX/bDOc_PO4,1.d0)*bsolid(1))
-  else
-    fd1=1.0/(1.0+bpiePO4*bKOPO4s**min(wDOX/bDOc_PO4,1.d0)*bsolid(1))
-  endif
-  fd2=1.0/(1.0+bpiePO4*bsolid(2))
-  j1=0.0;  j2=XJP+WSPn(iPO4)*wPO4p
-  k1=0.0;  k2=0.0  !no reactions 
-  call sfm_eq(2,PO41,PO42,wPO4d,bPO4(id),stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2)
-  JPO4(id)=stc*(fd1*PO41-wPO4d);  bPO4(id)=PO42
-
-  !------------------------------------------------------------------
-  !sediment erosion: this part needs more documentation
-  !------------------------------------------------------------------
-  eH2S(id)=0; eLPOC(id)=0;  eRPOC(id)=0
-  if(ierosion>0.and.idry_e(id)/=1)then
-    tau=sum(tau_bot_node(3,elnode(1:i34(id),id)))/i34(id) !bottom shear stress 
-    erate=erosion*(1-eporo)*efrac*max((tau-etau),0.d0)/(2650*etau) !erosion rate 
-
-    !compute depostion fraction: E/(k+W)
-    edfrac=dfrac
-    if(dfrac(1)<0.d0) edfrac(1)=erate/(WSP(iRPOC)*dWS_POC(1)/max(1.d-7,wdz)+KP0(1)*exp(KTRM(1)*(wtemp-TRM(1))))
-    if(dfrac(2)<0.d0) edfrac(2)=erate/(WSP(iLPOC)*dWS_POC(2)/max(1.d-7,wdz)+KP0(2)*exp(KTRM(2)*(wtemp-TRM(2))))
-
-    !compute erosion flux
-    eH2S(id) =bH2S(id)*erate*ediso/(1.+bsolid(1)*bpieH2Ss)/2.0 !todo: 2.0 (S to O2) unnecessary 
-    eLPOC(id)=bPOC(1,id)*erate*edfrac(1)
-    eRPOC(id)=bPOC(2,id)*erate*edfrac(2)
-    if(ierosion==2) eH2S(id)=0.0
-    if(ierosion==1) then; eLPOC(id)=0.0; eRPOC(id)=0.0; endif
-
-    !update sediment concentration: H2S, POC
-    bH2S(id)  =max(bH2S(id)-2.0*eH2S(id)*dtw/dz,0.d0)
-    bPOC(1,id)=max(bPOC(1,id)-eLPOC(id)*dtw/dz,0.d0)
-    bPOC(2,id)=max(bPOC(2,id)-eRPOC(id)*dtw/dz,0.d0)
-  endif 
+      !update sediment concentration: H2S, POC
+      bH2S(id)  =max(bH2S(id)-2.0*eH2S(id)*dtw/dz,0.d0)
+      bPOC(1,id)=max(bPOC(1,id)-eLPOC(id)*dtw/dz,0.d0)
+      bPOC(2,id)=max(bPOC(2,id)-eRPOC(id)*dtw/dz,0.d0)
+    endif 
+  endif !idry_e(id)
 
   !update sediment temperature
   btemp(id)=btemp(id)+86400.d0*dtw*bdiff*(wtemp-btemp(id))/(dz**2.0)
@@ -279,7 +289,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,it,isub)
                & 'wPBS ','wRPOC','wLPOC','wRPON','wLPON','wRPOP','wLPOP','wPO4 ','wNH4 ','wNO3 ', &
                & 'wCOD ','wDOX '/)
   do i=1,22 !Note: sediment fluxes can be negative
-    if(swild(i)<0.d0) then
+    if(swild(i)<0.d0.or.swild(i)/=swild(i)) then
       write(errmsg,*) 'Error in ICM SFM: id=',id,',',trim(adjustl(snames(i))),';', & 
                      & (trim(adjustl(snames(j))),'=',swild(j),', ', j=1,42) 
       call parallel_abort(errmsg)

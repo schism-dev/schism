@@ -23,7 +23,7 @@ subroutine read_icm_param(imode)
   use schism_glbl, only : rkind,dt,nvrt,ne_global,in_dir,out_dir,len_in_dir,len_out_dir, &
             & ihconsv,nws,nea,npa,ihot,idry_e,ze,kbe,irange_tr,tr_el,tr_nd,nea,npa,iof_icm, &
             & iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav, &
-            & iof_icm_marsh,iof_icm_sed, iof_icm_ba,iof_icm_clam,iof_icm_dbg
+            & iof_icm_marsh,iof_icm_sed, iof_icm_ba,iof_icm_clam
 
   use schism_msgp, only : myrank,parallel_abort
   use icm_misc, only : read_gr3_prop
@@ -32,6 +32,7 @@ subroutine read_icm_param(imode)
   integer,intent(in) :: imode
 
   !local variables
+  integer, parameter :: nout_max=200,nhot_max=50
   integer :: istat,i,j,k,m,n2,n3,nb,ntr
   integer,pointer :: nhot
   real(rkind),pointer,dimension(:,:,:) :: trnd
@@ -42,7 +43,7 @@ subroutine read_icm_param(imode)
   !define namelists
   namelist /MARCO/ nsub,iRad,iKe,iLight,iPR,iLimit,isflux,iSed,iBA,iClam,nclam, &
            & ibflux,iSilica,iZB,iPh,iCBP,isav_icm,imarsh_icm,nmarsh,idry_icm,KeC,KeS,KeSalt, &
-           & alpha,Ke0,tss2c,PRR,wqc0,WSP,WSPn,iout_icm,nspool_icm
+           & alpha,Ke0,tss2c,PRR,wqc0,WSP,WSPn,iout_icm,nspool_icm,idbg
   namelist /CORE/ GPM,TGP,KTGP,MTR,MTB,TMT,KTMT,FCP,FNP,FPP,FCM,FNM,FPM,  &
            & Nit,TNit,KTNit,KhDOn,KhNH4n,KhDOox,KhNO3dn,   &
            & KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KCD,TRCOD,KTRCOD, &
@@ -53,9 +54,11 @@ subroutine read_icm_param(imode)
            & zFSP,zFCM,zFNM,zFPM,zFSM,zKhDO,zn2c,zp2c,zs2c,z2pr,p2pr 
   namelist /PH_ICM/ ppatch0,inu_ph,pKCACO3,pKCA,pRea
   namelist /SAV_ICM/ spatch0,sav0,sGPM,sTGP,sKTGP,sFAM,sFCP,sMTB,sTMT,sKTMT,sFNM,sFPM,sFCM,sFNMb, &
-           & sFPMb,sFCMb,sKhN,sKhP,salpha,sKe,shtm,s2ht,sc2dw,sn2c,sp2c,so2c
+           & sFPMb,sFCMb,sKTB,sDoy,sKhN,sKhP,salpha,sKe,shtm,s2ht,sc2dw,sn2c,sp2c,EP0,eGPM,eTGP, &
+           & eKTGP,eKe,ealpha,eMTB,eTMT,eKTMT,ePRR,eFCM,eFNM,eFPM,eFCP,eFNP,eFPP,en2c,ep2c,eKhN,eKhP,eKhE
   namelist /MARSH/ iNmarsh,vpatch0,vmarsh0,vGPM,vFAM,vTGP,vKTGP,vFCP,vMTB,vTMT,vKTMT,vFCM,vFNM, &
-           & vFPM,vFW,vKhN,vKhP,valpha,vKe,vSopt,vKs,vInun,vht0,vcrit,v2ht,vc2dw,vn2c,vp2c,vo2c
+           & vFPM,vFW,vKhN,vKhP,valpha,vKe,vSopt,vKs,vInun,vht0,vcrit,v2ht,vc2dw,vn2c,vp2c,vAw, &
+           & vKNO3,vKPOM,vKTW,vRTw,vKhDO,vOCw
   namelist /SFM/ bdz,bVb,bdiff,bsaltc,bsaltn,bsaltp,bsolid,bKTVp,bKTVd,bVp,bVd,bTR,&
            & btemp0,bstc0,bSTR0,bThp0,bTox0,bNH40,bNO30,bPO40,bH2S0,bCH40,bPOS0,bSA0,&
            & bPOP0,bPON0,bPOC0,bPOS0,bKC,bKN,bKP,bKTC,bKTN,bKTP,bKS,bKTS,bFPP,&
@@ -65,7 +68,7 @@ subroutine read_icm_param(imode)
            & bKOSI,bpieSI,bKhPOS,bDOc_SI,bJPOSa,bKOPO4f,bKOPO4s,bpiePO4,bDOc_PO4, &
            & bKST,bSTmax,bp2d,bVpmin,bKhDO_Vp,bDOc_ST,banoxic,boxic,bKCH4,bKTCH4,bKhDO_CH4,bo2n
   namelist /BAG/ gpatch0,gBA0,gGPM,gTGP,gKTGP,gMTB,gPRR,gTR,gKTR,galpha,gKSED,gKBA,gKhN,gKhP, &
-           & gp2c,gn2c,go2c,gFCP,gFNP,gFPP
+           & gp2c,gn2c,gFCP,gFNP,gFPP
   namelist /CLAM_ICM/ cpatch0,clam0,clam0,cfrmax,cTFR,csalt,cKDO,cDOh,cfTSSm,cRF,cIFmax,cMTB, &
            & cTMT,cKTMT,cMRT,cPRR,cHSR,cDoyp,CDoyh,cn2c,cp2c,cKTFR,cKTSS,cTSS,calpha
   namelist /ERO/ ierosion,erosion,etau,eporo,efrac,ediso,dfrac,dWS_POC 
@@ -78,7 +81,7 @@ subroutine read_icm_param(imode)
     nsub=1; iRad=0; iKe=0; iLight=0; iPR=0; iLimit=0; isflux=0; iSed=1; iBA=0; ibflux=0; iSilica=0; 
     iZB=0;  iPh=0; iCBP=0; isav_icm=0; imarsh_icm=0; nmarsh=3; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02;
     alpha=5.0; Ke0=0.26; tss2c=6.0; PRR=0; wqc0=0; WSP=0.0; WSPn=0.0; iout_icm=0; nspool_icm=0
-    iClam=0; nclam=0
+    iClam=0; nclam=0; idbg=0
     jdry=>idry_icm; jsav=>isav_icm; jmarsh=>imarsh_icm; ised_icm=>iSed; iBA_icm=>iBA
 
     !read global switches
@@ -106,7 +109,7 @@ subroutine read_icm_param(imode)
            & vFCP(nmarsh,3),vMTB(nmarsh,3),vTMT(nmarsh,3),vKTMT(nmarsh,3),vFCM(nmarsh,4),vFNM(nmarsh,4), &
            & vFPM(nmarsh,4),vFW(nmarsh),vKhN(nmarsh),vKhP(nmarsh),valpha(nmarsh),vKe(nmarsh),vSopt(nmarsh), &
            & vKs(nmarsh),vInun(nmarsh),vht0(nmarsh),vcrit(nmarsh),v2ht(nmarsh,2),vc2dw(nmarsh),vn2c(nmarsh), &
-           & vp2c(nmarsh),vo2c(nmarsh),stat=istat)
+           & vp2c(nmarsh),stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. vmarsh0')
 
     !init. CORE module
@@ -131,12 +134,15 @@ subroutine read_icm_param(imode)
     !init. SAV module
     spatch0=0; sav0=0; sGPM=0; sTGP=0; sKTGP=0; sFAM=0; sFCP=0; sMTB=0; sTMT=0; sKTMT=0;
     sFNM=0; sFPM=0; sFCM=0; sFNMb=0; sFPMb=0; sFCMb=0;  sKhN=0; sKhP=0; salpha=0; sKe=0;
-    shtm=0; s2ht=0; sc2dw=0; sn2c=0; sp2c=0; so2c=0
+    shtm=0; s2ht=0; sc2dw=0; sn2c=0; sp2c=0; EP0=0; eGPM=0; eTGP=0; eKTGP=0; eKe=0; ealpha=0;
+    eMTB=0; eTMT=0; eKTMT=0; ePRR=0; eFCM=0; eFNM=0; eFPM=0; eFCP=0; eFNP=0; eFPP=0; en2c=0;
+    ep2c=0; eKhN=0; eKhP=0; eKhE=0
     
     !init. MARSH module
     iNmarsh=1; vpatch0=0; vmarsh0=0; vGPM=0; vFAM=0; vTGP=0; vKTGP=0; vFCP=0; vMTB=0; vTMT=0;
     vKTMT=0;  vFCM=0; vFNM=0; vFPM=0; vFW=0; vKhN=0; vKhP=0; valpha=0; vKe=0; vSopt=0; vKs=0;
-    vInun=0;  vht0=0; vcrit=0; v2ht=0; vc2dw=0; vn2c=0; vp2c=0; vo2c=0
+    vInun=0;  vht0=0; vcrit=0; v2ht=0; vc2dw=0; vn2c=0; vp2c=0; vAw=0; vKNO3=0; vKPOM=0;
+    vKTW=0;   vRTw=0; vKhDO=0; vOCw=0
 
     !init. SFM module
     bdz=0;  bVb=0;  bdiff=0; bsaltc=0; bsaltn=0; bsaltp=0; bsolid=0; bKTVp=0;  bKTVd=0;
@@ -152,7 +158,7 @@ subroutine read_icm_param(imode)
 
     !init. BA module
     gpatch0=1; gBA0=0; gGPM=0; gTGP=0; gKTGP=0; gMTB=0; gPRR=0; gTR=0; gKTR=0; galpha=0
-    gKSED=0; gKBA=0; gKhN=0; gKhP=0; gp2c=0; gn2c=0; go2c=0; gFCP=0; gFNP=0; gFPP=0
+    gKSED=0; gKBA=0; gKhN=0; gKhP=0; gp2c=0; gn2c=0; gFCP=0; gFNP=0; gFPP=0
 
     !init. CLAM module
     cpatch0=1; clam0=0; cfrmax=0; cTFR=0;  csalt=0; cKDO=0; cDOh=0;  cfTSSm=0; cRF=0;  cIFmax=0
@@ -180,7 +186,7 @@ subroutine read_icm_param(imode)
     !p%itype is consistent with the output type in SCHISM hydro
     !-----------------------------------------------------------------------------------------
     !allocate variables
-    allocate(wqout(200),wqhot(50),stat=istat)
+    allocate(wqout(nout_max),wqhot(nhot_max),stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. wqout')
 
     nouts=0; nout=0; iout=0; nhot_icm=0 !init
@@ -199,11 +205,11 @@ subroutine read_icm_param(imode)
       nb=17; nouts(1)=nb; iout(1,1)=1; iout(2,1)=nb; nout=nout+nb
 
       !debug variable
-      if(iof_icm_dbg/=0) then
-        p=>wqout(nout+1); p%name='ICM_TN';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_TN=>p%p1;   p%itype=4
-        p=>wqout(nout+2); p%name='ICM_TP';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_TP=>p%p1;   p%itype=4
-        p=>wqout(nout+3); p%name='ICM_CHLA'; allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); db_CHLA=>p%p2; p%itype=6
-        p=>wqout(nout+4); p%name='ICM_Ke';   allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); db_Ke=>p%p2;   p%itype=6
+      if(idbg(1)/=0) then
+        p=>wqout(nout+1); p%name='ICM_TN';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); p%p1=0; db_TN=>p%p1;   p%itype=4
+        p=>wqout(nout+2); p%name='ICM_TP';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); p%p1=0; db_TP=>p%p1;   p%itype=4
+        p=>wqout(nout+3); p%name='ICM_CHLA'; allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); p%p2=0; db_CHLA=>p%p2; p%itype=6
+        p=>wqout(nout+4); p%name='ICM_Ke';   allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); p%p2=0; db_Ke=>p%p2;   p%itype=6
         nb=4; nouts(1)=nouts(1)+nb; nout=nout+nb
       endif
     endif
@@ -261,35 +267,49 @@ subroutine read_icm_param(imode)
     endif
 
     !SAV module: 6
-    if(jsav==1) then
+    if(jsav/=0) then
       p=>wqout(nout+1); p%name='ICM_sleaf'; p%p1=>sav(1,:); p%itype=4
       p=>wqout(nout+2); p%name='ICM_sstem'; p%p1=>sav(2,:); p%itype=4
       p=>wqout(nout+3); p%name='ICM_sroot'; p%p1=>sav(3,:); p%itype=4
-      p=>wqout(nout+4); p%name='ICM_sht';   p%p1=>sht;      p%itype=4
-      nb=4; nouts(6)=nb;  iout(1,6)=nout+1; iout(2,6)=nout+nb; nout=nout+nb
+      p=>wqout(nout+4); p%name='ICM_stuber';p%p1=>sav(4,:); p%itype=4
+      p=>wqout(nout+5); p%name='ICM_sht';   p%p1=>sht;      p%itype=4
+      nb=5; nouts(6)=nb;  iout(1,6)=nout+1; iout(2,6)=nout+nb; nout=nout+nb
 
       !debug variable
-      if(iof_icm_dbg/=0) then
-        p=>wqout(nout+1);  p%name='ICM_sGP';   allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); db_sGP=>p%p2;   p%itype=6
-        p=>wqout(nout+2);  p%name='ICM_sMT1';  allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); db_sMT1=>p%p2;  p%itype=6
-        p=>wqout(nout+3);  p%name='ICM_sMT2';  allocate(p%data(1,nvrt,nea)); p%p2=>p%data(1,:,:); db_sMT2=>p%p2;  p%itype=6
-        p=>wqout(nout+4);  p%name='ICM_sMT01'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sMT01=>p%p1; p%itype=4
-        p=>wqout(nout+5);  p%name='ICM_sMT02'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sMT02=>p%p1; p%itype=4
-        p=>wqout(nout+6);  p%name='ICM_sMT03'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sMT03=>p%p1; p%itype=4
-        p=>wqout(nout+7);  p%name='ICM_sfT';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sfT=>p%p1;   p%itype=4
-        p=>wqout(nout+8);  p%name='ICM_sfI';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sfI=>p%p1;   p%itype=4
-        p=>wqout(nout+9);  p%name='ICM_sfN';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sfN=>p%p1;   p%itype=4
-        p=>wqout(nout+10); p%name='ICM_sfP';   allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_sfP=>p%p1;   p%itype=4
-        nb=10; nouts(1)=nouts(1)+nb; nout=nout+nb
+      if(idbg(6)/=0) then
+        p=>wqout(nout+1);  p%name='ICM_sGP';   allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_sGP=>p%p1;   p%itype=4
+        p=>wqout(nout+2);  p%name='ICM_sMT1';  allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_sMT1=>p%p1;  p%itype=4
+        p=>wqout(nout+3);  p%name='ICM_sMT2';  allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_sMT2=>p%p1;  p%itype=4
+        p=>wqout(nout+4);  p%name='ICM_sMT01'; allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_sMT01=>p%p1; p%itype=4
+        p=>wqout(nout+5);  p%name='ICM_sMT02'; allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_sMT02=>p%p1; p%itype=4
+        p=>wqout(nout+6);  p%name='ICM_sMT03'; allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_sMT03=>p%p1; p%itype=4
+        p=>wqout(nout+7);  p%name='ICM_sMT04'; allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_sMT04=>p%p1; p%itype=4
+        p=>wqout(nout+8);  p%name='ICM_sTB';   allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_sTB=>p%p1;   p%itype=4
+        p=>wqout(nout+9);  p%name='ICM_sfT';   allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_sfT=>p%p1;   p%itype=4
+        p=>wqout(nout+10); p%name='ICM_sfI';   allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_sfI=>p%p1;   p%itype=4
+        p=>wqout(nout+11); p%name='ICM_sfN';   allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_sfN=>p%p1;   p%itype=4
+        p=>wqout(nout+12); p%name='ICM_sfP';   allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_sfP=>p%p1;   p%itype=4
+        nb=12; nouts(6)=nouts(6)+nb; nout=nout+nb
       endif
 
       !hotstart variable
       p=>wqhot(nhot+1); p%name='sav';  p%p2=>sav
       nhot=nhot+1
+
+      !epiphytes
+      if(jsav==2) then
+        p=>wqout(nout+1); p%name='ICM_EP';   p%p1=>EP;      p%itype=4
+        p=>wqout(nout+2); p%name='ICM_TEP';  p%p1=>TEP;     p%itype=4
+        nb=2; nouts(6)=nouts(6)+nb;  iout(2,6)=iout(2,6)+nb; nout=nout+nb
+
+        !hotstart variable
+        p=>wqhot(nhot+1); p%name='EP';  p%p1=>EP
+        nhot=nhot+1
+      endif
     endif
 
     !MARSH module: 7
-    if(jmarsh==1) then
+    if(jmarsh==1) then !mechanistic model
       do i=1,nmarsh
         write(stmp,"(I3)") i
         p=>wqout(nout+4*(i-1)+1);  p%name='ICM_vleaf'//trim(adjustl(stmp)); p%p1=>vmarsh(i,1,:); p%itype=4
@@ -299,9 +319,38 @@ subroutine read_icm_param(imode)
       enddo
       nb=4*nmarsh; nouts(7)=nb;  iout(1,7)=nout+1; iout(2,7)=nout+nb; nout=nout+nb
 
+      !debug variable
+      if(idbg(7)/=0) then
+        allocate(db_vGP(nmarsh,nea),db_vBMw(nmarsh,nea),db_vBMb(nmarsh,nea),stat=istat)
+        if(istat/=0) call parallel_abort('Failed in alloc. db_vGP variables')
+        do i=1,nmarsh
+          write(stmp,"(I3)") i
+          p=>wqout(nout+3*(i-1)+1);  p%name='ICM_vGP'//trim(adjustl(stmp));  p%p1=>db_vGP(i,:);  p%p1=0;  p%itype=4
+          p=>wqout(nout+3*(i-1)+2);  p%name='ICM_vBMw'//trim(adjustl(stmp)); p%p1=>db_vBMw(i,:); p%p1=0;  p%itype=4
+          p=>wqout(nout+3*(i-1)+3);  p%name='ICM_vBMb'//trim(adjustl(stmp)); p%p1=>db_vBMb(i,:); p%p1=0;  p%itype=4
+        enddo
+        nb=3*nmarsh; nouts(7)=nouts(7)+nb; nout=nout+nb
+      endif
+
       !hotstart variable
       p=>wqhot(nhot+1); p%name='vmarsh';  p%p3=>vmarsh
       nhot=nhot+1
+    elseif(jmarsh==2) then !simple formulation
+      !debug variable
+      if(idbg(7)/=0) then
+        p=>wqout(nout+1);  p%name='ICM_vdNO3';   allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdNO3=>p%p1;    p%itype=4
+        p=>wqout(nout+2);  p%name='ICM_vdDOX';   allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdDOX=>p%p1;    p%itype=4
+        p=>wqout(nout+3);  p%name='ICM_vdRPOC';  allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdRPOC=>p%p1;   p%itype=4
+        p=>wqout(nout+4);  p%name='ICM_vdLPOC';  allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdLPOC=>p%p1;   p%itype=4
+        p=>wqout(nout+5);  p%name='ICM_vdRPON';  allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdRPON=>p%p1;   p%itype=4
+        p=>wqout(nout+6);  p%name='ICM_vdLPON';  allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdLPON=>p%p1;   p%itype=4
+        p=>wqout(nout+7);  p%name='ICM_vdRPOP';  allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdRPOP=>p%p1;   p%itype=4
+        p=>wqout(nout+8);  p%name='ICM_vdLPOP';  allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdLPOP=>p%p1;   p%itype=4
+        p=>wqout(nout+9);  p%name='ICM_vdSRPOC'; allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdSRPOC=>p%p1;  p%itype=4
+        p=>wqout(nout+10); p%name='ICM_vdSRPON'; allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdSRPON=>p%p1;  p%itype=4
+        p=>wqout(nout+11); p%name='ICM_vdSRPOP'; allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdSRPOP=>p%p1;  p%itype=4
+        nb=11; nouts(7)=nouts(7)+nb; nout=nout+nb
+      endif
     endif
 
     !SFM module: 8
@@ -366,12 +415,12 @@ subroutine read_icm_param(imode)
       nb=4; nouts(9)=nb; iout(1,9)=nout+1; iout(2,9)=nout+nb; nout=nout+nb
 
       !debug variable
-      if(iof_icm_dbg/=0) then
-        p=>wqout(nout+1); p%name='ICM_gfT'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_gfT=>p%p1;   p%itype=4
-        p=>wqout(nout+2); p%name='ICM_gfI'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_gfI=>p%p1;   p%itype=4
-        p=>wqout(nout+3); p%name='ICM_gfN'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_gfN=>p%p1;   p%itype=4
-        p=>wqout(nout+4); p%name='ICM_gfP'; allocate(p%data(1,1,nea));    p%p1=>p%data(1,1,:); db_gfP=>p%p1;   p%itype=4
-        nb=4; nouts(1)=nouts(1)+nb; nout=nout+nb
+      if(idbg(9)/=0) then
+        p=>wqout(nout+1); p%name='ICM_gfT'; allocate(p%data(1,1,nea)); p%p1=>p%data(1,1,:); p%p1=0; db_gfT=>p%p1;   p%itype=4
+        p=>wqout(nout+2); p%name='ICM_gfI'; allocate(p%data(1,1,nea)); p%p1=>p%data(1,1,:); p%p1=0; db_gfI=>p%p1;   p%itype=4
+        p=>wqout(nout+3); p%name='ICM_gfN'; allocate(p%data(1,1,nea)); p%p1=>p%data(1,1,:); p%p1=0; db_gfN=>p%p1;   p%itype=4
+        p=>wqout(nout+4); p%name='ICM_gfP'; allocate(p%data(1,1,nea)); p%p1=>p%data(1,1,:); p%p1=0; db_gfP=>p%p1;   p%itype=4
+        nb=4; nouts(9)=nouts(9)+nb; nout=nout+nb
       endif
      
       !hotstart
@@ -388,25 +437,30 @@ subroutine read_icm_param(imode)
       nb=nclam; nouts(10)=nb; iout(1,10)=nout+1; iout(2,10)=nout+nb; nout=nout+nb
 
       !debug variable
-      if(iof_icm_dbg/=0) then
+      if(idbg(10)/=0) then
+        allocate(db_cfT(nclam,nea),db_cfS(nclam,nea),db_cfDO(nclam,nea),db_cfTSS(nclam,nea), &
+            & db_cFr(nclam,nea),db_cIF(nclam,nea),db_cTFC(nclam,nea),db_cATFC(nclam,nea),&
+            & db_cfN(nclam,nea),db_cGP(nclam,nea),db_cMT(nclam,nea), db_cRT(nclam,nea), &
+            & db_cPR(nclam,nea),db_cHST(nclam,nea), stat=istat)
+        if(istat/=0) call parallel_abort('failed in alloc. db_cfT')
         do i=1,nclam
           write(stmp,"(I3)") i
-          p=>wqout(nout+(i-1)*14+1);  p%name='ICM_cfT'//trim(adjustl(stmp));     p%p1=>db_cfT(i,:);   p%itype=4
-          p=>wqout(nout+(i-1)*14+2);  p%name='ICM_cfS'//trim(adjustl(stmp));     p%p1=>db_cfS(i,:);   p%itype=4
-          p=>wqout(nout+(i-1)*14+3);  p%name='ICM_cfDO'//trim(adjustl(stmp));    p%p1=>db_cfDO(i,:);  p%itype=4
-          p=>wqout(nout+(i-1)*14+4);  p%name='ICM_cfTSS'//trim(adjustl(stmp));   p%p1=>db_cfTSS(i,:); p%itype=4
-          p=>wqout(nout+(i-1)*14+5);  p%name='ICM_cFr'//trim(adjustl(stmp));     p%p1=>db_cFr(i,:);   p%itype=4
-          p=>wqout(nout+(i-1)*14+6);  p%name='ICM_cIF'//trim(adjustl(stmp));     p%p1=>db_cIF(i,:);   p%itype=4
-          p=>wqout(nout+(i-1)*14+7);  p%name='ICM_cTFC'//trim(adjustl(stmp));    p%p1=>db_cTFC(i,:);  p%itype=4
-          p=>wqout(nout+(i-1)*14+8);  p%name='ICM_cATFC'//trim(adjustl(stmp));   p%p1=>db_cATFC(i,:); p%itype=4
-          p=>wqout(nout+(i-1)*14+9);  p%name='ICM_cfN'//trim(adjustl(stmp));     p%p1=>db_cfN(i,:);   p%itype=4
-          p=>wqout(nout+(i-1)*14+10); p%name='ICM_cGP'//trim(adjustl(stmp));     p%p1=>db_cGP(i,:);   p%itype=4
-          p=>wqout(nout+(i-1)*14+11); p%name='ICM_cMT'//trim(adjustl(stmp));     p%p1=>db_cMT(i,:);   p%itype=4
-          p=>wqout(nout+(i-1)*14+12); p%name='ICM_cRT'//trim(adjustl(stmp));     p%p1=>db_cRT(i,:);   p%itype=4
-          p=>wqout(nout+(i-1)*14+13); p%name='ICM_cPR'//trim(adjustl(stmp));     p%p1=>db_cPR(i,:);   p%itype=4
-          p=>wqout(nout+(i-1)*14+14); p%name='ICM_cHST'//trim(adjustl(stmp));    p%p1=>db_cHST(i,:);  p%itype=4
+          p=>wqout(nout+(i-1)*14+1);  p%name='ICM_cfT'//trim(adjustl(stmp));   p%p1=>db_cfT(i,:);   p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+2);  p%name='ICM_cfS'//trim(adjustl(stmp));   p%p1=>db_cfS(i,:);   p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+3);  p%name='ICM_cfDO'//trim(adjustl(stmp));  p%p1=>db_cfDO(i,:);  p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+4);  p%name='ICM_cfTSS'//trim(adjustl(stmp)); p%p1=>db_cfTSS(i,:); p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+5);  p%name='ICM_cFr'//trim(adjustl(stmp));   p%p1=>db_cFr(i,:);   p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+6);  p%name='ICM_cIF'//trim(adjustl(stmp));   p%p1=>db_cIF(i,:);   p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+7);  p%name='ICM_cTFC'//trim(adjustl(stmp));  p%p1=>db_cTFC(i,:);  p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+8);  p%name='ICM_cATFC'//trim(adjustl(stmp)); p%p1=>db_cATFC(i,:); p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+9);  p%name='ICM_cfN'//trim(adjustl(stmp));   p%p1=>db_cfN(i,:);   p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+10); p%name='ICM_cGP'//trim(adjustl(stmp));   p%p1=>db_cGP(i,:);   p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+11); p%name='ICM_cMT'//trim(adjustl(stmp));   p%p1=>db_cMT(i,:);   p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+12); p%name='ICM_cRT'//trim(adjustl(stmp));   p%p1=>db_cRT(i,:);   p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+13); p%name='ICM_cPR'//trim(adjustl(stmp));   p%p1=>db_cPR(i,:);   p%p1=0; p%itype=4
+          p=>wqout(nout+(i-1)*14+14); p%name='ICM_cHST'//trim(adjustl(stmp));  p%p1=>db_cHST(i,:);  p%p1=0; p%itype=4
         enddo
-        nb=14*nclam; nouts(1)=nouts(1)+nb; nout=nout+nb
+        nb=14*nclam; nouts(10)=nouts(10)+nb; nout=nout+nb
       endif
 
       !hotstart
@@ -417,13 +471,12 @@ subroutine read_icm_param(imode)
     !allocate iof_icm, and get output information
     allocate(iof_icm(nout),stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. iof_icm(2)')
-    iof_icm=min(iof_icm_dbg,1); nout_icm_3d=0; !init.
-    iof_icm(1:17)=iof_icm_core
+    iof_icm=1; nout_icm_3d=0; iof_icm(1:17)=iof_icm_core !init.
     if(iSilica==1)  iof_icm(iout(1,2): iout(2,2)) =iof_icm_silica
     if(iZB==1)      iof_icm(iout(1,3): iout(2,3)) =iof_icm_zb
     if(iPh==1)      iof_icm(iout(1,4): iout(2,4)) =iof_icm_ph
     if(iCBP==1)     iof_icm(iout(1,5): iout(2,5)) =iof_icm_cbp
-    if(isav_icm==1) iof_icm(iout(1,6): iout(2,6)) =iof_icm_sav
+    if(isav_icm/=0) iof_icm(iout(1,6): iout(2,6)) =iof_icm_sav
     if(imarsh_icm==1) iof_icm(iout(1,7): iout(2,7)) =iof_icm_marsh
     if(ised_icm==1) iof_icm(iout(1,8): iout(2,8)) =iof_icm_sed
     if(iBA_icm==1)  iof_icm(iout(1,9): iout(2,9)) =iof_icm_ba
@@ -643,8 +696,7 @@ subroutine icm_vars_init
   !allocate ICM variables and initialize; read ICM spatial parameters
   !--------------------------------------------------------------------------------
   use schism_glbl, only : rkind,nea,npa,nvrt,irange_tr,ntrs,in_dir,len_in_dir,np_global, &
-                        & ne_global,ielg,iplg,i34,elnode,flag_ic,tr_nd,tr_el,indel,np, &
-                        & nne,iof_icm_dbg
+                        & ne_global,ielg,iplg,i34,elnode,flag_ic,tr_nd,tr_el,indel,np,nne
   use schism_msgp, only : exchange_p3d_tr,parallel_abort,myrank,comm,itype,rtype
   use netcdf
   use icm_mod
@@ -686,11 +738,16 @@ subroutine icm_vars_init
   !SAV variables
   !-------------------------------------------------------------------------------
   allocate(spatch(nea)); spatch=0
-  if(jsav==1) then
-    allocate(sht(nea),sav(3,nea),sFPOC(3,nea),sFPON(3,nea),sFPOP(3,nea),sbNH4(nea), &
+  if(jsav/=0) then
+    allocate(sht(nea),sav(4,nea),sFPOC(3,nea),sFPON(3,nea),sFPOP(3,nea),sbNH4(nea), &
            & sbPO4(nea),sSOD(nea),stat=istat)
     if(istat/=0) call parallel_abort('Failed in alloc. SAV variables ')
     sht=0.0; sav=0.0; sFPOC=0.0; sFPON=0.0; sFPOP=0.0; sbNH4=0.0; sbPO4=0.0; sSOD=0.0
+    if(jsav==2) then
+      allocate(EP(nea),TEP(nea),stat=istat)
+      if(istat/=0) call parallel_abort('Failed in alloc. EP variables ')
+      EP=0.0; TEP=0.0
+    endif
   endif
 
   !-------------------------------------------------------------------------------
@@ -720,15 +777,6 @@ subroutine icm_vars_init
   if(iClam==1) then
     allocate(CLAM(nclam,nea),cFPOC(nea,2),cFPON(nea,2),cFPOP(nea,2), stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. CLAM')
-    if(iof_icm_dbg/=0) then
-      allocate(db_cfT(nclam,nea),db_cfS(nclam,nea),db_cfDO(nclam,nea),db_cfTSS(nclam,nea), &
-             & db_cFr(nclam,nea),db_cIF(nclam,nea),db_cTFC(nclam,nea),db_cATFC(nclam,nea),&
-             & db_cfN(nclam,nea),db_cGP(nclam,nea),db_cMT(nclam,nea), db_cRT(nclam,nea), &
-             & db_cPR(nclam,nea),db_cHST(nclam,nea), stat=istat)
-      if(istat/=0) call parallel_abort('failed in alloc. db_cfT')
-      db_cfT=0; db_cfS=0; db_cfDO=0; db_cfTSS=0; db_cFr=0; db_cIF=0; db_cTFC=0; db_cATFC=0
-      db_cfN=0; db_cGP=0; db_cMT=0;  db_cRT=0;   db_cPR=0; db_cHST=0
-    endif
   endif
 
   !-------------------------------------------------------------------------------
@@ -755,7 +803,7 @@ subroutine icm_vars_init
   !  2). make links by piointing p/p1/p2 for scalar/1D/2D variable
   !---------------------------------------------------------------------------
   !define spatial varying parameters 
-  fname='ICM_param.nc';  nsp=250
+  fname='ICM_param.nc';  nsp=300
   allocate(pname(nsp),sp(nsp),stat=istat)
   if(istat/=0) call parallel_abort('Failed in alloc. pname')
 
@@ -824,48 +872,67 @@ subroutine icm_vars_init
   sp(m+1)%p=>bKOSI;    sp(m+2)%p=>bKhPOS; sp(m+3)%p=>bDOc_SI; sp(m+4)%p=>bJPOSa;   m=m+4
 
   !SAV,MARSH,BA,pH,CLAM modules
-  if(jsav==1) then
-    pname((m+1):(m+26))=&
+  if(jsav/=0) then
+    pname((m+1):(m+27))=&
       & (/'spatch0','sav0   ','sGPM   ','sTGP   ','sKTGP  ',&
         & 'sFAM   ','sFCP   ','sMTB   ','sTMT   ','sKTMT  ',&
         & 'sFCM   ','sFNM   ','sFPM   ','sFCMb  ','sFNMb  ',&
         & 'sFPMb  ','sKhN   ','sKhP   ','salpha ','sKe    ',&
         & 'shtm   ','s2ht   ','sc2dw  ','sn2c   ','sp2c   ',&
-        & 'so2c   '/)
+        & 'sKTB   ','sDoy   '/)
     sp(m+1)%p=>spatch0;  sp(m+2)%p1=>sav0;  sp(m+3)%p=>sGPM;   sp(m+4)%p=>sTGP;    sp(m+5)%p1=>sKTGP;  m=m+5
     sp(m+1)%p=>sFAM;     sp(m+2)%p1=>sFCP;  sp(m+3)%p1=>sMTB;  sp(m+4)%p1=>sTMT;   sp(m+5)%p1=>sKTMT;  m=m+5
     sp(m+1)%p1=>sFCM;    sp(m+2)%p1=>sFNM;  sp(m+3)%p1=>sFPM;  sp(m+4)%p1=>sFCMb;  sp(m+5)%p1=>sFNMb;  m=m+5
     sp(m+1)%p1=>sFPMb;   sp(m+2)%p1=>sKhN;  sp(m+3)%p1=>sKhP;  sp(m+4)%p=>salpha;  sp(m+5)%p=>sKe;     m=m+5
     sp(m+1)%p1=>shtm;    sp(m+2)%p1=>s2ht;  sp(m+3)%p=>sc2dw;  sp(m+4)%p=>sn2c;    sp(m+5)%p=>sp2c;    m=m+5
-    sp(m+1)%p=>so2c;     m=m+1
+    sp(m+1)%p=>sKTB;     sp(m+2)%p1=>sDoy;  m=m+2
+    if(jsav==2) then
+      pname((m+1):(m+21))=&
+        & (/'EP0    ','eGPM   ','eTGP   ','eKTGP  ','eKe    ',&
+          & 'ealpha ','eMTB   ','eTMT   ','eKTMT  ','ePRR   ',&
+          & 'eFCM   ','eFNM   ','eFPM   ','eFCP   ','eFNP   ',&
+          & 'eFPP   ','en2c   ','ep2c   ','eKhN   ','eKhP   ',&
+          & 'eKhE   '/)
+      sp(m+1)%p=>EP0;    sp(m+2)%p=>eGPM;  sp(m+3)%p=>eTGP;   sp(m+4)%p1=>eKTGP;  sp(m+5)%p=>eKe;   m=m+5
+      sp(m+1)%p=>ealpha; sp(m+2)%p=>eMTB;  sp(m+3)%p=>eTMT;   sp(m+4)%p=>eKTMT;   sp(m+5)%p=>ePRR;  m=m+5
+      sp(m+1)%p1=>eFCM;  sp(m+2)%p1=>eFNM; sp(m+3)%p1=>eFPM;  sp(m+4)%p1=>eFCP;   sp(m+5)%p1=>eFNP; m=m+5
+      sp(m+1)%p1=>eFPP;  sp(m+2)%p=>en2c;  sp(m+3)%p=>ep2c;   sp(m+4)%p=>eKhN;    sp(m+5)%p=>eKhP;  m=m+5
+      sp(m+1)%p=>eKhE;   m=m+1
+    endif
   endif
 
   if(jmarsh==1) then
-    pname((m+1):(m+28))=&
+    pname((m+1):(m+27))=&
       & (/'vpatch0','vmarsh0','vGPM   ','vFAM   ','vTGP   ',&
         & 'vKTGP  ','vFCP   ','vMTB   ','vTMT   ','vKTMT  ',&
         & 'vFCM   ','vFNM   ','vFPM   ','vFW    ','vKhN   ',&
         & 'vKhP   ','valpha ','vKe    ','vSopt  ','vKs    ',&
         & 'vInun  ','vht0   ','vcrit  ','v2ht   ','vc2dw  ',&
-        & 'vn2c   ','vp2c   ','vo2c  '/)
+        & 'vn2c   ','vp2c   '/)
     sp(m+1)%p=>vpatch0; sp(m+2)%p2=>vmarsh0; sp(m+3)%p1=>vGPM;  sp(m+4)%p1=>vFAM;  sp(m+5)%p1=>vTGP;  m=m+5
     sp(m+1)%p2=>vKTGP;  sp(m+2)%p2=>vFCP;    sp(m+3)%p2=>vMTB;  sp(m+4)%p2=>vTMT;  sp(m+5)%p2=>vKTMT; m=m+5
     sp(m+1)%p2=>vFCM;   sp(m+2)%p2=>vFNM;    sp(m+3)%p2=>vFPM;  sp(m+4)%p1=>vFW;   sp(m+5)%p1=>vKhN;  m=m+5
     sp(m+1)%p1=>vKhP;   sp(m+2)%p1=>valpha;  sp(m+3)%p1=>vKe;   sp(m+4)%p1=>vSopt; sp(m+5)%p1=>vKs;   m=m+5
     sp(m+1)%p1=>vInun;  sp(m+2)%p1=>vht0;    sp(m+3)%p1=>vcrit; sp(m+4)%p2=>v2ht;  sp(m+5)%p1=>vc2dw; m=m+5
-    sp(m+1)%p1=>vn2c;   sp(m+2)%p1=>vp2c;    sp(m+3)%p1=>vo2c;  m=m+3
+    sp(m+1)%p1=>vn2c;   sp(m+2)%p1=>vp2c;    m=m+2
+  elseif(jmarsh==2) then !simple formulation
+    pname((m+1):(m+8))=&
+      & (/'vpatch0','vAw    ','vKNO3  ','vKPOM  ','vKTw   ',&
+        & 'vRTw   ','vKhDO  ','vOCw   '/)
+    sp(m+1)%p=>vpatch0; sp(m+2)%p=>vAw;    sp(m+3)%p=>vKNO3;  sp(m+4)%p=>vKPOM;   sp(m+5)%p=>vKTw;  m=m+5
+    sp(m+1)%p=>vRTw;    sp(m+2)%p=>vKhDO;  sp(m+3)%p=>vOCw;   m=m+3
   endif
 
   if(iBA==1) then
-    pname((m+1):(m+20))=&
+    pname((m+1):(m+19))=&
       & (/'gpatch0','gBA0   ','gGPM   ','gTGP   ','gKTGP  ',&
         & 'gMTB   ','gPRR   ','gTR    ','gKTR   ','galpha ',&
         & 'gKSED  ','gKBA   ','gKhN   ','gKhP   ','gp2c   ',&
-        & 'gn2c   ','go2c   ','gFCP   ','gFNP   ','gFPP   '/)
-    sp(m+1)%p=>gpatch0; sp(m+2)%p=>gBA0; sp(m+3)%p=>gGPM;  sp(m+4)%p=>gTGP;  sp(m+5)%p1=>gKTGP; m=m+5
-    sp(m+1)%p=>gMTB;    sp(m+2)%p=>gPRR; sp(m+3)%p=>gTR;   sp(m+4)%p=>gKTR;  sp(m+5)%p=>galpha; m=m+5
-    sp(m+1)%p=>gKSED;   sp(m+2)%p=>gKBA; sp(m+3)%p=>gKhN;  sp(m+4)%p=>gKhP;  sp(m+5)%p=>gp2c;   m=m+5
-    sp(m+1)%p=>gn2c;    sp(m+2)%p=>go2c; sp(m+3)%p1=>gFCP; sp(m+4)%p1=>gFNP; sp(m+5)%p1=>gFPP;  m=m+5
+        & 'gn2c   ','gFCP   ','gFNP   ','gFPP   '/)
+    sp(m+1)%p=>gpatch0; sp(m+2)%p=>gBA0;  sp(m+3)%p=>gGPM;  sp(m+4)%p=>gTGP;  sp(m+5)%p1=>gKTGP; m=m+5
+    sp(m+1)%p=>gMTB;    sp(m+2)%p=>gPRR;  sp(m+3)%p=>gTR;   sp(m+4)%p=>gKTR;  sp(m+5)%p=>galpha; m=m+5
+    sp(m+1)%p=>gKSED;   sp(m+2)%p=>gKBA;  sp(m+3)%p=>gKhN;  sp(m+4)%p=>gKhP;  sp(m+5)%p=>gp2c;   m=m+5
+    sp(m+1)%p=>gn2c;    sp(m+2)%p1=>gFCP; sp(m+3)%p1=>gFNP; sp(m+4)%p1=>gFPP;  m=m+4
   endif
 
   if(iClam==1) then
@@ -972,8 +1039,9 @@ subroutine icm_vars_init
 
     !PH/SAV/MARSH/BA init
     if(iPh==1) ppatch(i)=nint(ppatch0)
-    if(jsav==1) then
+    if(jsav/=0) then
       spatch(i)=nint(spatch0); sav(:,i)=sav0; call get_canopy(i)
+      if(jsav==2) EP(i)=EP0; TEP(i)=EP0*sav0(1)
     endif
     if(jmarsh==1) then
       vpatch(i)=nint(vpatch0); vmarsh(:,:,i)=vmarsh0; call get_canopy(i)
@@ -986,17 +1054,17 @@ subroutine icm_vars_init
     endif
   enddo
 
- !ICM variable init. @node
- if(flag_ic(7)==0) then
-   do m=irange_tr(1,7),irange_tr(2,7)
-     do k=1,nvrt
-       do i=1,np
-         tr_nd(m,k,i)=sum(tr_el(m,k,indel(1:nne(i),i)))/dble(nne(i))
-       enddo !p
-     enddo !k
-   enddo !m
-   call exchange_p3d_tr(tr_nd)
- endif
+  !ICM variable init. @node
+  if(flag_ic(7)==0) then
+    do m=irange_tr(1,7),irange_tr(2,7)
+      do k=1,nvrt
+        do i=1,np
+          tr_nd(m,k,i)=sum(tr_el(m,k,indel(1:nne(i),i)))/dble(nne(i))
+        enddo !p
+      enddo !k
+    enddo !m
+    call exchange_p3d_tr(tr_nd)
+  endif
 
 end subroutine icm_vars_init
 
@@ -1230,8 +1298,8 @@ subroutine check_icm_param()
   if(iZB/=0.and.iZB/=1) call parallel_abort('ICM iZB: 0/1')
   if(iPh/=0.and.iPh/=1) call parallel_abort('ICM iPh: 0/1')
   if(iCBP/=0.and.iCBP/=1) call parallel_abort('ICM iCBP: 0/1')
-  if(jsav/=0.and.jsav/=1) call parallel_abort('ICM isav_icm: 0/1')
-  if(jmarsh/=0.and.jmarsh/=1) call parallel_abort('ICM imarsh_icm: 0/1')
+  if(jsav/=0.and.jsav/=1.and.jsav/=2) call parallel_abort('ICM isav_icm: 0/1/2')
+  if(jmarsh/=0.and.jmarsh/=1.and.jmarsh/=2) call parallel_abort('ICM imarsh_icm: 0/1/2')
   if(iSed/=0.and.iSed/=1) call parallel_abort('ICM iSed: 0/1')
   if(iBA/=0.and.iBA/=1) call parallel_abort('ICM iBA: 0/1')
   if(iRad/=0.and.iRad/=1) call parallel_abort('ICM iRad: 0/1')
@@ -1247,15 +1315,5 @@ subroutine check_icm_param()
   inquire(file=in_dir(1:len_in_dir)//'ICM_rad.th.nc',exist=lexist)
   if(iRad==0.and.ihconsv/=1.and.nws/=2) call parallel_abort('iRad=0: need ihconsv=1,nws=2 ')
   if(iRad==1.and.(.not.lexist)) call parallel_abort('iRad=1: need ICM_rad.th.nc')
-
-  !check (FCP,FCM,FNP,FNM,FPP,FPM)
-  !do i=1,3
-  !  if(abs(sum(FCP(i,1:4))-1.0)>1.d-6) call parallel_abort('check FCP: sum(FCP(i,:))/=1')
-  !  if(sum(FCM(i,1:4))>1.d0) call parallel_abort('check FCM: sum(FCM(i,:))>1')
-  !  if(abs(sum(FNP(i,1:5))-1.0)>1.d-6) call parallel_abort('check FNP: sum(FNP(i,:))/=1')
-  !  if(abs(sum(FNM(i,1:5))-1.0)>1.d-6) call parallel_abort('check FNM: sum(FNM(i,:))/=1')
-  !  if(abs(sum(FPP(i,1:5))-1.0)>1.d-6) call parallel_abort('check FPP: sum(FNP(i,:))/=1')
-  !  if(abs(sum(FPM(i,1:5))-1.0)>1.d-6) call parallel_abort('check FPM: sum(FNM(i,:))/=1')
-  !enddo
 
 end subroutine check_icm_param

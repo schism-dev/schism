@@ -14,7 +14,7 @@
 !---------------------------------------------------------------------------------
 !---------------------------state variables in ICM--------------------------------
 !---------------------------------------------------------------------------------
-!Core Module
+!Core Module (1)
 !     1  PB1   :  Diatom                                     g/m^3
 !     2  PB2   :  Green Algae                                g/m^3
 !     3  PB3   :  Cyanobacteria                              g/m^3
@@ -32,26 +32,27 @@
 !     15 PO4   :  Total Phosphate                            g/m^3
 !     16 COD   :  Chemical Oxygen Demand                     g/m^3
 !     17 DOX   :  Dissolved Oxygen                           g/m^3
-!Silica Module
+!Silica Module (2)
 !     1  SU    :  Particulate Biogenic Silica                g/m^3
 !     2  SA    :  Available Silica                           g/m^3
-!Zooplankton Module
+!Zooplankton Module (3)
 !     1  ZB1   :  1st zooplankton                            g/m^3
 !     2  ZB2   :  2nd zooplankton                            g/m^3
-!pH Module
+!pH Module (4)
 !     1  TIC   :  Total Inorganic Carbon                     g/m^3
 !     2  ALK   :  Alkalinity                                 g[CaCO3]/m^3
 !     3  CA    :  Dissolved Calcium                          g[CaCO3]/m^3
 !     4  CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
-!CBP Module
+!CBP Module (5)
 !     1  SRPOC :  Slow Refractory Particulate Organic Carbon g/m^3
 !     2  SRPON :  Slow Refractory Particulate Organic Nitro. g/m^3
 !     3  SRPOP :  Slow Refractory Particulate Organic Phosp. g/m^3
 !     4  PIP   :  Particulate Inorganic Phosphate            g/m^3
-!SAV   Module (no transport variables)
-!MARSH Module (no transport variables)
-!SFM   Module (no transport variables)
-!BA    Module (no transport variables)
+!SAV   Module (no transport variables) (6)
+!MARSH Module (no transport variables) (7)
+!SFM   Module (no transport variables) (8)
+!BA    Module (no transport variables) (9)
+!CLAM  Module (no transport variables) (10)
 !---------------------------------------------------------------------------------
 
 &MARCO
@@ -117,14 +118,14 @@ iPh = 0
 iCBP = 0
 
 !-----------------------------------------------------------------------
-!Submerged Aquatic Vegetation switch
+!Submerged Aquatic Vegetation switch (0: OFF;  1: SAV;  2: SAV+epiphytes)
 !-----------------------------------------------------------------------
 isav_icm = 0
 
 !-----------------------------------------------------------------------
 !Intertidal marsh switch; nmarsh: number of marsh species
 !-----------------------------------------------------------------------
-imarsh_icm = 0   !0: off;  1: on
+imarsh_icm = 0   !0: off;  1: mechanistic model;  2: simple formulation 
 nmarsh     = 3   !parameters in marsh module must be consistent with
 
 !-----------------------------------------------------------------------
@@ -166,6 +167,13 @@ ibflux = 0
 !-----------------------------------------------------------------------
 iout_icm = 0
 nspool_icm = 24
+
+!-----------------------------------------------------------------------
+!ICM diagnostic outputs of sub-modules (0: OFF;  1: ON)
+!Note: it can output any model-related variables, but may need coding (developers)
+!-----------------------------------------------------------------------
+!      Core  Silica  ZB   pH   CBP   SAV   Marsh  SFM  BA  Clam 
+idbg =  0      0      0    0    0     0      0     0   0    0
 
 !-----------------------------------------------------------------------
 !options of nutrient limitation on phytoplankton growth
@@ -437,28 +445,30 @@ inu_ph   = 0                  !nudge option for pH model
 !-----------------------------------------------------------------------
 !Submerged Aquatic Vegetation (SAV) parameters
 !-----------------------------------------------------------------------
-spatch0 = -999              !region flag for SAV. (1: ON all elem.; -999: spatial)
-sav0    = 100.0  50.0  10.0 !init. SAV leaf/stem/root conc. (g[C].m-2)
+spatch0 = -999                     !region flag for SAV. (1: ON all elem.; -999: spatial)
+sav0    = 100.0  50.0  10.0  20.0  !init. SAV leaf/stem/root/tuber conc. (g[C].m-2)
 
 !growth coefficients
-sGPM  = 0.1                 !maximum growth rate (day-1)
-sTGP  = 32                  !optimal growth temperature (oC)
-sKTGP = 0.003  0.005        !temp. dependence for growth (T<=sTGP & T>sTGP)
-sFAM  = 0.2                 !fraction of leaf production to active metabolism
-sFCP  = 0.6    0.3    0.1   !fractions of production to leaf/stem/root biomass
+sGPM  = 0.1                      !maximum growth rate (day-1)
+sTGP  = 32                       !optimal growth temperature (oC)
+sKTGP = 0.003  0.005             !temp. dependence for growth (T<=sTGP & T>sTGP)
+sFAM  = 0.2                      !fraction of leaf production to active metabolism
+sFCP  = 0.55   0.3   0.1   0.05  !fractions of production to leaf/stem/root/tuber biomass
 
 !metabolism coefficients
-sMTB  = 0.02   0.02   0.02  !metabolism rates of leaf/stem/root (day-1)
-sTMT  = 20     20     20    !reference temp. for leaf/stem/root metabolism (oC)
-sKTMT = 0.069  0.069  0.069 !temp. dependence of leaf/stem/root metabolism (oC-1)
-sFCM  = 0.05   0.15   0.3   0.5  !fractions of metabolism leaf/stem C into (RPOC,LPOC,DOC,CO2)
-sFNM  = 0.05   0.15   0.3   0.5  !fractions of metabolism leaf/stem N into (RPON,LPON,DON,NH4)
-sFPM  = 0.05   0.1    0.35  0.5  !fractions of metabolism leaf/stem P into (RPOP,LPOP,DOP,PO4)
-sFCMb = 0.65   0.255  0.095 0.0  !fractions of metabolism root C into (G1/G2/G3 POC, CO2) in sediment
-sFNMb = 0.65   0.300  0.050 0.0  !fractions of metabolism root N into (G1/G2/G3 PON, NH4) in sediment
-sFPMb = 0.65   0.255  0.095 0.0  !fractions of metabolism root P into (G1/G2/G3 POP, PO4) in sediment
+sMTB  = 0.02   0.02   0.02  0.02  !metabolism rates of leaf/stem/root/tuber (day-1)
+sTMT  = 20     20     20    20    !reference temp. for leaf/stem/root/tuber metabolism (oC)
+sKTMT = 0.069  0.069  0.069 0.069 !temp. dependence of leaf/stem/root/tuber metabolism (oC-1)
+sFCM  = 0.05   0.15   0.3   0.5   !fractions of metabolism leaf/stem C into (RPOC,LPOC,DOC,CO2)
+sFNM  = 0.05   0.15   0.3   0.5   !fractions of metabolism leaf/stem N into (RPON,LPON,DON,NH4)
+sFPM  = 0.05   0.1    0.35  0.5   !fractions of metabolism leaf/stem P into (RPOP,LPOP,DOP,PO4)
+sFCMb = 0.65   0.255  0.095 0.0   !fractions of metabolism root C into (G1/G2/G3 POC, CO2) in sediment
+sFNMb = 0.65   0.300  0.050 0.0   !fractions of metabolism root N into (G1/G2/G3 PON, NH4) in sediment
+sFPMb = 0.65   0.255  0.095 0.0   !fractions of metabolism root P into (G1/G2/G3 POP, PO4) in sediment
 
 !misc. coefficients
+sKTB   = 0.1                !mass transfer rate from tuber to leaves (day-1)
+sDoy   = 60   150           !range of day_of_year for mass transfer of tuber
 sKhN   = 0.01   0.1         !reference N conc. in water and sediment (mg/L)
 sKhP   = 0.001  0.01        !reference P conc. in water and sediment (mg/L)
 salpha = 0.006              !init. slope of P-I curve (g[C].m2.g[Chl]-1.E-1)
@@ -468,15 +478,43 @@ s2ht   = 0.0036 0.0036 0.0  !coeffs. converting (leaf,stem,root) to canopy heigh
 sc2dw  = 0.38               !carbon to dry weight ratio of sav
 sn2c   = 0.09               !nitrogen to carbon ratio of sav
 sp2c   = 0.01               !phosphorus to carbon ratio
-so2c   = 2.67               !oxygen to carbon ratio
+
+!----------------------
+!Epiphytes (activated when isav_icm=2)
+!----------------------
+EP0   =  0.05                !epiphytes abundane (g[C_EP].g-1[C_sleaf])
+eGPM  =  0.5                 !EP growth rate (day-1)
+eTGP  =  30                  !optimal growth temperature (oC)
+eKTGP =  0.005   0.005       !temp. dependence for growth (oC-2)
+eKe   =  0.05                !light attenuation from EP (g-1[C_EP].g[C_sleaf])
+ealpha=  2                   !init. slope of P-I curve (g[C].m2.g[Chl]-1.E-1)
+eMTB  =  0.2                 !EP metabolism rate (day-1)
+eTMT  =  20                  !reference temp. for EP metabolism (oC)
+eKTMT =  0.069               !temp. dependence of EP metabolism (oC-1)
+ePRR  =  0.1                 !predation rate of EP (day-1.g-1[C_EP].g[C_sleaf])
+eFCM  =  0.1  0.5  0.2  0.2  !fractions of EP metabolism C. into (RPOC,LPOC,DOC,CO2)
+eFNM  =  0.1  0.7  0.2  0.0  !fractions of EP metabolism N. into (RPON,LPON,DON,NH4)
+eFPM  =  0.1  0.7  0.2  0.0  !fractions of EP metabolism P. into (RPOP,LPOP,DOP,PO4)
+eFCP  =  0.1  0.9  0.0  0.0  !fractions of EP predation C. into (RPOC,LPOC,DOC,CO2)
+eFNP  =  0.1  0.9  0.0  0.0  !fractions of EP predation N. into (RPON,LPON,DON,NH4)
+eFPP  =  0.1  0.9  0.0  0.0  !fractions of EP predation P. into (RPOP,LPOP,DOP,PO4)
+en2c  =  0.167               !nitrogen to carbon ratio
+ep2c  =  0.02                !phosphorus to carbon ratio
+eKhN  =  0.01                !half N. concentration for EP growth (mg/L)
+eKhP  =  0.001               !half P. concentration for EP growth (mg/L)
+eKhE  =  0.01                !EP abundance at which growth halves (g[C_EP].g-1[C_sleaf])
 /
 
 &MARSH
 !-----------------------------------------------------------------------
-!Marsh modele, paramters
+!Marsh model: 1). fully dynamic;  2). simple formulation
 !-----------------------------------------------------------------------
-iNmarsh = 1  !whether turn on nitrogen/phosphorus dynamics in Marsh kenetics (0: OFF; 1: ON)
 vpatch0 = -999  !region flag for marsh. (1: ON all elem.; -999: spatial)
+
+!----------------------
+!mechanistic model (imarsh=1)
+!----------------------
+iNmarsh = 1  !whether turn on nitrogen/phosphorus dynamics in Marsh kenetics (0: OFF; 1: ON)
 vmarsh0 = 100.0 100.0 100.0   100.0 100.0 100.0   30.0 30.0 30.0 !init. leaf/stem/root conc. (g[C].m-3) [nmarsh,3]
 
 !growth coefficients
@@ -511,7 +549,17 @@ v2ht   = 0.0036 0.0036 0.0036   0.001 0.001 0.001   !coefs. convert leaf/stem to
 vc2dw  = 0.38   0.38   0.38   !dry to wet ratio of marsh biomass [nmarsh]
 vn2c   = 0.09   0.09   0.09   !nitrogen to carbon ratio [nmarsh]
 vp2c   = 0.01   0.01   0.01   !phosphorus to carbon ratio [nmarsh]
-vo2c   = 2.67   2.67   2.67   !oxygen to carbon ratio [nmarsh]
+
+!----------------------
+!simple wetland model (imarsh=2)
+!----------------------
+vAw    =   0.1                !ratio between marsh area to adjacent water volume (m-1)
+vKNO3  =   0.01               !mass-transfer coefficient for NO3 removal (m.day-1)
+vKPOM  =   0.05               !settling velocity caused by marsh (m.day-1)
+vKTw   =   0.069              !temperature dependence for wetland effect (oC-1)
+vRTw   =   20                 !reference temperature for wetland effect (oC)
+vKhDO  =   1.0                !half saturation for wetland effect (mg/L)
+vOCw   =   0.1                !wetland oxygen consumption rate (g.m-2.day-1)
 /
 
 &BAG
@@ -534,7 +582,6 @@ gKhN    =  0.01          !nitrogen half saturation for BA growth (g[N]/m3)
 gKhP    =  0.001         !phosphorus half saturation for BA growth (g[P]/m3)
 gp2c    = 0.0167         !phosphorus to carbon ratio
 gn2c    = 0.167          !nitrogen to carbon ratio
-go2c    = 2.67           !oxygen to carbon ratio
 gFCP    = 0.5 0.45 0.05  !fraction of predation BA C into 3G classes in sediment 
 gFNP    = 0.5 0.45 0.05  !fraction of predation BA N into 3G classes in sediment 
 gFPP    = 0.5 0.45 0.05  !fraction of predation BA P into 3G classes in sediment 

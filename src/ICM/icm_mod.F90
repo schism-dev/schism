@@ -27,7 +27,7 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !global switch and variables
   !-------------------------------------------------------------------------------
-  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iBA,iRad,isflux,ibflux,iout_icm,nspool_icm
+  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iBA,iRad,isflux,ibflux,idbg(10),iout_icm,nspool_icm
   integer,save,target :: iSilica,iZB,iPh,iCBP,isav_icm,imarsh_icm,nmarsh,idry_icm,iClam,nclam
   real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,PRR(3),wqc0(29),WSP(29),WSPn(29)
   real(rkind),save,target,dimension(3) :: alpha
@@ -99,19 +99,21 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !SAV parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: spatch0,sav0(3)  !sav patch, and init conc.
-  real(rkind),save,target :: sGPM,sTGP,sKTGP(2),sFAM,sFCP(3) !growth related coefficients
-  real(rkind),save,target :: sMTB(3),sTMT(3),sKTMT(3)        !meta. coefficients (rate, temp, temp dependence)
+  real(rkind),save,target :: spatch0,sav0(4)  !sav patch, and init conc.
+  real(rkind),save,target :: sGPM,sTGP,sKTGP(2),sFAM,sFCP(4) !growth related coefficients
+  real(rkind),save,target :: sMTB(4),sTMT(4),sKTMT(4)        !meta. coefficients (rate, temp, temp dependence)
   real(rkind),save,target :: sFCM(4),sFNM(4),sFPM(4)         !metabolism of leaf/stem to (RPOM,RLOM,DOM,DIM)
   real(rkind),save,target :: sFCMb(4),sFNMb(4),sFPMb(4)      !metabolism of root to (POM(G1-G3),dissolved nutrients)
-  real(rkind),save,target :: sKhN(2),sKhP(2)                 !half-saturation conc. of N, P
+  real(rkind),save,target :: sKTB,sDoy(2),sKhN(2),sKhP(2)    !tuber mass transfer, half-saturation conc. of N, P
   real(rkind),save,target :: salpha,sKe,shtm(2),s2ht(3)      !(P-I curve, light attenu., canopy height)
-  real(rkind),save,target :: sc2dw,sn2c,sp2c,so2c      !convert ratios
+  real(rkind),save,target :: sc2dw,sn2c,sp2c                 !convert ratios
+  real(rkind),save,target :: EP0,eGPM,eTGP,eKTGP(2),eKe,ealpha,eMTB,eTMT,eKTMT,ePRR,eKhN,eKhP,eKhE !epiphytes growth,metabolism, predation
+  real(rkind),save,target :: eFCM(4),eFNM(4),eFPM(4),eFCP(4),eFNP(4),eFPP(4),en2c,ep2c !epiphytes partition
 
   integer,save,allocatable :: spatch(:)               !sav region
-  real(rkind),save,target,allocatable :: sht(:),sav(:,:),sFPOC(:,:),sFPON(:,:),sFPOP(:,:),sbNH4(:),sbPO4(:),sSOD(:)
-  real(rkind),save,pointer,dimension(:,:) :: db_sGP,db_sMT1,db_sMT2
-  real(rkind),save,pointer,dimension(:) :: db_sMT01,db_sMT02,db_sMT03,db_sfT,db_sfI,db_sfN,db_sfP
+  real(rkind),save,target,allocatable :: EP(:),TEP(:),sht(:),sav(:,:),sFPOC(:,:),sFPON(:,:),sFPOP(:,:),sbNH4(:),sbPO4(:),sSOD(:)
+  real(rkind),save,pointer,dimension(:) :: db_sGP,db_sMT1,db_sMT2,db_sMT01,db_sMT02,db_sMT03, &
+                                         & db_sMT04,db_sTB,db_sfT,db_sfI,db_sfN,db_sfP
 
   !-------------------------------------------------------------------------------
   !marsh parameters and variables
@@ -122,11 +124,15 @@ module icm_mod
   real(rkind),save,target,allocatable,dimension(:,:) :: vMTB,vTMT,vKTMT,vFCM,vFNM,vFPM !metabolsim
   !metabolism partition, growth limit of nutrient,light,salinity,inundation
   real(rkind),save,target,allocatable,dimension(:) :: vFW,vKhN,vKhP,valpha,vKe,vSopt,vKs,vInun
-  real(rkind),save,target,allocatable :: vht0(:),vcrit(:),v2ht(:,:),vc2dw(:),vn2c(:),vp2c(:),vo2c(:) !misc
+  real(rkind),save,target,allocatable :: vht0(:),vcrit(:),v2ht(:,:),vc2dw(:),vn2c(:),vp2c(:) !misc
+  real(rkind),save,target :: vAw,vKNO3,vKPOM,vKTW,vRTw,vKhDO,vOCw
 
   integer,save,allocatable :: vpatch(:)  !marsh regions
   real(rkind),save,target,allocatable :: vmarsh(:,:,:),vht(:,:) !marsh biomass
   real(rkind),save,target,allocatable :: vFPOC(:,:),vFPON(:,:),vFPOP(:,:),vbNH4(:),vbPO4(:),vSOD(:) !sediment
+  real(rkind),save,pointer :: db_vGP(:,:),db_vBMw(:,:),db_vBMb(:,:)
+  real(rkind),save,pointer,dimension(:) :: db_vdNO3,db_vdDOX,db_vdRPOC,db_vdLPOC,db_vdRPON,db_vdLPON, &
+                                         & db_vdRPOP,db_vdLPOP,db_vdSRPOC,db_vdSRPON,db_vdSRPOP
 
   !-------------------------------------------------------------------------------
   !sediment flux model (SFM) parameters and variables
@@ -158,7 +164,7 @@ module icm_mod
   !Benthic Algea model (BA) parameters and variables
   !-------------------------------------------------------------------------------
   real(rkind),save,target :: gpatch0,gBA0,gGPM,gTGP,gKTGP(2),gMTB,gPRR,gTR,gKTR,galpha
-  real(rkind),save,target :: gKSED,gKBA,gKhN,gKhP,gp2c,gn2c,go2c,gFCP(3),gFNP(3),gFPP(3)
+  real(rkind),save,target :: gKSED,gKBA,gKhN,gKhP,gp2c,gn2c,gFCP(3),gFNP(3),gFPP(3)
 
   integer,save,allocatable,dimension(:) :: gpatch
   real(rkind),save,target,allocatable,dimension(:) :: gBA,gGP,gMT,gPR

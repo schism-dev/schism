@@ -1042,9 +1042,6 @@
 !  !clam biomass(1:nclam) (g[C]/m^2)
 !  !-------------------------------------------------------------
 !  iof_icm_clam     = 1
-!
-!  !ICM Debug Outputs (need coding, for developers)
-!  iof_icm_dbg      = 1 !2D/3D ICM debug variables
            
 !-----------------------------------------------------------------------
 ! CoSINE outputs: all 3D

@@ -212,7 +212,7 @@
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_marsh,iof_icm_sed, &
-     &iof_icm_ba,iof_icm_clam,iof_icm_dbg,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
+     &iof_icm_ba,iof_icm_clam,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta,iof_ugrid
 
 !-------------------------------------------------------------------------------
@@ -509,7 +509,7 @@
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25:26)=1
       iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_cbp=0; iof_icm_sav=0
-      iof_icm_marsh=0; iof_icm_sed=0; iof_icm_ba=0; iof_icm_clam=0;   iof_icm_dbg=0; iof_cos=0; iof_fib=0; iof_sed2d=0
+      iof_icm_marsh=0; iof_icm_sed=0; iof_icm_ba=0; iof_icm_clam=0; iof_cos=0; iof_fib=0; iof_sed2d=0
       iof_ice=0; iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
 
       read(15,nml=OPT)
@@ -6792,7 +6792,6 @@
           call mpi_send(nout_icm_3d,2,itype,nproc_schism-i,142,comm_schism,ierr)
           !call mpi_send(nout_d3d,1,itype,nproc_schism-i,143,comm_schism,ierr)
           !call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,144,comm_schism,ierr)
-          !call mpi_send(iof_icm_dbg,2,itype,nproc_schism-i,145,comm_schism,ierr)
 #endif
         call mpi_send(ics,1,itype,nproc_schism-i,146,comm_schism,ierr)
         call mpi_send(iof_ugrid,1,itype,nproc_schism-i,147,comm_schism,ierr)
