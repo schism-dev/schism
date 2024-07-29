@@ -7956,7 +7956,7 @@
         call ecosystem(it)
 
         !feedback from ICM to Hydro 
-        if(iveg/=0.and.isav_icm==1)then
+        if(iveg/=0.and.isav_icm/=0)then
           !Convert hcansav to nodes
           do i=1,np
             veg_h_unbent(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
