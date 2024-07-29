@@ -10380,7 +10380,7 @@
         !put variables
         do i=1,nhot_icm
           if(wqhot(i)%ndim==1) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p1),(/1/),(/ne/))
-          if(wqhot(i)%ndim==2) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p2),(/1,1/),(/wqhot(i)%dims(1),ne/))
+          if(wqhot(i)%ndim==2) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p2),(/1,1/),(/wqhot(i)%dims(2),ne/))
           if(wqhot(i)%ndim==3) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p3),(/1,1,1/),(/wqhot(i)%dims(1:2),ne/))
         enddo !i
 #endif /*USE_ICM*/
