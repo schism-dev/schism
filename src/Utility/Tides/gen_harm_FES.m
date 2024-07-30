@@ -14,7 +14,7 @@ const={'s2','m2','n2','k2','k1','p1','o1','q1'};
 %const={'s2','m2','n2','k2','k1','p1','o1','q1','m4'};
 
 %List of open bnd seg's that contain lon/lat of open bnd nodes
-open_ll={'fg.bp.1'}; %,'fg.bp.2','fg.bp.3'};
+open_ll={'fg.bp.1','fg.bp.2'}; %,'fg.bp.3','fg.bp.4','fg.bp.5','fg.bp.6'};
 
 for iseg=1:length(open_ll)
 %-----------------------------------------------------------
@@ -72,15 +72,27 @@ for ifl=1:2*iflag-1 %loop over elev, u,v
     for j=1:npt
       lon2=open(j,2); if(lon2<0); lon2=lon2+360; end;
       lat2=open(j,3);
-      I=find(lon>=lon2,1); %find 1st entry
       J=find(lat>=lat2,1);
-      if(I<=1 || J<=1) 
-        disp('Failed to find an interval'); [j lon2 lat2 I J]
-        error('Bomb out'); 
+      if(J<=1) 
+        disp('Failed to find an interval for lat'); [j lon2 lat2 J]
+        error('Bomb out(1)'); 
       end
-  
-      ratx=(lon(I)-lon2)/(lon(I)-lon(I-1));
       raty=(lat(J)-lat2)/(lat(J)-lat(J-1));
+
+      %Handle case with pt very close to prime meridian
+      if(lon2<min(lon) || lon2>max(lon))
+	disp(['Point ' num2str(j) ' very close to prime meridian']);
+	disp('Its lon:'); [lon2 min(lon) max(lon)]
+	I=length(lon);
+	ratx=0;
+      else
+        I=find(lon>=lon2,1); %find 1st entry
+        if(I<=1) 
+          disp('Failed to find an interval for lon'); [j lon2 lat2 I J]
+          error('Bomb out'); 
+        end
+        ratx=(lon(I)-lon2)/(lon(I)-lon(I-1));
+      end
       %Check junks
       amp_max=max([amp0(I-1,J-1);amp0(I,J-1);amp0(I-1,J);amp0(I,J)]);
       amp_min=min([amp0(I-1,J-1);amp0(I,J-1);amp0(I-1,J);amp0(I,J)]);

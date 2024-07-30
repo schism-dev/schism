@@ -153,7 +153,7 @@ If `iprecip_off_bnd`/=0, preciptation will be turned off near land boundary. Thi
 
 ### stemp_stc (double), stemp_dz(1:2) (double)
  Option to account for sediment-water heat exchange on bottom temperature.
-  `stemp_stc` is  heat transfer coefficient W.m-2.K-1 (so `stemp_stc=0` would turn this option off).
+  `stemp_stc` is  heat transfer coefficient $W/m^2/K$ (so `stemp_stc=0` would turn this option off).
   stemp_dz(1) is the equivalent sediment buffer depth (m) for heat into sediment, and
   stemp_dz(2) is the equivalent sediment buffer depth (m) for heat out of sediment.
 
