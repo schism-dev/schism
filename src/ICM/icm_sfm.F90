@@ -51,7 +51,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,it,isub)
   wLPOP=LPOP(kb+1);  wPO4 =PO4(kb+1);  wNH4 =NH4(kb+1)
   wNO3 =NO3(kb+1);   wCOD =COD(kb+1);  wDOX =min(max(DOX(kb+1),1.d-2),50.d0)
   fd0=1.0/(1.0+KPO4p*wTSS); wPO4d=fd0*wPO4; wPO4p=(1.0-fd0)*wPO4
-  if(iCBP==1) then
+  if(iSRM==1) then
     wSRPOC=SRPOC(kb+1); wSRPON=SRPON(kb+1); wSRPOP=SRPOP(kb+1); wPIP=PIP(kb+1)
   endif
 
@@ -72,7 +72,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,it,isub)
   FPOC(1)=FPOC(1)+WSPn(iLPOC)*wLPOC !LPOM contribution
   FPON(1)=FPON(1)+WSPn(iLPON)*wLPON
   FPOP(1)=FPOP(1)+WSPn(iLPOP)*wLPOP
-  if(iCBP==1) then
+  if(iSRM==1) then
       bPO4(id)=bPO4(id)+dtw*WSPn(iPIP)*wPIP !PIP contribution
       FPOC(2)=FPOC(2)+WSPn(iRPOC)*wRPOC !RPOM contribution
       FPON(2)=FPON(2)+WSPn(iRPON)*wRPON

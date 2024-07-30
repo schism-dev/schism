@@ -22,7 +22,7 @@ subroutine read_icm_param(imode)
 !---------------------------------------------------------------------
   use schism_glbl, only : rkind,dt,nvrt,ne_global,in_dir,out_dir,len_in_dir,len_out_dir, &
             & ihconsv,nws,nea,npa,ihot,idry_e,ze,kbe,irange_tr,tr_el,tr_nd,nea,npa,iof_icm, &
-            & iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav, &
+            & iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav, &
             & iof_icm_marsh,iof_icm_sed, iof_icm_ba,iof_icm_clam
 
   use schism_msgp, only : myrank,parallel_abort
@@ -42,7 +42,7 @@ subroutine read_icm_param(imode)
 
   !define namelists
   namelist /MARCO/ nsub,iRad,iKe,iLight,iPR,iLimit,isflux,iSed,iBA,iClam,nclam, &
-           & ibflux,iSilica,iZB,iPh,iCBP,isav_icm,imarsh_icm,nmarsh,idry_icm,KeC,KeS,KeSalt, &
+           & ibflux,iSilica,iZB,iPh,iSRM,isav_icm,imarsh_icm,nmarsh,idry_icm,KeC,KeS,KeSalt, &
            & alpha,Ke0,tss2c,PRR,wqc0,WSP,WSPn,iout_icm,nspool_icm,idbg
   namelist /CORE/ GPM,TGP,KTGP,MTR,MTB,TMT,KTMT,FCP,FNP,FPP,FCM,FNM,FPM,  &
            & Nit,TNit,KTNit,KhDOn,KhNH4n,KhDOox,KhNO3dn,   &
@@ -79,7 +79,7 @@ subroutine read_icm_param(imode)
     !------------------------------------------------------------------------------------
     !initilize global switches
     nsub=1; iRad=0; iKe=0; iLight=0; iPR=0; iLimit=0; isflux=0; iSed=1; iBA=0; ibflux=0; iSilica=0; 
-    iZB=0;  iPh=0; iCBP=0; isav_icm=0; imarsh_icm=0; nmarsh=3; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02;
+    iZB=0;  iPh=0; iSRM=0; isav_icm=0; imarsh_icm=0; nmarsh=3; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02;
     alpha=5.0; Ke0=0.26; tss2c=6.0; PRR=0; wqc0=0; WSP=0.0; WSPn=0.0; iout_icm=0; nspool_icm=0
     iClam=0; nclam=0; idbg=0
     jdry=>idry_icm; jsav=>isav_icm; jmarsh=>imarsh_icm; ised_icm=>iSed; iBA_icm=>iBA
@@ -93,7 +93,7 @@ subroutine read_icm_param(imode)
     if(iSilica==1) ntrs_icm=ntrs_icm+2
     if(iZB==1) ntrs_icm=ntrs_icm+2
     if(iPh==1) ntrs_icm=ntrs_icm+4
-    if(iCBP==1) ntrs_icm=ntrs_icm+4
+    if(iSRM==1) ntrs_icm=ntrs_icm+4
 
   elseif(imode==1) then
     !------------------------------------------------------------------------------------
@@ -251,8 +251,8 @@ subroutine read_icm_param(imode)
       nb=4; nouts(4)=nb; iout(1,4)=nout+1; iout(2,4)=nout+nb; nout=nout+nb
     endif
 
-    !CBP module: 5
-    if(iCBP==1) then
+    !SRM module: 5
+    if(iSRM==1) then
       name_icm((ntr+1):(ntr+4))=(/'SRPOC','SRPON','SRPOP','PIP  '/)
       iSRPOC=ntr+1; iSRPON=ntr+2; iSRPOP=ntr+3; iPIP=ntr+4; ntr=ntr+4
 
@@ -475,7 +475,7 @@ subroutine read_icm_param(imode)
     if(iSilica==1)  iof_icm(iout(1,2): iout(2,2)) =iof_icm_silica
     if(iZB==1)      iof_icm(iout(1,3): iout(2,3)) =iof_icm_zb
     if(iPh==1)      iof_icm(iout(1,4): iout(2,4)) =iof_icm_ph
-    if(iCBP==1)     iof_icm(iout(1,5): iout(2,5)) =iof_icm_cbp
+    if(iSRM==1)     iof_icm(iout(1,5): iout(2,5)) =iof_icm_srm
     if(isav_icm/=0) iof_icm(iout(1,6): iout(2,6)) =iof_icm_sav
     if(imarsh_icm==1) iof_icm(iout(1,7): iout(2,7)) =iof_icm_marsh
     if(ised_icm==1) iof_icm(iout(1,8): iout(2,8)) =iof_icm_sed
@@ -1110,7 +1110,7 @@ subroutine update_vars(id,usf,wspd)
   if(iPh==1) then
     TIC=>wqc(iTIC,:); ALK=>wqc(iALK,:);  CA=>wqc(iCA,:); CACO3=>wqc(iCACO3,:)
   endif
-  if(iCBP==1) then
+  if(iSRM==1) then
     SRPOC=>wqc(iSRPOC,:); SRPON=>wqc(iSRPON,:); SRPOP=>wqc(iSRPOP,:); PIP=>wqc(iPIP,:)
   endif
 
@@ -1297,7 +1297,7 @@ subroutine check_icm_param()
   if(iSilica/=0.and.iSilica/=1) call parallel_abort('ICM iSilica: 0/1')
   if(iZB/=0.and.iZB/=1) call parallel_abort('ICM iZB: 0/1')
   if(iPh/=0.and.iPh/=1) call parallel_abort('ICM iPh: 0/1')
-  if(iCBP/=0.and.iCBP/=1) call parallel_abort('ICM iCBP: 0/1')
+  if(iSRM/=0.and.iSRM/=1) call parallel_abort('ICM iSRM: 0/1')
   if(jsav/=0.and.jsav/=1.and.jsav/=2) call parallel_abort('ICM isav_icm: 0/1/2')
   if(jmarsh/=0.and.jmarsh/=1.and.jmarsh/=2) call parallel_abort('ICM imarsh_icm: 0/1/2')
   if(iSed/=0.and.iSed/=1) call parallel_abort('ICM iSed: 0/1')

@@ -59,7 +59,7 @@
 !     2  ALK   :  Alkalinity                                 g[CaCO3]/m^3
 !     3  CA    :  Dissolved Calcium                          g[CaCO3]/m^3
 !     4  CACO3 :  Calcium Carbonate                          g[CaCO3]/m^3
-!CBP Module (5)
+!SRM Module (slow refractory matter 5)
 !     1  SRPOC :  Slow Refractory Particulate Organic Carbon g/m^3
 !     2  SRPON :  Slow Refractory Particulate Organic Nitro. g/m^3
 !     3  SRPOP :  Slow Refractory Particulate Organic Phosp. g/m^3
@@ -276,7 +276,7 @@ subroutine ecosystem(it)
       rKa=WRea+0.157*(0.54+0.0233*temp(nvrt)-0.002*salt(nvrt))*wspd**1.5
 
       !----------------------------------------------------------------------------------
-      !modules (exception: CBP sub-module is embeded in the core module)
+      !modules (exception: SRM sub-module is embeded in the core module)
       !----------------------------------------------------------------------------------
       sdwqc=0; vdwqc=0; zdwqc=0; gdwqc=0; cdwqc=0
       !silica module
@@ -423,8 +423,8 @@ subroutine ecosystem(it)
           dwqc(iDOX,k)=dwqc(iDOX,k)+o2c*((1.3-0.3*fPN(m,k))*GP(m,k)-((1.0-sum(FCM(m,1:4)))*DOX(k)/(DOX(k)+KhDO(m)))*MT(m,k)) !growth, metabolism
         enddo
 
-        !CBP module
-        if(iCBP==1) then
+        !SRM module
+        if(iSRM==1) then
           do m=1,3; rKSR(m)=KSR0(m)*exp(KTRSR(m)*(temp(k)-TRSR(m))); enddo !decay rates for SRPOC,SRPON,SRPOP
           dwqc(iDOC,k)=dwqc(iDOC,k)+rKSR(1)*SRPOC(k)
           dwqc(iDON,k)=dwqc(iDON,k)+rKSR(2)*SRPON(k)
@@ -439,7 +439,7 @@ subroutine ecosystem(it)
             dwqc(iSRPOP,k)=dwqc(iSRPOP,k)+FPP(m,5)*PR(m,k)+FPM(m,5)*MT(m,k)
           enddo
           dwqc(iPIP,k)=-KPIP*PIP(k)
-        endif !iCBP=1
+        endif !iSRM=1
       enddo !k
 
       !----------------------------------------------------------------------------------
@@ -537,7 +537,7 @@ subroutine ecosystem(it)
           dzb=(zid(k)-zid(k-1))
           db_TN(id)=dzb*(RPON(k)+LPON(k)+DON(k)+NH4(k)+NO3(k)+sum(n2c*PBS(1:3,k)))
           db_TP(id)=dzb*(RPOP(k)+LPOP(k)+DOP(k)+PO4(k)+sum(p2c*PBS(1:3,k)))
-          if(iCBP==1) then
+          if(iSRM==1) then
             db_TN(id)=db_TN(id)+dzb*SRPON(k)
             db_TP(id)=db_TP(id)+dzb*SRPOP(k)
           endif
@@ -788,7 +788,7 @@ subroutine marsh_calc(id,kb,zid,vhtz,vLight)
       vdc=rc*LPON(k);  vdwqc(iLPON,k)=-vdc;  db_vdLPON(id)=db_vdLPON(id)+vdc*dz(k)
       vdc=rc*RPOP(k);  vdwqc(iRPOP,k)=-vdc;  db_vdRPOP(id)=db_vdRPOP(id)+vdc*dz(k)
       vdc=rc*LPOP(k);  vdwqc(iLPOP,k)=-vdc;  db_vdLPOP(id)=db_vdLPOP(id)+vdc*dz(k)
-      if(iCBP==1) then
+      if(iSRM==1) then
         vdc=rc*SRPOC(k);  vdwqc(iSRPOC,k)=-vdc;  db_vdSRPOC(id)=db_vdSRPOC(id)+vdc*dz(k)
         vdc=rc*SRPON(k);  vdwqc(iSRPON,k)=-vdc;  db_vdSRPON(id)=db_vdSRPON(id)+vdc*dz(k)
         vdc=rc*SRPOP(k);  vdwqc(iSRPOP,k)=-vdc;  db_vdSRPOP(id)=db_vdSRPOP(id)+vdc*dz(k)

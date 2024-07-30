@@ -1003,11 +1003,11 @@
 !  iof_icm_ph(3) = 1 !CA
 !  iof_icm_ph(4) = 1 !CACO3
 !
-!  !CBP model
-!  iof_icm_cbp(1) = 1 !SRPOC
-!  iof_icm_cbp(2) = 1 !SRPON
-!  iof_icm_cbp(3) = 1 !SRPOP
-!  iof_icm_cbp(4) = 1 !PIP
+!  !SRM model
+!  iof_icm_srm(1) = 1 !SRPOC
+!  iof_icm_srm(2) = 1 !SRPON
+!  iof_icm_srm(3) = 1 !SRPOP
+!  iof_icm_srm(4) = 1 !PIP
 !
 !  !SAV model
 !  !-------------------------------------------------------------
