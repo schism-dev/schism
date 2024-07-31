@@ -5563,15 +5563,20 @@
             do l=1,wqhot(k)%dims(2)
               if(myrank==0) then
                 j=nf90_inq_varid(ncid2,trim(adjustl(wqhot(k)%name)),mm)
-                if(j/=NF90_NOERR) call parallel_abort('hotstart.nc, ICM 1: '//trim(adjustl(wqhot(k)%name)))
-                if(wqhot(k)%ndim==1) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
-                if(wqhot(k)%ndim==2) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/l,1/),(/1,ne_global/))
-                if(wqhot(k)%ndim==3) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,l,1/),(/1,1,ne_global/))
-                if(j/=NF90_NOERR) call parallel_abort('hotstart.nc, ICM 2: '//trim(adjustl(wqhot(k)%name)))
+                if(j/=NF90_NOERR) then !skip reading variable, and pass -9999
+                  buf3(1:ne_global)=-9999.0
+                  write(16,*) 'WARNING ICM hotstart.nc: variable not found (use values in icm.nml), '//trim(adjustl(wqhot(k)%name))
+                else
+                  if(wqhot(k)%ndim==1) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
+                  if(wqhot(k)%ndim==2) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/l,1/),(/1,ne_global/))
+                  if(wqhot(k)%ndim==3) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,l,1/),(/1,1,ne_global/))
+                  if(j/=NF90_NOERR) call parallel_abort('ICM hotstart.nc, failed in read: '//trim(adjustl(wqhot(k)%name)))
+                endif
               endif
               call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
               do i=1,ne_global
                 if(iegl(i)%rank==myrank) then
+                  if(abs(buf3(i)+9999.d0)<1.d-6) cycle
                   if(wqhot(k)%ndim==1) wqhot(k)%p1(iegl(i)%id)=buf3(i)
                   if(wqhot(k)%ndim==2) wqhot(k)%p2(l,iegl(i)%id)=buf3(i)
                   if(wqhot(k)%ndim==3) wqhot(k)%p3(m,l,iegl(i)%id)=buf3(i)

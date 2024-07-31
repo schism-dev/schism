@@ -1041,16 +1041,23 @@ subroutine icm_vars_init
     if(iPh==1) ppatch(i)=nint(ppatch0)
     if(jsav/=0) then
       spatch(i)=nint(spatch0); sav(:,i)=sav0; call get_canopy(i)
-      if(jsav==2) EP(i)=EP0; TEP(i)=EP0*sav0(1)
+      if(jsav==2) then; EP(i)=EP0; TEP(i)=EP0*sav0(1); endif
+      if(spatch(i)==0) then !zero for other region
+        sav(:,i)=0; sht(i)=0
+        if(jsav==2) then; EP(i)=0; TEP(i)=0; endif
+      endif
     endif
     if(jmarsh==1) then
       vpatch(i)=nint(vpatch0); vmarsh(:,:,i)=vmarsh0; call get_canopy(i)
+      if(vpatch(i)==0) then; vmarsh(:,:,i)=0; vht(:,i)=0; endif
     endif
     if(iBA==1) then
       gpatch(i)=nint(gpatch0); gBA(i)=gBA0
+      if(gpatch(i)==0) gBA(i)=0 !zero for other region
     endif
     if(iClam==1) then
       cpatch(i)=nint(cpatch0); CLAM(1:nclam,i)=clam0
+      if(cpatch(i)==0) CLAM(1:nclam,i)=0 !zero for other region
     endif
   enddo
 
