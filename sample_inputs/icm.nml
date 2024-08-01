@@ -129,10 +129,10 @@ imarsh_icm = 0   !0: off;  1: mechanistic model;  2: simple formulation
 nmarsh     = 3   !parameters in marsh module must be consistent with
 
 !-----------------------------------------------------------------------
-!Sediment module switch. iSed=1: Use sediment flux model
+!Sediment module switch. iSFM=1: Use sediment flux model
 !benthic flux provided by sed_flux_model
 !-----------------------------------------------------------------------
-iSed = 1 
+iSFM = 1
 
 !-----------------------------------------------------------------------
 !Benthic Algae

@@ -27,11 +27,11 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !global switch and variables
   !-------------------------------------------------------------------------------
-  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iBA,iRad,isflux,ibflux,idbg(10),iout_icm,nspool_icm
+  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSFM,iBA,iRad,isflux,ibflux,idbg(10),iout_icm,nspool_icm
   integer,save,target :: iSilica,iZB,iPh,iSRM,isav_icm,imarsh_icm,nmarsh,idry_icm,iClam,nclam
   real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,PRR(3),wqc0(29),WSP(29),WSPn(29)
   real(rkind),save,target,dimension(3) :: alpha
-  integer,save,pointer :: jdry,jsav,jmarsh,ised_icm,iBA_icm
+  integer,save,pointer :: jdry,jsav,jmarsh,iBA_icm
 
   integer,save,target :: ntrs_icm,nout,nouts(10),iout(2,10),nout_icm_3d(2),nhot_icm
   integer,save,pointer :: itrs_icm(:,:),elem_in(:,:),nout_icm

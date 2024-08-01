@@ -1032,7 +1032,7 @@
 !  !bThp: consective days of hypoxia (day)
 !  !bTox: consective days of oxic condition after hypoxia (day)
 !  !-------------------------------------------------------------
-!  iof_icm_sed      = 1
+!  iof_icm_sfm      = 1
 !
 !  !Benthic Algae model
 !  iof_icm_ba       = 1 !BA    (g[C].m-2)

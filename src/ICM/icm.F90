@@ -292,7 +292,7 @@ subroutine ecosystem(it)
       if(iClam==1) call clam_calc(id,kb,dz(kb+1))
 
       !sediment flux module
-      if(iSed==1) call sfm_calc(id,kb,tdep,dz(kb+1),it,isub)
+      if(iSFM==1) call sfm_calc(id,kb,tdep,dz(kb+1),it,isub)
 
       !BA module
       if(iBA==1) call ba_calc(id,kb,dz(kb+1))
@@ -326,7 +326,7 @@ subroutine ecosystem(it)
       endif
 
       !sediment fluxes addition from SFM
-      if(iSed==1) then
+      if(iSFM==1) then
         !pH effect on sediment PO4 release
         if(iPh==1 .and.ppatch(id)/=0) then
           JPO4(id)=max(JPO4(id)*exp(1.3*(PH(kb+1)-8.5)),0.02)

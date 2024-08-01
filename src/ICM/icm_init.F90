@@ -23,7 +23,7 @@ subroutine read_icm_param(imode)
   use schism_glbl, only : rkind,dt,nvrt,ne_global,in_dir,out_dir,len_in_dir,len_out_dir, &
             & ihconsv,nws,nea,npa,ihot,idry_e,ze,kbe,irange_tr,tr_el,tr_nd,nea,npa,iof_icm, &
             & iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav, &
-            & iof_icm_marsh,iof_icm_sed, iof_icm_ba,iof_icm_clam
+            & iof_icm_marsh,iof_icm_sfm,iof_icm_ba,iof_icm_clam
 
   use schism_msgp, only : myrank,parallel_abort
   use icm_misc, only : read_gr3_prop
@@ -41,7 +41,7 @@ subroutine read_icm_param(imode)
   type(icm_pointer),pointer :: p
 
   !define namelists
-  namelist /MARCO/ nsub,iRad,iKe,iLight,iPR,iLimit,isflux,iSed,iBA,iClam,nclam, &
+  namelist /MARCO/ nsub,iRad,iKe,iLight,iPR,iLimit,isflux,iSFM,iBA,iClam,nclam, &
            & ibflux,iSilica,iZB,iPh,iSRM,isav_icm,imarsh_icm,nmarsh,idry_icm,KeC,KeS,KeSalt, &
            & alpha,Ke0,tss2c,PRR,wqc0,WSP,WSPn,iout_icm,nspool_icm,idbg
   namelist /CORE/ GPM,TGP,KTGP,MTR,MTB,TMT,KTMT,FCP,FNP,FPP,FCM,FNM,FPM,  &
@@ -78,11 +78,11 @@ subroutine read_icm_param(imode)
     !read ICM; compute total # of state variables 
     !------------------------------------------------------------------------------------
     !initilize global switches
-    nsub=1; iRad=0; iKe=0; iLight=0; iPR=0; iLimit=0; isflux=0; iSed=1; iBA=0; ibflux=0; iSilica=0; 
+    nsub=1; iRad=0; iKe=0; iLight=0; iPR=0; iLimit=0; isflux=0; iSFM=1; iBA=0; ibflux=0; iSilica=0;
     iZB=0;  iPh=0; iSRM=0; isav_icm=0; imarsh_icm=0; nmarsh=3; idry_icm=0; KeC=0.26; KeS=0.07; KeSalt=-0.02;
     alpha=5.0; Ke0=0.26; tss2c=6.0; PRR=0; wqc0=0; WSP=0.0; WSPn=0.0; iout_icm=0; nspool_icm=0
     iClam=0; nclam=0; idbg=0
-    jdry=>idry_icm; jsav=>isav_icm; jmarsh=>imarsh_icm; ised_icm=>iSed; iBA_icm=>iBA
+    jdry=>idry_icm; jsav=>isav_icm; jmarsh=>imarsh_icm; iBA_icm=>iBA
 
     !read global switches
     open(31,file=in_dir(1:len_in_dir)//'icm.nml',delim='apostrophe',status='old')
@@ -354,7 +354,7 @@ subroutine read_icm_param(imode)
     endif
 
     !SFM module: 8
-    if(iSed==1) then
+    if(iSFM==1) then
       p=>wqout(nout+1);   p%name='ICM_bPOC1';   p%p1=>bPOC(1,:); p%itype=4
       p=>wqout(nout+2);   p%name='ICM_bPOC2';   p%p1=>bPOC(2,:); p%itype=4
       p=>wqout(nout+3);   p%name='ICM_bPOC3';   p%p1=>bPOC(3,:); p%itype=4
@@ -478,7 +478,7 @@ subroutine read_icm_param(imode)
     if(iSRM==1)     iof_icm(iout(1,5): iout(2,5)) =iof_icm_srm
     if(isav_icm/=0) iof_icm(iout(1,6): iout(2,6)) =iof_icm_sav
     if(imarsh_icm==1) iof_icm(iout(1,7): iout(2,7)) =iof_icm_marsh
-    if(ised_icm==1) iof_icm(iout(1,8): iout(2,8)) =iof_icm_sed
+    if(iSFM==1)     iof_icm(iout(1,8): iout(2,8)) =iof_icm_sfm
     if(iBA_icm==1)  iof_icm(iout(1,9): iout(2,9)) =iof_icm_ba
     if(iClam==1)    iof_icm(iout(1,10):iout(2,10))=iof_icm_clam
     do i=1,nout
@@ -1027,7 +1027,7 @@ subroutine icm_vars_init
     endif
 
     !SFM init
-    if(iSed==1) then
+    if(iSFM==1) then
       bPOC(:,i)=bPOC0(:); bPON(:,i)=bPON0(:); bPOP(:,i)=bPOP0(:)
       bNH4(i)=bNH40;      bNO3(i)=bNO30;      bPO4(i)=bPO40
       bH2S(i)=bH2S0;      bCH4(i)=bCH40;      bstc(i)=bstc0
@@ -1307,7 +1307,7 @@ subroutine check_icm_param()
   if(iSRM/=0.and.iSRM/=1) call parallel_abort('ICM iSRM: 0/1')
   if(jsav/=0.and.jsav/=1.and.jsav/=2) call parallel_abort('ICM isav_icm: 0/1/2')
   if(jmarsh/=0.and.jmarsh/=1.and.jmarsh/=2) call parallel_abort('ICM imarsh_icm: 0/1/2')
-  if(iSed/=0.and.iSed/=1) call parallel_abort('ICM iSed: 0/1')
+  if(iSFM/=0.and.iSFM/=1) call parallel_abort('ICM iSFM: 0/1')
   if(iBA/=0.and.iBA/=1) call parallel_abort('ICM iBA: 0/1')
   if(iRad/=0.and.iRad/=1) call parallel_abort('ICM iRad: 0/1')
   if(isflux/=0.and.isflux/=1) call parallel_abort('ICM isflux: 0/1')
