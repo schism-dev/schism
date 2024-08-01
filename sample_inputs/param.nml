@@ -969,96 +969,50 @@
 
 !-----------------------------------------------------------------------
 ! ICM outputs 
+!
+! * SFM variables (2D)
+!     bPOC(3),bPON(3),bPOP(3),bNH4,bNO3,bPO4,bH2S,bCH4,bPOS,bSA: sediment concs. (g.m-3)
+!     SOD/JNH4/JNO3/JPO4/JSA/JCOD: sediment fluxes   (g.m-2.day-1)
+!     bstc: surface transfer coeff. (m/day)
+!     bSTR: benthic stress      (day)
+!     bThp: consective days of hypoxia (day)
+!     bTox: consective days of oxic condition after hypoxia (day)
 !-----------------------------------------------------------------------
-!  !core Module
-!  iof_icm_core(1)  = 1 !PB1
-!  iof_icm_core(2)  = 1 !PB2
-!  iof_icm_core(3)  = 1 !PB3
-!  iof_icm_core(4)  = 1 !RPOC
-!  iof_icm_core(5)  = 1 !LPOC
-!  iof_icm_core(6)  = 1 !DOC
-!  iof_icm_core(7)  = 1 !RPON
-!  iof_icm_core(8)  = 1 !LPON
-!  iof_icm_core(9)  = 1 !DON
-!  iof_icm_core(10) = 1 !NH4
-!  iof_icm_core(11) = 1 !NO3
-!  iof_icm_core(12) = 1 !RPOP
-!  iof_icm_core(13) = 1 !LPOP
-!  iof_icm_core(14) = 1 !DOP
-!  iof_icm_core(15) = 1 !PO4
-!  iof_icm_core(16) = 1 !COD
-!  iof_icm_core(17) = 1 !DOX
+!  !Core (3D):       PB1 PB2 PB3 RPOC LPOC DOC RPON LPON DON NH4 NO3 RPOP LPOP DOP PO4 COD DOX (mg/L)
+!  iof_icm_core   =   1   1   1   1    1    1   1    1    1   1   1   1    1    1   1   1   1
 !
-!  !silica module
-!  iof_icm_silica(1) = 1 !SU
-!  iof_icm_silica(2) = 1 !SA
+!  !Silica (3D):     SU   SA  (mg/L)
+!  iof_icm_silica =   1   1
 !
-!  !zooplankton module
-!  iof_icm_zb(1)  = 1 !ZB1
-!  iof_icm_zb(2)  = 1 !ZB2
+!  !Zooplankton(3D): ZB1  ZB2  (mg/L)
+!  iof_icm_zb     =   1    1
 !
-!  !pH model
-!  iof_icm_ph(1) = 1 !TIC
-!  iof_icm_ph(2) = 1 !ALK
-!  iof_icm_ph(3) = 1 !CA
-!  iof_icm_ph(4) = 1 !CACO3
+!  !pH model (3D):   TIC  ALK  CA  CACO3  (mg/L)
+!  iof_icm_ph     =   1    1    1    1
 !
-!  !SRM model
-!  iof_icm_srm(1) = 1 !SRPOC
-!  iof_icm_srm(2) = 1 !SRPON
-!  iof_icm_srm(3) = 1 !SRPOP
-!  iof_icm_srm(4) = 1 !PIP
+!  !SRM (3D):       SRPOC  SRPON  SRPOP  PIP  (mg/L)
+!  iof_icm_srm    =   1      1      1      1
 !
-!  !SAV model
-!  !-------------------------------------------------------------
-!  !stleaf/ststem/stroot: leaf/stem/root biomass @elem [gC/m^2]
-!  !sht: canopy height @elem [m]
-!  !-------------------------------------------------------------
-!  iof_icm_sav    = 1
+!  !SAV (2D)
+!  iof_icm_sav    =   1  !sav leaf/stem/root/tuber (g[C].m-2) and canopy height (m)
 !
-!  !MARSH model
-!  !-------------------------------------------------------------
-!  !vleaf/vstem/vroot(1:nmarsh): leaf/stem/root biomass for nmarsh groups (g[C].m-2)
-!  !vht(1:nmarsh): canopy height (m)
-!  !-------------------------------------------------------------
-!  iof_icm_marsh     = 1
+!  !Marsh (2D)
+!  iof_icm_marsh  =   1  !marsh leaf/stem/root (g[C].m-2) and canopy height (m)
 !
-!  !SFM model
-!  !-------------------------------------------------------------
-!  !bPOC(3),bPON(3),bPOP(3),bNH4,bNO3,bPO4,bH2S,bCH4,bPOS,bSA: sediment concs. (g.m-3)
-!  !SOD/JNH4/JNO3/JPO4/JSA/JCOD: sediment fluxes   (g.m-2.day-1)
-!  !bstc: surface transfer coeff. (m/day)
-!  !bSTR: benthic stress      (day)
-!  !bThp: consective days of hypoxia (day)
-!  !bTox: consective days of oxic condition after hypoxia (day)
-!  !-------------------------------------------------------------
-!  iof_icm_sfm      = 1
+!  !SFM model (2D)
+!  iof_icm_sfm    =   1
 !
-!  !Benthic Algae model
-!  iof_icm_ba       = 1 !BA    (g[C].m-2)
-
-!  !clam model
-!  !-------------------------------------------------------------
-!  !clam biomass(1:nclam) (g[C]/m^2)
-!  !-------------------------------------------------------------
-!  iof_icm_clam     = 1
-           
+!  !benthic algae (2D)
+!  iof_icm_ba     =   1  !BA  (g[C].m-2)
+!
+!  !oyster/clam (2D)
+!  iof_icm_clam   =   1  !clam biomass(1:nclam) (g[C].m-2)
+!
 !-----------------------------------------------------------------------
-! CoSINE outputs: all 3D
+! CoSINE outputs: All 3D
 !-----------------------------------------------------------------------
-!  iof_cos(1)  = 0 !NO3 (uM)
-!  iof_cos(2)  = 0 !SiO4(uM)
-!  iof_cos(3)  = 0 !NH4 (uM)
-!  iof_cos(4)  = 0 !S1  (uM)
-!  iof_cos(5)  = 0 !S2  (uM)
-!  iof_cos(6)  = 0 !Z1  (uM)
-!  iof_cos(7)  = 0 !Z2  (uM)
-!  iof_cos(8)  = 0 !DN  (uM) 
-!  iof_cos(9)  = 0 !DSi (uM) 
-!  iof_cos(10) = 0 !PO4 (uM) 
-!  iof_cos(11) = 0 !DOX (uM) 
-!  iof_cos(12) = 0 !CO2 (uM) 
-!  iof_cos(13) = 0 !ALK (uM) 
+!  !variables: NO3  SiO4  NH4  S1  S2  Z1  Z2  DN  DSi  PO4  DOX  CO2  ALK (uM)
+!  iof_cos   =  1    1     1   1   1   1   1   1    1    1    1    1    1
 
 !-----------------------------------------------------------------------
 ! Fecal indicating bacteria module
