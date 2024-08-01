@@ -497,7 +497,7 @@
       iprecip_off_bnd=0
       model_type_pahm=10
       stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
-      RADFLAG='VOR'
+      RADFLAG='LON' !if WWM is used, this will be overwritten
       veg_vert_z=(/((i-1)*0.4d0,i=1,nbins_veg_vert+1)/) ![m]
       veg_vert_scale_cd=(/(1.0d0,i=1,nbins_veg_vert+1)/) !scaling [-]
       veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)

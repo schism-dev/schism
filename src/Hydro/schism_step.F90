@@ -772,6 +772,7 @@
       if(mod(it,nstep_wwm)==0) then
         wtmp1=mpi_wtime()
         if(myrank==0) write(16,*)'starting WWM'
+        !Overwrite SCHISM's RADFLAG here
         call WWM_II(it,icou_elfe_wwm,dt,nstep_wwm,RADFLAG)
 
 !       Outputs (via datapool):
