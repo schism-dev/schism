@@ -181,6 +181,12 @@
   thetai = 0.6 
 
 !-----------------------------------------------------------------------
+! Wave coupling option. If USE_WWM, this will be overruled by WWM's .nml.
+! If USE_WW3, this flag decides the coupling option (LON, VOR)
+!-----------------------------------------------------------------------
+  RADFLAG = 'LON'
+
+!-----------------------------------------------------------------------
 ! If WWM is used, set coupling/decoupling flag 'icou_elfe_wwm'. 
 ! No effects if USE_WWM is distabled in Makefile.
 ! Note that all these parameters must be present in this file (even when not used).

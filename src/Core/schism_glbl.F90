@@ -594,7 +594,7 @@ module schism_glbl
 !  real(rkind) :: vclose_surf_frac   ! 1.0:flux applied at surface, 0.5:half at top half at bottom
 
 ! WWM & WW3
-  CHARACTER(LEN=3) :: RADFLAG
+  character(len=3) :: RADFLAG
   integer,save :: msc2,mdc2
   real(rkind),save,allocatable :: wwave_force(:,:,:), jpress(:), sbr(:,:), sbf(:,:), srol(:,:), sds(:,:), sveg(:,:), eps_w(:), eps_r(:),eps_br(:)
   real(rkind),save,allocatable :: stokes_hvel(:,:,:), stokes_wvel(:,:), stokes_hvel_side(:,:,:), stokes_wvel_side(:,:)
