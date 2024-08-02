@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-- `` (2 Aug 2024): added an optional flag RADFLAG (for wave coupling)
+- `44c0c76` (2 Aug 2024): added an optional flag RADFLAG (for wave coupling)
 - `c4a5278` (17 July 2024): added Ganthy option for flex vegetation (iveg=2); related optional parameters 
                            are: veg_cw and veg_lai;
 - `0fec598` (20 May 2024): added nbins_veg_vert as a mandatory input; veg_vert_z*(1:nbins_veg_vert+1) 
