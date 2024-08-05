@@ -1,3 +1,4 @@
+!     Old script for record; use newer version: gen_WENO_zone.f90
 !     Generate tvd.prop for hybrid WENO/ELM and cross-scale applications, based on depth and remove
 !     'isolated' WENO elements in shallow water, etc. The goal is to
 !     minimize the direct 'contact' between WENO and ELM cells, which can cause dispersion.
