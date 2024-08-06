@@ -1,4 +1,3 @@
-1) generate mask nc file using generate_adcirc.py
+1) Use mask_boundary_elev.py to make lbnd_node_mask.nc 
 
-2) generate out2d_1.mask.nc using nco commands, as requested by NOAA
-/sciclone/schism10/feiye/STOFS3D-v4/Shared_with_NOAA/Mask_lbnd/mask_lbn_nd.sh
+2) Use mask_lbn_nd.sh to do the actual masking over out2d_*.nc 
