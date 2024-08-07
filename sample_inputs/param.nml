@@ -328,9 +328,12 @@
   level_age = 9, -999 !default: -999 (all levels)
 
 !-----------------------------------------------------------------------
-! Horizontal diffusivity option. if ihdif=1, horizontal diffusivity is given in hdif.gr3
+! Horizontal diffusivity option. if ihdif=1, horizontal diffusivity in the 
+! form of a filter is given in hdif.gr3 (max strength should be ~1/8);
+! and # of iterations for filter is given by niter_hdif.
 !-----------------------------------------------------------------------
   ihdif = 0 
+  niter_hdif = 1 !used if ihdif/=0
 
 !-----------------------------------------------------------------------
 ! Bottom friction. 

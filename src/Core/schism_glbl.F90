@@ -94,7 +94,7 @@ module schism_glbl
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
                   &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm,iof_icm_ba,&
-                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw
+                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_cos,iof_fib, &
@@ -414,7 +414,7 @@ module schism_glbl
   real(rkind),save,allocatable :: bdy_frc(:,:,:) !body force at prism center Q_{i,k}
   real(rkind),save,allocatable :: flx_sf(:,:) !surface b.c. \kappa*dC/dz = flx_sf (at element center)
   real(rkind),save,allocatable :: flx_bt(:,:) !bottom b.c.
-  real(rkind),save,allocatable :: hdif(:,:) !horizontal diffusivity
+  real(rkind),save,allocatable :: hdif(:) !horizontal diffusivity
   real(rkind),save,allocatable :: tr_nd0(:,:,:) ! Initial tracer conc. at nodes
   real(rkind),save,allocatable :: rkai_num(:,:,:) !DVD (numerical mixing) [C^2]/sec
   real(rkind),save,allocatable :: eta1(:)   ! Elevation at nodes at previous timestep

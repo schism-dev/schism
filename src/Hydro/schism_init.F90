@@ -209,7 +209,7 @@
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
-     &RADFLAG
+     &RADFLAG,niter_hdif
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm, &
@@ -499,6 +499,7 @@
       model_type_pahm=10
       stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
       RADFLAG='LON' !if WWM is used, this will be overwritten
+      niter_hdif=1
       veg_vert_z=(/((i-1)*0.4d0,i=1,nbins_veg_vert+1)/) ![m]
       veg_vert_scale_cd=(/(1.0d0,i=1,nbins_veg_vert+1)/) !scaling [-]
       veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
@@ -1389,7 +1390,7 @@
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &
          &  fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
          &  Cdp(npa),rmanning(npa),rough_p(npa),dfv(nvrt,npa),elev_nudge(npa),uv_nudge(npa), &
-         & hdif(nvrt,npa),shapiro(nsa),shapiro_smag(nsa),fluxprc(npa),fluxevp(npa),prec_snow(npa),prec_rain(npa), & 
+         & hdif(npa),shapiro(nsa),shapiro_smag(nsa),fluxprc(npa),fluxevp(npa),prec_snow(npa),prec_rain(npa), & 
          &  sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
          &  tr_nudge(natrm,npa), & 
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
@@ -3016,7 +3017,7 @@
      &call parallel_abort('Check hdif.gr3')
           do i=1,np_global
             read(32,*)j,xtmp,ytmp,tmp 
-            if(tmp<0.d0) then
+            if(tmp<0.d0.or.tmp>0.2d0) then
               write(errmsg,*)'hdif out of bound:',tmp,i
               call parallel_abort(errmsg)
             endif
@@ -3027,7 +3028,7 @@
         call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
          
         do i=1,np_global
-          if(ipgl(i)%rank==myrank) hdif(:,ipgl(i)%id)=buf3(i) !tmp
+          if(ipgl(i)%rank==myrank) hdif(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
       endif !ihdif/=0
       
