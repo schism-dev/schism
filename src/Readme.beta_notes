@@ -9,6 +9,8 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter; added an optional
+                          parameter niter_hdif, and hdif.gr3 now specifies the filter strength (<=0.2);
 - `44c0c76` (2 Aug 2024): added an optional flag RADFLAG (for wave coupling)
 - `c4a5278` (17 July 2024): added Ganthy option for flex vegetation (iveg=2); related optional parameters 
                            are: veg_cw and veg_lai;
@@ -609,6 +611,7 @@ git versions:
 151. `5914ae2` (Mar 26, 2024): fix an init error for diffm* (c/o Ufuk)
 161. `ca44ba0` (1 May 2024): fixed bugs in vegetation&marsh module (uninited sav_h0 etc) 
 162. `cfb58a5` [5 July 2024] replace fatal errors with warning in btrack (no intersecting edges). These are exaordinary exceptions that occur rarely.
+163. - `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter;
 
 ================================================================================================
 (D) Auto-test history:

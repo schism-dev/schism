@@ -159,7 +159,9 @@ If `iprecip_off_bnd`/=0, preciptation will be turned off near land boundary. Thi
 
 
 ### ihdif=0 (int)
-Flag to use non-zero horizontal diffusivity. If `ihdif=0`, it is not used. If $ihdif \neq 0$, input `hdif.gr3` is needed.
+Flag for applying horizontal diffusivity, implemented as a geometric filter. 
+If `ihdif=0`, it is not used. If $ihdif \neq 0$, input `hdif.gr3` is used to specify filter strength at each node (which
+ should be <=0.2).
 
 ### ihot=0 (int)
 Hot start flag. If `ihot=0`, cold start; if $ihot \neq 0$, hot start from `hotstart.nc`. If `ihot=1`, the time and time step are reset to zero, and outputs start from `t=0` accordingly (and you need to adjust other inputs like `.th` etc). If `ihot=2`, the run (and outputs) will continue from the time specified in `hotstart.nc`. 

@@ -76,12 +76,37 @@ To find all the changes between tag releases, search for 'Tag'.
      combine_hotstart7.f90 as it seems to cause hang in restart;
 145. `a6fd5cb` (May 15, 2023): revamped nws=4 to allow more variables for 3D. The input needed is 'atmos.nc'.
 146. `a832e4fd` (Aug 15, 2023): renamed LAP routines and tridag to avoid conflicts with other ESMs.
+147. `d31ea846` (Aug 30, 2023): fixed similar bugs on too many open nc handle (c/o Kijin) for 1-way script)
+148. `abf37240` (Aug 31, 2023): Ivica J. fixed a bug in FAIRALL option (bulk_psiu should be real*8)
+149. `045962` (Sept 13, 2023): removed goto in lap.F90
+150. `66242aa` (Sept 13, 2023): removed goto in harm.F90
+151. `5914ae2` (Mar 26, 2024): fix an init error for diffm* (c/o Ufuk)
+161. `ca44ba0` (1 May 2024): fixed bugs in vegetation&marsh module (uninited sav_h0 etc)
+162. `cfb58a5` [5 July 2024] replace fatal errors with warning in btrack (no intersecting edges). These are exaordinary exceptions that occur rarely.
+163. - `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter;
 
 
 
 ## Changes in input and output format
 The info below can also be found in src/Readme.beta_notes. Most changes are made in param.in (now renamed as [param.nml](input-output/param.md)).
 
+
+- `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter; added an optional
+                          parameter niter_hdif, and hdif.gr3 now specifies the filter strength (<=0.2);
+- `44c0c76` (2 Aug 2024): added an optional flag RADFLAG (for wave coupling)
+- `c4a5278` (17 July 2024): added Ganthy option for flex vegetation (iveg=2); related optional parameters
+                           are: veg_cw and veg_lai;
+- `0fec598` (20 May 2024): added nbins_veg_vert as a mandatory input; veg_vert_z*(1:nbins_veg_vert+1)
+                           etc as optional. The latter are required if iveg/=0;
+- `56b88ae` (17 May 2024): added station outputs for all tracers (flags in station.in after w);
+- `e66f1b3` (3 May 2024): renamed sav_*.gr3 as veg_*.gr3; also MARSH module now requires iveg/=0;
+- `ca44ba0` (1 May 2024): removed isav and replaced it with iveg
+- `4fb6228` (9 Feb 2024): add cmake CPP 'BLD_STANDALONE' to accommodate UFS
+- `9bee0f5` (8 Feb 2024): removed IMPOSE_NET_FLUX and 'meth_sink'
+- `d5fb0f1` (3 Jan 2024): merged ZG's stemp branch (sediment-water heat exchange option), with
+            new parameters: stemp_stc, stemp_dz(1:2);
+- `6a079f9` (30 Nov 2023): Fei added i_epsilon2 (to allow spatially variable epsilon2;
+- `376b3a45` (14 Sept, 2023) : removed iflux_out_format (folded it into iflux);
 
 Tag stofs3d-atl.v2.1.0 (identical to v5.11.0): for NOAA STOFS3D Atlantic operational forecast release
 Tag v5.11.0: (Aug 2022)
