@@ -2154,7 +2154,9 @@ conservation will be checked in regions specified by <code>fluxflag.prop</code>.
   stemp_dz(1) is the equivalent sediment buffer depth (m) for heat into sediment, and
   stemp_dz(2) is the equivalent sediment buffer depth (m) for heat out of sediment.</p>
 <h3 id="ihdif0-int">ihdif=0 (int)<a class="headerlink" href="#ihdif0-int" title="Permanent link">&para;</a></h3>
-<p>Flag to use non-zero horizontal diffusivity. If <code>ihdif=0</code>, it is not used. If <span class="arithmatex">\(ihdif \neq 0\)</span>, input <code>hdif.gr3</code> is needed.</p>
+<p>Flag for applying horizontal diffusivity, implemented as a geometric filter. 
+If <code>ihdif=0</code>, it is not used. If <span class="arithmatex">\(ihdif \neq 0\)</span>, input <code>hdif.gr3</code> is used to specify filter strength at each node (which
+ should be &lt;=0.2).</p>
 <h3 id="ihot0-int">ihot=0 (int)<a class="headerlink" href="#ihot0-int" title="Permanent link">&para;</a></h3>
 <p>Hot start flag. If <code>ihot=0</code>, cold start; if <span class="arithmatex">\(ihot \neq 0\)</span>, hot start from <code>hotstart.nc</code>. If <code>ihot=1</code>, the time and time step are reset to zero, and outputs start from <code>t=0</code> accordingly (and you need to adjust other inputs like <code>.th</code> etc). If <code>ihot=2</code>, the run (and outputs) will continue from the time specified in <code>hotstart.nc</code>. </p>
 <div class="admonition note">
