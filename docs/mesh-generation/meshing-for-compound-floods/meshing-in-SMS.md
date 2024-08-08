@@ -302,19 +302,20 @@ Edit the coastal coverage when local refinements are needed in an area of intere
 
 Rules to follow (for consistency among STOFS3D/SECOFS developers):
 
+- The model boundary, which includes both the land boundary and the ocean boundary, must fully encompass all other coverages, particularly the coastal coverage. In other words, the coastal coverage should not extend beyond the land boundary (see figure below).
+This can cause issues in subsequent procedures if feeder channels are needed.
+
+<img src="../../assets/extruding_coastal_coverage.jpg" alt="drawing" width="500"/>
+
 - The manual arcs should at least be better than the auto arcs; use the shapefile of the auto arcs as a background in SMS to help you decide.
   In particular, this means you need to accommodate for tributaries when placing a manual polygon for a main channel, lake, or estuary:
 
 <img src="../../assets/accommodate_trib.jpg" alt="drawing" width="700"/>
 
 - No need to create buffers for manual polygons; the [clipping procedure](https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/OneNote.aspx?id=%2Fpersonal%2Ffeiye_vims_edu%2FDocuments%2FNotebooks%2FNOAA%20TWL%20project%E2%80%8B&wd=target%28Highlights.one%7C9F3230A1-12F7-4F9A-8890-CE493995252A%2FSMS%20notes%7C95E15132-42B8-4581-A263-4F4576C9A5FE%2F%29onenote:https://vims0-my.sharepoint.com/personal/feiye_vims_edu/Documents/Notebooks/NOAA%20TWL%20project​/Highlights.one#SMS%20notes&section-id={9F3230A1-12F7-4F9A-8890-CE493995252A}&page-id={95E15132-42B8-4581-A263-4F4576C9A5FE}&end) automatically creates a 50-meter buffer zone around all manual polygons.
-!!! Attention
-    Arcs not included in a polygon do not have a buffer; this setting is intentional.
   
-- Unless you have a clear plan, don't mix features from other coverages (e.g., levees and auto arcs) in the coastal coverage, which is reserved for manual editing.
-Doing so means that you assume the responsiblity of keeping the manual edits up-to-date with external changes that may be more easily done in other coverages.
-For example, the National Levee Database add/remove features from time to time; the requirements on the auto arcs may change or there may be improvements in the RiverMapper tool itself.
-In addition, putting auto arcs in this coverage means that you will spend extra time trying to satisfy the first rule of explicitly accommodating for the connectivity with tributaries.
+!!!Attention
+    Unless you have a clear plan, avoid mixing other coverages (e.g., levees and auto arcs) or portions of other coverages with the coastal coverage, which is reserved for manual editing. Doing so requires you to maintain manual edits in sync with external changes, which may be easier to manage within their respective coverages. For instance, the National Levee Database may periodically add or remove features; requirements for auto arcs may evolve, or there may be improvements in the RiverMapper tool. Additionally, including auto arcs in this coverage means you will need to spend extra time ensuring connectivity with tributaries (see the above figure).
 
 
 ## Set watershed resolution
