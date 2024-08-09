@@ -1,0 +1,65 @@
+#!/bin/bash
+#----------------------------------------------------
+# Sample Slurm job script
+#   for TACC Stampede3 SPR nodes
+#
+#   *** MPI Job in SPR Queue ***
+# 
+# Last revised: 23 April 2024
+#
+# Notes:
+#
+#   -- Launch this script by executing
+#      "sbatch spr.mpi.slurm" on Stampede3 login node.
+#
+#   -- Use ibrun to launch MPI codes on TACC systems.
+#      Do not use mpirun or mpiexec.
+#
+#   -- Max recommended MPI ranks per SPR node: 112
+#      (start small, increase gradually).
+#
+#   -- If you're running out of memory, try running
+#      on more nodes using fewer tasks and/or threads 
+#      per node to give each task access to more memory.
+#
+#   -- Don't worry about task layout.  By default, ibrun
+#      will provide proper affinity and pinning.
+#
+#   -- You should always run out of $SCRATCH.  Your input
+#      files, output files, and exectuable should be 
+#      in the $SCRATCH directory hierarchy.
+#
+#   From Dan,
+#   SPR nodes has 112 cores, however,
+#   try lower cores if you have allocation error in output log.
+#   Especially for large domain case like STOFS-3D 
+#   STOFS-Atl use 85 cores per node
+#----------------------------------------------------
+
+#SBATCH -J STOFS-Atl           # Job name
+#SBATCH -o Atl.o%j       # Name of stdout output file
+#SBATCH -e Atl.e%j       # Name of stderr error file
+#SBATCH -p spr             # Queue (partition) name
+#SBATCH -N 32               # Total # of nodes 
+#SBATCH -n 2720            # Total # of mpi tasks (85 cores/nd *32 node)
+#SBATCH -t 01:00:00        # Run time (hh:mm:ss)
+#SBATCH --mail-user=hyu05@tacc.utexas.edu
+#SBATCH --mail-type=all    # Send email at begin and end of job
+
+# Other commands must follow all #SBATCH directives...
+module load netcdf/4.9.2 
+module list
+pwd
+date
+
+# Always run your jobs out of $SCRATCH.  Your input files, output files, 
+# and exectuable should be in the $SCRATCH directory hierarchy.  
+# Change directories to your $SCRATCH directory where your executable is
+
+#cd $SCRATCH
+
+# Launch MPI code... 
+
+ibrun ./pschism_STAM3_NO_PARMETIS_PREC_EVAP_BLD_STANDALONE_TVD-VL 6         # Use ibrun instead of mpirun or mpiexec
+
+
