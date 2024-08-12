@@ -29,21 +29,23 @@
 #      files, output files, and exectuable should be 
 #      in the $SCRATCH directory hierarchy.
 #
-#   From Dan,
+#   From Dan Yu:
 #   SPR nodes has 112 cores, however,
 #   try lower cores if you have allocation error in output log.
 #   Especially for large domain case like STOFS-3D 
 #   STOFS-Atl use 85 cores per node
 #----------------------------------------------------
 
-#SBATCH -J STOFS-Atl           # Job name
-#SBATCH -o Atl.o%j       # Name of stdout output file
-#SBATCH -e Atl.e%j       # Name of stderr error file
+#SBATCH -J 01a # Job name
+#SBATCH -o std.o%j       # Name of stdout output file
+#SBATCH -e err.e%j       # Name of stderr error file
 #SBATCH -p spr             # Queue (partition) name
 #SBATCH -N 32               # Total # of nodes 
+## Max 112 cores/node with GB memory, so cannot use all usually 
 #SBATCH -n 2720            # Total # of mpi tasks (85 cores/nd *32 node)
 #SBATCH -t 01:00:00        # Run time (hh:mm:ss)
-#SBATCH --mail-user=hyu05@tacc.utexas.edu
+#SBATCH -A OCE24002
+#SBATCH --mail-user=yjzhang@vims.edu
 #SBATCH --mail-type=all    # Send email at begin and end of job
 
 # Other commands must follow all #SBATCH directives...
@@ -60,6 +62,6 @@ date
 
 # Launch MPI code... 
 
-ibrun ./pschism_STAM3_NO_PARMETIS_PREC_EVAP_BLD_STANDALONE_TVD-VL 6         # Use ibrun instead of mpirun or mpiexec
+ibrun ./pschism_STAM3_NO_PARMETIS_PREC_EVAP_BLD_STANDALONE_TVD-VL 6
 
 
