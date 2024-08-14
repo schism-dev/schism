@@ -6390,7 +6390,7 @@
         !No ghost
         REAL(rkind),intent(in) :: WW3__OHS(np),WW3__DIR(np),WW3_T0M1(np), &
      &WW3__WNM(np),WW3__BHD(np),WW3_USSX(np),WW3_USSY(np),WW3_TWOX(np), &
-     &WW3_TWOY(np),WW3_TBBX(np),WW3_TBBY(np),WW3_UBRX,WW3_UBRY
+     &WW3_TWOY(np),WW3_TBBX(np),WW3_TBBY(np),WW3_UBRX(np),WW3_UBRY(np)
 
         REAL(rkind) :: tmp
 
