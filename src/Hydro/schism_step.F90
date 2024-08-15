@@ -9244,7 +9244,7 @@
            call writeout_nc(id_out_ww3(12),'ubrx',1,1,npa,wave_orbu)
 
            ! Near bed orbital vel, y component
-           call writeout_nc(id_out_ww3(12),'ubry',1,1,npa,wave_orbv)
+           call writeout_nc(id_out_ww3(13),'ubry',1,1,npa,wave_orbv)
         else
            ! Eastward wave radiation stress
            call writeout_nc(id_out_ww3(1),'rsxx',1,1,npa,rsxx)
