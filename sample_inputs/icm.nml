@@ -593,6 +593,7 @@ gFPP    = 0.5 0.45 0.05  !fraction of predation BA P into 3G classes in sediment
 !calpha(clam=1:nclam, PC); cKTFR=(clam,2);  cTSS=(clam, 4)
 !-----------------------------------------------------------------------
 cpatch0 =  -999          !region flag for clam. (1: ON all elem.; -999: spatial)
+cFc     =  1.0    1.0    1.0    1.0    1.0     !fraction of clam coverage
 clam0   =  0.1    0.1    0.1    0.1    0.1     !initial clam conc. (g[C].m-2)
 cfrmax  =  0.5    0.5    0.5    0.5    0.5     !maximum filtration rate (m3.g[C]-1.day-1)
 cTFR    =  27.0   27.0   27.0   27.0   27.0    !optimal temperature of filtration (oC)

@@ -1196,29 +1196,29 @@ subroutine clam_calc(id,kb,wdz)
     enddo !i=1,nclam
 
     !interaction with water column variables;  change rate of conc. (g.m-3.day-1)
-    cdwqc(iPB1, kb+1)=-sum(PC(1)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iPB2, kb+1)=-sum(PC(2)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iPB3, kb+1)=-sum(PC(3)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iLPOC,kb+1)=-sum(PC(4)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iRPOC,kb+1)=-sum(PC(5)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iLPON,kb+1)=-sum(PN(4)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iRPON,kb+1)=-sum(PN(5)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iLPOP,kb+1)=-sum(PP(4)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iRPOP,kb+1)=-sum(PP(5)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iNH4, kb+1)=sum((ATFN-cn2c*GP)+cn2c*MT)/wdz
-    cdwqc(iPO4, kb+1)=sum((ATFP-cp2c*GP)+cp2c*MT)/wdz
-    cdwqc(iDOX, kb+1)=o2c*sum((ATFC-GP)+MT)/wdz
+    cdwqc(iPB1, kb+1)=-sum(cFc*PC(1)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iPB2, kb+1)=-sum(cFc*PC(2)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iPB3, kb+1)=-sum(cFc*PC(3)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iLPOC,kb+1)=-sum(cFc*PC(4)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iRPOC,kb+1)=-sum(cFc*PC(5)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iLPON,kb+1)=-sum(cFc*PN(4)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iRPON,kb+1)=-sum(cFc*PN(5)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iLPOP,kb+1)=-sum(cFc*PP(4)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iRPOP,kb+1)=-sum(cFc*PP(5)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iNH4, kb+1)=sum(cFc*((ATFN-cn2c*GP)+cn2c*MT))/wdz
+    cdwqc(iPO4, kb+1)=sum(cFc*((ATFP-cp2c*GP)+cp2c*MT))/wdz
+    cdwqc(iDOX, kb+1)=o2c*sum(cFc*((ATFC-GP)+MT))/wdz
 
     !interaction with sediment layer
     cFPOC(id,1:2)=0; cFPON(id,1:2)=0; cFPOP(id,1:2)=0
     do i=1,nclam
-      cFPOC(id,1)=cFPOC(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PC(1:4))+sum(RT+PR)
-      cFPON(id,1)=cFPON(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PN(1:4))+sum(cn2c(i)*(RT+PR))
-      cFPOP(id,1)=cFPOP(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PP(1:4))+sum(cp2c(i)*(RT+PR))
+      cFPOC(id,1)=cFPOC(id,1)+sum(cFc(i)*((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PC(1:4))+sum(cFc(i)*(RT+PR))
+      cFPON(id,1)=cFPON(id,1)+sum(cFc(i)*((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PN(1:4))+sum(cFc(i)*cn2c(i)*(RT+PR))
+      cFPOP(id,1)=cFPOP(id,1)+sum(cFc(i)*((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PP(1:4))+sum(cFc(i)*cp2c(i)*(RT+PR))
     enddo !i
-    cFPOC(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PC(5))
-    cFPON(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PN(5))
-    cFPOP(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PP(5))
+    cFPOC(id,2)=sum(cFc*((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PC(5))
+    cFPON(id,2)=sum(cFc*((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PN(5))
+    cFPOP(id,2)=sum(cFc*((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PP(5))
 
   endif !iClam
 end subroutine clam_calc

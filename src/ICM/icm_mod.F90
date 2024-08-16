@@ -173,7 +173,7 @@ module icm_mod
   !Clam model (CLAM) parameters and variables
   !-------------------------------------------------------------------------------
   real(rkind),save,target :: cpatch0
-  real(rkind),save,target,allocatable,dimension(:) :: clam0,cfrmax,cTFR,csalt,cKDO,cDOh,cfTSSm,cRF, &
+  real(rkind),save,target,allocatable,dimension(:) :: cFc,clam0,cfrmax,cTFR,csalt,cKDO,cDOh,cfTSSm,cRF, &
                                                     & cIFmax,cMTB,cTMT,cKTMT,cMRT,cPRR,cHSR,cn2c,cp2c
   real(rkind),save,target,allocatable,dimension(:,:) :: cKTFR,cKTSS,cTSS,calpha,cDoyp,cDoyh
 
