@@ -681,7 +681,7 @@ subroutine marsh_calc(id,kb,zid,vhtz,vLight)
 
   !local variables
   integer :: i,j,k,m
-  real(rkind) :: fR,fT,fST,fI,fN,fP,fDO,mLight,mtemp,msalt,rIK,Kd,xT,xS,rc,vdc,drat
+  real(rkind) :: fR,fT,fST,fI,fN,fP,fDO,mLight,mtemp,msalt,rIK,Kd,xT,xS,vdc,drat
   real(rkind),dimension(nmarsh) :: BMw,BMb,srat,orat
   real(rkind) :: tdep,dz(nvrt),GP(nmarsh),MT(3,nmarsh)
   real(rkind),pointer,dimension(:) :: vleaf,vstem,vroot
@@ -777,21 +777,22 @@ subroutine marsh_calc(id,kb,zid,vhtz,vLight)
   elseif(vpatch(id)==1.and.jmarsh==2.and.idry_e(id)==0) then
     !currently, the sink due marsh doesn't go to the sediment (todo) for this simple model
     db_vdNO3(id)=0; db_vdDOX(id)=0; db_vdRPOC(id)=0; db_vdLPOC(id)=0; db_vdRPON(id)=0; db_vdLPON(id)=0
-    db_vdRPOP(id)=0; db_vdLPOP(id)=0; db_vdSRPOC(id)=0; db_vdSRPON(id)=0; db_vdSRPOP(id)=0
+    db_vdRPOP(id)=0; db_vdLPOP(id)=0; db_vdSRPOC(id)=0; db_vdSRPON(id)=0; db_vdSRPOP(id)=0; db_vdPIP(id)=0
     do k=kb+1,nvrt
-      fT=exp(vKTw*(temp(k)-vRTw)); fDO=DOX(k)/(vKhDO+DOX(k)); rc=vKPOM*vAw  !pre-compute 
+      fT=exp(vKTw*(temp(k)-vRTw)); fDO=DOX(k)/(vKhDO+DOX(k))  !pre-compute
       vdc=vKNO3*vAw*fT*NO3(k);  vdwqc(iNO3,k)=-vdc;  db_vdNO3(id)=db_vdNO3(id)+vdc*dz(k) !vdNO3: g.m-2.day
       vdc=vAw*fDO*fT*vOCw;      vdwqc(iDOX,k)=-vdc;  db_vdDOX(id)=db_vdDOX(id)+vdc*dz(k)
-      vdc=rc*RPOC(k);  vdwqc(iRPOC,k)=-vdc;  db_vdRPOC(id)=db_vdRPOC(id)+vdc*dz(k)
-      vdc=rc*LPOC(k);  vdwqc(iLPOC,k)=-vdc;  db_vdLPOC(id)=db_vdLPOC(id)+vdc*dz(k)
-      vdc=rc*RPON(k);  vdwqc(iRPON,k)=-vdc;  db_vdRPON(id)=db_vdRPON(id)+vdc*dz(k)
-      vdc=rc*LPON(k);  vdwqc(iLPON,k)=-vdc;  db_vdLPON(id)=db_vdLPON(id)+vdc*dz(k)
-      vdc=rc*RPOP(k);  vdwqc(iRPOP,k)=-vdc;  db_vdRPOP(id)=db_vdRPOP(id)+vdc*dz(k)
-      vdc=rc*LPOP(k);  vdwqc(iLPOP,k)=-vdc;  db_vdLPOP(id)=db_vdLPOP(id)+vdc*dz(k)
+      vdc=vKPOM(iRPOC)*vAW*RPOC(k);  vdwqc(iRPOC,k)=-vdc;  db_vdRPOC(id)=db_vdRPOC(id)+vdc*dz(k)
+      vdc=vKPOM(iLPOC)*vAW*LPOC(k);  vdwqc(iLPOC,k)=-vdc;  db_vdLPOC(id)=db_vdLPOC(id)+vdc*dz(k)
+      vdc=vKPOM(iRPON)*vAW*RPON(k);  vdwqc(iRPON,k)=-vdc;  db_vdRPON(id)=db_vdRPON(id)+vdc*dz(k)
+      vdc=vKPOM(iLPON)*vAW*LPON(k);  vdwqc(iLPON,k)=-vdc;  db_vdLPON(id)=db_vdLPON(id)+vdc*dz(k)
+      vdc=vKPOM(iRPOP)*vAW*RPOP(k);  vdwqc(iRPOP,k)=-vdc;  db_vdRPOP(id)=db_vdRPOP(id)+vdc*dz(k)
+      vdc=vKPOM(iLPOP)*vAW*LPOP(k);  vdwqc(iLPOP,k)=-vdc;  db_vdLPOP(id)=db_vdLPOP(id)+vdc*dz(k)
       if(iSRM==1) then
-        vdc=rc*SRPOC(k);  vdwqc(iSRPOC,k)=-vdc;  db_vdSRPOC(id)=db_vdSRPOC(id)+vdc*dz(k)
-        vdc=rc*SRPON(k);  vdwqc(iSRPON,k)=-vdc;  db_vdSRPON(id)=db_vdSRPON(id)+vdc*dz(k)
-        vdc=rc*SRPOP(k);  vdwqc(iSRPOP,k)=-vdc;  db_vdSRPOP(id)=db_vdSRPOP(id)+vdc*dz(k)
+        vdc=vKPOM(iSRPOC)*vAw*SRPOC(k);  vdwqc(iSRPOC,k)=-vdc;  db_vdSRPOC(id)=db_vdSRPOC(id)+vdc*dz(k)
+        vdc=vKPOM(iSRPON)*vAw*SRPON(k);  vdwqc(iSRPON,k)=-vdc;  db_vdSRPON(id)=db_vdSRPON(id)+vdc*dz(k)
+        vdc=vKPOM(iSRPOP)*vAw*SRPOP(k);  vdwqc(iSRPOP,k)=-vdc;  db_vdSRPOP(id)=db_vdSRPOP(id)+vdc*dz(k)
+        vdc=vKPOM(iPIP)*vAw*PIP(k);      vdwqc(iPIP,k)  =-vdc;  db_vdPIP(id)  =db_vdPIP(id)  +vdc*dz(k)
       endif
     enddo
   endif !vpatch(id)

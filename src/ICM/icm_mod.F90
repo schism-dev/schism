@@ -125,14 +125,15 @@ module icm_mod
   !metabolism partition, growth limit of nutrient,light,salinity,inundation
   real(rkind),save,target,allocatable,dimension(:) :: vFW,vKhN,vKhP,valpha,vKe,vSopt,vKs,vInun
   real(rkind),save,target,allocatable :: vht0(:),vcrit(:),v2ht(:,:),vc2dw(:),vn2c(:),vp2c(:) !misc
-  real(rkind),save,target :: vAw,vKNO3,vKPOM,vKTW,vRTw,vKhDO,vOCw
+  real(rkind),save,target :: vAw,vKNO3,vKTW,vRTw,vKhDO,vOCw
+  real(rkind),save,target,allocatable :: vKPOM(:)
 
   integer,save,allocatable :: vpatch(:)  !marsh regions
   real(rkind),save,target,allocatable :: vmarsh(:,:,:),vht(:,:) !marsh biomass
   real(rkind),save,target,allocatable :: vFPOC(:,:),vFPON(:,:),vFPOP(:,:),vbNH4(:),vbPO4(:),vSOD(:) !sediment
   real(rkind),save,pointer :: db_vGP(:,:),db_vBMw(:,:),db_vBMb(:,:)
   real(rkind),save,pointer,dimension(:) :: db_vdNO3,db_vdDOX,db_vdRPOC,db_vdLPOC,db_vdRPON,db_vdLPON, &
-                                         & db_vdRPOP,db_vdLPOP,db_vdSRPOC,db_vdSRPON,db_vdSRPOP
+                                         & db_vdRPOP,db_vdLPOP,db_vdSRPOC,db_vdSRPON,db_vdSRPOP,db_vdPIP
 
   !-------------------------------------------------------------------------------
   !sediment flux model (SFM) parameters and variables

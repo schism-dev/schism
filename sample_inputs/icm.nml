@@ -552,14 +552,15 @@ vp2c   = 0.01   0.01   0.01   !phosphorus to carbon ratio [nmarsh]
 
 !----------------------
 !simple wetland model (imarsh=2)
+!vKPOM (order same as WSP): (PB1,PB2,PB3)   (RPOC,LPOC,DOC)   (RPON,LPON,DON,NH4,NO3)     (RPOP,LPOP,DOP,PO4)    (COD,DO)    (SRPOM, PIP)
 !----------------------
 vAw    =   0.1                !ratio between marsh area to adjacent water volume (m-1)
 vKNO3  =   0.01               !mass-transfer coefficient for NO3 removal (m.day-1)
-vKPOM  =   0.05               !settling velocity caused by marsh (m.day-1)
 vKTw   =   0.069              !temperature dependence for wetland effect (oC-1)
 vRTw   =   20                 !reference temperature for wetland effect (oC)
 vKhDO  =   1.0                !half saturation for wetland effect (mg/L)
 vOCw   =   0.1                !wetland oxygen consumption rate (g.m-2.day-1)
+vKPOM  =   0.005 0.005 0.0   0.05 0.05 0.0   0.05 0.05 0.0 0.0 0.0   0.05 0.05 0.0 0.0  0.0 0.0   0.05 0.05 0.05 0.01 !settling velocity caused by marsh (m.day-1)
 /
 
 &BAG

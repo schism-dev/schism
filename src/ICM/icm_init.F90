@@ -109,7 +109,7 @@ subroutine read_icm_param(imode)
            & vFCP(nmarsh,3),vMTB(nmarsh,3),vTMT(nmarsh,3),vKTMT(nmarsh,3),vFCM(nmarsh,4),vFNM(nmarsh,4), &
            & vFPM(nmarsh,4),vFW(nmarsh),vKhN(nmarsh),vKhP(nmarsh),valpha(nmarsh),vKe(nmarsh),vSopt(nmarsh), &
            & vKs(nmarsh),vInun(nmarsh),vht0(nmarsh),vcrit(nmarsh),v2ht(nmarsh,2),vc2dw(nmarsh),vn2c(nmarsh), &
-           & vp2c(nmarsh),stat=istat)
+           & vp2c(nmarsh),vKPOM(ntrs_icm),stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. vmarsh0')
 
     !init. CORE module
@@ -349,7 +349,8 @@ subroutine read_icm_param(imode)
         p=>wqout(nout+9);  p%name='ICM_vdSRPOC'; allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdSRPOC=>p%p1;  p%itype=4
         p=>wqout(nout+10); p%name='ICM_vdSRPON'; allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdSRPON=>p%p1;  p%itype=4
         p=>wqout(nout+11); p%name='ICM_vdSRPOP'; allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdSRPOP=>p%p1;  p%itype=4
-        nb=11; nouts(7)=nouts(7)+nb; nout=nout+nb
+        p=>wqout(nout+12); p%name='ICM_vdPIP';   allocate(p%data(1,1,nea));  p%p1=>p%data(1,1,:); p%p1=0; db_vdPIP=>p%p1;    p%itype=4
+        nb=12; nouts(7)=nouts(7)+nb; nout=nout+nb
       endif
     endif
 
@@ -919,7 +920,7 @@ subroutine icm_vars_init
     pname((m+1):(m+8))=&
       & (/'vpatch0','vAw    ','vKNO3  ','vKPOM  ','vKTw   ',&
         & 'vRTw   ','vKhDO  ','vOCw   '/)
-    sp(m+1)%p=>vpatch0; sp(m+2)%p=>vAw;    sp(m+3)%p=>vKNO3;  sp(m+4)%p=>vKPOM;   sp(m+5)%p=>vKTw;  m=m+5
+    sp(m+1)%p=>vpatch0; sp(m+2)%p=>vAw;    sp(m+3)%p=>vKNO3;  sp(m+4)%p1=>vKPOM;   sp(m+5)%p=>vKTw;  m=m+5
     sp(m+1)%p=>vRTw;    sp(m+2)%p=>vKhDO;  sp(m+3)%p=>vOCw;   m=m+3
   endif
 
@@ -1047,9 +1048,12 @@ subroutine icm_vars_init
         if(jsav==2) then; EP(i)=0; TEP(i)=0; endif
       endif
     endif
-    if(jmarsh==1) then
-      vpatch(i)=nint(vpatch0); vmarsh(:,:,i)=vmarsh0; call get_canopy(i)
-      if(vpatch(i)==0) then; vmarsh(:,:,i)=0; vht(:,i)=0; endif
+    if(jmarsh/=0) then
+      vpatch(i)=nint(vpatch0)
+      if(jmarsh==1) then
+        vmarsh(:,:,i)=vmarsh0; call get_canopy(i)
+        if(vpatch(i)==0) then; vmarsh(:,:,i)=0; vht(:,i)=0; endif
+      endif
     endif
     if(iBA==1) then
       gpatch(i)=nint(gpatch0); gBA(i)=gBA0
