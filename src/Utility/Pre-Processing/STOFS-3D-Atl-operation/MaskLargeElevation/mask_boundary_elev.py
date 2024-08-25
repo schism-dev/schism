@@ -1,15 +1,16 @@
 import xarray
 import numpy as np
-from pylib import schism_grid, grd2sms
+from pylib_essentials.schism_file import grd2sms
+# from pylib import schism_grid
+from spp_essentials.Hgrid_extended import read_schism_hgrid_cached as schism_grid
 from schism_py_pre_post.Geometry.inpoly import find_node_in_shpfiles
 import os
 from netCDF4 import Dataset
 
 def make_mask(hg: schism_grid, high_ground_thres=-19.0, additional_mask_file=None):
-    
+
     hg.compute_bnd()
     hg.compute_node_ball()
-    # hg.save('/sciclone/schism10/feiye/STOFS3D-v4/Inputs/v4_20220715_update/hgrid.pkl')
 
     # find nodes near lbnd
     lbnd_nd_idx = np.hstack(hg.ilbn)
@@ -71,8 +72,9 @@ def diagnose_mask(imask: np.ndarray):
 
 
 if __name__ == '__main__':
-    hg = schism_grid('/sciclone/schism10/feiye/STOFS3D-v4/Inputs/v4_20220715_update/hgrid.pkl')
+    hg = schism_grid('./hgrid.ll')
 
     imask = make_mask(hg, high_ground_thres=-19.0, additional_mask_file='./Shapefiles/additional_masks.shp')
-    write_mask_nc(imask, outputfile='/sciclone/schism10/feiye/STOFS3D-v4/Shared_with_NOAA/Mask_lbnd/lbnd_node_mask1.nc')
-    
+    write_mask_nc(imask, outputfile='./lbnd_node_mask.nc')
+    hg.save(value=imask, fname='./hgrid_masked.gr3')  # diagnostic output
+

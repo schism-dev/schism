@@ -19,14 +19,18 @@ from typing import Any
 
 from dataclasses import dataclass, field
 from dateutil import parser
-import psutil
 import numpy as np
-from netCDF4 import Dataset
+from netCDF4 import Dataset   # pylint: disable=no-name-in-module
 
 from generate_adcirc import split_quads
 
 
-process = psutil.Process(os.getpid())
+# set to True to enable memory diagnostic mode
+# this will print memory usage at different stages of the script
+MEM_DIAG_MODE = False
+if MEM_DIAG_MODE:
+    import psutil
+    process = psutil.Process(os.getpid())
 
 
 @dataclass
@@ -236,9 +240,10 @@ def main():
 
     sid = args.stack
     outdir = args.output_dir
-    mem_save_mode = args.mem_save_mode.lower() in ['true', '1', 't', 'y', 'yes']
+    MEM_SAVE_MODE = args.mem_save_mode.lower() in ['true', '1', 't', 'y', 'yes']
 
-    print(f'Memory saving mode: {mem_save_mode}')
+    print(f'Diagnostics mode: {MEM_DIAG_MODE}')
+    print(f'Memory saving mode: {MEM_SAVE_MODE}')
     os.makedirs(outdir, exist_ok=True)
 
     # --------------------- specify schism outputs ---------------------
@@ -252,7 +257,8 @@ def main():
         'horizontalVelY': Dataset(f"{fpath}/outputs/horizontalVelY_{sid}.nc")['horizontalVelY'],
         'zCoordinates': Dataset(f'{fpath}/outputs/zCoordinates_{sid}.nc')['zCoordinates']
     }
-    print(f"Memory usage before reading files: {process.memory_info().rss / 1024 ** 2:.2f} MB")
+    if MEM_DIAG_MODE:
+        print(f"Memory usage before reading files: {process.memory_info().rss / 1024 ** 2:.2f} MB")
 
     # --------------------- basic info, should be same for all input files ---------------------
     # process time information from out2d_*.nc; the time info is the same for all files
@@ -298,7 +304,8 @@ def main():
     # Done processing basic information
     ds.close()
 
-    print(f"Memory usage after extracting basic info: {process.memory_info().rss / 1024 ** 2:.2f} MB")
+    if MEM_DIAG_MODE:
+        print(f"Memory usage after extracting basic info: {process.memory_info().rss / 1024 ** 2:.2f} MB")
 
     # write the output file
     with Dataset(f"{outdir}/schout_UV4.5m_{sid}.nc", "w", format="NETCDF4") as fout:
@@ -370,7 +377,7 @@ def main():
             fout[var_name].units = var_info['units']
 
         # extract native 2D variables and 3D variables interpolated to specified depths
-        if not mem_save_mode:
+        if not MEM_SAVE_MODE:
             # native variables that don't need to be interpolated are read in at all time steps
             last_var = ''
             for var_name, var_info in native_var_dict.items():
@@ -390,12 +397,13 @@ def main():
                     data = data_3d[:, np.arange(n_points), bottom_index_node+1]
 
                 data = mask_var(data, idry)
-                print(f"Memory usage after extracting {var_name}: {process.memory_info().rss / 1024 ** 2:.2f} MB")
+                if MEM_DIAG_MODE:
+                    print(f"Memory usage after extracting {var_name}: {process.memory_info().rss / 1024 ** 2:.2f} MB")
                 fout[var_name][:] = data
                 print(f"Processing {var_name} took {time()-t1} seconds\n")
 
         # do interpolation time-step by time-step to save memory
-        if mem_save_mode:
+        if MEM_SAVE_MODE:
             var_dict = {**native_var_dict, **interpolated_var_dict}
         else:
             var_dict = interpolated_var_dict
@@ -440,7 +448,8 @@ def main():
                 fout[var_name][it, :] = data
 
                 print(f"Processing {var_name} took {time()-t_var} seconds")
-                print(f"Memory usage after extracting {var_name}: {process.memory_info().rss / 1024 ** 2:.2f} MB")
+                if MEM_DIAG_MODE:
+                    print(f"Memory usage after extracting {var_name}: {process.memory_info().rss / 1024 ** 2:.2f} MB")
 
             print(f"Processing time step {it+1} took {time()-t_it} seconds\n")
 

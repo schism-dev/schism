@@ -93,11 +93,11 @@ module schism_glbl
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,iveg, &
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
-                  &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_veg,iof_icm_sed,iof_icm_ba,&
-                  &iof_icm_clam,iof_icm_dbg,nbins_veg_vert
+                  &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm,iof_icm_ba,&
+                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
-     &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_cos,iof_fib, &
+     &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd,iadjust_mass_consv,lev_tr_source2(:)
 
   real(rkind),save :: dt,h0,drampbc,drampwind,drampwafo,dramp,dramp_ss,wtiminc,npstime,npstiminc, &
@@ -414,7 +414,7 @@ module schism_glbl
   real(rkind),save,allocatable :: bdy_frc(:,:,:) !body force at prism center Q_{i,k}
   real(rkind),save,allocatable :: flx_sf(:,:) !surface b.c. \kappa*dC/dz = flx_sf (at element center)
   real(rkind),save,allocatable :: flx_bt(:,:) !bottom b.c.
-  real(rkind),save,allocatable :: hdif(:,:) !horizontal diffusivity
+  real(rkind),save,allocatable :: hdif(:) !horizontal diffusivity
   real(rkind),save,allocatable :: tr_nd0(:,:,:) ! Initial tracer conc. at nodes
   real(rkind),save,allocatable :: rkai_num(:,:,:) !DVD (numerical mixing) [C^2]/sec
   real(rkind),save,allocatable :: eta1(:)   ! Elevation at nodes at previous timestep
@@ -594,7 +594,7 @@ module schism_glbl
 !  real(rkind) :: vclose_surf_frac   ! 1.0:flux applied at surface, 0.5:half at top half at bottom
 
 ! WWM & WW3
-  CHARACTER(LEN=3) :: RADFLAG
+  character(len=3) :: RADFLAG
   integer,save :: msc2,mdc2
   real(rkind),save,allocatable :: wwave_force(:,:,:), jpress(:), sbr(:,:), sbf(:,:), srol(:,:), sds(:,:), sveg(:,:), eps_w(:), eps_r(:),eps_br(:)
   real(rkind),save,allocatable :: stokes_hvel(:,:,:), stokes_wvel(:,:), stokes_hvel_side(:,:,:), stokes_wvel_side(:,:)
@@ -664,9 +664,9 @@ module schism_glbl
 ! Marsh model
   integer,save,allocatable     :: imarsh(:),ibarrier_m(:)
 
-! SAV
-  real(rkind),save,allocatable     :: veg_alpha0(:),veg_h(:),veg_nv(:),veg_di(:),veg_cd(:)
-
+! Vegetation
+  real(rkind),save,allocatable     :: veg_alpha0(:),veg_h(:),veg_nv(:),veg_di(:),veg_cd(:), &
+ &veg_h_unbent(:),veg_nv_unbent(:),veg_di_unbent(:)
 !Tsinghua group:0825
   REAL(rkind),save :: Cbeta,beta0,c_miu,Cv_max,ecol,ecol1,sigf,sigepsf,Ceps1,Ceps2,Ceps3,Acol,sig_s,fi_c,ksi_c,kpz !1013+kpz
   REAL(rkind),save,ALLOCATABLE :: Dpzz(:,:)     !at nodes & whole levels 

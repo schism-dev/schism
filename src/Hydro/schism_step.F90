@@ -48,7 +48,7 @@
 #endif
 
 #ifdef USE_ICM
-      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,wqout,nhot_icm,wqhot,isav_icm,iveg_icm,sht
+      use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,wqout,nhot_icm,wqhot,isav_icm,sht
 #endif
 
 #ifdef USE_COSINE
@@ -772,6 +772,7 @@
       if(mod(it,nstep_wwm)==0) then
         wtmp1=mpi_wtime()
         if(myrank==0) write(16,*)'starting WWM'
+        !Overwrite SCHISM's RADFLAG by WWM's
         call WWM_II(it,icou_elfe_wwm,dt,nstep_wwm,RADFLAG)
 
 !       Outputs (via datapool):
@@ -2333,7 +2334,7 @@
 !      if(myrank==0) write(16,*) 'done recomputing levels after reading schout...'
 
 !=================================================================================
-      else !normal: not bypass solver
+      else !normal: not bypass solver for transport only
 !=================================================================================
 
       if(nchi==1) then 
@@ -2495,7 +2496,7 @@
 !$OMP tmp,dzz,shearbt,rzbt,q2ha,xlha,cpsi3,zctr2,dists,distb,fwall,cpsi2p,xlmax,q2fs,q2bot,xlbot, &
 !$OMP tmp0,zsurf,xlfs,nqdim,kin,alow,bdia,cupp,gam2,prod,buoy,diss,soln2,gam,q2tmp,psi_n,psi_n1, &
 !$OMP q2l,xltmp,upper,xl_max,vd,td,qd1,qd2,zt,veg_prod,zz1,zrat,ub2,vb2,vmag1,vmag2,sum1,sum2, &
-!$OMP ifl,cff1,cff2,cff3,rl10)
+!$OMP ifl,cff1,cff2,cff3,rl10,wtmp2)
 
       if(nchi/=0) then
 !$OMP   do
@@ -2518,42 +2519,71 @@
       enddo !i
 !$OMP end do
 
-!     Add vertical variation to veg_alpha and compute vertical mean
+!     Add vertical variation to veg_alpha and compute vertical mean etc
       if(iveg/=0) then
-!$OMP do
+        if(iveg==1) then !specify vertical variation
+!$OMP     do
+          do i=1,npa
+            if(idry(i)==1) then
+              veg_alpha3D(:,i)=veg_alpha0(i)
+            else !wet
+              do k=kbp(i),nvrt
+                rl10=znl(k,i)-znl(kbp(i),i) !>=0
+                if(rl10>=veg_vert_z(nbins_veg_vert+1)) then
+                  cff1=veg_vert_scale_cd(nbins_veg_vert+1)
+                  cff2=veg_vert_scale_N(nbins_veg_vert+1)
+                  cff3=veg_vert_scale_D(nbins_veg_vert+1)
+                else
+                  ifl=0
+                  do kk=1,nbins_veg_vert
+                    if(rl10>=veg_vert_z(kk).and.rl10<=veg_vert_z(kk+1)) then
+                      zrat=(rl10-veg_vert_z(kk))/(veg_vert_z(kk+1)-veg_vert_z(kk))
+                      ifl=kk
+                      exit
+                    endif !znl
+                  enddo !kk
+                  if(ifl==0) then
+                    write(errmsg,*)'STEP: veg vert failed,',veg_vert_z
+                    call parallel_abort(errmsg) 
+                  endif
+                  cff1=veg_vert_scale_cd(ifl)*(1.d0-zrat)+veg_vert_scale_cd(ifl+1)*zrat
+                  cff2=veg_vert_scale_N(ifl)*(1.d0-zrat)+veg_vert_scale_N(ifl+1)*zrat
+                  cff3=veg_vert_scale_D(ifl)*(1.d0-zrat)+veg_vert_scale_D(ifl+1)*zrat
+                endif !rl10
+  
+                veg_alpha3D(k,i)=veg_alpha0(i)*cff1*cff2*cff3
+              enddo !k
+            endif !idry
+          enddo !i=1,npa
+!$OMP     end do
+
+        else !Ganthy (iveg=2)
+          !Modify canopy height, diameter, and density
+!$OMP     do
+          do i=1,npa
+            !Make sure there is veg on this node
+            if(veg_h_unbent(i)>0.d0) then
+              wtmp2=sqrt(dav(1,i)**2.d0+dav(2,i)**2.d0)*100.d0 !cm/s
+              veg_h(i)=0.72d-2*(4.657d0-0.158d0*wtmp2+0.262d0*veg_lai-0.011d0*veg_lai*wtmp2+ &
+     &0.0022d0*wtmp2*wtmp2+0.048d0*veg_lai*veg_lai)-0.00784d0
+              veg_h(i)=max(veg_h(i),1.d-2) !impose min of 1cm
+
+              wtmp2=veg_cw*veg_di_unbent(i)*veg_h_unbent(i)/veg_h(i) !\phi_b
+              veg_di(i)=(veg_di_unbent(i)+wtmp2)*0.5d0
+              wtmp2=max(0.d0,veg_h_unbent(i)-veg_h(i)) !surplus height
+              veg_nv(i)=veg_nv_unbent(i)*(1.d0+wtmp2/veg_h(i))
+            endif !veg_h_unbent
+            veg_alpha3D(:,i)=0.5d0*veg_di(i)*veg_nv(i)*veg_cd(i)
+          enddo !i
+!$OMP     end do
+        endif !iveg
+  
+        !Compute mean
+!$OMP   do
         do i=1,npa
           if(idry(i)==1) then
-            veg_alpha3D(:,i)=veg_alpha0(i)
             veg_alpha_vert_mean(i)=veg_alpha0(i)
           else !wet
-            do k=kbp(i),nvrt
-              rl10=znl(k,i)-znl(kbp(i),i) !>=0
-              if(rl10>=veg_vert_z(nbins_veg_vert+1)) then
-                cff1=veg_vert_scale_cd(nbins_veg_vert+1)
-                cff2=veg_vert_scale_N(nbins_veg_vert+1)
-                cff3=veg_vert_scale_D(nbins_veg_vert+1)
-              else
-                ifl=0
-                do kk=1,nbins_veg_vert
-                  if(rl10>=veg_vert_z(kk).and.rl10<=veg_vert_z(kk+1)) then
-                    zrat=(rl10-veg_vert_z(kk))/(veg_vert_z(kk+1)-veg_vert_z(kk))
-                    ifl=kk
-                    exit
-                  endif !znl
-                enddo !kk
-                if(ifl==0) then
-                  write(errmsg,*)'STEP: veg vert failed,',veg_vert_z
-                  call parallel_abort(errmsg) 
-                endif
-                cff1=veg_vert_scale_cd(ifl)*(1.d0-zrat)+veg_vert_scale_cd(ifl+1)*zrat
-                cff2=veg_vert_scale_N(ifl)*(1.d0-zrat)+veg_vert_scale_N(ifl+1)*zrat
-                cff3=veg_vert_scale_D(ifl)*(1.d0-zrat)+veg_vert_scale_D(ifl+1)*zrat
-              endif !rl10
-  
-              veg_alpha3D(k,i)=veg_alpha0(i)*cff1*cff2*cff3
-            enddo !k
-  
-            !Mean
             zt=znl(kbp(i),i)+veg_h(i) !top
             sum1=0.d0
             sum2=0.d0
@@ -2572,7 +2602,7 @@
             endif
           endif !idry
         enddo !i=1,npa
-!$OMP end do
+!$OMP   end do
       endif !iveg/=0
 
 !************************************************************************
@@ -2885,14 +2915,15 @@
 
           !SAV production term \alpha*|u|^3*Hev()
           veg_prod(k)=0.d0 !init @half level
-          if(iveg==1.and.zt>znl(k-1,j)) then !partial or full SAV layer
+          if(iveg/=0.and.zt>znl(k-1,j)) then !partial or full veg layer
             zz1=min(zt,znl(k,j))
             zrat=(zz1-znl(k-1,j))/(znl(k,j)-znl(k-1,j)) !\in (0,1]
-            ub2=(1.d0-zrat)*uu2(k-1,j)+zrat*uu2(k,j) !@top of SAV layer
+            ub2=(1.d0-zrat)*uu2(k-1,j)+zrat*uu2(k,j) !@top of canopy
             vb2=(1.d0-zrat)*vv2(k-1,j)+zrat*vv2(k,j)
             vmag2=sqrt(ub2*ub2+vb2*vb2)             
             vmag1=sqrt(uu2(k-1,j)**2.d0+vv2(k-1,j)**2.d0)
             !veg_prod(k)=veg_alpha(j)*(vmag1**3.d0+vmag2**3.d0)/2.d0
+            !=0 at places with no veg
             veg_prod(k)=(veg_alpha3D(k,j)+veg_alpha3D(k-1,j))*0.5d0*(vmag1**3.d0+vmag2**3.d0)/2.d0
           endif !iveg
 
@@ -5163,7 +5194,7 @@
         vmag1=sqrt(sdbt(1,kbs(i)+1,i)**2.d0+sdbt(2,kbs(i)+1,i)**2.d0)
         chi2(i)=Cd(i)*vmag1 !sqrt(sdbt(1,kbs(i)+1,i)**2+sdbt(2,kbs(i)+1,i)**2)
         chi(i)=chi2(i)
-        if(iveg==1) then
+        if(iveg/=0) then
           veg_alpha_sd=sum(veg_alpha_vert_mean(isidenode(1:2,i)))/2.d0
           veg_alpha_sd_bot=(veg_alpha3D(kbp(n1),n1)+veg_alpha3D(kbp(n2),n2))/2.d0
           chi(i)=chi(i)/(1.d0+veg_alpha_sd_bot*vmag1*dt)
@@ -5172,8 +5203,8 @@
 !       Calc consts in SAV model; make sure veg_[c2,beta]=0 at 2D, dry
 !       side, and emergent side
         uuint=0.d0 !\int_{-h}^{z_v} |u|dz / H^\alpha = \bar{|u|}^\alpha
-        if(iveg==1.and.nvrt-kbs(i)>1.and.veg_h_sd>0.d0) then !3D wet side with SAV
-          zctr2=zs(kbs(i),i)+veg_h_sd !top of SAV 
+        if(iveg/=0.and.nvrt-kbs(i)>1.and.veg_h_sd>0.d0) then !3D wet side with veg
+          zctr2=zs(kbs(i),i)+veg_h_sd !top of canopy
           do k=kbs(i),nvrt-1
             if(zctr2>zs(k,i)) then !partial or full SAV layer
               zz1=min(zctr2,zs(k+1,i))
@@ -5195,19 +5226,19 @@
 !          bb2=(-bigu1*bigu(2,i)+bigv1*bigu(1,i))/max(small1*1.e-2,vmag2) !b'
 
           veg_c2(i)=veg_alpha_sd*dt*uuint !>=0
-          if(veg_h_sd<0.99d0*htot) then !3D wet submergent side with SAV
+          if(veg_h_sd<0.99d0*htot) then !3D wet submergent side with veg
             tmpx2=max(1.d-5,chi2(i)*vmag1/grav/htot) !energy gradient
             !\beta_2; arguments checked
             tmpy2=sqrt(sqrt(veg_nv_sd)/veg_h_sd)*(-0.32d0-0.85d0*log10((htot-veg_h_sd)/veg_h_sd*tmpx2))
             veg_beta(i)=exp(tmpy2*(zctr2-zs(kbs(i)+1,i)))-1.d0 !\beta
             veg_beta(i)=min(10.d0,max(veg_beta(i),0.d0))
           endif !veg_h_sd
-        endif !iveg==1.
+        endif !iveg
 
         !hhat is \breve{H} in notes
         if(nvrt-kbs(i)==1) then !2D
           tmp=htot+chi2(i)*dt
-          if(iveg==1) tmp=tmp+veg_alpha_sd*vmag1*htot*dt
+          if(iveg/=0) tmp=tmp+veg_alpha_sd*vmag1*htot*dt
           if(tmp<=0.d0) then
             write(errmsg,*)'Impossible dry 53:',tmp,htot,iplg(isidenode(1:2,i))
             call parallel_abort(errmsg)
@@ -5216,7 +5247,7 @@
         else !3D
           hhat(i)=htot-chi(i)*dt
 !          hhat(i)=hhat2(i)
-          if(iveg==1) then
+          if(iveg/=0) then
             if(veg_h_sd<0.99d0*htot) then !submergent
               veg_c=veg_c2(i)/(1.d0+veg_c2(i))
               hhat(i)=hhat(i)-veg_c*(veg_h_sd+veg_beta(i)*chi(i)*dt)
@@ -5533,7 +5564,7 @@
           isd=elside(j,i)
           htot=dps(isd)+sum(eta2(isidenode(1:2,isd)))/2.d0 !>0
           veg_h_sd=sum(veg_h(isidenode(1:2,isd)))/2.d0
-          zctr2=zs(kbs(isd),isd)+veg_h_sd !top of SAV
+          zctr2=zs(kbs(isd),isd)+veg_h_sd !top of canopy
           if(nvrt==kbs(isd)+1) then !2D
             !coefficients applied to 2/3D case 
             cff1=hhat(isd)/htot 
@@ -5544,7 +5575,7 @@
             cff1=1.d0
             cff2=1.d0
             cff3=0.d0
-            if(iveg==1) then
+            if(iveg/=0) then
               if(veg_h_sd<0.99d0*htot) then !submergent 
                 cff1=1
                 veg_c=veg_c2(isd)/(1.d0+veg_c2(isd))
@@ -5576,7 +5607,7 @@
               wy2=(sdbt(2,k,isd)+sdbt(2,k-1,isd))/2.d0*(zs(k,isd)-zs(k-1,isd))
               tmp1=tmp1+wx2
               tmp2=tmp2+wy2
-              if(iveg==1.and.zctr2>zs(k-1,isd)) then
+              if(iveg/=0.and.zctr2>zs(k-1,isd)) then
                 zrat=min(1.d0,(zctr2-zs(k-1,isd))/(zs(k,isd)-zs(k-1,isd)))
                 xtmp=xtmp+wx2*zrat
                 ytmp=ytmp+wy2*zrat
@@ -5621,7 +5652,7 @@
           botf1=cori(isd)*sv2(kbs(isd)+1,isd) !f_b_x
           botf2=-cori(isd)*su2(kbs(isd)+1,isd)
           bigfa1=0.d0; bigfa2=0.d0 !F^\alpha
-          if(iveg==1.and.nvrt>kbs(isd)+1) then !3D
+          if(iveg/=0.and.nvrt>kbs(isd)+1) then !3D
             do k=kbs(isd)+1,nvrt
               if(zctr2>zs(k-1,isd)) then
                 wx2=(zs(k,isd)-zs(k-1,isd))*(su2(k,isd)+su2(k-1,isd))/2.d0
@@ -5654,7 +5685,7 @@
             bigf1=bigf1+wx2
             bigf2=bigf2+wy2
 
-            if(iveg==1.and.nvrt>kbs(isd)+1.and.zctr2>zs(k-1,isd)) then
+            if(iveg/=0.and.nvrt>kbs(isd)+1.and.zctr2>zs(k-1,isd)) then
               zrat=min(1.d0,(zctr2-zs(k-1,isd))/(zs(k,isd)-zs(k-1,isd)))
               bigfa1=bigfa1+wx2*zrat
               bigfa2=bigfa2+wy2*zrat
@@ -5675,7 +5706,7 @@
             bigf1=bigf1+wx2
             bigf2=bigf2+wy2
 
-            if(iveg==1.and.nvrt>kbs(isd)+1.and.zctr2>zs(k-1,isd)) then
+            if(iveg/=0.and.nvrt>kbs(isd)+1.and.zctr2>zs(k-1,isd)) then !3D
               zrat=min(1.d0,(zctr2-zs(k-1,isd))/(zs(k,isd)-zs(k-1,isd)))
               bigfa1=bigfa1+wx2*zrat
               bigfa2=bigfa2+wy2*zrat
@@ -6525,7 +6556,7 @@
 
 !	Coefficient matrix 
         ndim=nvrt-kbs(j)
-        zctr2=zs(kbs(j),j)+veg_h_sd !top of SAV
+        zctr2=zs(kbs(j),j)+veg_h_sd !top of canopy
         do k=kbs(j)+1,nvrt
           kin=k-kbs(j) !eq. #
           alow(kin)=0.d0 
@@ -6533,7 +6564,7 @@
           bdia(kin)=0.d0
           if(k<nvrt) then
             cff1=1.d0 !init \bar{c^{k+1}}
-            if(iveg==1.and.zctr2>zs(k,j)) then
+            if(iveg/=0.and.zctr2>zs(k,j)) then
               zz1=min(zctr2,zs(k+1,j))
               zrat=(zz1-zs(k,j))/(zs(k+1,j)-zs(k,j)) !\in (0,1]
               ub2=(1.d0-zrat)*swild98(1,k,j)+zrat*swild98(1,k+1,j) !u@top level
@@ -6552,7 +6583,7 @@
 
           if(k>kbs(j)+1) then
             cff1=1.d0 !init \bar{c^k}
-            if(iveg==1.and.zctr2>zs(k-1,j)) then
+            if(iveg/=0.and.zctr2>zs(k-1,j)) then
               zz1=min(zctr2,zs(k,j))
               zrat=(zz1-zs(k-1,j))/(zs(k,j)-zs(k-1,j)) !\in (0,1]
               ub2=(1.d0-zrat)*swild98(1,k-1,j)+zrat*swild98(1,k,j) !u@top layer
@@ -7926,16 +7957,16 @@
         call ecosystem(it)
 
         !feedback from ICM to Hydro 
-        if(iveg==1.and.isav_icm==1)then
+        if(iveg/=0.and.isav_icm/=0)then
           !Convert hcansav to nodes
           do i=1,np
-            veg_h(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
+            veg_h_unbent(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
           enddo !i
           call exchange_p2d(veg_h)
 
           do i=1,npa
             !Do not allow SAV to grow out of init patch for the time being
-            if(veg_nv(i)==0.d0.or.veg_alpha0(i)==0.d0) then
+            if(veg_nv_unbent(i)==0.d0.or.veg_alpha0(i)==0.d0) then
               veg_nv(i)=0.d0; veg_alpha0(i)=0.d0; veg_h(i)=0.d0
             endif
           enddo !i
@@ -8182,10 +8213,6 @@
         do j=1,nne(i)
           ie=indel(j,i)
           if(imarsh(ie)==1) then !iveg/=0
-!            if(iveg==0) then
-!              Cdp(i)=0.05d0
-!              rough_p(i)=1.d-2
-!            else !/=0
             veg_di(i)=veg_di0
             veg_h(i)=veg_h0
             veg_nv(i)=veg_nv0
@@ -10340,25 +10367,22 @@
         names_dim(1:11)=(/one_dim,two_dim,three_dim,four_dim,five_dim,six_dim,seven_dim, &
                          & eight_dim,nine_dim,nvrt_dim,elem_dim/)
         do i=1,nhot_icm
-          if(wqhot(i)%ndim==1) then
-            var1d_dim(1)=elem_dim
-            j=nf90_def_var(ncid_hot,trim(adjustl(wqhot(i)%name)),NF90_DOUBLE,var1d_dim,wqhot(i)%id)
-          elseif(wqhot(i)%ndim==2) then
+          do m=1,wqhot(i)%ndim !get variable dimension info.
             do k=1,11
-              if(wqhot(i)%dims(1)==nums_dim(k)) then
-                var2d_dim(1)=names_dim(k); exit
+              if(wqhot(i)%dims(m+(3-wqhot(i)%ndim))==nums_dim(k)) then
+                var3d_dim(m)=names_dim(k); exit
               endif
             enddo !k
-            var2d_dim(2)=elem_dim
-            j=nf90_def_var(ncid_hot,trim(adjustl(wqhot(i)%name)),NF90_DOUBLE,var2d_dim,wqhot(i)%id)
-          endif !wqhot(i)%ndim
+          enddo !m
+          j=nf90_def_var(ncid_hot,trim(adjustl(wqhot(i)%name)),NF90_DOUBLE,var3d_dim(1:wqhot(i)%ndim),wqhot(i)%id)
         enddo !i
         j=nf90_enddef(ncid_hot)
 
         !put variables
         do i=1,nhot_icm
           if(wqhot(i)%ndim==1) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p1),(/1/),(/ne/))
-          if(wqhot(i)%ndim==2) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p2),(/1,1/),(/wqhot(i)%dims(1),ne/))
+          if(wqhot(i)%ndim==2) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p2),(/1,1/),(/wqhot(i)%dims(2),ne/))
+          if(wqhot(i)%ndim==3) j=nf90_put_var(ncid_hot,wqhot(i)%id,dble(wqhot(i)%p3),(/1,1,1/),(/wqhot(i)%dims(1:2),ne/))
         enddo !i
 #endif /*USE_ICM*/
 

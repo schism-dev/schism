@@ -576,19 +576,41 @@ contains
      return
    end subroutine ph_f
 
-   function signf(a)
-   !----------------------------------------------
-   !step function
-   !----------------------------------------------
+   function julian(year,month,day)
+     !convert to julian date (Fliegel and van Flandern, 1968)
      implicit none
-     real(rkind), intent(in) :: a
-     real(rkind) :: signf
+     integer,intent(in) :: year,month,day
+     integer :: julian,I,J,K
 
-     if(a>=0) then
-       signf=1.d0
-     else
-       signf=-1.d0
-     endif
-   end function signf
+     I=year; J=month; K=day
+     julian= K-32075+1461*(I+4800+(J-14)/12)/4+367*(J-2-(J-14)/12*12)/12-3*((I+4900+(J-14)/12)/100)/4
+   end function julian
 
+   subroutine datetime(julian_num,year,month,day,doy)
+     implicit none
+     integer,intent(in) :: julian_num !julian date
+     integer,intent(out) :: year,month,day,doy !year,month,day,doy
+     integer :: I,J,K,L,N
+
+     !convert julian date to calendar date (Fliegel and van Flandern, 1968)
+     L= julian_num+68569;    N= 4*L/146097;     L= L-(146097*N+3)/4
+     I= 4000*(L+1)/1461001;  L= L-1461*I/4+31;  J= 80*L/2447
+     K= L-2447*J/80;         L= J/11;           J= J+2-12*L;    I= 100*(N-49)+I+L
+     year=I;  month=J; day=K;  doy=julian_num-julian(year,1,1)+1
+   end subroutine datetime
+
+   !function signf(a)
+   !!----------------------------------------------
+   !!step function
+   !!----------------------------------------------
+   !  implicit none
+   !  real(rkind), intent(in) :: a
+   !  real(rkind) :: signf
+
+   !  if(a>=0) then
+   !    signf=1.d0
+   !  else
+   !    signf=-1.d0
+   !  endif
+   !end function signf
 end module 

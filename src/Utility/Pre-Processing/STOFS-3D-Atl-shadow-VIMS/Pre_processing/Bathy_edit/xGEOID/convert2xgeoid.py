@@ -4,17 +4,11 @@ import subprocess
 from pathlib import Path
 from glob import glob
 
-import re
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
 
 from pylib import read_schism_hgrid, inside_polygon, read_schism_bpfile, grd2sms
-
-
-def extract_trailing_numbers(s):
-    match = re.search(r'\d+$', s)
-    return match.group() if match else None
 
 
 def prep_folder(wdir):
@@ -216,6 +210,10 @@ def convert2xgeoid(wdir, hgrid_obj, diag_output=None):
     Wrapper function for vdatum.jar to convert the hgrid depth to xGEOID20b
     Review the workflow and test it manually before using the script,
     because the script may not work for all cases.
+
+    return:
+    hgrid_obj: updated hgrid object with the converted depths
+    depth_diff: converted depth - original depth
     '''
 
     print("Converting to xGEOID20b ... \n")

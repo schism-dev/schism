@@ -1,0 +1,2 @@
+module load netcdf/4.9.2
+###Use defaults for others

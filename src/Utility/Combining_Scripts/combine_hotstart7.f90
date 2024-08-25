@@ -144,6 +144,10 @@ subroutine combine_hotstart7(istep)
 
   !Query # of vars
   iret=nf90_open('hotstart_000000_'//it_char(1:it_len)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+  if(iret.ne.0) then
+    write(*,*) 'Cannot find the hotstart file to read. Check the input information.'
+    call exit(iret)
+  endif
   iret=nf90_inquire(ncid2,nDimensions=ndimensions,nVariables=nvars)
   write(*,*)'nvars=',nvars,ndimensions
   allocate(idims(ndimensions),dim_name(ndimensions),dimids(ndimensions))

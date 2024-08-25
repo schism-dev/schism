@@ -208,11 +208,12 @@
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
-     &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D
+     &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
+     &RADFLAG,niter_hdif
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
-     &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_cbp,iof_icm_sav,iof_icm_veg,iof_icm_sed, &
-     &iof_icm_ba,iof_icm_clam,iof_icm_dbg,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
+     &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm, &
+     &iof_icm_ba,iof_icm_clam,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta,iof_ugrid
 
 !-------------------------------------------------------------------------------
@@ -439,7 +440,7 @@
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), &
-     &iof_icm_cbp(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
+     &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
      &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1),stat=istat)
@@ -497,18 +498,20 @@
       iprecip_off_bnd=0
       model_type_pahm=10
       stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
-      RADFLAG='VOR'
+      RADFLAG='LON' !if WWM is used, this will be overwritten
+      niter_hdif=1
       veg_vert_z=(/((i-1)*0.4d0,i=1,nbins_veg_vert+1)/) ![m]
       veg_vert_scale_cd=(/(1.0d0,i=1,nbins_veg_vert+1)/) !scaling [-]
       veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
       veg_vert_scale_D=(/(1.0d0,i=1,nbins_veg_vert+1)/)
+      veg_lai=1.d0; veg_cw=1.5d0
 
       !Output elev, hvel by detault
       nc_out=1
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25:26)=1
-      iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_cbp=0; iof_icm_sav=0
-      iof_icm_veg=0; iof_icm_sed=0; iof_icm_ba=0; iof_icm_clam=0;   iof_icm_dbg=0; iof_cos=0; iof_fib=0; iof_sed2d=0
+      iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_srm=0; iof_icm_sav=0
+      iof_icm_marsh=0; iof_icm_sfm=0; iof_icm_ba=0; iof_icm_clam=0; iof_cos=0; iof_fib=0; iof_sed2d=0
       iof_ice=0; iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
 
       read(15,nml=OPT)
@@ -1119,12 +1122,12 @@
 !      endif
 
 !     Vegetation
-      if(iveg/=0.and.iveg/=1) then
+      if(iveg<0.or.iveg>2) then
         write(errmsg,*)'INIT: illegal iveg,',iveg
         call parallel_abort(errmsg)
       endif
 
-      if(iveg/=0) then
+      if(iveg==1) then !specify vertical variation
         do k=1,nbins_veg_vert
           if(veg_vert_z(k)>=veg_vert_z(k+1)) then
             write(errmsg,*)'INIT: veg_vert_z not ascending,',veg_vert_z
@@ -1387,16 +1390,17 @@
          &  pr2(npa),airt2(npa),shum2(npa),pr(npa),sflux(npa),srad(npa),tauxz(npa),tauyz(npa), &
          &  fluxsu(npa),fluxlu(npa),hradu(npa),hradd(npa),cori(nsa),Cd(nsa), &
          &  Cdp(npa),rmanning(npa),rough_p(npa),dfv(nvrt,npa),elev_nudge(npa),uv_nudge(npa), &
-         & hdif(nvrt,npa),shapiro(nsa),shapiro_smag(nsa),fluxprc(npa),fluxevp(npa),prec_snow(npa),prec_rain(npa), & 
+         & hdif(npa),shapiro(nsa),shapiro_smag(nsa),fluxprc(npa),fluxevp(npa),prec_snow(npa),prec_rain(npa), & 
          &  sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
          &  tr_nudge(natrm,npa), & 
          &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa),epsilon2_elem(ne), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
-         & surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),veg_alpha0(npa), &
-         & veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
-         & wwave_force(2,nvrt,nsa),btaun(npa), &
-         & rsxx(npa), rsxy(npa), rsyy(npa), stat=istat)
+         &  surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),veg_alpha0(npa), &
+         &  veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
+         &  veg_h_unbent(npa),veg_nv_unbent(npa),veg_di_unbent(npa), &
+         &  wwave_force(2,nvrt,nsa),btaun(npa), &
+         &  rsxx(npa), rsxy(npa), rsyy(npa), stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -1708,7 +1712,7 @@
       tempmin=-2.d0; tempmax=40.d0; saltmin=0.d0; saltmax=42.d0
       pr1=0.d0; pr2=0.d0; pr=prmsl_ref !uniform pressure (the const. is unimportant)
       uthnd=-99.d0; vthnd=-99.d0; eta_mean=-99.d0; !uth=-99.d0; vth=-99.d0; !flags
-      elevmax=-1.d34; dav_maxmag=-1.d0; dav_max=0.d0
+      elevmax=-1.d34; dav=0.d0; dav_maxmag=-1.d0; dav_max=0.d0
       tr_el=0.d0
       timer_ns=0.d0
       iwsett=0; wsett=0.d0 !settling vel.
@@ -3013,7 +3017,7 @@
      &call parallel_abort('Check hdif.gr3')
           do i=1,np_global
             read(32,*)j,xtmp,ytmp,tmp 
-            if(tmp<0.d0) then
+            if(tmp<0.d0.or.tmp>0.2d0) then
               write(errmsg,*)'hdif out of bound:',tmp,i
               call parallel_abort(errmsg)
             endif
@@ -3024,7 +3028,7 @@
         call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
          
         do i=1,np_global
-          if(ipgl(i)%rank==myrank) hdif(:,ipgl(i)%id)=buf3(i) !tmp
+          if(ipgl(i)%rank==myrank) hdif(ipgl(i)%id)=buf3(i) !tmp
         enddo !i
       endif !ihdif/=0
       
@@ -3752,12 +3756,12 @@
       enddo !k
 
 !     Vegetation inputs: veg_*.gr3
-      veg_alpha0=0.d0 !=D*Nv*Cdv/2; init; D is diameter; Cdv is form drag (veg_cd)
+      veg_alpha0=0.d0 !=D*Nv*Cdv/2; init; D is diameter or leaf width; Cdv is form drag (veg_cd)
       veg_h=0.d0 !veg height; not used at 2D sides
       veg_nv=0.d0 !Nv: # of stems per m^2
       veg_di=0.d0 !D [m]
       veg_cd=0.d0 !Cdv : drag coefficient
-      if(iveg==1) then
+      if(iveg/=0) then
         !\lambda=D*Nv [1/m]
         if(myrank==0) then
           open(10,file=in_dir(1:len_in_dir)//'veg_D.gr3',status='old')
@@ -3791,7 +3795,7 @@
         enddo !i
 
         if(myrank==0) then
-          !SAV height [m]
+          !Veg height [m]
           open(32,file=in_dir(1:len_in_dir)//'veg_h.gr3',status='old')
           !Drag coefficient
           open(30,file=in_dir(1:len_in_dir)//'veg_cd.gr3',status='old')
@@ -3827,6 +3831,11 @@
           endif
         enddo !i
 
+        !Save unbent (original) values
+        veg_h_unbent=veg_h
+        veg_nv_unbent=veg_nv
+        veg_di_unbent=veg_di
+
 #ifdef USE_MARSH
         !Assume constant inputs from .gr3; save these values
         veg_di0=veg_di(1); veg_h0=veg_h(1); veg_nv0=veg_nv(1); veg_cd0=veg_cd(1)
@@ -3842,7 +3851,7 @@
           endif
         enddo !i
 #endif
-      endif !iveg=1 
+      endif !iveg/=0
 
 !...  Surface min. mixing length for f.s. and max. for all; inactive 
 !      read(15,*) !xlmax00
@@ -5553,20 +5562,29 @@
 #ifdef USE_ICM
         do k=1,nhot_icm
           do m=1,wqhot(k)%dims(1)
-            if(myrank==0) then
-              j=nf90_inq_varid(ncid2,trim(adjustl(wqhot(k)%name)),mm)
-              if(j/=NF90_NOERR) call parallel_abort('hotstart.nc, ICM 1: '//trim(adjustl(wqhot(k)%name)))
-              if(wqhot(k)%ndim==1) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
-              if(wqhot(k)%ndim==2) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,1/),(/1,ne_global/))
-              if(j/=NF90_NOERR) call parallel_abort('hotstart.nc, ICM 2: '//trim(adjustl(wqhot(k)%name)))
-            endif
-            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-            do i=1,ne_global
-              if(iegl(i)%rank==myrank) then
-                if(wqhot(k)%ndim==1) wqhot(k)%p1(iegl(i)%id)=buf3(i)
-                if(wqhot(k)%ndim==2) wqhot(k)%p2(m,iegl(i)%id)=buf3(i)
+            do l=1,wqhot(k)%dims(2)
+              if(myrank==0) then
+                j=nf90_inq_varid(ncid2,trim(adjustl(wqhot(k)%name)),mm)
+                if(j/=NF90_NOERR) then !skip reading variable, and pass -9999
+                  buf3(1:ne_global)=-9999.0
+                  write(16,*) 'WARNING ICM hotstart.nc: variable not found (use values in icm.nml), '//trim(adjustl(wqhot(k)%name))
+                else
+                  if(wqhot(k)%ndim==1) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
+                  if(wqhot(k)%ndim==2) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/l,1/),(/1,ne_global/))
+                  if(wqhot(k)%ndim==3) j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/m,l,1/),(/1,1,ne_global/))
+                  if(j/=NF90_NOERR) call parallel_abort('ICM hotstart.nc, failed in read: '//trim(adjustl(wqhot(k)%name)))
+                endif
               endif
-            enddo!i
+              call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+              do i=1,ne_global
+                if(iegl(i)%rank==myrank) then
+                  if(abs(buf3(i)+9999.d0)<1.d-6) cycle
+                  if(wqhot(k)%ndim==1) wqhot(k)%p1(iegl(i)%id)=buf3(i)
+                  if(wqhot(k)%ndim==2) wqhot(k)%p2(l,iegl(i)%id)=buf3(i)
+                  if(wqhot(k)%ndim==3) wqhot(k)%p3(m,l,iegl(i)%id)=buf3(i)
+                endif
+              enddo!i
+            enddo !l
           enddo!m
         enddo !k
 #endif /*USE_ICM*/
@@ -6781,7 +6799,6 @@
           call mpi_send(nout_icm_3d,2,itype,nproc_schism-i,142,comm_schism,ierr)
           !call mpi_send(nout_d3d,1,itype,nproc_schism-i,143,comm_schism,ierr)
           !call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,144,comm_schism,ierr)
-          !call mpi_send(iof_icm_dbg,2,itype,nproc_schism-i,145,comm_schism,ierr)
 #endif
         call mpi_send(ics,1,itype,nproc_schism-i,146,comm_schism,ierr)
         call mpi_send(iof_ugrid,1,itype,nproc_schism-i,147,comm_schism,ierr)

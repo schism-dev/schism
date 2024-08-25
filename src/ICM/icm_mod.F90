@@ -27,32 +27,34 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !global switch and variables
   !-------------------------------------------------------------------------------
-  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSed,iBA,iRad,isflux,ibflux,iout_icm,nspool_icm
-  integer,save,target :: iSilica,iZB,iPh,iCBP,isav_icm,iveg_icm,idry_icm,iClam,nclam
+  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSFM,iBA,iRad,isflux,ibflux,idbg(10),iout_icm,nspool_icm
+  integer,save,target :: iSilica,iZB,iPh,iSRM,isav_icm,imarsh_icm,nmarsh,idry_icm,iClam,nclam
   real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,PRR(3),wqc0(29),WSP(29),WSPn(29)
   real(rkind),save,target,dimension(3) :: alpha
-  integer,save,pointer :: jdry,jsav,jveg,ised_icm,iBA_icm
+  integer,save,pointer :: jdry,jsav,jmarsh,iBA_icm
 
   integer,save,target :: ntrs_icm,nout,nouts(10),iout(2,10),nout_icm_3d(2),nhot_icm
   integer,save,pointer :: itrs_icm(:,:),elem_in(:,:),nout_icm
   integer,save :: iPB1,iPB2,iPB3,iRPOC,iLPOC,iDOC,iRPON,iLPON,iDON,iNH4,iNO3,iRPOP,iLPOP, &
         & iDOP,iPO4,iCOD,iDOX,iSU,iSA,iZB1,iZB2,iTIC,iALK,iCA,iCACO3,iSRPOC,iSRPON,iSRPOP,iPIP
+  integer,save,target :: iyear,imonth,iday,idoy
   character(len=6),save :: name_icm(100),name_d2d(100),name_d3d(100)
   integer,save,target :: ncid_icm(3),npt_icm(3)
   real(rkind),target,save :: time_icm(2,3),dt_icm(3)
-  real(rkind),target,save,allocatable :: rad_in(:,:),sflux_in(:,:,:),bflux_in(:,:,:),wqc_d2d(:,:),wqc_d3d(:,:,:)
+  real(rkind),target,save,allocatable :: rad_in(:,:),sflux_in(:,:,:),bflux_in(:,:,:)
 
   !declear temporary variables to increase code readability (can be put in main loop)
   real(rkind),save,pointer,dimension(:,:) :: wqc,ZBS,PBS 
-  real(rkind),save,pointer,dimension(:) :: temp,salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
+  real(rkind),save,pointer,dimension(:) :: salt,ZB1,ZB2,PB1,PB2,PB3,RPOC,LPOC,DOC,RPON,LPON,DON,NH4, &
                               & NO3,RPOP,LPOP,DOP,PO4,SU,SA,COD,DOX,TIC,ALK,CA,CACO3,SRPOC,SRPON,SRPOP,PIP
-  real(rkind),save,target,allocatable :: DIN(:),dwqc(:,:),zdwqc(:,:),sdwqc(:,:),vdwqc(:,:),gdwqc(:,:),cdwqc(:,:)
+  real(rkind),save,target,allocatable :: temp(:),DIN(:),PO4d(:),TSS(:),dwqc(:,:),zdwqc(:,:),sdwqc(:,:), &
+                              & vdwqc(:,:),gdwqc(:,:),cdwqc(:,:)
   real(rkind),save,pointer,dimension(:,:) :: zdPBS,zdC,zdN,zdP,zdS
   real(rkind),save,pointer,dimension(:) :: zdDOX 
 
   !debug variables
-  real(rkind),save,pointer,dimension(:,:) :: dbCHLA
-  real(rkind),save,pointer,dimension(:) :: dbTN,dbTP
+  real(rkind),save,pointer,dimension(:,:) :: db_CHLA,db_Ke
+  real(rkind),save,pointer,dimension(:) :: db_TN,db_TP
  
   !-------------------------------------------------------------------------------
   !ICM parameters and variables
@@ -68,7 +70,6 @@ module icm_mod
 
   real(rkind),save :: dtw     !ICM time step (day)
   real(rkind),save:: time_ph  !time stamp for WQinput
-  real(rkind),save :: rIa,rIavg
 
   !-------------------------------------------------------------------------------
   !silica parameters and variables
@@ -98,39 +99,41 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !SAV parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: spatch0,stleaf0,ststem0,stroot0
-  real(rkind),save,target :: sGPM,sTGP,sKTGP(2),sFAM,sFCP(3) !growth related coefficients
-  real(rkind),save,target :: sMTB(3),sTMT(3),sKTMT(3)        !meta. coefficients (rate, temp, temp dependence)
-  real(rkind),save,target :: sFCM(4),sFNM(4),sFPM(4)         !metabolism to (RPOM,RLOM,DOM,DIM)
-  real(rkind),save,target :: sKhNw,sKhNs,sKhNH4,sKhPw,sKhPs  !half-saturation conc. of N&P
+  real(rkind),save,target :: spatch0,sav0(4)  !sav patch, and init conc.
+  real(rkind),save,target :: sGPM,sTGP,sKTGP(2),sFAM,sFCP(4) !growth related coefficients
+  real(rkind),save,target :: sMTB(4),sTMT(4),sKTMT(4)        !meta. coefficients (rate, temp, temp dependence)
+  real(rkind),save,target :: sFCM(4),sFNM(4),sFPM(4)         !metabolism of leaf/stem to (RPOM,RLOM,DOM,DIM)
+  real(rkind),save,target :: sFCMb(4),sFNMb(4),sFPMb(4)      !metabolism of root to (POM(G1-G3),dissolved nutrients)
+  real(rkind),save,target :: sKTB,sDoy(2),sKhN(2),sKhP(2)    !tuber mass transfer, half-saturation conc. of N, P
   real(rkind),save,target :: salpha,sKe,shtm(2),s2ht(3)      !(P-I curve, light attenu., canopy height)
-  real(rkind),save,target :: sc2dw,s2den,sn2c,sp2c,so2c      !convert ratios
+  real(rkind),save,target :: sc2dw,sn2c,sp2c                 !convert ratios
+  real(rkind),save,target :: EP0,eGPM,eTGP,eKTGP(2),eKe,ealpha,eMTB,eTMT,eKTMT,ePRR,eKhN,eKhP,eKhE !epiphytes growth,metabolism, predation
+  real(rkind),save,target :: eFCM(4),eFNM(4),eFPM(4),eFCP(4),eFNP(4),eFPP(4),en2c,ep2c !epiphytes partition
 
   integer,save,allocatable :: spatch(:)               !sav region
-  real(rkind),save,target,allocatable,dimension(:) :: stleaf,ststem,stroot,sht
-  real(rkind),save,target,allocatable,dimension(:,:) :: sleaf,sstem,sroot !(nvrt,nea), unit: g/m^2
-  real(rkind),save,target,allocatable,dimension(:) :: sroot_POC,sroot_PON,sroot_POP,sroot_DOX !(nea), unit: g/m^2/day
-  real(rkind),save,target,allocatable,dimension(:) :: sleaf_NH4,sleaf_PO4  !(nea), unit: g/m^2/day
+  real(rkind),save,target,allocatable :: EP(:),TEP(:),sht(:),sav(:,:),sFPOC(:,:),sFPON(:,:),sFPOP(:,:),sbNH4(:),sbPO4(:),sSOD(:)
+  real(rkind),save,pointer,dimension(:) :: db_sGP,db_sMT1,db_sMT2,db_sMT01,db_sMT02,db_sMT03, &
+                                         & db_sMT04,db_sTB,db_sfT,db_sfI,db_sfN,db_sfP
 
   !-------------------------------------------------------------------------------
-  !VEG parameters and variables
+  !marsh parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target,dimension(3) :: vtleaf0,vtstem0,vtroot0  !init conc.
-  real(rkind),save,target :: vpatch0,vGPM(3),vFAM(3),vTGP(3),vKTGP(3,2),vFCP(3,3) !growth related coefficients
-  real(rkind),save,target,dimension(3,3) :: vMTB,vTMT,vKTMT    !meta. coefficients (rate,temp,temp dependence)
-  real(rkind),save,target,dimension(3,4) :: vFNM,vFPM,vFCM     !metabolism to (RPOM,RLOM,DOM,DIM)
-  real(rkind),save,target,dimension(3) :: vKhNs,vKhPs,vScr,vSopt,vInun,valpha,vKe !growth limit(nutrent,light,salinity,inundation)
-  real(rkind),save,target,dimension(3,2) :: vTMR,vKTMR,vMR0,vMRcr    !mortality coeffs
-  real(rkind),save,target :: v2ht(3,2),vht0(3),vcrit(3)    !computing canopy height
-  real(rkind),save,target,dimension(3) :: vc2dw,v2den,vn2c,vp2c,vo2c!convert ratios
-  integer,save,target :: ivNc,ivPc,ivNs,ivPs,ivMRT              !flags for (N,P) limit, recycled (N,P) dest., mortality
+  integer,save,target :: iNmarsh !swtich for N/P kentics
+  real(rkind),save,target :: vpatch0 !init marsh region
+  real(rkind),save,target,allocatable :: vmarsh0(:,:),vGPM(:),vFAM(:),vTGP(:),vKTGP(:,:),vFCP(:,:) !growth
+  real(rkind),save,target,allocatable,dimension(:,:) :: vMTB,vTMT,vKTMT,vFCM,vFNM,vFPM !metabolsim
+  !metabolism partition, growth limit of nutrient,light,salinity,inundation
+  real(rkind),save,target,allocatable,dimension(:) :: vFW,vKhN,vKhP,valpha,vKe,vSopt,vKs,vInun
+  real(rkind),save,target,allocatable :: vht0(:),vcrit(:),v2ht(:,:),vc2dw(:),vn2c(:),vp2c(:) !misc
+  real(rkind),save,target :: vAw,vKNO3,vKTW,vRTw,vKhDO,vOCw
+  real(rkind),save,target,allocatable :: vKPOM(:)
 
-  real(rkind),save :: mtemp !todo add function to read mtemp
-  integer,save,allocatable :: vpatch(:)                     !reg region
-  real(rkind),save,target,allocatable,dimension(:,:) :: vht !,ztcveg !(nea,3)
-  real(rkind),save,target,allocatable,dimension(:,:) :: vtleaf,vtstem,vtroot !(nea,3)
-  real(rkind),save,target,allocatable,dimension(:,:) :: vroot_POC,vroot_PON,vroot_POP,vroot_DOX !(nea,3)
-  real(rkind),save,target,allocatable,dimension(:,:) :: vleaf_NH4,vleaf_PO4 !(nea,3)
+  integer,save,allocatable :: vpatch(:)  !marsh regions
+  real(rkind),save,target,allocatable :: vmarsh(:,:,:),vht(:,:) !marsh biomass
+  real(rkind),save,target,allocatable :: vFPOC(:,:),vFPON(:,:),vFPOP(:,:),vbNH4(:),vbPO4(:),vSOD(:) !sediment
+  real(rkind),save,pointer :: db_vGP(:,:),db_vBMw(:,:),db_vBMb(:,:)
+  real(rkind),save,pointer,dimension(:) :: db_vdNO3,db_vdDOX,db_vdRPOC,db_vdLPOC,db_vdRPON,db_vdLPON, &
+                                         & db_vdRPOP,db_vdLPOP,db_vdSRPOC,db_vdSRPON,db_vdSRPOP,db_vdPIP
 
   !-------------------------------------------------------------------------------
   !sediment flux model (SFM) parameters and variables
@@ -141,8 +144,8 @@ module icm_mod
   real(rkind),save,target :: bCH40,bPOS0,bSA0,bPOP0(3),bPON0(3),bPOC0(3)
   real(rkind),save,target,dimension(3) :: bKC,bKN,bKP,bKTC,bKTN,bKTP
   real(rkind),save,target :: bKS,bKTS
-  real(rkind),save,target,dimension(3,3) :: bFPP,bFNP,bFCP,bFCv,bFNv,bFPv !(G1:G3,veg/PB)
-  real(rkind),save,target,dimension(3) :: bFCs,bFNs,bFPs,bFCM,bFNM,bFPM !(G1:G3)
+  real(rkind),save,target,dimension(3,3) :: bFPP,bFNP,bFCP!(G1:G3,PB)
+  real(rkind),save,target,dimension(3) :: bFCM,bFNM,bFPM !(G1:G3)
   real(rkind),save,target :: bKNH4f,bKNH4s,bpieNH4,bKTNH4,bKhNH4,bKhDO_NH4 !!nitrification
   real(rkind),save,target :: bKNO3f,bKNO3s,bKNO3,bKTNO3 !denitrification
   real(rkind),save,target :: bKH2Sd,bKH2Sp,bpieH2Ss,bpieH2Sb,bKTH2S,bKhDO_H2S !H2S oxidation
@@ -162,21 +165,26 @@ module icm_mod
   !Benthic Algea model (BA) parameters and variables
   !-------------------------------------------------------------------------------
   real(rkind),save,target :: gpatch0,gBA0,gGPM,gTGP,gKTGP(2),gMTB,gPRR,gTR,gKTR,galpha
-  real(rkind),save,target :: gKSED,gKBA,gKhN,gKhP,gp2c,gn2c,go2c,gFCP(3),gFNP(3),gFPP(3)
+  real(rkind),save,target :: gKSED,gKBA,gKhN,gKhP,gp2c,gn2c,gFCP(3),gFNP(3),gFPP(3)
 
   integer,save,allocatable,dimension(:) :: gpatch
   real(rkind),save,target,allocatable,dimension(:) :: gBA,gGP,gMT,gPR
-
+  real(rkind),save,pointer,dimension(:) :: db_gfT,db_gfI,db_gfN,db_gfP
   !-------------------------------------------------------------------------------
   !Clam model (CLAM) parameters and variables
   !-------------------------------------------------------------------------------
   real(rkind),save,target :: cpatch0
-  real(rkind),save,target,allocatable,dimension(:) :: clam0,cfrmax,cTFR,csalt,cKDO,cDOh,cfTSSm,cRF, &
-                                                    & cIFmax,cMTB,cTMT,cKTMT,cMRT,cn2c,cp2c
-  real(rkind),save,target,allocatable,dimension(:,:) :: cKTFR,cKTSS,cTSS,calpha
+  real(rkind),save,target,allocatable,dimension(:) :: cFc,clam0,cfrmax,cTFR,csalt,cKDO,cDOh,cfTSSm,cRF, &
+                                                    & cIFmax,cMTB,cTMT,cKTMT,cMRT,cPRR,cHSR,cn2c,cp2c
+  real(rkind),save,target,allocatable,dimension(:,:) :: cKTFR,cKTSS,cTSS,calpha,cDoyp,cDoyh
 
   integer,save,allocatable,dimension(:) :: cpatch
   real(rkind),save,target,allocatable,dimension(:,:) :: CLAM,cFPOC,cFPON,cFPOP
+
+  !debug
+  real(rkind),save,pointer,dimension(:,:) :: db_cfT,db_cfS,db_cfDO,db_cfTSS,db_cFr,db_cIF,db_cTFC,db_cATFC,db_cfN, &
+                                           & db_cGP,db_cMT,db_cRT,db_cPR,db_cHST
+
   !-------------------------------------------------------------------------------
   !benthic erosion (ERO) parameters and variables
   !-------------------------------------------------------------------------------
@@ -203,14 +211,15 @@ module icm_mod
   type :: icm_pointer
     character(len=30) :: name  !parameter name
     integer :: ndim=0  !parameter dimension
-    integer :: dims(2) !dimension info
+    integer :: dims(3) !dimension info
     integer :: id=0    !id number
     integer :: itype=0 !used to identify data type
     real(rkind),dimension(50) :: data0 !oirginal value of data
     integer,allocatable,dimension(:,:) :: istat
-    real(rkind),pointer :: p=>null()                !param. of single value
-    real(rkind),pointer,dimension(:) :: p1=>null()   !param. of 1D array
-    real(rkind),pointer,dimension(:,:) :: p2=>null() !param of 2D array
+    real(rkind),pointer :: p=>null()                   !param of single value
+    real(rkind),pointer,dimension(:) :: p1=>null()     !param of 1D array
+    real(rkind),pointer,dimension(:,:) :: p2=>null()   !param of 2D array
+    real(rkind),pointer,dimension(:,:,:) :: p3=>null() !param of 2D array
     real(rkind),allocatable,dimension(:,:,:) :: data
   end type icm_pointer
   type(icm_pointer),save,target,allocatable,dimension(:) :: sp,wqout,wqhot

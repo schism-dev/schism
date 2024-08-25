@@ -9,8 +9,13 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter; added an optional
+                          parameter niter_hdif, and hdif.gr3 now specifies the filter strength (<=0.2);
+- `44c0c76` (2 Aug 2024): added an optional flag RADFLAG (for wave coupling)
+- `c4a5278` (17 July 2024): added Ganthy option for flex vegetation (iveg=2); related optional parameters 
+                           are: veg_cw and veg_lai;
 - `0fec598` (20 May 2024): added nbins_veg_vert as a mandatory input; veg_vert_z*(1:nbins_veg_vert+1) 
-                           etc as optional. These are required if iveg/=0;
+                           etc as optional. The latter are required if iveg/=0;
 - `56b88ae` (17 May 2024): added station outputs for all tracers (flags in station.in after w);
 - `e66f1b3` (3 May 2024): renamed sav_*.gr3 as veg_*.gr3; also MARSH module now requires iveg/=0;
 - `ca44ba0` (1 May 2024): removed isav and replaced it with iveg
@@ -22,10 +27,10 @@ Github versions:
 - `376b3a45` (14 Sept, 2023) : removed iflux_out_format (folded it into iflux);
 
 Tag stofs3d-atl.v2.1.0 (identical to v5.11.0): for NOAA STOFS3D Atlantic operational forecast release
-Tag v5.11.0: (Aug 2022)
+Tag v5.11.0: (Aug 2023)
 
 - `ae1c210` (14 June 2023): ishapiro=2 now needs shapiro.gr3 (variable coefficients);
-- `a6fd5cb` (15 May, 2023): revamped nws=4; input is 'atmos'nc'. It needs wind and air pressure at least.
+- `a6fd5cb` (15 May, 2023): revamped nws=4; input is 'atmos.nc'. It needs wind and air pressure at least.
                         If ihconsv/=0, it should also contain 2 heat fluxes ('solar' and 'downwardNetFlux';
                         the latter is the net surface heat flux). 
                         If isconsv/=0, it should also contain 2 salt fluxes: 'prate' and 'evap'.
@@ -605,6 +610,8 @@ git versions:
 150. `66242aa` (Sept 13, 2023): removed goto in harm.F90
 151. `5914ae2` (Mar 26, 2024): fix an init error for diffm* (c/o Ufuk)
 161. `ca44ba0` (1 May 2024): fixed bugs in vegetation&marsh module (uninited sav_h0 etc) 
+162. `cfb58a5` [5 July 2024] replace fatal errors with warning in btrack (no intersecting edges). These are exaordinary exceptions that occur rarely.
+163. - `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter;
 
 ================================================================================================
 (D) Auto-test history:

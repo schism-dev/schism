@@ -1115,7 +1115,8 @@ end subroutine inter_btrack
 !      (xt,yt,zt):  the updated end pt (if so); 
 !      trm: time remaining (trm<=time). trm=0 unless the path crosses aug. bnd (nfl=3);
 !      nfl: a flag. nfl=1 if a bnd or dry element is hit and vel. there is small,              
-!           or death trap is reached. In this case, all outputs are valid, 
+!           or death trap is reached, or some extraordinary case like unable to
+!           find intersecting side. In this case, all outputs are valid, 
 !           and the time stepping in btrack is exited successfully. 
 !           If nfl=2 (hit aug. bnd upon entry) or 3 (hit aug. bnd during iteration),
 !           nnel, jlev, (xt,yt,zt) and trm are updated, and nnel should be inside 
@@ -1217,7 +1218,6 @@ end subroutine inter_btrack
           if(ar_min2<=0) call area_coord(1,nel,gcor0,frame0,xt,yt,arco)
           nnel=nel
           trm=0._rkind
-!          go to 400
           qsearch_done=.true.
         endif
       else !quad
@@ -1238,7 +1238,6 @@ end subroutine inter_btrack
         if(inside2/=0) then !found & finish
           nnel=nel
           trm=0._rkind
-          !go to 400
           qsearch_done=.true.
         endif
       endif !i34
@@ -1269,17 +1268,27 @@ end subroutine inter_btrack
           if(ar1>0._rkind.and.ar2>0._rkind) then
             call intersect2(xcg,xt,xn1,xn2,ycg,yt,yn1,yn2,iflag,xin,yin,tt1,tt2)
             wild(j,1)=tt1; wild(j,2)=tt2; wild(3+j,1)=xin; wild(3+j,2)=yin
-            if(iflag/=1) then
+            if(iflag/=1) then !abnormal return
               if(ics==1) then
                 xcg2=xcg; ycg2=ycg; zcg2=0._rkind; xt2=xt; yt2=yt; zt2=0._rkind
               else !lat/lon
                 call project_pt('l2g',xcg,ycg,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
                 call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xt2,yt2,zt2)
               endif !ics
-              write(errmsg,*)'QUICKSEARCH: Found no intersecting edges (1):',idx,itr, &
+              write(12,*)'QUICKSEARCH: Found no intersecting edges (1):',idx,itr, &
      &ielg(nel),xcg2,ycg2,zcg2,xt2,yt2,zt2,ar_min1,ar_min2,wild(1:3,1:2),wild(4:6,1:2),ar1,ar2, &
      &xcg,ycg,xt,yt,time,trm,jlev,uuint0,vvint0,wwint0,jlev00
-              call parallel_abort(errmsg)
+              !Set final values and return
+              nfl=1
+              trm=0._rkind
+              arco(:)=1.d0/i34(nnel)
+              uuint=0._rkind
+              vvint=0._rkind
+              wwint=0._rkind
+              zrat=1.d0
+              kbpl=nvrt-1
+              ztmp=znl(:,elnode(1,nnel)) !1st node
+              return
             else !success
               nel_j=j; exit loop6
             endif
@@ -1322,8 +1331,8 @@ end subroutine inter_btrack
               if(ics==1) call quad_shape(0,3,nel,xcg,ycg,inside1,arco)
             endif !i34
             ar_min1=minval(arco(1:i34(nel))) !info for debug only (undefined if ics=2 and quads)
-          else !i=2; out of luck
-            write(errmsg,*)'QUICKSEARCH: no intersecting edge; start ID (node/side/elem)=', &
+          else !i=2; out of luck; return
+            write(12,*)'QUICKSEARCH: no intersecting edge; start ID (node/side/elem)=', &
      &l_ns,'; start gb. node/side/elem #=',ipsgb,'; start level=',jlev,'; current elem=',ielg(nel), &
      &'; cg (local) coord.=',xcg2,ycg2,zcg2,'; end coord.=',xt2,yt2,zt2, &
      &'; signed areas (cg,1,t)@ nodes followed by (cg,t,2)@ nodes=',wild2(1:i34(nel),1:2), &
@@ -1331,7 +1340,17 @@ end subroutine inter_btrack
      &'; time step from cg to t=',time,'; time remaining=',trm, &
      &'; min. area coord. for cg, t=',ar_min1,ar_min2,'; input vel=',uuint0,vvint0,wwint0, &
      &idx,itr,jlev00
-            call parallel_abort(errmsg)
+!            call parallel_abort(errmsg)
+            nfl=1
+            trm=0._rkind
+            arco(:)=1.d0/i34(nnel)
+            uuint=0._rkind
+            vvint=0._rkind
+            wwint=0._rkind
+            zrat=1.d0
+            kbpl=nvrt-1
+            ztmp=znl(:,elnode(1,nnel)) !1st node
+            return
           endif !i
         endif !nel_j=0
       enddo loop6 !i: 2 tries
@@ -1373,7 +1392,7 @@ end subroutine inter_btrack
       zin=zt-tmp*(zt-zin)
       trm=trm*tmp !time remaining
       pathl=dist !sqrt((xin-xt)**2+(yin-yt)**2)
-      if(dist==0._rkind.or.trm==0._rkind) then
+      if(dist==0._rkind.or.trm==0._rkind) then !done
 !        write(errmsg,*)'QUICKSEARCH: end pt on side:',idx,itr,l_ns,ipsgb,dist,it, &
 !     &ielg(nnel00),ielg(nel),zin,time,x0,y0,xt00,yt00,xin,yin,xt,yt, &
 !     &uuint0,vvint0,wwint0,ar_min2,jlev00,vis_coe
@@ -1390,7 +1409,6 @@ end subroutine inter_btrack
             call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nel),yctr(nel),zctr(nel)/),eframe(:,:,nel),xn2,yn2,zn2)
           endif !ics
 
-          !call quad_shape(1,4,nel,xt,yt,inside2,arco)
           call quad_shape(1,4,nel,xn2,yn2,inside2,arco)
         endif
         nnel=nel
@@ -1471,32 +1489,11 @@ end subroutine inter_btrack
 !     Search for nel's neighbor with edge nel_j, or in abnormal cases, the same element
       if(lit==0) nel=ic3(nel_j,nel) !next front element
 
-!      do i=1,3
-!        k1=elnode(i,nel)
-!        k2=elnode(nx(i,1),nel)
-!        if(ics==1) then
-!          xn1=xnd(k1); yn1=ynd(k1)
-!          xn2=xnd(k2); yn2=ynd(k2)
-!        else !lat/lon
-!          call project_pt('g2l',xnd(k1),ynd(k1),znd(k1),gcor0,frame0,xn1,yn1,tmp)
-!          call project_pt('g2l',xnd(k2),ynd(k2),znd(k2),gcor0,frame0,xn2,yn2,tmp)
-!        endif !ics
-!        wild(i,1)=signa1(xn1,xn2,xt,yn1,yn2,yt)
-!        !Save for debugging later
-!        xy_l(i,1)=xn1; xy_l(i,2)=yn1
-!      enddo !i
-!      ar_min1=minval(wild(1:3,1))/area(nel)
-
       if(i34(nel)==3) then
         call area_coord(0,nel,gcor0,frame0,xt,yt,arco)
         ar_min1=minval(arco(1:3))
-!        if(ar_min1==0) then
-!          write(errmsg,*)'QUICKSEARCH impossible(2):',idx,itr,l_ns,ipsgb, &
-!     &ielg(nel),ielg(nnel00),x0,y0,xt00,yt00,xt,yt,time,uuint0,vvint0,wwint0
-!          call parallel_abort(errmsg)
-!        endif !ar_min1==0
 
-        if(ar_min1>-small1) then
+        if(ar_min1>-small1) then !found
           !arco will be fixed immediately outside loop4
           !if(ar_min1<=0) call area_coord(1,nel,gcor0,frame0,xt,yt,arco) !Fix
           nnel=nel
@@ -1512,10 +1509,9 @@ end subroutine inter_btrack
           call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nel),yctr(nel),zctr(nel)/),eframe(:,:,nel),xn2,yn2,zn2)
         endif !ics
 
-        !call quad_shape(0,5,nel,xt,yt,inside2,arco)
         call quad_shape(0,5,nel,xn2,yn2,inside2,arco)
         ar_min1=minval(arco(1:4))
-        if(inside2/=0) then
+        if(inside2/=0) then !found
           !arco will be fixed immediately outside loop4
           !call quad_shape(1,?,nel,xt,yt,inside2,arco) !force the pt inside
           nnel=nel
@@ -1542,21 +1538,32 @@ end subroutine inter_btrack
         ar1=signa1(xcg,xn1,xt,ycg,yn1,yt)
         ar2=signa1(xcg,xt,xn2,ycg,yt,yn2)
         wild2(j,1)=ar1; wild2(j,2)=ar2
-!        if(ar1>=0.and.ar2>=0) then
         if(ar1>0._rkind.and.ar2>0._rkind) then
           call intersect2(xcg,xt,xn1,xn2,ycg,yt,yn1,yn2,iflag,xin,yin,tt1,tt2)
           wild(j,1)=tt1; wild(j,2)=tt2; wild(3+j,1)=xin; wild(3+j,2)=yin
-          if(iflag/=1) then
+          if(iflag/=1) then !abort and return
             if(ics==1) then
               xcg2=xcg; ycg2=ycg; zcg2=0._rkind; xt2=xt; yt2=yt; zt2=0._rkind
             else !lat/lon
               call project_pt('l2g',xcg,ycg,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
               call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xt2,yt2,zt2)
             endif !ics      
-            write(errmsg,*)'QUICKSEARCH: Failed to find next edge (2):',lit,idx,itr,l_ns,ipsgb, &
+            write(12,*)'QUICKSEARCH: Failed to find next edge (2):',lit,idx,itr,l_ns,ipsgb, &
      &xcg2,ycg2,zcg2,xt2,yt2,zt2,ielg(nel),iplg(md1),iplg(md2),ar_min1, &
      &wild(1:3,1:2),wild(4:6,1:2),ar1,ar2,xcg,ycg,xt,yt,time,trm,uuint0,vvint0,wwint0
-            call parallel_abort(errmsg)
+!           call parallel_abort(errmsg)
+            !Set final values and return
+            nfl=1
+            trm=0._rkind
+            nnel=nel
+            arco(:)=1.d0/i34(nnel)
+            uuint=0._rkind
+            vvint=0._rkind
+            wwint=0._rkind
+            zrat=1.d0
+            kbpl=nvrt-1
+            ztmp=znl(:,elnode(1,nnel)) !1st node
+            return
           else !success
             nel_j=j; !next front edge
             cycle loop4
@@ -1564,16 +1571,28 @@ end subroutine inter_btrack
         endif !ar1>=0.and.ar2>=0
       enddo !j
 
-      if(nel_j==0) then
+      if(nel_j==0) then !return
         if(ics==1) then
           xcg2=xcg; ycg2=ycg; zcg2=0._rkind; xt2=xt; yt2=yt; zt2=0._rkind
         else !lat/lon
           call project_pt('l2g',xcg,ycg,0._rkind,gcor0,frame0,xcg2,ycg2,zcg2)
           call project_pt('l2g',xt,yt,0._rkind,gcor0,frame0,xt2,yt2,zt2)
         endif !ics   
-        write(errmsg,*)'QUICKSEARCH: no intersecting edge (2): ',idx,itr,l_ns,ipsgb,ielg(nel), &
+        write(12,*)'QUICKSEARCH: no intersecting edge (2): ',idx,itr,l_ns,ipsgb,ielg(nel), &
      &xcg2,ycg2,zcg2,xt2,yt2,zt2,wild2(1:i34(nel),1:2),xcg,ycg,xt,yt,time,trm,uuint0,vvint0,wwint0,lit
-        call parallel_abort(errmsg)
+!        call parallel_abort(errmsg)
+        !Set final values and return
+        nfl=1
+        trm=0._rkind
+        nnel=nel
+        arco(:)=1.d0/i34(nnel)
+        uuint=0._rkind
+        vvint=0._rkind
+        wwint=0._rkind
+        zrat=1.d0
+        kbpl=nvrt-1
+        ztmp=znl(:,elnode(1,nnel)) !1st node
+        return
       endif !nel_j
 
 !----------------------------------------------------------------------------------------
@@ -1600,7 +1619,6 @@ end subroutine inter_btrack
           call project_pt('g2l',xcg2,ycg2,zcg2,(/xctr(nnel),yctr(nnel),zctr(nnel)/),eframe(:,:,nnel),xn2,yn2,zn2)
         endif !ics
 
-        !call quad_shape(1,6,nnel,xt,yt,inside2,arco)
         call quad_shape(1,6,nnel,xn2,yn2,inside2,arco)
       endif !i34
 

@@ -134,7 +134,6 @@
       !call mpi_recv(nout_d3d,1,itype,0,143,comm_schism,rrqst,ierr)
       !allocate(iof_icm(nout_icm))
       !call mpi_recv(iof_icm,nout_icm,itype,0,144,comm_schism,rrqst,ierr)
-      !call mpi_recv(iof_icm_dbg,2,itype,0,145,comm_schism,rrqst,ierr)
 #endif
       call mpi_recv(ics,1,itype,0,146,comm_schism,rrqst,ierr)
       call mpi_recv(iof_ugrid,1,itype,0,147,comm_schism,rrqst,ierr)

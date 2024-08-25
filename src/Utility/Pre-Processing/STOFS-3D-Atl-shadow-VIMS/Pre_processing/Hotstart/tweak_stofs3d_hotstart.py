@@ -80,18 +80,19 @@ def tweak_stofs3d_hotstart(
     mydir = os.path.dirname(schism_py_pre_post.__file__)
     for shp in city_shapefile_names:
         shp_basename = Path(shp).stem
-        os.system(f'cp {mydir}/Datafiles/{shp_basename}.* {wdir}')
+        if not os.path.exists(f'{wdir}/{shp_basename}.shp'):
+            os.system(f'cp {mydir}/Datafiles/{shp_basename}.* {wdir}')
 
-    # download coastal obs from usgs
+    print(f'downloading obs from USGS to {output_obs_dir}')
     get_usgs_obs_for_stofs3d(outdir=output_obs_dir, start_date_str=hotstart_date_str)
 
-    # download coastal obs from CBP; only salinity, no temperature (cbp samples are sparse in time)
+    print('downloading coastal obs from CBP; only salinity, no temperature (cbp samples are sparse in time)')
     get_cbp_obs_for_stofs3d(outdir=output_obs_dir, sample_time=hotstart_date_str, varname=['sal'])
 
-    # interpolate obs onto model grid
+    print('interpolating obs onto model grid')
     gen_subregion_ic_stofs3d(wdir=wdir, obsdir=output_obs_dir, hycom_TS_file=hycom_TS_file, date_str=hotstart_date_str)
 
-    # make a copy of the hycom-based hotstart.nc
+    print(f'copying {hycom_TS_file} to {my_hot_file}, which will be modified')
     if os.path.exists(my_hot_file):
         os.system(f"rm {my_hot_file}")
     os.system(f"cp {hycom_hot_file} {my_hot_file}")
@@ -106,29 +107,29 @@ def tweak_stofs3d_hotstart(
     # my_hot.tr_nd0.val[:, :, 0] += 1.0
     # my_hot.tr_el.val[:, :, 0] += 1.0
 
-    # tweak coastal values based on obs
+    print('tweaking coastal values based on obs')
     for i, var in enumerate(['tem', 'sal']):
         hg = schism_grid(f'{wdir}/ecgc_coastal_{var}.gr3')  # this file is from get*_obs_for_stofs3d
         idx = hg.dp > -9998
         for k in range(my_hot.grid.vgrid.nvrt):
             my_hot.tr_nd.val[idx, k, i] = hg.dp[idx]
 
-    # set salinity to 0 on higher grounds
+    print('setting salinity to 0 on higher grounds')
     rat = np.maximum(np.minimum(1.0, (my_hot.grid.hgrid.dp + 3.0) / 3.0), 0.0)  # linearly varying from 0 to 3 m
     my_hot.tr_nd.val[:, :, 1] *= np.transpose(np.tile(rat, (my_hot.grid.vgrid.nvrt, 1)))
     my_hot.trnd_propogate()  # propogate trnd values to trnd0 and tr_el
 
-    # set initial elevation: aviso values in the ocean, just below ground on higher grounds and in cities
+    print('setting initial elevation: aviso values in the ocean, just below ground on higher grounds and in cities')
     my_hot.eta2.val[:] = gen_elev_ic(hgrid=my_hot.grid.hgrid, h0=0.1, city_shape_fnames=[f'{wdir}/{x}' for x in city_shapefile_names], aviso_file=aviso_file)  # no shift based on R11, R24, R11a
 
-    # write
+    print('writing the final hotstart.nc')
     my_hot.writer(fname=my_hot_file)
 
 if __name__ == "__main__":
     # Modify hycom-based hotstart.nc.hycom with coastal observation values of T and S, and a better initial elevation
     tweak_stofs3d_hotstart(
-        wdir='/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I14c/Hotstart/',
-        hotstart_date_str='2021-08-01',
+        wdir='./',
+        hotstart_date_str='2024-05-21',
         city_shapefile_names = ["LA_urban_polys_lonlat.shp"],  # polygon shapefile specifying cities
         aviso_file = 'aviso.nc'
     )

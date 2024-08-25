@@ -1892,7 +1892,7 @@
       difnum_max_l=0.d0 !max. diffusion number reached by this process (check stability)
 !$OMP end single
 
-!$OMP do reduction(max: difnum_max_l) 
+!$OMP do 
       do i=1,ne
         if(idry_e(i)==1) cycle
 
@@ -1983,29 +1983,28 @@
             !Body source
             rrhs(1,kin)=rrhs(1,kin)+dt*bdy_frc(m,k,i)
 
-            !Horizontal diffusion
-            if(ihdif/=0) then
-              do j=1,i34(i) !sides
-                jsj=elside(j,i) !residents
-                iel=ic3(j,i)
-                if(iel==0.or.idry_e(max(1,iel))==1) cycle
- 
-                nd1=isidenode(1,jsj)
-                nd2=isidenode(2,jsj)
-                hdif_tmp=(hdif(k,nd1)+hdif(k,nd2)+hdif(k-1,nd1)+hdif(k-1,nd2))/4.d0
-                if(k>=kbs(jsj)+1) then
-                  !av_h=(znl(k,nd1)-znl(k-1,nd1)+znl(k,nd2)-znl(k-1,nd2))/2.d0
-                  !!average height
-                  av_h=zs(k,jsj)-zs(k-1,jsj)
-                  if(av_h<=0.d0) call parallel_abort('TRAN_IMP: av_h<=0')
-                  !Check diffusion number; write warning message
-                  difnum=dt_by_bigv*hdif_tmp/delj(jsj)*av_h*distj(jsj)
-!                  if(difnum>difnum_max_l) difnum_max_l=difnum
-                  difnum_max_l=max(difnum_max_l,difnum)
-                  rrhs(1,kin)=rrhs(1,kin)+difnum*(trel_tmp(m,k,iel)-trel_tmp(m,k,i))
-                endif !k>=
-              enddo !j
-            endif !ihdif/=0
+!            !Horizontal diffusion
+!            if(ihdif/=0) then
+!              do j=1,i34(i) !sides
+!                jsj=elside(j,i) !residents
+!                iel=ic3(j,i)
+!                if(iel==0.or.idry_e(max(1,iel))==1) cycle
+! 
+!                nd1=isidenode(1,jsj)
+!                nd2=isidenode(2,jsj)
+!                hdif_tmp=(hdif(k,nd1)+hdif(k,nd2)+hdif(k-1,nd1)+hdif(k-1,nd2))/4.d0
+!                if(k>=kbs(jsj)+1) then
+!                  !av_h=(znl(k,nd1)-znl(k-1,nd1)+znl(k,nd2)-znl(k-1,nd2))/2.d0
+!                  !!average height
+!                  av_h=zs(k,jsj)-zs(k-1,jsj)
+!                  if(av_h<=0.d0) call parallel_abort('TRAN_IMP: av_h<=0')
+!                  !Check diffusion number; write warning message
+!                  difnum=dt_by_bigv*hdif_tmp/delj(jsj)*av_h*distj(jsj)
+!                  difnum_max_l=max(difnum_max_l,difnum)
+!                  rrhs(1,kin)=rrhs(1,kin)+difnum*(trel_tmp(m,k,iel)-trel_tmp(m,k,i))
+!                endif !k>=
+!              enddo !j
+!            endif !ihdif/=0
 
           enddo !k=kbe(i)+1,nvrt
 
@@ -2061,9 +2060,60 @@
       wtimer(9,2)=wtimer(9,2)+cwtmp2-cwtmp
 #endif
 
-!     Output warning for diffusion number
-      if(difnum_max_l>0.5d0) write(12,*)'TRAN_IMP, diffusion # exceeds 0.5:',it,difnum_max_l
-!'
+!     Horizontal diffusion as filter
+!     Save the final array from previous step as trel_tmp
+      if(ihdif/=0) then
+        do kk=1,niter_hdif
+!$OMP     parallel default(shared) !private(i,j,k,m,sum1,jsj,iel,nd1,nd2,hdif_tmp)
+!$OMP     workshare
+          trel_tmp(1:ntr,:,1:nea)=tr_el(1:ntr,:,1:nea)
+!$OMP     end workshare
+
+!$OMP     do
+          do i=1,ne
+            if(idry_e(i)==1) cycle
+  
+            !Wet elements with wet nodes
+            do m=1,ntr !cycle through tracers
+              do k=kbe(i),nvrt
+                sum1=0.d0
+                do j=1,i34(i) !sides
+                  jsj=elside(j,i) !residents
+                  iel=ic3(j,i)
+                  if(iel==0.or.idry_e(max(1,iel))==1) cycle
+
+                  nd1=isidenode(1,jsj)
+                  nd2=isidenode(2,jsj)
+                  hdif_tmp=(hdif(nd1)+hdif(nd2))/2.d0
+                  if(k>=kbs(jsj)+1) then
+                    sum1=sum1+hdif_tmp*(trel_tmp(m,k,iel)-trel_tmp(m,k,i))
+                  endif !k>=
+                enddo !j
+            
+                tr_el(m,k,i)=trel_tmp(m,k,i)+sum1
+              enddo !k
+
+              !Extend
+!              do k=1,kbe(i)
+!                tr_el(m,k,i)=tr_el(m,kbe(i)+1,i)
+!              enddo !k
+            enddo !m: tracers
+          enddo !i=1,ne
+!$OMP     end do
+!$OMP     end parallel
+
+!         Update ghosts
+#ifdef INCLUDE_TIMING
+          cwtmp=mpi_wtime()
+!          timer_ns(1)=timer_ns(1)+cwtmp-cwtmp2
+#endif
+          call exchange_e3d_2t_tr(tr_el)
+#ifdef INCLUDE_TIMING
+          cwtmp2=mpi_wtime()
+          wtimer(9,2)=wtimer(9,2)+cwtmp2-cwtmp
+#endif
+        enddo !kk=1,niter_hdif
+      endif !ihdif/=0
 
 #ifdef DEBUG
 !debug conservation
