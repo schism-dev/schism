@@ -57,7 +57,7 @@
 !										
 !	Output: particle.pth, particle.pth.more (more info), fort.11 (fatal errors).		
 !										
-! ifort -mcmodel=medium -assume byterecl -O2 -o ptrack4.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack4.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifx -mcmodel=medium -assume byterecl -O2 -o ptrack4.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack4.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !...  Data type consts
       module kind_par
@@ -82,10 +82,12 @@
       	real(kind=dbl_kind), parameter :: zero=1.e-5 !small postive number in lieu of 0; usually used to check areas 
         real(kind=dbl_kind), parameter :: small1=1.e-6 !small non-negative number; must be identical to that in kind_par
         real(kind=dbl_kind), parameter :: pi=3.1415926d0 
+        real(kind=dbl_kind), parameter :: rho_w=1025.d0 !kg/m^3
+        real(kind=dbl_kind), parameter :: grav=9.8d0 !m/s/s
 
 !...  	Important variables
-        integer, save :: np,ne,ns,nvrt,mnei,mod_part,ibf,istiff,ivcor,kz,nsig
-      	real(kind=dbl_kind), save :: h0,rho0,dt
+        integer, save :: np,ne,ns,nvrt,mnei,mod_part,ibf,istiff,ivcor,kz,nsig,ibiofoul
+      	real(kind=dbl_kind), save :: h0,dt
         real(kind=dbl_kind), save :: h_c,theta_b,theta_f,h_s !s_con1
 
 !...    Output handles
@@ -111,7 +113,7 @@
         real(kind=dbl_kind),save, allocatable :: z(:,:)
         real(kind=dbl_kind),save, allocatable :: uu1(:,:),vv1(:,:),ww1(:,:),uu2(:,:),vv2(:,:),ww2(:,:)
         real*8,save, allocatable :: wnx1(:),wnx2(:),wny1(:),wny2(:),hf1(:,:),vf1(:,:),hf2(:,:),vf2(:,:)
-        real*8,save, allocatable :: hvis_e(:,:)
+        real*8,save, allocatable :: hvis_e(:,:),bio_wvel(:),bio_thick(:)
       end module global
 
 !...  Main program
@@ -174,12 +176,14 @@
 !     Model #: 0-passive; 1:oil spill
       read(95,*) mod_part
       if(mod_part<0.or.mod_part>1) stop 'Unknown model'
+      read(95,*) ibiofoul
+      if(ibiofoul<0.or.ibiofoul>1) stop 'Unknown biofouling option'
       read(95,*) ibf
       if(iabs(ibf)/=1) then
         write(*,*)'Wrong ibf',ibf
         stop
       endif
-      if(mod_part==1.and.ibf/=1) stop 'Oil spill must have ibf=1'
+      if((mod_part==1.or.ibiofoul==1).and.ibf/=1) stop 'Oil spill or biofouling must have ibf=1'
 
       read(95,*) istiff !1: fixed distance from F.S.
       if(istiff/=0.and.istiff/=1) then
@@ -201,7 +205,8 @@
      &st_p(nparticle),idp(nparticle),ielpar(nparticle),levpar(nparticle),upar(nparticle), &
      &vpar(nparticle),wpar(nparticle),iabnorm(nparticle),ist(nparticle),inbr(nparticle), &
      &dhfx(nparticle),dhfy(nparticle),dhfz(nparticle),grdx(nparticle),grdy(nparticle), &
-     &grdz(nparticle),amas(nparticle),wndx(nparticle),wndy(nparticle),stat=istat)
+     &grdz(nparticle),amas(nparticle),wndx(nparticle),wndy(nparticle),bio_wvel(nparticle), &
+     &bio_thick(nparticle),stat=istat)
       if(istat/=0) stop 'Failed to alloc (1)'
 
       levpar=-99 !vertical level
@@ -244,6 +249,14 @@
         read(95,*) pbeach
       endif !mod_part=1
 
+      if(ibiofoul/=0) then
+        read(95,*) !comment line
+        !init plastic radius (m),init thickness of fouling layer (m), 
+        !bio growth (m/day),init density of plastic particle (kg/m^3),
+        ! density of biofoul layer (kg/m^3)
+        read(95,*)bio_R0,bio_BT0,bio_BR,bio_den0,bio_den_biolayer
+      endif !ibiofoul/
+
       close(95)
 
 !...  Init. ist etc; some of these are only used in certain models
@@ -263,8 +276,8 @@
         if(ibuoy==1) then
           !compute the rising velocity(m/s) based on Proctor et al., 1994
           gr=9.8               ! m/s^2
-          rho_o=900.0d3        ! kg/m^3 (oil)
-          rho_w=1025.0d3       ! kg/m^3
+          rho_o=900.0d0        ! kg/m^3 (oil)
+          !rho_w=1025.0d0       ! kg/m^3
           di=500.0d-6          ! m
           smu=1.05d-6          ! m^2/s
 ! ... critical diameter, dc
@@ -707,6 +720,18 @@
       do it=iths,it2,ibf !it is total time record #
 !--------------------------------------------------------------------------
       time=it*dt
+
+!...  Calculate modifications to flow vel 
+      if(ibiofoul==1) then
+        do i=1,nparticle
+          bio_thick(i)=bio_BT0+dt/86400.d0*bio_BR !BT: thickness of biolayer [m]
+          rat=(bio_R0/(bio_R0+bio_thick(i)))**3.
+          bio_den_tot=bio_den0*rat+bio_den_biolayer*(1-rat) !\rho_p
+          s_tmp=(bio_den_tot-rho_w)/rho_w
+          diameter=2*(bio_R0+bio_thick(i))
+          bio_wvel(i)=s_tmp*grav*diameter*diameter/(18*1.d-6+sqrt(0.3*s_tmp*grav*diameter**3.d0))
+        enddo !i  
+      endif !ibiofoul
       
 !...  Read in elevation and vel. info
       if((ibf==1.and.it>nrec*ifile).or.(ibf==-1.and.it<=nrec*(ifile-1))) then
@@ -767,6 +792,7 @@
       iret=nf90_get_var(ncid4,lw_id,real_ar(1:nvrt,1:np),(/1,1,irec1/),(/nvrt,np,1/))
       if(iret/=nf90_NoErr) stop 'ww2 not read'
       ww2(:,:)=transpose(real_ar(1:nvrt,1:np))
+
       if(mod_part==1) then
         iret=nf90_get_var(ncid,lwindx,wnx2(1:np),(/1,irec1/),(/np,1/))
         if(iret/=nf90_NoErr) stop 'windx not read'
@@ -884,7 +910,7 @@
         endif !mod_part
 
         pt=dt !tracking time step
-!...    Initialize starting level 
+!...    Initialize starting level and vel
         if(levpar(i)==-99) then !just started
           pt=(time-st_p(i))*ibf
           if(pt<=0) then
@@ -920,6 +946,7 @@
             levpar(i)=jlev
           
             upar(i)=0; vpar(i)=0; wpar(i)=0; wndx(i)=0; wndy(i)=0
+            if(ibiofoul==1) wpar(i)=bio_wvel(i)
             do j=1,3
               nd=elnode(nodel(j),iel)
               upar(i)=upar(i)+uu2(nd,jlev)*arco(j)
@@ -1061,6 +1088,7 @@
 !	  Interpolate in horizontal
           upar(i)=0; vpar(i)=0; wpar(i)=0
           wndx(i)=0;wndy(i)=0; dhfx(i)=0; dhfz(i)=0
+          if(ibiofoul==1) wpar(i)=bio_wvel(i)
           do j=1,3 !1st tri for quads
             id=nodel2(j)
             upar(i)=upar(i)+vxn(id)*arco(j)

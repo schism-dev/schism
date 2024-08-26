@@ -265,8 +265,8 @@
         if(ibuoy==1) then
           !compute the rising velocity(m/s) based on Proctor et al., 1994
           gr=9.8               ! m/s^2
-          rho_o=900.0d3        ! kg/m^3 (oil)
-          rho_w=1025.0d3       ! kg/m^3
+          rho_o=900.0d0        ! kg/m^3 (oil)
+          rho_w=1025.0d0       ! kg/m^3
           di=500.0d-6          ! m
           smu=1.05d-6          ! m^2/s
 ! ... critical diameter, dc
