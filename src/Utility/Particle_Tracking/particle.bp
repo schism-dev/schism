@@ -14,5 +14,5 @@ Input for ptrack*
 1  0                  !ibuoy,iwind
 20.0                  !pbeach
 !start of biofouling paramaters, needed only if ibiofoul=1
- !bio_R0,bio_BT0,bio_BR,bio_den0
+1.e-5 0. 1.e-4 0.1 1.e-3   !bio_R0,bio_BT0,bio_BR,bio_den0 (\rho_0),bio_den_biolayer (\rho_D)
 

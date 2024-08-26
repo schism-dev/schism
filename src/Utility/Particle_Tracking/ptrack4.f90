@@ -253,7 +253,7 @@
         read(95,*) !comment line
         !init plastic radius (m),init thickness of fouling layer (m), 
         !bio growth (m/day),init density of plastic particle (kg/m^3),
-        ! density of biofoul layer (kg/m^3)
+        !density of biofoul layer (kg/m^3)
         read(95,*)bio_R0,bio_BT0,bio_BR,bio_den0,bio_den_biolayer
       endif !ibiofoul/
 
