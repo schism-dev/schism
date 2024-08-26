@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-- `` (26 Aug 2024): ptrack4 added biofouling option; new parameter ibiofoul and related values; 
+- `ab71be44` (26 Aug 2024): ptrack4 added biofouling option; new parameter ibiofoul and related values; 
 - `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter; added an optional
                           parameter niter_hdif, and hdif.gr3 now specifies the filter strength (<=0.2);
 - `44c0c76` (2 Aug 2024): added an optional flag RADFLAG (for wave coupling)
