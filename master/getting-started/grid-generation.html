@@ -1766,7 +1766,8 @@ as the ratio between the max. side and the equivalent radius) &gt;15 can be used
 for baroclinic applications, mesh quality may be important in critical regions. Also note that 
 quality quads are required; always use the pre-processing script <code>fix_bad_quads.f90</code> to split bad quads. 
 (You can check quad quality in xmgredit5 <span class="arithmatex">\(\rightarrow\)</span> Edit <span class="arithmatex">\(\rightarrow\)</span> Edit over region <span class="arithmatex">\(\rightarrow\)</span> 
- Quality check for quadrangles, and input 0.5 (which is the ratio between the min and max interior angles) for cutoff and ‘Accept’. All violating elements will be highlighted.)</p>
+ Quality check for quadrangles, and input 0.5 (which is the ratio between the min and max interior angles) for cutoff and ‘Accept’. All violating elements will be highlighted).
+In addition, keep the quad aspect ratio (i.e., along-channel/cross-channel) reasonable (&lt;=5).</p>
 <p>Unlike explicit models, you’ll find meshgen for SCHISM is more ‘intuitive’ and ‘freer’. 
 Implicit model allows you to focus on physics instead of numerics. You are freer to resolve important features
  (e.g. jetties) without worrying about cost/instability. SCHISM is not picky about mesh quality 
@@ -1807,7 +1808,7 @@ more accurately represent the salt intrusion process.</p>
 <div class="admonition notes">
 <p class="admonition-title">Patch method</p>
 </div>
-<p>It is well known that channelized flow is better simulated using flow-aligned quads.  Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control on the cross-channel resolution which is important for 3D processes. Paving, on the other hand, can lead to either excessively large mesh size or inadequate cross-channel resolution.</p>
+<p>It is well known that channelized flow is better simulated using flow-aligned quads.  Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control on the cross-channel resolution which is important for 3D processes. Keep the aspect ratio of quads under 5. Paving, on the other hand, can lead to either excessively large mesh size or inadequate cross-channel resolution.</p>
 <h2 id="meshing-near-wetting-and-drying">Meshing near wetting and drying<a class="headerlink" href="#meshing-near-wetting-and-drying" title="Permanent link">&para;</a></h2>
 <p>You may want to have an arc follow the initial shoreline (but there is no need to be exactly following the shoreline). 
  Reasonable mesh transition should be done from shoreline to dryland. Use comparable or finer mesh resolution 
