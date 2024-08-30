@@ -729,7 +729,8 @@
           bio_den_tot=bio_den0*rat+bio_den_biolayer*(1-rat) !\rho_p
           s_tmp=(bio_den_tot-rho_w)/rho_w
           diameter=2*(bio_R0+bio_thick(i))
-          bio_wvel(i)=s_tmp*grav*diameter*diameter/(18*1.d-6+sqrt(0.3*s_tmp*grav*diameter**3.d0))
+          bio_wvel(i)=-s_tmp*grav*diameter*diameter/(18*1.d-6+sqrt(0.3*abs(s_tmp)*grav*diameter**3.d0))
+!          write(99,*)time/86400,i,bio_wvel(i),bio_thick(i),rat,bio_den_tot,s_tmp,diameter
         enddo !i  
       endif !ibiofoul
       
