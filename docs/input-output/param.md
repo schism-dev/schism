@@ -203,7 +203,7 @@ specifies the non-dimensional viscosity. In addition to the viscosity, one can a
 which is specified by `ishapiro` =0,±1, 2 (turn off/on Shapiro filter). If `ishapiro=1`, `shapiro0` 
 specifies the Shapiro filter strength. If `ishapiro=-1`, an input called `shapiro.gr3` is 
 required which specifies the filter strength at each node (there is a pre-proc script `gen_slope_filter2.f90` 
-for this). If `ishapiro=2`, a Smagorinsky-like filter is applied and `shpiro.gr3` specifies the coefficient $(\gamma_0)$, 
+for this). If `ishapiro=2`, a Smagorinsky-like filter is applied and `shapiro.gr3` specifies the coefficient $(\gamma_0)$, 
 which is typically 10-$10^3$:
 
 \begin{equation}
@@ -218,7 +218,7 @@ If `ishapiro/=0`, `niter_shap` specifies the number of times the filter is appli
 
 For non-eddying regime applications (nearshore, estuary, river), an easiest option is: `indvel=0`, `ishapiro=1` (`shapiro0=0.5`), `ihorcon= inter_mom=0`.
 
-For applications that include the eddying regime, grid resolution in the eddying regime needs to vary smoothly (Zhang et al. 2016), and the user needs to tweak dissipation carefully. A starting point can be: `indvel=ishapiro=inter_mom=0`, `ihorcon=2`, `hvis_coef0=0.025`. If the amount of dissipation is insufficient in the non-eddying regime, consider using `ishapiro=-1`, with an appropriate `shapiro.gr3` to turn on Shapiro filter locally to add dissipation, or use `ishapiro=2` and `shapiro0=1000`.
+For applications that include the eddying regime, grid resolution in the eddying regime needs to vary smoothly (Zhang et al. 2016), and the user needs to tweak dissipation carefully. A starting point can be: `indvel=ishapiro=inter_mom=0`, `ihorcon=2`, `hvis_coef0=0.025`. If the amount of dissipation is insufficient in the non-eddying regime, consider using `ishapiro=-1`, with an appropriate `shapiro.gr3` to turn on Shapiro filter locally to add dissipation, or use `ishapiro=2` and `shapiro.gr3` with $(\gamma_0)$ set to 1000 everywhere.
 
 ### inter_mom=0, kr_co=1 (int)
 Interpolation method at foot of characteristic line during ELM. `inter_mom=0`: default linear interpolation; `=1`: dual kriging method. If `inter_mom=-1`, the depth in `krvel.gr3` (0 or 1) will determine the order of interpolation (linear or kriging). If the kriging ELM is used, the general covariance function is specified in `kr_co`: 1: linear $f(h)=-h$; 2: $(h^2*log(h))$; 3: cubic $(h^3)$; 4: $(-h^5)$.
