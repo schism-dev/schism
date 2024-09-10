@@ -1808,10 +1808,11 @@
       endif
 
       do k=kbpl+1,nvrt
-        if(ztmp(k)-ztmp(k-1)<0) then !can be 0 for deg. case
+        if(ztmp(k)-ztmp(k-1)<-1.d-8) then !can be 0 or even small negative for degenerate case or interp error
           write(11,*)'Inverted z-level in quicksearch:',nnel1,etal,dep,k,ztmp(k)-ztmp(k-1),ztmp(kbpl:nvrt)
           stop
         endif
+        ztmp(k)=max(ztmp(k),ztmp(k-1))
       enddo !k
 
       if(zt<=ztmp(kbpl)) then
