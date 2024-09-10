@@ -170,7 +170,8 @@ nspool_icm = 24
 
 !-----------------------------------------------------------------------
 !ICM diagnostic outputs of sub-modules (0: OFF;  1: ON)
-!Note: it can output any model-related variables, but may need coding (developers)
+!Note: 1). it can output any model-related variables, but may need coding (developers)
+!      2). idbg=0/1/2 with different outputs
 !-----------------------------------------------------------------------
 !      Core  Silica  ZB   pH   SRM   SAV   Marsh  SFM  BA  Clam
 idbg =  0      0      0    0    0     0      0     0   0    0
@@ -446,6 +447,7 @@ inu_ph   = 0                  !nudge option for pH model
 !Submerged Aquatic Vegetation (SAV) parameters
 !-----------------------------------------------------------------------
 spatch0 = -999                     !region flag for SAV. (1: ON all elem.; -999: spatial)
+sFc     = 1.0                      !SAV bed fraction [0,1]
 sav0    = 100.0  50.0  10.0  20.0  !init. SAV leaf/stem/root/tuber conc. (g[C].m-2)
 
 !growth coefficients

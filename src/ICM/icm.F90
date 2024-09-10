@@ -531,20 +531,37 @@ subroutine ecosystem(it)
       !debug mode for 2D/3D variables (for ICM developers)
       !----------------------------------------------------------------------------------
       if(idbg(1)/=0) then
-        !Core
-        db_TN=0; db_TP=0 !TN, TP
+        !init
+        db_GP(id)=0;  db_MT(id)=0;  db_PR(id)=0;   db_oNit(id)=0; db_oDOC(id)=0; db_oCOD(id)=0
+        db_oGP(id)=0; db_oMT(id)=0; db_oFlx(id)=0; db_Denit(id)=0
+        if(idbg(1)==2) then; db_TN(id)=0; db_TP(id)=0; endif
+
+        !compute debug variables
+        db_oFlx(id)=sflux(iDOX)
         do k=kb+1,nvrt
           dzb=(zid(k)-zid(k-1))
-          db_TN(id)=dzb*(RPON(k)+LPON(k)+DON(k)+NH4(k)+NO3(k)+sum(n2c*PBS(1:3,k)))
-          db_TP(id)=dzb*(RPOP(k)+LPOP(k)+DOP(k)+PO4(k)+sum(p2c*PBS(1:3,k)))
-          if(iSRM==1) then
-            db_TN(id)=db_TN(id)+dzb*SRPON(k)
-            db_TP(id)=db_TP(id)+dzb*SRPOP(k)
+          !2D variables
+          db_GP(id)  =db_GP(id)+dzb*sum(GP(:,k));           db_MT(id)  =db_MT(id)+dzb*sum(MT(:,k))
+          db_PR(id)  =db_PR(id)+dzb*sum(PR(:,k));           db_oNit(id)=db_oNit(id)+dzb*o2n*rNit(k)*NH4(k)
+          db_oDOC(id)=db_oDOC(id)+dzb*o2c*rKHR(k)*DOC(k);   db_oCOD(id)=db_oCOD(id)+dzb*rKCOD(k)*COD(k)
+          db_oGP(id) =db_oGP(id)+dzb*o2c*sum((1.3-0.3*fPN(:,k))*GP(:,k))
+          db_oMT(id) =db_oMT(id)+dzb*o2c*sum(((1.0-sum(FCM(:,1:4)))*DOX(k)/(DOX(k)+KhDO(:)))*MT(:,k))
+          db_Denit(id)=db_Denit(id)+dzb*dn2c*rDenit(k)*DOC(k)
+
+          if(idbg(1)==2) then
+            db_TN(id)=db_TN(id)+dzb*(RPON(k)+LPON(k)+DON(k)+NH4(k)+NO3(k)+sum(n2c*PBS(1:3,k)))
+            db_TP(id)=db_TP(id)+dzb*(RPOP(k)+LPOP(k)+DOP(k)+PO4(k)+sum(p2c*PBS(1:3,k)))
+            if(iSRM==1) then
+              db_TN(id)=db_TN(id)+dzb*SRPON(k)
+              db_TP(id)=db_TP(id)+dzb*SRPOP(k)
+            endif
           endif
-        enddo
-        do k=kb+1,nvrt
-          db_CHLA(k,id)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0) !CHLA
-          db_Ke(k,id)=rKe(k)
+
+          !3D variables
+          if(idbg(1)==2) then
+            db_CHLA(k,id)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0) !CHLA
+            db_Ke(k,id)=rKe(k)
+          endif
         enddo
       endif !idbg(1)/=0
 
@@ -950,19 +967,19 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight)
       !interaction with water column
       efPN=(NH4(k)/(eKhN+NO3(k)))*(NO3(k)/(eKhN+NH4(k))+eKhN/(NH4(k)+NO3(k)))
       if(k==nvrt) eMT=eMT+eMT0/max(dz(k),1.d-5) !add the MT mass above water
-      sdwqc(iRPOC,k)=eFCM(1)*eMT+eFCP(1)*ePR
-      sdwqc(iLPOC,k)=eFCM(2)*eMT+eFCP(2)*ePR
-      sdwqc(iDOC,k) =eFCM(3)*eMT+eFCP(3)*ePR
-      sdwqc(iDOX,k) =o2c*(eGP-eFCM(4)*eMT-eFCP(4)*ePR)
-      sdwqc(iRPON,k)=en2c*(eFNM(1)*eMT+eFNP(1)*ePR)
-      sdwqc(iLPON,k)=en2c*(eFNM(2)*eMT+eFNP(2)*ePR)
-      sdwqc(iDON,k) =en2c*(eFNM(3)*eMT+eFNP(3)*ePR)
-      sdwqc(iNH4,k) =en2c*(-efPN*eGP+eFNM(4)*eMT+eFNP(4)*ePR)
-      sdwqc(iNO3,k) =-en2c*(1.0-efPN)*eGP
-      sdwqc(iRPOP,k)=ep2c*(eFPM(1)*eMT+eFPP(1)*ePR)
-      sdwqc(iLPOP,k)=ep2c*(eFPM(2)*eMT+eFPP(2)*ePR)
-      sdwqc(iDOP,k) =ep2c*(eFPM(3)*eMT+eFPP(3)*ePR)
-      sdwqc(iPO4,k) =ep2c*(-eGP+eFPM(4)*eMT+eFPP(4)*ePR)
+      sdwqc(iRPOC,k)=sFc*(eFCM(1)*eMT+eFCP(1)*ePR)
+      sdwqc(iLPOC,k)=sFc*(eFCM(2)*eMT+eFCP(2)*ePR)
+      sdwqc(iDOC,k) =sFc*(eFCM(3)*eMT+eFCP(3)*ePR)
+      sdwqc(iDOX,k) =sFc*o2c*(eGP-eFCM(4)*eMT-eFCP(4)*ePR)
+      sdwqc(iRPON,k)=sFc*en2c*(eFNM(1)*eMT+eFNP(1)*ePR)
+      sdwqc(iLPON,k)=sFc*en2c*(eFNM(2)*eMT+eFNP(2)*ePR)
+      sdwqc(iDON,k) =sFc*en2c*(eFNM(3)*eMT+eFNP(3)*ePR)
+      sdwqc(iNH4,k) =sFc*en2c*(-efPN*eGP+eFNM(4)*eMT+eFNP(4)*ePR)
+      sdwqc(iNO3,k) =-sFc*en2c*(1.0-efPN)*eGP
+      sdwqc(iRPOP,k)=sFc*ep2c*(eFPM(1)*eMT+eFPP(1)*ePR)
+      sdwqc(iLPOP,k)=sFc*ep2c*(eFPM(2)*eMT+eFPP(2)*ePR)
+      sdwqc(iDOP,k) =sFc*ep2c*(eFPM(3)*eMT+eFPP(3)*ePR)
+      sdwqc(iPO4,k) =sFc*ep2c*(-eGP+eFPM(4)*eMT+eFPP(4)*ePR)
     enddo
     TEP(id)=max(sum(zEP*dz)+zEP0,1.d-12)
   endif
@@ -1023,33 +1040,33 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight)
     sfPPb=(bPO4(id)/sKhP(2))/(bPO4(id)/sKhP(2)+drat*PO4d(k)/sKhP(1))
 
     !interaction with water column: nutrient uptake and metabolism from/to water
-    sdwqc(iRPOC,k)= sFCM(1)*BM
-    sdwqc(iLPOC,k)= sFCM(2)*BM
-    sdwqc(iDOC,k) = sFCM(3)*BM
-    sdwqc(iDOX,k) = o2c*(GP(k)-sFCM(4)*BM)
-    sdwqc(iRPON,k)= sn2c*sFNM(1)*BM
-    sdwqc(iLPON,k)= sn2c*sFNM(2)*BM
-    sdwqc(iDON,k) = sn2c*sFNM(3)*BM
-    sdwqc(iNH4,k) = sn2c*(sFNM(4)*BM-(1.0-sfPNb)*sfPN*GP(k))
-    sdwqc(iNO3,k) =-sn2c*(1.0-sfPNb)*(1.0-sfPN)*GP(k)
-    sdwqc(iRPOP,k)= sp2c*sFPM(1)*BM
-    sdwqc(iLPOP,k)= sp2c*sFPM(2)*BM
-    sdwqc(iDOP,k) = sp2c*sFPM(3)*BM
-    sdwqc(iPO4,k) = sp2c*(sFPM(4)*BM-(1.0-sfPPb)*GP(k))
+    sdwqc(iRPOC,k)= sFc*sFCM(1)*BM
+    sdwqc(iLPOC,k)= sFc*sFCM(2)*BM
+    sdwqc(iDOC,k) = sFc*sFCM(3)*BM
+    sdwqc(iDOX,k) = sFc*o2c*(GP(k)-sFCM(4)*BM)
+    sdwqc(iRPON,k)= sFc*sn2c*sFNM(1)*BM
+    sdwqc(iLPON,k)= sFc*sn2c*sFNM(2)*BM
+    sdwqc(iDON,k) = sFc*sn2c*sFNM(3)*BM
+    sdwqc(iNH4,k) = sFc*sn2c*(sFNM(4)*BM-(1.0-sfPNb)*sfPN*GP(k))
+    sdwqc(iNO3,k) =-sFc*sn2c*(1.0-sfPNb)*(1.0-sfPN)*GP(k)
+    sdwqc(iRPOP,k)= sFc*sp2c*sFPM(1)*BM
+    sdwqc(iLPOP,k)= sFc*sp2c*sFPM(2)*BM
+    sdwqc(iDOP,k) = sFc*sp2c*sFPM(3)*BM
+    sdwqc(iPO4,k) = sFc*sp2c*(sFPM(4)*BM-(1.0-sfPPb)*GP(k))
     if(idry_e(id)==1) sdwqc=0 !reset to zero for dry condition
 
     !interaction with sediment
     if(k==(kb+1)) then
       BMb=MT0(3)+MT0(4)+(1.0-drat)*BM*dz(k) !include leaf/stem BM under dry condition
-      sFPOC(1:3,id)=sFCMb(1:3)*BMb
-      sFPON(1:3,id)=sn2c*sFNMb(1:3)*BMb
-      sFPOP(1:3,id)=sp2c*sFPMb(1:3)*BMb
-      sSOD(id) =o2c*sFCMb(4)*BMb
-      sbNH4(id)=sn2c*sFNMb(4)*BMb
-      sbPO4(id)=sp2c*sFPMb(4)*BMb
+      sFPOC(1:3,id)=sFc*sFCMb(1:3)*BMb
+      sFPON(1:3,id)=sFc*sn2c*sFNMb(1:3)*BMb
+      sFPOP(1:3,id)=sFc*sp2c*sFPMb(1:3)*BMb
+      sSOD(id) =sFc*o2c*sFCMb(4)*BMb
+      sbNH4(id)=sFc*sn2c*sFNMb(4)*BMb
+      sbPO4(id)=sFc*sp2c*sFPMb(4)*BMb
     endif
-    sbNH4(id)=sbNH4(id)-sfPNb*GP(k)*dz(k)
-    sbPO4(id)=sbPO4(id)-sfPPb*GP(k)*dz(k)
+    sbNH4(id)=sbNH4(id)-sFc*sfPNb*GP(k)*dz(k)
+    sbPO4(id)=sbPO4(id)-sFc*sfPPb*GP(k)*dz(k)
   enddo
 
   !update canopy height, and EP abundance

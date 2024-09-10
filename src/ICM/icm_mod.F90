@@ -54,7 +54,8 @@ module icm_mod
 
   !debug variables
   real(rkind),save,pointer,dimension(:,:) :: db_CHLA,db_Ke
-  real(rkind),save,pointer,dimension(:) :: db_TN,db_TP
+  real(rkind),save,pointer,dimension(:) :: db_TN,db_TP,db_GP,db_MT,db_PR,db_oNit,db_oDOC,db_oCOD,db_oGP, &
+                                         & db_oMT,db_oFlx,db_Denit
  
   !-------------------------------------------------------------------------------
   !ICM parameters and variables
@@ -99,7 +100,7 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !SAV parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: spatch0,sav0(4)  !sav patch, and init conc.
+  real(rkind),save,target :: spatch0,sFc,sav0(4)  !sav patch, and init conc.
   real(rkind),save,target :: sGPM,sTGP,sKTGP(2),sFAM,sFCP(4) !growth related coefficients
   real(rkind),save,target :: sMTB(4),sTMT(4),sKTMT(4)        !meta. coefficients (rate, temp, temp dependence)
   real(rkind),save,target :: sFCM(4),sFNM(4),sFPM(4)         !metabolism of leaf/stem to (RPOM,RLOM,DOM,DIM)
