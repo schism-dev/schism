@@ -222,6 +222,9 @@ module icm_mod
     real(rkind),pointer,dimension(:,:) :: p2=>null()   !param of 2D array
     real(rkind),pointer,dimension(:,:,:) :: p3=>null() !param of 2D array
     real(rkind),allocatable,dimension(:,:,:) :: data
+
+    contains !functions
+      procedure,pass :: init=>icm_pointer_init
   end type icm_pointer
   type(icm_pointer),save,target,allocatable,dimension(:) :: sp,wqout,wqhot
 
@@ -245,6 +248,79 @@ module icm_mod
   end type
   type(station_data),save :: dg
 
+  contains
+    integer function icm_pointer_init(p,varname,nlayer,npt,nt,p1,p2,p3,v1d,v2d,v3d)
+      !this part is used to initialize icm_pointer
+      !when external data (v1d,v2d,v3d) provided, link (p%p1,p%p2,p%p3)  to the data
+      !when external pointer (p1,p2,p3) provided, link exteranl pointer to (p%p1,p%p2,p%p3) (p%data is also allocated)
+      use schism_glbl, only : rkind,nea,npa,nsa,nvrt
+      use schism_msgp, only : parallel_abort
+      implicit none
+      class(icm_pointer),target,intent(inout) :: p
+      character(*) ::varname
+      integer,intent(in) :: nlayer,npt
+      integer,optional,intent(in) :: nt !1st dimension of p%data (e.g. ntimes or ntracers)
+      real(rkind),optional,pointer,dimension(:),intent(inout) :: p1
+      real(rkind),optional,pointer,dimension(:,:),intent(inout) :: p2
+      real(rkind),optional,pointer,dimension(:,:,:),intent(inout) :: p3
+      real(rkind),optional,target,dimension(:),intent(inout) :: v1d
+      real(rkind),optional,target,dimension(:,:),intent(inout) :: v2d
+      real(rkind),optional,target,dimension(:,:,:),intent(inout) :: v3d
+      integer :: istat
+
+      !init 1D/2D/3D data
+      p%name=trim(adjustl(varname))  !assign variable name
+      p%dims=(/1,nlayer,npt/)        !assign variable dimension
+      if(present(nt)) then !3D data
+        p%dims(1)=nt     !assign variable's 1st dimension
+        if(present(v3d)) then !external 3D data already exist, make a link
+          p%p3=>v3d; p%ndim=3
+        else !external 3D data not avaiable
+          if(.not.associated(p%p3)) then
+            allocate(p%data(nt,nlayer,npt),stat=istat)
+            if(istat/=0) call parallel_abort('failed in alloc. '//trim(adjustl(p%name)))
+            p%data=0
+          endif
+          p%p3=>p%data; p%ndim=3
+          if(present(p3)) p3=>p%p3
+        endif
+      elseif(nlayer/=1) then !2D data
+        if(present(v2d)) then !external 2D data already exist, make a link
+          p%p2=>v2d; p%ndim=2
+        else !external 2D data not avaiable
+          if(.not.associated(p%p2)) then
+            allocate(p%data(1,nlayer,npt),stat=istat)
+            if(istat/=0) call parallel_abort('failed in alloc. '//trim(adjustl(p%name)))
+            p%data(1,:,:)=0
+          endif
+          p%p2=>p%data(1,:,:); p%ndim=2
+          if(present(p2)) p2=>p%p2
+        endif
+
+        !assign data type for ICM output
+        if(nlayer==nvrt.and.npt==npa) p%itype=2
+        if(nlayer==nvrt.and.npt==nea) p%itype=6
+        if(nlayer==nvrt.and.npt==nsa) p%itype=8
+      else !1D data
+        if(present(v1d)) then !external 1D data already exist, make a link
+          p%p1=>v1d; p%ndim=1
+        else !external 2D data not avaiable
+          if(.not.associated(p%p1)) then
+            allocate(p%data(1,1,npt),stat=istat)
+            if(istat/=0) call parallel_abort('failed in alloc. '//trim(adjustl(p%name)))
+            p%data(1,1,:)=0; p%ndim=1
+          endif
+          p%p1=>p%data(1,1,:)
+          if(present(p1)) p1=>p%p1
+        endif
+
+        !assign data type for ICM outputs
+        if(npt==npa) p%itype=1
+        if(npt==nea) p%itype=4
+        if(npt==nsa) p%itype=7
+      endif
+      icm_pointer_init=0
+    end function icm_pointer_init
 end module icm_mod
 
 module icm_interface

@@ -916,28 +916,35 @@ subroutine zoo_calc(kb,PR)
 
 end subroutine zoo_calc
 
-subroutine sav_calc(id,kb,zid,shtz,tdep,sLight)
-  use schism_glbl, only : rkind,errmsg,idry_e,nvrt,errmsg
+subroutine sav_calc(id,kb,zid,shtz,tdep,sLight0)
+  use schism_glbl, only : rkind,errmsg,idry_e,nvrt,errmsg,dp,elnode,i34
   use schism_msgp, only : myrank,parallel_abort
   use icm_mod
   implicit none
   integer,intent(in) :: id,kb
   real(rkind),intent(in) :: shtz,tdep
-  real(rkind),intent(in),dimension(nvrt) :: zid,sLight
+  real(rkind),intent(in),dimension(nvrt) :: zid,sLight0
 
   !local variables
   integer :: k
-  real(rkind) :: drat,srat,leafC,stemC,xT,mLight,rIK,Ns,Ps,fT,fI,fN,fP
+  real(rkind) :: drat,srat,leafC,stemC,xT,mLight,rIK,Ns,Ps,fT,fI,fN,fP,zm
   real(rkind) :: sfPN,sfPNb,sfPPb,leaf0,stem0,TB,MT0(4),BM,BMb,sfT,sfI,sfN,sfP,s
   real(rkind) :: efT,eKd,efI,efN,efP,efEP,eGP,eMT,ePR,efPN,zEP0,eMT0
-  real(rkind),dimension(nvrt) :: dz,zleaf,zstem,GP,MT1,MT2,zEP
+  real(rkind),dimension(nvrt) :: sLight,dz,zleaf,zstem,GP,MT1,MT2,zEP
   real(rkind),pointer :: sleaf,sstem,sroot,tuber,Hs
 
   !pre-proc
   sleaf=>sav(1,id); sstem=>sav(2,id); sroot=>sav(3,id); tuber=>sav(4,id); Hs=>sht(id)
-  zleaf=0; zstem=0; dz=0; drat=1.0; leaf0=0; stem0=0
-  if(idry_e(id)==1) drat=0.0
+  zleaf=0; zstem=0; dz=0; drat=1.0; leaf0=0; stem0=0; zm=minval(dp(elnode(1:i34(id),id)))
+  if(idry_e(id)==1) drat=0.0 !set water column contribution to zero
   do k=kb+1,nvrt; dz(k)=max(zid(k)-zid(k-1),0.d0); enddo !re-compute dz to ensure strict mass-conservation
+  do k=nvrt,kb+1,-1 !use shallowest node for computing light condition
+    if((zid(nvrt)-zid(k))<=zm) then
+      sLight(k)=sLight0(k)
+    else
+      sLight(k)=sLight(k+1)
+    endif
+  enddo
   do k=kb+1,nvrt !distribute sav biomass in the vertical
     srat=max(min(shtz-zid(k-1),dz(k)),0.d0)/max(dz(k),1.d-12)
     zleaf(k)=srat*sleaf/(Hs+1.d-12)
