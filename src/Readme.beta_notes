@@ -9,7 +9,9 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-- `` : added surfac T,S restoration (for large-scale long-term runs); related parameters are iref_ts,ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale,ref_ts_dt, and the input is surface_restore.nc;
+- `95030324` (17 Sept 2024): added surfac T,S restoration (for large-scale long-term runs); 
+                             related parameters are iref_ts,ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,
+                             ref_ts_tscale,ref_ts_dt, and the input is surface_restore.nc;
 - `ab71be44` (26 Aug 2024): ptrack4 added biofouling option; new parameter ibiofoul and related values; 
 - `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter; added an optional
                           parameter niter_hdif, and hdif.gr3 now specifies the filter strength (<=0.2);
