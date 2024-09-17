@@ -20,17 +20,19 @@
 ! The code will do all it can to extrapolate: below bottom/above surface.
 ! If a pt in hgrid.ll is outside the background nc grid, const. values will be filled. 
 !
-! ifort -mcmodel=medium -CB -O2 -o gen_nudge_from_hycom.exe ../UtilLib/pt_in_poly_test.f90 ../UtilLib/compute_zcor.f90 gen_nudge_from_hycom.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifx -mcmodel=medium -CB -O2 -o gen_nudge_from_hycom.exe ../UtilLib/pt_in_poly_test.f90 ../UtilLib/compute_zcor.f90 gen_nudge_from_hycom.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !   Input: 
 !     (1) hgrid.gr3;
 !     (2) hgrid.ll;
 !     (3) vgrid.in (SCHISM R3000 and up);
-!     (4) TEM_nudge.gr3: used to mark elem's that need nudging (assuming identical to SAL_nudge.gr3!)
+!     (4) TEM_nudge.gr3: used to mark elem's that need nudging (assuming identical to SAL_nudge.gr3!).
+!                        Not used for surface relax (inu_or_surf>0)
 !     (5) gen_nudge_from_nc.in: 
-!                     1st line: T,S values for pts outside bg grid in nc (make sure nudging zone is inside bg grid in nc)
-!                     2nd line: time step in .nc in sec; output stride
-!                     3rd line: # of nc files
+!                     1st line: inu_or_surf=0 (nudging output only); 1 (surface restoration output only)
+!                     2nd line: T,S values for pts outside bg grid in nc (make sure nudging zone is inside bg grid in nc)
+!                     3rd line: time step in .nc in sec; output stride
+!                     4th line: # of nc files
 !     (6) HYCOM files: TS_[1,2,..nfiles].nc (includes lon/lat; beware scaling etc)
 !                      The extent the HYCOM files cover needs to be
 !                      larger than the nudging region specified in TEM_nudge.gr3,
@@ -106,6 +108,7 @@
 !      hr_char=(/'03','09','15','21'/) !each day has 4 starting hours in ROMS
 
       open(10,file='gen_nudge_from_nc.in',status='old')
+      read(10,*) inu_or_surf !0: nudging outputs only
       read(10,*) tem_outside,sal_outside !T,S values for pts outside bg grid in nc or TEM_nudge.gr3
       read(10,*) dtout,nt_out !time step in .nc [sec], output stride
       !read(10,*) istart_year,istart_mon,istart_day 
@@ -505,8 +508,10 @@
           ixy=0
           loop4: do i=1,np
             !won't work across dateline
-            if(xl(i)<xlmin.or.xl(i)>xlmax.or.yl(i)<ylmin.or.yl(i)>ylmax) cycle loop4
-            if(include2(i)==0) cycle loop4
+            if(inu_or_surf==0) then !need all for surf relax
+              if(xl(i)<xlmin.or.xl(i)>xlmax.or.yl(i)<ylmin.or.yl(i)>ylmax) cycle loop4
+              if(include2(i)==0) cycle loop4
+            endif !if(inu_or_surf==0
             
             if(interp_mode==0) then !SG search
               do ix=1,ixlen-1
@@ -669,7 +674,8 @@
         tempout=tem_outside; saltout=sal_outside !init
         npout=0 !# of _valid_ output points
         do i=1,np
-          if(ixy(i,1)==0.or.ixy(i,2)==0) then !T,S use outside values
+          if(ixy(i,1)==0.or.ixy(i,2)==0) then !skipped nodes
+            if(inu_or_surf>0) stop 'Surf relax needs all nodes'
           else !found parent 
             npout=npout+1
             imap(npout)=i
@@ -754,43 +760,64 @@
         endif !ifile
         close(101); close(102); close(103)
 
-        if(ifile==1.and.it2==ilo) then
-          iret=nf90_create('TEM_nu.nc',OR(NF90_CLOBBER,NF90_NETCDF4),ncid_T)
-          iret=nf90_def_dim(ncid_T,'node',npout,node_dim)
-          iret=nf90_def_dim(ncid_T,'nLevels',nvrt,nv_dim)
-          iret=nf90_def_dim(ncid_T,'one',1,one_dim)
-          iret=nf90_def_dim(ncid_T,'time', NF90_UNLIMITED,itime_dim)
+        if(inu_or_surf==0) then !nudging outputs
+          if(ifile==1.and.it2==ilo) then
+            iret=nf90_create('TEM_nu.nc',OR(NF90_CLOBBER,NF90_NETCDF4),ncid_T)
+            iret=nf90_def_dim(ncid_T,'node',npout,node_dim)
+            iret=nf90_def_dim(ncid_T,'nLevels',nvrt,nv_dim)
+            iret=nf90_def_dim(ncid_T,'one',1,one_dim)
+            iret=nf90_def_dim(ncid_T,'time', NF90_UNLIMITED,itime_dim)
 
-          var1d_dims(1)=itime_dim
-          iret=nf90_def_var(ncid_T,'time',NF90_DOUBLE,var1d_dims,itime_id_T)
-          var1d_dims(1)=node_dim
-          iret=nf90_def_var(ncid_T,'map_to_global_node',NF90_INT,var1d_dims,id_map_T)
-          var4d_dims(1)=one_dim; var4d_dims(2)=nv_dim; 
-          var4d_dims(3)=node_dim; var4d_dims(4)=itime_dim
-          iret=nf90_def_var(ncid_T,'tracer_concentration',NF90_FLOAT,var4d_dims,ivar_T)
-          iret=nf90_enddef(ncid_T)
+            var1d_dims(1)=itime_dim
+            iret=nf90_def_var(ncid_T,'time',NF90_DOUBLE,var1d_dims,itime_id_T)
+            var1d_dims(1)=node_dim
+            iret=nf90_def_var(ncid_T,'map_to_global_node',NF90_INT,var1d_dims,id_map_T)
+            var4d_dims(1)=one_dim; var4d_dims(2)=nv_dim; 
+            var4d_dims(3)=node_dim; var4d_dims(4)=itime_dim
+            iret=nf90_def_var(ncid_T,'tracer_concentration',NF90_FLOAT,var4d_dims,ivar_T)
+            iret=nf90_enddef(ncid_T)
 
-          iret=nf90_create('SAL_nu.nc',OR(NF90_CLOBBER,NF90_NETCDF4),ncid_S)
-          iret=nf90_def_dim(ncid_S,'node',npout,node_dim)
-          iret=nf90_def_dim(ncid_S,'nLevels',nvrt,nv_dim)
-          iret=nf90_def_dim(ncid_S,'one',1,one_dim)
-          iret=nf90_def_dim(ncid_S,'time', NF90_UNLIMITED,itime_dim)
+            iret=nf90_create('SAL_nu.nc',OR(NF90_CLOBBER,NF90_NETCDF4),ncid_S)
+            iret=nf90_def_dim(ncid_S,'node',npout,node_dim)
+            iret=nf90_def_dim(ncid_S,'nLevels',nvrt,nv_dim)
+            iret=nf90_def_dim(ncid_S,'one',1,one_dim)
+            iret=nf90_def_dim(ncid_S,'time', NF90_UNLIMITED,itime_dim)
 
-          var1d_dims(1)=itime_dim
-          iret=nf90_def_var(ncid_S,'time',NF90_DOUBLE,var1d_dims,itime_id_S)
-          var1d_dims(1)=node_dim
-          iret=nf90_def_var(ncid_S,'map_to_global_node',NF90_INT,var1d_dims,id_map_S)
-          iret=nf90_def_var(ncid_S,'tracer_concentration',NF90_FLOAT,var4d_dims,ivar_S)
-          iret=nf90_enddef(ncid_S)
-        endif !ifile
+            var1d_dims(1)=itime_dim
+            iret=nf90_def_var(ncid_S,'time',NF90_DOUBLE,var1d_dims,itime_id_S)
+            var1d_dims(1)=node_dim
+            iret=nf90_def_var(ncid_S,'map_to_global_node',NF90_INT,var1d_dims,id_map_S)
+            iret=nf90_def_var(ncid_S,'tracer_concentration',NF90_FLOAT,var4d_dims,ivar_S)
+            iret=nf90_enddef(ncid_S)
+          endif !ifile
 
-        aa1(1)=timeout/86400
-        iret=nf90_put_var(ncid_T,itime_id_T,aa1,(/irecout2/),(/1/))
-        iret=nf90_put_var(ncid_S,itime_id_S,aa1,(/irecout2/),(/1/))
-        iret=nf90_put_var(ncid_T,id_map_T,imap(1:npout),(/1/),(/npout/))
-        iret=nf90_put_var(ncid_S,id_map_S,imap(1:npout),(/1/),(/npout/))
-        iret=nf90_put_var(ncid_T,ivar_T,tempout(:,imap(1:npout)),(/1,1,1,irecout2/),(/1,nvrt,npout,1/))
-        iret=nf90_put_var(ncid_S,ivar_S,saltout(:,imap(1:npout)),(/1,1,1,irecout2/),(/1,nvrt,npout,1/))
+          aa1(1)=timeout/86400
+          iret=nf90_put_var(ncid_T,itime_id_T,aa1,(/irecout2/),(/1/))
+          iret=nf90_put_var(ncid_S,itime_id_S,aa1,(/irecout2/),(/1/))
+          iret=nf90_put_var(ncid_T,id_map_T,imap(1:npout),(/1/),(/npout/))
+          iret=nf90_put_var(ncid_S,id_map_S,imap(1:npout),(/1/),(/npout/))
+          iret=nf90_put_var(ncid_T,ivar_T,tempout(:,imap(1:npout)),(/1,1,1,irecout2/),(/1,nvrt,npout,1/))
+          iret=nf90_put_var(ncid_S,ivar_S,saltout(:,imap(1:npout)),(/1,1,1,irecout2/),(/1,nvrt,npout,1/))
+        else !surface relax outputs
+          if(ifile==1.and.it2==ilo) then
+            iret=nf90_create('surface_restore.nc',OR(NF90_CLOBBER,NF90_NETCDF4),ncid_T)
+            iret=nf90_def_dim(ncid_T,'node',np,node_dim)
+!            iret=nf90_def_dim(ncid_T,'one',1,one_dim)
+            iret=nf90_def_dim(ncid_T,'time', NF90_UNLIMITED,itime_dim)
+
+            var1d_dims(1)=itime_dim
+            iret=nf90_def_var(ncid_T,'time',NF90_DOUBLE,var1d_dims,itime_id_T)
+            var1d_dims(1)=node_dim
+            iret=nf90_def_var(ncid_T,'reference_sst',NF90_FLOAT,var1d_dims,ivar_T)
+            iret=nf90_def_var(ncid_T,'reference_sss',NF90_FLOAT,var1d_dims,ivar_S)
+            iret=nf90_enddef(ncid_T)
+          endif !ifile
+
+          aa1(1)=timeout/86400
+          iret=nf90_put_var(ncid_T,itime_id_T,aa1,(/irecout2/),(/1/))
+          iret=nf90_put_var(ncid_T,ivar_T,tempout(nvrt,:),(/1,irecout2/),(/np,1/))
+          iret=nf90_put_var(ncid_T,ivar_S,saltout(nvrt,:),(/1,irecout2/),(/np,1/))
+        endif !inu_or_surf
       enddo !it2=ilo,ntime
 
       status = nf90_close(sid)

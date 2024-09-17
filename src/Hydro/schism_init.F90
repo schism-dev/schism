@@ -195,7 +195,8 @@
      &ibcc_mean,flag_ic,start_year,start_month,start_day,start_hour,utc_start, &
      &itr_met,h_tvd,eps1_tvd_imp,eps2_tvd_imp,ip_weno, &
      &courant_weno,ntd_weno,nquad,epsilon1,i_epsilon2,epsilon2,epsilon3,ielad_weno,small_elad, &
-     &i_prtnftl_weno,inu_tr,step_nu_tr,vnh1,vnh2,vnf1,vnf2, &
+     &i_prtnftl_weno,inu_tr,step_nu_tr,vnh1,vnh2,vnf1,vnf2,iref_ts, &
+     &ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale,ref_ts_dt, &
      &moitn0,mxitn0,rtol0,iflux,inter_mom,h_bcc1,inu_elev,inu_uv, &
      &ihhat,kr_co,rmaxvel,velmin_btrack,btrack_nudge,ibtrack_test,irouse_test, &
      &inunfl,shorewafo,ic_elev,nramp_elev,inv_atm_bnd,prmsl_ref,s1_mxnbt,s2_mxnbt, &
@@ -471,6 +472,8 @@
       courant_weno=0.5_rkind; ntd_weno=1; nquad=2; epsilon1=1.d-15; i_epsilon2=1; epsilon2=1.d-10; epsilon3=1.d-25; 
       ielad_weno=0; small_elad=1.d-4; i_prtnftl_weno=0;
       inu_tr(:)=0; step_nu_tr=86400._rkind; vnh1=400._rkind; vnh2=500._rkind; vnf1=0._rkind; vnf2=0._rkind;
+      iref_ts=0; ref_ts_h1=100.d0; ref_ts_h2=60.d0; ref_ts_restore_depth=50.d0 
+      ref_ts_tscale=365.d0; ref_ts_dt=30.d0
       moitn0=50; mxitn0=1500; rtol0=1.d-12; iflux=0; inter_mom=0; 
       h_bcc1=100._rkind; inu_elev=0; inu_uv=0; 
       ihhat=1; kr_co=1; rmaxvel=5._rkind; velmin_btrack=1.d-4; btrack_nudge=9.013d-3; 
@@ -938,6 +941,20 @@
         call parallel_abort(errmsg)
       endif
 
+!...  Surface T,S relax for long-term simulations
+      if(iref_ts/=0.and.iref_ts/=1) then
+        write(errmsg,*)'Wrong iref_ts:',iref_ts
+        call parallel_abort(errmsg)
+      endif
+      if(iref_ts/=0.and.isconsv==0) then
+        write(errmsg,*)'Surface relax requires air-sea ex:',iref_ts,isconsv
+        call parallel_abort(errmsg)
+      endif
+
+      if(ref_ts_h1<=ref_ts_h2.or.ref_ts_restore_depth<=0.d0.or.ref_ts_tscale<=0.d0.or.ref_ts_dt<=0.d0) then
+        write(errmsg,*)'Wrong surface relax:',ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale,ref_ts_dt
+        call parallel_abort(errmsg)
+      endif
 
 !...  input information about hot start output
       if(nhot/=0.and.nhot/=1.or.nhot*mod(nhot_write,ihfskip)/=0) then
@@ -1416,6 +1433,11 @@
         allocate(sdbt(2+ntracers,nvrt,nsa),stat=istat)
       endif
       if(istat/=0) call parallel_abort('INIT: alloc sdbt failure')
+
+      if(iref_ts/=0) then
+        allocate(ref_ts1(npa,2),ref_ts2(npa,2),ref_ts(npa,2),stat=itmp)
+        if(itmp/=0) call parallel_abort('INIT: alloc failed (57)')
+      endif
 
 !     Offline transport
       if(itransport_only/=0) then
@@ -3754,6 +3776,12 @@
           call mpi_bcast(inu_pts_gb,mnu_pts*natrm,itype,0,comm,istat)
         endif
       enddo !k
+
+!     Surface T,S restoration: open nc handle
+      if(iref_ts/=0.and.myrank==0) then
+        j=nf90_open(in_dir(1:len_in_dir)//'surface_restore.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_ref_ts)
+        if(j/=NF90_NOERR) call parallel_abort('init: surface_restore.nc not found')
+      endif !iref_ts
 
 !     Vegetation inputs: veg_*.gr3
       veg_alpha0=0.d0 !=D*Nv*Cdv/2; init; D is diameter or leaf width; Cdv is form drag (veg_cd)

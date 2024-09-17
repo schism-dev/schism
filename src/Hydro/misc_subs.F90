@@ -98,7 +98,8 @@
 
       real(rkind), intent(in) :: time
 
-      integer :: it_now,it,i,j,k,m,mm,ntr_l,ninv,nd,itmp,itmp1,itmp2,ntmp,istat,ip,icount,n1,n2,kl
+      integer :: it_now,it,i,j,k,m,mm,ntr_l,ninv,nd,itmp,itmp1,itmp2,ntmp, &
+                 &istat,ip,icount,n1,n2,kl,nwild(2)
       real :: floatout 
       real(rkind) :: tmp,wx1,wx2,wy1,wy2,wtratio,ttt,dep,eqstate
       character(len=48) :: inputfile
@@ -106,8 +107,8 @@
       real(4), allocatable :: swild9(:,:) !used in tracer nudging
       real(4), allocatable :: rwild(:,:) !used in nws=4
 
-      allocate(swild9(nvrt,mnu_pts),swild(nsa+nvrt+12+ntracers),stat=istat)
-      if(istat/=0) call parallel_abort('MISC: swild9')
+      allocate(swild(nsa+nvrt+12+ntracers),stat=istat)
+      if(istat/=0) call parallel_abort('MISC: swild')
       if(nws==4) then
         allocate(rwild(7,np_global),stat=istat)
         if(istat/=0) call parallel_abort('MISC: failed to alloc. (71)')
@@ -419,6 +420,9 @@
 #endif      
 
 !...  Nudging 
+      allocate(swild9(nvrt,mnu_pts),stat=istat)
+      if(istat/=0) call parallel_abort('MISC: swild9')
+
       !Shared variables for inu_tr=2 (not used if none of inu_tr=2)
       ntmp=time/step_nu_tr+1
       time_nu_tr=real(ntmp,rkind)*step_nu_tr !points to next time pt
@@ -477,6 +481,56 @@
           enddo !m
         endif !inu_tr(k)
       enddo !k
+      deallocate(swild9)
+
+!...  Surface TS restore
+      if(iref_ts/=0) then
+        allocate(swild9(np_global,1),stat=istat)
+        if(istat/=0) call parallel_abort('MISC: swild9(2)')
+
+        !Shared variables
+        ntmp=time/ref_ts_dt/86400.d0+1 !next time record
+        time_ref_ts=real(ntmp,rkind)*ref_ts_dt*86400.d0 ![sec]; points to next time pt
+        ref_ts1=-9999.; ref_ts2=-9999. !init
+
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid_ref_ts, "reference_sst",nwild(1))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: ref SST')
+          j=nf90_inq_varid(ncid_ref_ts, "reference_sss",nwild(2))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: ref SSS')
+        endif 
+
+        do m=1,2 !T,S
+          swild9=-9999.
+          if(myrank==0) then
+            j=nf90_get_var(ncid_ref_ts,nwild(m),swild9(1:np_global,1), &
+     &(/1,ntmp/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('MISC: surface relax (2)')
+          endif !myrank
+          call mpi_bcast(swild9,np_global,mpi_real,0,comm,istat)
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+              ip=ipgl(i)%id
+              ref_ts1(ip,m)=swild9(i,1)
+            endif 
+          enddo !i
+
+          swild9=-9999.
+          if(myrank==0) then
+            j=nf90_get_var(ncid_ref_ts,nwild(m),swild9(1:np_global,1), &
+     &(/1,ntmp+1/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('MISC: surface relax(2.2)')
+          endif !myrank
+          call mpi_bcast(swild9,np_global,mpi_real,0,comm,istat)
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+              ip=ipgl(i)%id
+              ref_ts2(ip,m)=swild9(i,1)
+            endif
+          enddo !i
+        enddo !m: T,S
+        deallocate(swild9)
+      endif !iref_ts/=0
 
 !     The following to init th_dt*, th_time* and ath* is only done by
 !     rank 0, not bcast'ed, b/c in _step we'll continue the reading
@@ -909,7 +963,7 @@
 
 
       if(allocated(rwild)) deallocate(rwild)
-      deallocate(swild,swild9)
+      deallocate(swild)
 
       end subroutine other_hot_init
 
