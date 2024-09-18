@@ -480,6 +480,7 @@ s2ht   = 0.0036 0.0036 0.0  !coeffs. converting (leaf,stem,root) to canopy heigh
 sc2dw  = 0.38               !carbon to dry weight ratio of sav
 sn2c   = 0.09               !nitrogen to carbon ratio of sav
 sp2c   = 0.01               !phosphorus to carbon ratio
+savm   = 1.0  1.0  1.0  0.2   500.0  500.0  500.0  100  !minimum and maximum SAV leaf/stem/root/tuber conc (g[C].m-2)
 
 !----------------------
 !Epiphytes (activated when isav_icm=2)
@@ -620,6 +621,7 @@ cDoyp   =  152 152 152 152 152    304 304 304 304 304 !date range for predation 
 cDoyh   =  122 122 122 122 122    274 274 274 274 274 !date range for predation (day of year)
 cn2c    =  0.167  0.167  0.167  0.167  0.167   !nitrogen to carbon ratio
 cp2c    =  0.011  0.011  0.011  0.011  0.011   !phosphorus to carbon ratio
+clamm   =  0.001  0.001  0.001  0.001  0.001    1.0  1.0  1.0  1.0  1.0   !minimum and maximum clam conc. [g[C].m-2)
 /
 
 &ERO

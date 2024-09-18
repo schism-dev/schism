@@ -107,7 +107,7 @@ module icm_mod
   real(rkind),save,target :: sFCMb(4),sFNMb(4),sFPMb(4)      !metabolism of root to (POM(G1-G3),dissolved nutrients)
   real(rkind),save,target :: sKTB,sDoy(2),sKhN(2),sKhP(2)    !tuber mass transfer, half-saturation conc. of N, P
   real(rkind),save,target :: salpha,sKe,shtm(2),s2ht(3)      !(P-I curve, light attenu., canopy height)
-  real(rkind),save,target :: sc2dw,sn2c,sp2c                 !convert ratios
+  real(rkind),save,target :: sc2dw,sn2c,sp2c,savm(4,2)       !convert ratios,min and max conc.
   real(rkind),save,target :: EP0,eGPM,eTGP,eKTGP(2),eKe,ealpha,eMTB,eTMT,eKTMT,ePRR,eKhN,eKhP,eKhE !epiphytes growth,metabolism, predation
   real(rkind),save,target :: eFCM(4),eFNM(4),eFPM(4),eFCP(4),eFNP(4),eFPP(4),en2c,ep2c !epiphytes partition
 
@@ -177,7 +177,7 @@ module icm_mod
   real(rkind),save,target :: cpatch0
   real(rkind),save,target,allocatable,dimension(:) :: cFc,clam0,cfrmax,cTFR,csalt,cKDO,cDOh,cfTSSm,cRF, &
                                                     & cIFmax,cMTB,cTMT,cKTMT,cMRT,cPRR,cHSR,cn2c,cp2c
-  real(rkind),save,target,allocatable,dimension(:,:) :: cKTFR,cKTSS,cTSS,calpha,cDoyp,cDoyh
+  real(rkind),save,target,allocatable,dimension(:,:) :: cKTFR,cKTSS,cTSS,calpha,cDoyp,cDoyh,clamm
 
   integer,save,allocatable,dimension(:) :: cpatch
   real(rkind),save,target,allocatable,dimension(:,:) :: CLAM,cFPOC,cFPON,cFPOP

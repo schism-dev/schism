@@ -926,8 +926,8 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight0)
   real(rkind),intent(in),dimension(nvrt) :: zid,sLight0
 
   !local variables
-  integer :: k
-  real(rkind) :: drat,srat,leafC,stemC,xT,mLight,rIK,Ns,Ps,fT,fI,fN,fP,zm
+  integer :: i,k
+  real(rkind) :: drat,srat,leafC,stemC,xT,mLight,rIK,Ns,Ps,fT,fI,fN,fP,zm,sFCPm(4)
   real(rkind) :: sfPN,sfPNb,sfPPb,leaf0,stem0,TB,MT0(4),BM,BMb,sfT,sfI,sfN,sfP,s
   real(rkind) :: efT,eKd,efI,efN,efP,efEP,eGP,eMT,ePR,efPN,zEP0,eMT0
   real(rkind),dimension(nvrt) :: sLight,dz,zleaf,zstem,GP,MT1,MT2,zEP
@@ -1012,14 +1012,29 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight0)
       MT0(4)=sMTB(4)*exp(sKTMT(4)*(temp(kb+1)-sTMT(4)))*tuber
     endif
 
+    !apply minimum and maximum conc.
+    sFCPm=sFCP !initial partitioning coefficient
+    do i=1,4
+      if(sav(i,id)<savm(i,1)) then !reach the minimum
+        MT0(i)=0.0
+        if(i==1) MT1(k)=0.0
+        if(i==2) MT2(k)=0.0
+        if(i==4) TB=0.0
+      elseif(sav(i,id)>savm(i,2)) then !reach the maximum
+        sFCPm(i)=0.0
+      endif
+    enddo
+    s=sum(sFCPm); sFCPm=sFCPm/max(s,1.d-3) !modify mass distribution
+    if(s<1.d-6) GP(k)=0.0 !turn off growth if maximum concentrations are reached
+
     !new concentration
-    zleaf(k)=zleaf(k)+(sFCP(1)*(1.0-sFAM)*GP(k)-MT1(k)+TB/Hs)*dtw
-    zstem(k)=zstem(k)+(sFCP(2)*(1.0-sFAM)*GP(k)-MT2(k))*dtw
+    zleaf(k)=zleaf(k)+(sFCPm(1)*(1.0-sFAM)*GP(k)-MT1(k)+TB/Hs)*dtw
+    zstem(k)=zstem(k)+(sFCPm(2)*(1.0-sFAM)*GP(k)-MT2(k))*dtw
     if(k==nvrt) then !For SAV above water, only metabolism is allowed
        leaf0=leaf0-MT0(1)*dtw
        stem0=stem0-MT0(2)*dtw
-       sroot=sroot+(sFCP(3)*(1.0-sFAM)*sum(GP((kb+1):nvrt)*dz((kb+1):nvrt))-MT0(3))*dtw
-       tuber=tuber+(sFCP(4)*(1.0-sFAM)*sum(GP((kb+1):nvrt)*dz((kb+1):nvrt))-MT0(4)-TB)*dtw
+       sroot=sroot+(sFCPm(3)*(1.0-sFAM)*sum(GP((kb+1):nvrt)*dz((kb+1):nvrt))-MT0(3))*dtw
+       tuber=tuber+(sFCPm(4)*(1.0-sFAM)*sum(GP((kb+1):nvrt)*dz((kb+1):nvrt))-MT0(4)-TB)*dtw
     endif
 
     !debug
@@ -1210,7 +1225,14 @@ subroutine clam_calc(id,kb,wdz)
       RT(i)=cMRT(i)*(1.d0-fDO(i))*CLAM(i,id) !mortality (g[C].m-2.day-1)
       if(idoy>=cDoyp(i,1).and.idoy<=cDoyp(i,2)) PR(i) =cPRR(i)*CLAM(i,id) !predation (g[C].m-2.day-1)
       if(idoy>=cDoyh(i,1).and.idoy<=cDoyh(i,2)) HST(i)=cHSR(i)*CLAM(i,id) !harvest (g[C].m-2.day-1)
-      CLAM(i,id)=CLAM(i,id)+(GP(i)-MT(i)-RT(i)-PR(i)-HST(i))*dtw !update clam biomass
+
+      !update clam biomass
+      if(CLAM(i,id)<clamm(i,1)) then !reach minimum biomass conc.
+        MT(i)=0.0; RT(i)=0.0; RT(i)=0.0; HST(i)=0.0
+      elseif (CLAM(i,id)>clam(i,2)) then !reach maximum biomass conc.
+        Fr(i)=0.0; GP(i)=0.0; TFC(i)=0.0; TFN(i)=0.0; TFP(i)=0.0; ATFC(i)=0.0; ATFN(i)=0.0; ATFP(i)=0.0
+      endif
+      CLAM(i,id)=CLAM(i,id)+(GP(i)-MT(i)-RT(i)-PR(i)-HST(i))*dtw
 
       !debug
       if(idbg(10)/=0) then

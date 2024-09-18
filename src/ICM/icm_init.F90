@@ -54,7 +54,7 @@ subroutine read_icm_param(imode)
            & zFSP,zFCM,zFNM,zFPM,zFSM,zKhDO,zn2c,zp2c,zs2c,z2pr,p2pr 
   namelist /PH_ICM/ ppatch0,inu_ph,pKCACO3,pKCA,pRea
   namelist /SAV_ICM/ spatch0,sFc,sav0,sGPM,sTGP,sKTGP,sFAM,sFCP,sMTB,sTMT,sKTMT,sFNM,sFPM,sFCM,sFNMb, &
-           & sFPMb,sFCMb,sKTB,sDoy,sKhN,sKhP,salpha,sKe,shtm,s2ht,sc2dw,sn2c,sp2c,EP0,eGPM,eTGP, &
+           & sFPMb,sFCMb,sKTB,sDoy,sKhN,sKhP,salpha,sKe,shtm,s2ht,sc2dw,sn2c,sp2c,savm,EP0,eGPM,eTGP, &
            & eKTGP,eKe,ealpha,eMTB,eTMT,eKTMT,ePRR,eFCM,eFNM,eFPM,eFCP,eFNP,eFPP,en2c,ep2c,eKhN,eKhP,eKhE
   namelist /MARSH/ iNmarsh,vpatch0,vmarsh0,vGPM,vFAM,vTGP,vKTGP,vFCP,vMTB,vTMT,vKTMT,vFCM,vFNM, &
            & vFPM,vFW,vKhN,vKhP,valpha,vKe,vSopt,vKs,vInun,vht0,vcrit,v2ht,vc2dw,vn2c,vp2c,vAw, &
@@ -70,7 +70,7 @@ subroutine read_icm_param(imode)
   namelist /BAG/ gpatch0,gBA0,gGPM,gTGP,gKTGP,gMTB,gPRR,gTR,gKTR,galpha,gKSED,gKBA,gKhN,gKhP, &
            & gp2c,gn2c,gFCP,gFNP,gFPP
   namelist /CLAM_ICM/ cpatch0,cFc,clam0,cfrmax,cTFR,csalt,cKDO,cDOh,cfTSSm,cRF,cIFmax,cMTB, &
-           & cTMT,cKTMT,cMRT,cPRR,cHSR,cDoyp,CDoyh,cn2c,cp2c,cKTFR,cKTSS,cTSS,calpha
+           & cTMT,cKTMT,cMRT,cPRR,cHSR,cDoyp,CDoyh,cn2c,cp2c,cKTFR,cKTSS,cTSS,calpha,clamm
   namelist /ERO/ ierosion,erosion,etau,eporo,efrac,ediso,dfrac,dWS_POC 
 
   if(imode==0) then
@@ -103,7 +103,7 @@ subroutine read_icm_param(imode)
     allocate(clam0(nclam),cfrmax(nclam),cTFR(nclam),csalt(nclam),cKDO(nclam),cDOh(nclam),cfTSSm(nclam), &
            & cRF(nclam),cIFmax(nclam),cMTB(nclam),cTMT(nclam),cKTMT(nclam),cMRT(nclam),cn2c(nclam),     &
            & cp2c(nclam),cKTFR(nclam,2),cKTSS(nclam,2),cTSS(nclam,4),calpha(nclam,5),cPRR(nclam), &
-           & cHSR(nclam),cDoyp(nclam,2),CDoyh(nclam,2),cFc(nclam),stat=istat)
+           & cHSR(nclam),cDoyp(nclam,2),CDoyh(nclam,2),cFc(nclam),clamm(nclam,2),stat=istat)
     if(istat/=0) call parallel_abort('failed in alloc. clam0')
     allocate(vmarsh0(nmarsh,3),vGPM(nmarsh),vFAM(nmarsh),vTGP(nmarsh),vKTGP(nmarsh,2), &
            & vFCP(nmarsh,3),vMTB(nmarsh,3),vTMT(nmarsh,3),vKTMT(nmarsh,3),vFCM(nmarsh,4),vFNM(nmarsh,4), &
@@ -134,7 +134,7 @@ subroutine read_icm_param(imode)
     !init. SAV module
     spatch0=0; sFc=0; sav0=0; sGPM=0; sTGP=0; sKTGP=0; sFAM=0; sFCP=0; sMTB=0; sTMT=0; sKTMT=0;
     sFNM=0; sFPM=0; sFCM=0; sFNMb=0; sFPMb=0; sFCMb=0;  sKhN=0; sKhP=0; salpha=0; sKe=0;
-    shtm=0; s2ht=0; sc2dw=0; sn2c=0; sp2c=0; EP0=0; eGPM=0; eTGP=0; eKTGP=0; eKe=0; ealpha=0;
+    shtm=0; s2ht=0; sc2dw=0; sn2c=0; sp2c=0; savm=0; EP0=0; eGPM=0; eTGP=0; eKTGP=0; eKe=0; ealpha=0;
     eMTB=0; eTMT=0; eKTMT=0; ePRR=0; eFCM=0; eFNM=0; eFPM=0; eFCP=0; eFNP=0; eFPP=0; en2c=0;
     ep2c=0; eKhN=0; eKhP=0; eKhE=0
     
@@ -163,7 +163,7 @@ subroutine read_icm_param(imode)
     !init. CLAM module
     cpatch0=1; clam0=0; cfrmax=0; cTFR=0;  csalt=0; cKDO=0; cDOh=0;  cfTSSm=0; cRF=0;  cIFmax=0
     cMTB=0;    cTMT=0;  cKTMT=0;  cMRT=0;  cPRR=0;  cHSR=0; cDoyp=0; cDoyh=0;  cn2c=0; cp2c=0
-    cKTFR=0; cKTSS=0;  cTSS=0; calpha=0; cFc=1.0
+    cKTFR=0; cKTSS=0;  cTSS=0; calpha=0; cFc=1.0; clamm=0
 
     !init. ERO module
     ierosion=0; erosion=0; etau=0;  eporo=0;  efrac=0;  ediso=0;  dfrac=0; dWS_POC=0 
@@ -880,19 +880,19 @@ subroutine icm_vars_init
 
   !SAV,MARSH,BA,pH,CLAM modules
   if(jsav/=0) then
-    pname((m+1):(m+28))=&
+    pname((m+1):(m+29))=&
       & (/'spatch0','sav0   ','sGPM   ','sTGP   ','sKTGP  ',&
         & 'sFAM   ','sFCP   ','sMTB   ','sTMT   ','sKTMT  ',&
         & 'sFCM   ','sFNM   ','sFPM   ','sFCMb  ','sFNMb  ',&
         & 'sFPMb  ','sKhN   ','sKhP   ','salpha ','sKe    ',&
         & 'shtm   ','s2ht   ','sc2dw  ','sn2c   ','sp2c   ',&
-        & 'sKTB   ','sDoy   ','sFc    '/)
+        & 'sKTB   ','sDoy   ','sFc    ','savm   '/)
     sp(m+1)%p=>spatch0;  sp(m+2)%p1=>sav0;  sp(m+3)%p=>sGPM;   sp(m+4)%p=>sTGP;    sp(m+5)%p1=>sKTGP;  m=m+5
     sp(m+1)%p=>sFAM;     sp(m+2)%p1=>sFCP;  sp(m+3)%p1=>sMTB;  sp(m+4)%p1=>sTMT;   sp(m+5)%p1=>sKTMT;  m=m+5
     sp(m+1)%p1=>sFCM;    sp(m+2)%p1=>sFNM;  sp(m+3)%p1=>sFPM;  sp(m+4)%p1=>sFCMb;  sp(m+5)%p1=>sFNMb;  m=m+5
     sp(m+1)%p1=>sFPMb;   sp(m+2)%p1=>sKhN;  sp(m+3)%p1=>sKhP;  sp(m+4)%p=>salpha;  sp(m+5)%p=>sKe;     m=m+5
     sp(m+1)%p1=>shtm;    sp(m+2)%p1=>s2ht;  sp(m+3)%p=>sc2dw;  sp(m+4)%p=>sn2c;    sp(m+5)%p=>sp2c;    m=m+5
-    sp(m+1)%p=>sKTB;     sp(m+2)%p1=>sDoy;  sp(m+3)%p=>sFc;    m=m+3
+    sp(m+1)%p=>sKTB;     sp(m+2)%p1=>sDoy;  sp(m+3)%p=>sFc;    sp(m+4)%p2=>savm;    m=m+4
     if(jsav==2) then
       pname((m+1):(m+21))=&
         & (/'EP0    ','eGPM   ','eTGP   ','eKTGP  ','eKe    ',&
@@ -943,17 +943,19 @@ subroutine icm_vars_init
   endif
 
   if(iClam==1) then
-    pname((m+1):(m+25))=&
+    pname((m+1):(m+26))=&
       & (/'cpatch0','clam0  ','cfrmax ','cTFR   ','csalt  ',&
         & 'cKDO   ','cDOh   ','cfTSSm ','cRF    ','cIFmax ',&
         & 'cMTB   ','cTMT   ','cKTMT  ','cMRT   ','cPRR   ',&
         & 'cHSR   ','cDoyp  ','cDoyh  ','cn2c   ','cp2c   ',&
-        & 'cKTFR  ','cKTSS  ','cTSS   ','calpha ','cFc    '/)
+        & 'cKTFR  ','cKTSS  ','cTSS   ','calpha ','cFc    ',&
+        & 'clamm  '/)
     sp(m+1)%p=>cpatch0;  sp(m+2)%p1=>clam0;   sp(m+3)%p1=>cfrmax; sp(m+4)%p1=>cTFR;  sp(m+5)%p1=>csalt;  m=m+5
     sp(m+1)%p1=>cKDO;    sp(m+2)%p1=>cDOh;    sp(m+3)%p1=>cfTSSm; sp(m+4)%p1=>cRF;   sp(m+5)%p1=>cIFmax; m=m+5
     sp(m+1)%p1=>cMTB;    sp(m+2)%p1=>cTMT;    sp(m+3)%p1=>cKTMT;  sp(m+4)%p1=>cMRT;  sp(m+5)%p1=>cPRR;   m=m+5
     sp(m+1)%p1=>cHSR;    sp(m+2)%p2=>cDoyp;   sp(m+3)%p2=>cDoyh;  sp(m+4)%p1=>cn2c;  sp(m+5)%p1=>cp2c;   m=m+5
     sp(m+1)%p2=>cKTFR;   sp(m+2)%p2=>cKTSS;   sp(m+3)%p2=>cTSS;   sp(m+4)%p2=>calpha;sp(m+5)%p1=>cFc;    m=m+5
+    sp(m+1)%p2=>clamm;   m=m+1
   endif
 
   !read spatially varying parameters
