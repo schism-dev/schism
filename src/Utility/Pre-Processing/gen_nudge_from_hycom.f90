@@ -37,7 +37,8 @@
 !                      The extent the HYCOM files cover needs to be
 !                      larger than the nudging region specified in TEM_nudge.gr3,
 !                      and lon/lat coord monotonically increasing.
-!   Output: [TEM,SAL]_nu.nc (reduced to within nudging zone only); include3.gr3 (nudging zone)
+!   Output: if inu_or_surf=0: [TEM,SAL]_nu.nc (reduced to within nudging zone only); include3.gr3 (nudging zone)
+!           if inu_or_surf/=0: surface_restore.nc 
 !   Debug outputs: fort.11 (fatal errors); fort.*
 
       program gen_hot
@@ -63,7 +64,7 @@
       integer :: svid, tvid ! salt & temp variable IDs
       integer :: uvid, vvid ! vel variable IDs
       integer :: evid ! SSH variable IDs
-      integer :: var1d_dims(1),var4d_dims(4)
+      integer :: var1d_dims(1),var2d_dims(2),var4d_dims(4)
       integer, dimension(nf90_max_var_dims) :: dids
       integer :: lldim ! check lat/lon dimension
              
@@ -807,9 +808,9 @@
 
             var1d_dims(1)=itime_dim
             iret=nf90_def_var(ncid_T,'time',NF90_DOUBLE,var1d_dims,itime_id_T)
-            var1d_dims(1)=node_dim
-            iret=nf90_def_var(ncid_T,'reference_sst',NF90_FLOAT,var1d_dims,ivar_T)
-            iret=nf90_def_var(ncid_T,'reference_sss',NF90_FLOAT,var1d_dims,ivar_S)
+            var2d_dims(1)=node_dim; var2d_dims(2)=itime_dim
+            iret=nf90_def_var(ncid_T,'reference_sst',NF90_FLOAT,var2d_dims,ivar_T)
+            iret=nf90_def_var(ncid_T,'reference_sss',NF90_FLOAT,var2d_dims,ivar_S)
             iret=nf90_enddef(ncid_T)
           endif !ifile
 
