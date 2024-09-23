@@ -1229,7 +1229,7 @@ subroutine clam_calc(id,kb,wdz)
       !update clam biomass
       if(CLAM(i,id)<clamm(i,1)) then !reach minimum biomass conc.
         MT(i)=0.0; RT(i)=0.0; RT(i)=0.0; HST(i)=0.0
-      elseif (CLAM(i,id)>clam(i,2)) then !reach maximum biomass conc.
+      elseif (CLAM(i,id)>clamm(i,2)) then !reach maximum biomass conc.
         Fr(i)=0.0; GP(i)=0.0; TFC(i)=0.0; TFN(i)=0.0; TFP(i)=0.0; ATFC(i)=0.0; ATFN(i)=0.0; ATFP(i)=0.0
       endif
       CLAM(i,id)=CLAM(i,id)+(GP(i)-MT(i)-RT(i)-PR(i)-HST(i))*dtw
