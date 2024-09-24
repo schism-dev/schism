@@ -6431,13 +6431,13 @@
 !     (search /OASOCM)
 !=========================================================================
 #ifdef USE_WW3
-!     Grab necessary arrays from WW3 and save into SCHISM arrays
+!     Grab necessary arrays from WW3 and save into SCHISM arrays and compute wave forces
       SUBROUTINE get_WW3_arrays(WW3__OHS,WW3__DIR,WW3_T0M1,WW3__WNM,WW3__BHD,WW3_USSX,WW3_USSY, &
      &WW3_TWOX,WW3_TWOY,WW3_TBBX,WW3_TBBY,WW3_UBRX,WW3_UBRY)
-        USE schism_glbl, ONLY: rkind,errmsg,np,npa,wave_hs,wave_dir,wave_tm1, &
-     &wave_wnm,wave_pres,wave_stokes_x,wave_stokes_y,wave_ocean_flux_x, &
-     &wave_ocean_flux_y,wave_flux_friction_x,wave_flux_friction_y, &
-     &wave_orbu,wave_orbv
+        USE schism_glbl !, ONLY: rkind,errmsg,np,npa,wave_hs,wave_dir,wave_tm1, &
+!     &wave_wnm,wave_pres,wave_stokes_x,wave_stokes_y,wave_ocean_flux_x, &
+!     &wave_ocean_flux_y,wave_flux_friction_x,wave_flux_friction_y, &
+!     &wave_orbu,wave_orbv
         USE schism_msgp
         IMPLICIT NONE
 
@@ -6484,6 +6484,20 @@
           write(errmsg,*)'WW3 input has nan:',tmp
           call parallel_abort(errmsg)
         endif
+
+        !Compute wave forces
+        ! Compute Stokes drift velocities and pressure terms
+        call STOKES_STRESS_INTEGRAL_SCHISM
+        ! Conservative terms (relative to Stokes drift advection, Coriolis and pressure head: Eq. 17, 19 and 20 from Bennis 2011)
+        call COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM
+        ! Sink of momentum due to wave breaking
+        IF (fwvor_breaking == 1) call COMPUTE_BREAKING_VF_TERMS_SCHISM
+        ! Sink of momentum due to bottom streaming
+        IF (fwvor_streaming == 1) call COMPUTE_STREAMING_VF_TERMS_SCHISM
+        !No veg yet
+        !IF (fwvor_wveg == 1) CALL COMPUTE_VEGDISS_VF_TERMS_SCHISM     ! Sink of momentum due to wave dissipation by vegetation and update wwave_force
+        !IF (fwvor_wveg_NL == 1) CALL COMPUTE_INTRAWAVE_VEG_FORCE      ! Compute non linear intrawave vegetation force and update wwave_force
+
       end SUBROUTINE get_WW3_arrays
 
 !**********************************************************************
@@ -6796,7 +6810,7 @@
         REAL(rkind) :: Fdb_x_loc, Fdb_y_loc, Fds_x_loc, Fds_y_loc
         REAL(rkind) :: swild_2D(nvrt), swild_3D(nvrt)
         
-        ZPROF_BREAK=2
+        ZPROF_BREAK=2 !vel profile method
 
         ! Compute sink of momentum due to wave breaking 
         DO is = 1, ns
