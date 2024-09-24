@@ -6534,12 +6534,12 @@
           D_loc = max(znl(nvrt,ip)-znl(kbp(ip),ip),hmin_radstress) !>0
 
           !new40
-          jpress(ip)=wave_pres(ip)/rho0 !needs to be [m2/s2]
+          jpress(ip)=wave_pres(ip) !/rho0 !needs to be [m2/s2]
 
           k_loc=wave_wnm(ip) !MIN(KDMAX/DEP(IP),WK(IS,IP))
           kD_loc=k_loc*D_loc !MIN(KDMAX,WK(IS,IP)*D_loc)
           IF(kD_loc <= 0) THEN
-            WRITE(errmsg,*)'WWM: kD_loc<=0'
+            WRITE(errmsg,*)'WW3: kD_loc<=0:',jpress(ip),k_loc,kD_loc
             CALL parallel_abort(errmsg)
           END IF
 
