@@ -6485,6 +6485,9 @@
           call parallel_abort(errmsg)
         endif
 
+        !Temp fixes
+        where(wave_wnm<=0.d0) wave_wnm=0.16d0
+
         !Compute wave forces
         ! Compute Stokes drift velocities and pressure terms
         call STOKES_STRESS_INTEGRAL_SCHISM
