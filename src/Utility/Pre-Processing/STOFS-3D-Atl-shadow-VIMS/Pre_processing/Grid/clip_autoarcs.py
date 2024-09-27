@@ -13,7 +13,7 @@ import os
 import geopandas as gpd
 
 # ------------------------- inputs ---------------------------
-wdir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2v7/Clip/'
+wdir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v43s2_RiverMapper/v43/Clip/'
 crs = 'esri:102008'
 
 # manual polygons defined in the coastal coverage
@@ -24,6 +24,7 @@ lbnd_coastal_shpfile = f'{wdir}/inputs/lbnd_coastal.shp'  # esri:102008
 
 # use linestring as the levee shapefile
 levee_shpfile = f'{wdir}/inputs/levee.shp'  # esri:102008
+levee_buf_distance = 5
 
 # used to select manual polygons that are supposedly better refined than the auto arcs
 select_nearshore_shpfile = f'{wdir}/inputs/select_nearshore_v3.shp'  # esri:102008
@@ -63,7 +64,7 @@ watershed = raw_watershed.overlay(refined_coastal_buf, how='difference').dissolv
 pass
 
 # subtract levee from watershed
-levee_buf = gpd.GeoDataFrame(geometry=gpd.read_file(levee_shpfile).buffer(50))
+levee_buf = gpd.GeoDataFrame(geometry=gpd.read_file(levee_shpfile).buffer(levee_buf_distance))
 watershed = watershed.overlay(levee_buf, how='difference').dissolve()
 watershed.to_file(f'{output_dir}/watershed.shp', crs=crs)
 watershed = gpd.read_file(f'{output_dir}/watershed.shp')

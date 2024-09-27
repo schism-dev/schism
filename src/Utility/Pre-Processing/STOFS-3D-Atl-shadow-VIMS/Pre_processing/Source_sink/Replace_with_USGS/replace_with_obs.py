@@ -132,6 +132,7 @@ def find_usgs_along_nwm(
     The order of the stream is also recorded,
     but not used as a stopping criterion at this moment.
     """
+    SEARCH_DIST = 30e3  # search distance limit
 
     if starting_seg_id is None:
         return  # some starting segs may not be in nwm_shp, which is subsetted
@@ -143,10 +144,10 @@ def find_usgs_along_nwm(
     if iupstream:
         vsource.upstream_path.forward_path(seg_id=starting_seg_id, seg_order=order)
     else:
-        vsource.upstream_path.forward_path(seg_id=starting_seg_id, seg_order=order)
+        vsource.downstream_path.forward_path(seg_id=starting_seg_id, seg_order=order)
 
     total_seg_length += nwm_shp.loc[starting_seg_id].Length
-    if total_seg_length > 30e3:  # stop search when the path exceeds 30 km
+    if total_seg_length > SEARCH_DIST:  # stop search when the path exceeds 30 km
         return
 
     if nwm_shp.loc[starting_seg_id].gages is not None and nwm_shp.loc[starting_seg_id].gages != '':  # gage found
@@ -337,10 +338,20 @@ def source_nwm2usgs(
     # associate USGS stations with NWM segment fid
     nwm_shp = associate_poi_with_nwm(
         nwm_shp, poi=usgs_stations_coords, poi_names=usgs_stations.tolist(),
-        poi_label='gage', diag_output=f'{output_dir}/gage.txt')
+        poi_label='gages', diag_output=f'{output_dir}/auto_nearby_gages.txt')
+    
+    # manually associate some USGS stations with NWM segments,
+    # set the NWM segment to be the one associated with the vsource injection
+    manual_nwm2usgs = {
+        19406836: '07381490',
+        15708755: '02489500',
+        18928090: '07375175',
+    }
+    for nwm_featureID, usgs_id in manual_nwm2usgs.items():
+        nwm_shp.loc[nwm_shp['featureID'] == nwm_featureID, 'gages'] = usgs_id
     
     # print diagnostic info
-    idx = nwm_shp['gage'].notnull()
+    idx = nwm_shp['gages'].notnull()
     print(f'{nwm_shp.loc[idx]}')
 
     # -----------------------------------------------------------------------------------
@@ -408,20 +419,15 @@ def source_nwm2usgs(
     # -----------------------------------------------------------------------------------
     t1 = time.time()
 
-    usgs_data_cache_fname = f'{output_dir}/usgs_data.pkl'
-
     # pad one day before and after the start and end time
     padded_start_time = pd.to_datetime(start_time_str) - pd.Timedelta('1 day')
     padded_end_time = pd.to_datetime(end_time_str) + pd.Timedelta('1 day')
-    if os.path.exists(usgs_data_cache_fname):
-        my_obs = ObsData(usgs_data_cache_fname, from_raw_data=False)
-    else:
-        usgs_data = download_stations(
-            param_id=usgs_var_dict['streamflow']['id'],
-            station_ids=usgs_stations,
-            datelist=pd.date_range(start=padded_start_time, end=padded_end_time),
-        )
-        my_obs = convert_to_ObsData(usgs_data, cache_fname=usgs_data_cache_fname)
+    usgs_data = download_stations(
+        param_id=usgs_var_dict['streamflow']['id'],
+        station_ids=usgs_stations,
+        datelist=pd.date_range(start=padded_start_time, end=padded_end_time),
+    )
+    my_obs = convert_to_ObsData(usgs_data)
 
     print(f'---------------collecting usgs data took: {time.time()-t1} s ---------------\n')
 
@@ -540,7 +546,7 @@ if __name__ == "__main__":
     source_nwm2usgs(
         start_time_str="2024-03-05 00:00:00",
         f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
-        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I03/Source_sink/original_source_sink/',
-        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I03/Source_sink/original_source_sink/20240305/',
-        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I03c/Source_sink/USGS_adjusted_sources/',
+        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I07/Source_sink/original_source_sink/',
+        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I07/Source_sink/original_source_sink/20240305/',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I07d/Source_sink/USGS_adjusted_sources/',
     )
