@@ -231,10 +231,6 @@
       lp3: do i=1,nsource 
         ie=ie_src(i)
         nd1=elnode(1,ie) !use 1st node to check bbox
-
-          !new11
-          if(i==21) write(13,*)'CORIE (1):',ie
-
         do m=1,nbbox
           if(x(nd1)>=bbox_ll(1,m).and.x(nd1)<=bbox_ur(1,m).and. &
             &y(nd1)>=bbox_ll(2,m).and.y(nd1)<=bbox_ur(2,m)) then
@@ -255,15 +251,7 @@
         vol=area(ie)*av_h !>0
         !Max flow allowed for S
         flowmax=vol/dt*(s_rat-1) !>0
-
-          !new11
-          if(i==21) write(13,*)'CORIE b4:',ie
-
         if(flowmax<av_flow(i)) then !look for neighboring bnd cells
- 
-          !new11
-          if(i==21) write(13,*)'CORIE in'
-
           !Prep list of land bnd nodes to search         
           icolor2=0 !flag
           !Find first <=2 starting bnd nodes
