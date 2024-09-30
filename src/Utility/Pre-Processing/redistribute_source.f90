@@ -6,7 +6,7 @@
 !     Works for mixed tri/quads, lon/lat or proj. The code will look for neigboring bnd cells 
 !     (with at least 1 node on land bnd) to spread flow.
 !     Inputs: redistribute_source.in, constants below, hgrid.gr3, source_sink.in.0, vsource.th.0
-!     Output: source_sink.in,vsource.th
+!     Output: source_sink.in,vsource.th, msource.th,vsource.bp.out (depth of 1=> new sources)
 !             Warning messages in warning.out; fatal on screen
 
 !     ifx -CB -O2 -g -traceback -o redistribute_source redistribute_source.f90
@@ -54,6 +54,8 @@
       open(13,file='warning.out',status='replace')
       open(15,file='source_sink.in',status='replace')
       open(17,file='vsource.th',status='replace')
+      open(18,file='msource.th',status='replace')
+      open(19,file='vsource.bp.out',status='replace')
       read(14,*); read(14,*)ne,np
       allocate(xctr(ne),yctr(ne),dp(np),xnd(np),ynd(np),i34(ne),elnode(4,ne),isbnd(np), &
      &icolor(ne),icolor2(np),area(ne),nne(np),tot_perc(ne),perc(ne),nd_search(np),x(np), &
@@ -252,6 +254,11 @@
         !Max flow allowed for S
         flowmax=vol/dt*(s_rat-1) !>0
         if(flowmax<av_flow(i)) then !look for neighboring bnd cells
+          if(av_flow(i)<=0.d0) then
+            print*, 'av_flow<0:',ie,av_flow(i)
+            stop
+          endif
+
           !Prep list of land bnd nodes to search         
           icolor2=0 !flag
           !Find first <=2 starting bnd nodes
@@ -338,7 +345,7 @@
       end do lp3 !i=1,nsource
       print*, nsource2-nsource,' new sources added'
 
-      !Check total %
+      !Check total %=1
       tot_perc(:)=0
       do i=nsource+1,nsource2
         ie0=ie_src2(i,2)
@@ -350,7 +357,7 @@
         tmp=tot_perc(ie)+perc(i)
         write(98,*)'Total %=',i,ie,tmp
         if(abs(tmp-1.d0)>1.d-5) then
-          print*, '% not right; check fort.98:',i,ie,tmp
+          print*, 'Total !=1; may need to increase max_iter:',i,ie,tmp
           stop 
         endif
       enddo !i
@@ -368,6 +375,20 @@
       enddo !i
       close(15)
 
+      write(19,*)'z=0 =>old source; z=1: new'; write(19,*)nsource2
+      do i=1,nsource2
+        ie=ie_src2(i,1)
+        if(i<=nsource) then
+          hout=0
+        else
+          hout=1
+        endif
+        xtmp=sum(x(elnode(1:i34(ie),ie)))/i34(ie)
+        ytmp=sum(y(elnode(1:i34(ie),ie)))/i34(ie)
+        write(19,*)i,xtmp,ytmp,hout
+      enddo !i
+      close(19)
+
       allocate(flow2(nsource2))
       nline=0
       rewind(12)
@@ -384,12 +405,13 @@
             endif
           enddo !j
           if(indx==0) then
-            print*, 'Not found:',ie0
+            print*, 'Index not found:',ie0
             stop 
           endif
           flow2(i)=flow(indx)*perc(i)
         enddo !i
         write(17,'(e22.12,1000000(1x,e14.6))')time,flow2(1:nsource2)
+        write(18,'(e22.12,1000000(1x,f8.2))')time,(-9999.,i=1,nsource2),(0.,i=1,nsource2)
         nline=nline+1
       end do
 98    close(12)

@@ -11,10 +11,10 @@
 clear all; close all;
 
 %Output info
-river_S=30;
+river_S=0;
 start_yr=2017; end_yr=2018;
-start_mon=12; end_mon=12;
-start_day=1; end_day=31; %GMT
+start_mon=1; end_mon=1;
+start_day=1; end_day=1; %GMT
 
 %Location
 riv=load('out_river'); %id,lon,lat,rank
