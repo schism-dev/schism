@@ -1208,7 +1208,7 @@ subroutine clam_calc(id,kb,wdz)
         fTSS(i)=1.0-(1.0-cfTSSm(i))*(TSSc-cTSS(i,3))/(cTSS(i,4)-cTSS(i,3))
       endif
       Fr(i)=cfrmax(i)*fT(i)*fS(i)*fDO(i)*fTSS(i) !filtration rate (m3.g[C_clam].day-1)
-      cIF(i)=min(1.d0,cIFmax(i)/max(sum(Fr(i)*PC),1.d-5)) !ingestion rate
+      cIF(i)=min(1.d0,cIFmax(i)/max(sum(Fr(i)*PC),1.d-12)) !ingestion rate
 
       !filtered matters
       TFC(i)=sum(PC*Fr(i)*CLAM(i,id))   !POC filtered (g[C].m-2.day-1)
@@ -1217,7 +1217,7 @@ subroutine clam_calc(id,kb,wdz)
       ATFC(i)=sum(calpha(i,1:5)*PC*Fr(i)*cIF(i)*CLAM(i,id))   !potential POC assimilated (g[C].m-2.day-1)
       ATFN(i)=sum(calpha(i,1:5)*PN*Fr(i)*cIF(i)*CLAM(i,id))   !potential PON assimilated (g[N].m-2.day-1)
       ATFP(i)=sum(calpha(i,1:5)*PP*Fr(i)*cIF(i)*CLAM(i,id))   !potential POP assimilated (g[P].m-2.day-1)
-      fN(i)=min(1.d0, ATFN(i)/max(cn2c(i)*ATFC(i),1.d-5),ATFP(i)/max(cp2c(i)*ATFC(i),1.d-5)) !nutrient(N,P) limitation
+      fN(i)=min(1.d0, ATFN(i)/max(cn2c(i)*ATFC(i),1.d-12),ATFP(i)/max(cp2c(i)*ATFC(i),1.d-12)) !nutrient(N,P) limitation
 
       !growth, metabolism, and mortality
       GP(i)=sum(fN(i)*calpha(i,1:5)*cIF(i)*(1.0-cRF(i))*PC(1:5)*Fr(i)*CLAM(i,id)) !growth (g[C].m-2.day-1)
