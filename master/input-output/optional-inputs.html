@@ -1717,7 +1717,7 @@
 <div class="admonition notes">
 <p class="admonition-title">Notes</p>
 <ul>
-<li>Note that the time must start from 0, and the step can be anything <code>≥dt</code>.</li>
+<li>Note that the time must start from 0, and the (uniform) step (in sec) can be anything <code>≥dt</code>.</li>
 <li>The '1' in <code>TEM_1.th</code> refers to the 1 (and only) tracer class in the temperature module;</li>
 <li>In the case of wind.th (with <code>nws=1 or 4</code>), the time step specified inside must also match <code>wtiminc</code> in <code>param.nml</code>. If <code>nws=4</code>, the format of <code>wind.th</code> is different: each line specifies the wind u,v, and atmospheric pressure (in Pa) at all nodes.</li>
 <li>In the case of <code>msource.th</code> (invoked with <code>if_source=1</code>), the values after time stamp are tracer values at each source element (specified in <code>source_sink.in</code>), and the order of tracers is: T,S, followed by each tracer module invoked. No vertical level info is needed here as the tracers are injected at a level or all levels. If you do not have good values for some tracers, use -9999. instead and the code will inject ambient concentration values for you.</li>
@@ -1729,7 +1729,7 @@
 <div class="admonition notes">
 <p class="admonition-title">Notes</p>
 <ol>
-<li>the time always starts from 0, and the time step can be anything <code>≥dt</code>. Note that the time stamp series in <code>time</code> is not needed by the code; only <code>time_step</code> (in sec) is needed;</li>
+<li>the time always starts from 0, and the (uniform) time step can be anything <code>≥dt</code>. Note that the time stamp series in <code>time</code> is not needed by the code; only <code>time_step</code> (in sec) is needed;</li>
 <li><code>time_series</code> contains the main data at all relevant nodes;</li>
 <li>‘nOpenBndNodes’ should be total number of nodes on all open boundary segments that require this input, and the values appear in same order as in bctides.in inside ‘time_series’;</li>
 <li><code>nLevels</code> specifies the vertical structure, and <code>nComponents</code> specifies either scalar/vector, or # of classes in the tracer module;</li>
