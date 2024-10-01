@@ -29,7 +29,7 @@ This includes `elev.th`, `flux.th`, `TEM_1.th`, `SAL_1.th` etc, which share same
 ```
 
 !!!notes
-    - Note that the time must start from 0, and the step can be anything `≥dt`.
+    - Note that the time must start from 0, and the (uniform) step (in sec) can be anything `≥dt`.
     - The '1' in `TEM_1.th` refers to the 1 (and only) tracer class in the temperature module;
     - In the case of wind.th (with `nws=1 or 4`), the time step specified inside must also match `wtiminc` in `param.nml`. If `nws=4`, the format of `wind.th` is different: each line specifies the wind u,v, and atmospheric pressure (in Pa) at all nodes.
     - In the case of `msource.th` (invoked with `if_source=1`), the values after time stamp are tracer values at each source element (specified in `source_sink.in`), and the order of tracers is: T,S, followed by each tracer module invoked. No vertical level info is needed here as the tracers are injected at a level or all levels. If you do not have good values for some tracers, use -9999. instead and the code will inject ambient concentration values for you.
@@ -39,7 +39,7 @@ This includes `elev.th`, `flux.th`, `TEM_1.th`, `SAL_1.th` etc, which share same
 These include `elev2D.th.nc`, `uv3D.th.nc`, `TEM_3D.th.nc`, `SAL_3D.th.nc`, and `[MOD]_3D.th.nc` (where MOD is the tracer module name like ‘COS’). The format can be found below (also in test suite (e.g. schism_verification_tests/Test_ICM_UB/)).
 
 !!!notes
-    1. the time always starts from 0, and the time step can be anything `≥dt`. Note that the time stamp series in `time` is not needed by the code; only `time_step` (in sec) is needed;
+    1. the time always starts from 0, and the (uniform) time step can be anything `≥dt`. Note that the time stamp series in `time` is not needed by the code; only `time_step` (in sec) is needed;
     2. `time_series` contains the main data at all relevant nodes;
     3. ‘nOpenBndNodes’ should be total number of nodes on all open boundary segments that require this input, and the values appear in same order as in bctides.in inside ‘time_series’;
     4. `nLevels` specifies the vertical structure, and `nComponents` specifies either scalar/vector, or # of classes in the tracer module;
