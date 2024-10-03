@@ -2041,6 +2041,10 @@ MODULE ParWind
 !   Init wind etc
     atmos_1(:,1:2)=0.d0
     atmos_1(:,3)=backgroundAtmPress*MB2PA
+
+    IF (time_stamp < mdBegSimTime .OR. time_stamp > mdEndSimTime) THEN
+!     WRITE(12,*)'GetHollandFields: outside time window:',time_stamp,mdBegSimTime,mdEndSimTime
+      RETURN
     END IF
 
 !YJZ, debug
@@ -2062,7 +2066,7 @@ MODULE ParWind
     IF (firstCall) THEN
     firstCall = .FALSE.
 
-    ALLOCATE(rad(np), dx(np), dy(np), theta(np))
+    ALLOCATE(rad(np_gb), dx(np_gb), dy(np_gb), theta(np_gb))
     ALLOCATE(holStru(nBTrFiles))
 
     DO stCnt = 1, nBTrFiles
@@ -2181,9 +2185,9 @@ MODULE ParWind
         IF (maxRadIDX == 0) THEN
           WRITE(tmpStr1, '(f20.3)') rrpval
           tmpStr1 = '(rrp = ' // TRIM(ADJUSTL(tmpStr1)) // ' m)'
-        WRITE(16, '(a)') 'No nodal points found inside the radius of the last closed isobar ' // &
-                                       TRIM(ADJUSTL(tmpStr1)) // ' for storm: ' // &
-                                       TRIM(ADJUSTL(holStru(stCnt)%thisStorm))
+          WRITE(16, '(a)') 'No nodal points found inside the radius of the last closed isobar ' // &
+                           TRIM(ADJUSTL(tmpStr1)) // ' for storm: ' // &
+                           TRIM(ADJUSTL(holStru(stCnt)%thisStorm))
           EXIT
         ELSE
           WRITE(tmpStr1, '(i20)') maxRadIDX
@@ -2524,7 +2528,7 @@ MODULE ParWind
     ! Check if time_stamp is within bounds. If it is not then exit the program.
     IF(time_stamp < mdBegSimTime .OR. time_stamp > mdEndSimTime) THEN
       RETURN
-    END IF  
+    END IF
 
 
 !   JEROME I'm agreeing with YJZ, manage to call just once
@@ -2703,7 +2707,9 @@ MODULE ParWind
       END DO ! nBTrFiles
 
       WRITE(16,*)'maxTrackRecords: ', maxTrackRecords
-      
+
+    END IF ! FIRSTCALL
+
     !------------------------------
     ! Initialize the arrays. Here we are resetting the fields to their defaults.
     ! This subroutine is called repeatdly and each time the following
@@ -2753,10 +2759,10 @@ MODULE ParWind
 
       !Check NaN
       IF(wtRatio /= wtRatio .OR. clat /= clat .OR. clon /= clon) THEN
-          WRITE(16,*)'GetGAHMFields, error in lonlat:',wtRatio,clat,clon,jl1,jl2
-!          WRITE(errmsg,*)'GetHollandFields- nan(1):',wtRatio,lat,lon,jl1,jl2
-!          CALL parallel_abort(errmsg)
-          lrevert=.true.
+        WRITE(16,*)'GetGAHMFields, error in lonlat:',wtRatio,clat,clon,jl1,jl2
+!        WRITE(errmsg,*)'GetHollandFields- nan(1):',wtRatio,lat,lon,jl1,jl2
+!        CALL parallel_abort(errmsg)
+        lrevert=.true.
       END IF
 
       ! These represent the total number of records (34-knot isotach in the 4 quadrants)
@@ -3329,7 +3335,7 @@ MODULE ParWind
   !----------------------------------------------------------------
   SUBROUTINE ReAllocBTrStruct(str, nRec)
 
-    USE Utilities, ONLY : ReAllocate
+    USE PaHM_Utilities, ONLY : ReAllocate
 
     IMPLICIT NONE
 
