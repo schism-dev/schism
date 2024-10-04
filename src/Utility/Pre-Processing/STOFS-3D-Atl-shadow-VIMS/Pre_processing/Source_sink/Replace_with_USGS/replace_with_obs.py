@@ -546,7 +546,7 @@ if __name__ == "__main__":
     source_nwm2usgs(
         start_time_str="2024-03-05 00:00:00",
         f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
-        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I07/Source_sink/original_source_sink/',
-        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I07/Source_sink/original_source_sink/20240305/',
-        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I07d/Source_sink/USGS_adjusted_sources/',
+        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/',
+        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/20240305/',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/USGS_adjusted_sources/',
     )

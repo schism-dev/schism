@@ -13,7 +13,7 @@ import os
 import geopandas as gpd
 
 # ------------------------- inputs ---------------------------
-wdir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v43s2_RiverMapper/v43/Clip/'
+wdir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v43s2_RiverMapper/v44/Clip/'
 crs = 'esri:102008'
 
 # manual polygons defined in the coastal coverage

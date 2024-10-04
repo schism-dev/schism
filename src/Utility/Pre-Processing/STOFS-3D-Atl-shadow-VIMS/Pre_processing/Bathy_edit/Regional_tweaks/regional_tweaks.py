@@ -15,7 +15,7 @@ except ImportError:
     print("Using 'read' from 'pylib'")
 
 
-REGIONAL_TWEAKS = {
+DEFAULT_REGIONAL_TWEAKS = {
     'min_5m_ll_noPR': 5,
     'SabinePass': 7,
     'BergenPoint': 5,
@@ -38,12 +38,16 @@ REGIONAL_TWEAKS = {
     'st_lawrence2': 10,
     'st_lawrence3': 10,
 }
+DEFAULT_REGION_DIR = '/sciclone/schism10/Hgrid_projects/DEMs/regions/'
 
 
-def tweak_hgrid_depth(hgrid, regional_tweaks, regions_dir):
+def tweak_hgrid_depth(hgrid, regional_tweaks=None, regions_dir=DEFAULT_REGION_DIR):
     '''
     Set the minimum depth in the regions specified in regional_tweaks.
     '''
+    if regional_tweaks is None:
+        regional_tweaks = DEFAULT_REGIONAL_TWEAKS
+
     for region, depth in regional_tweaks.items():
         region_file = f'{regions_dir}/{region}.reg'
         bp = read_schism_bpfile(region_file, fmt=1)
@@ -58,11 +62,10 @@ def sample():
     '''
     Sample usage of the tweak_hgrid_depth function.
     '''
-    regions_dir = '/sciclone/schism10/Hgrid_projects/DEMs/regions/'
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_test/Bathy_edit/DEM_loading/'
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I09b/Bathy_edit/DEM_loading/'
 
     hgrid = read_hgrid(f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3')
-    hgrid = tweak_hgrid_depth(hgrid, REGIONAL_TWEAKS, regions_dir)
+    hgrid = tweak_hgrid_depth(hgrid)
     hgrid.write(f'{wdir}/hgrid.tweaked.gr3')
 
 

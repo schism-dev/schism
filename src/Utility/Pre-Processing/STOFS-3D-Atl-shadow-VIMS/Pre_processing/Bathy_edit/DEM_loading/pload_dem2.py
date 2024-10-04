@@ -356,5 +356,46 @@ def stofs3d_v7():
     comm.Barrier()
 
 
+def stofs3d_v8_LA():
+    """
+    Load bathymetry for STOFS3D-v8 Louisiana.
+
+    Two DEM sets are used to load bathymetry from different sources: v2a and v3a.
+        DEM_info.json v2a: v1 (STOFS-3D-Atl v6) + Bluetopo
+            (locally applied in LA, mainly Mississippi River)¬
+        DEM_info.json v3a: v1 + NGOM_CoNED_2022 (mostly LA, but including Mobile Bay, AL)¬
+    """
+    # dem_dir = '/work2/noaa/nos-surge/feiye/npz2/'
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I09/Bathy_edit/DEM_loading_new/'
+    dem_dir = '/sciclone/schism10/Hgrid_projects/DEMs/npz2/'
+    dem_json_list = [f'{wdir}/DEM_info_v2a.json', f'{wdir}/DEM_info_v3a.json']
+    dem_region_shpfile = f'{wdir}/v18_s2_v1_polys_dissolved.shp'
+    output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
+    # ---------------------------------------
+
+    comm, _, myrank = initialize_mpi()
+    if myrank == 0:  # copy this script to the working directory to keep a record
+        os.system(f'cp {__file__} {wdir}')
+
+    loaded_grids = []
+    for dem_json in dem_json_list:
+        # Load grids in parallel
+        loaded_grids.append(
+            pload_dem(grd=f'{wdir}/hgrid.ll', grdout=None, dem_json=dem_json,
+                      dem_dir=dem_dir, reverse_sign=True)  # returns None for non-root
+        )  # On non-root processes, loaded_grids only contains None
+        comm.Barrier()  # wait for all cores to finish populating loaded_grids
+        if myrank == 0:
+            print(f'---------Loaded grid from {dem_json}----------\n')
+
+    # On root process, take the maximum depth from loaded_grids
+    if myrank == 0:
+        print(f'Taking the maximum depth from loaded grids: {loaded_grids}')
+        dp = max_dp_in_region(loaded_grids, region_file=dem_region_shpfile)
+        loaded_grids[0].save(output_fname, value=dp)
+
+    comm.Barrier()
+
+
 if __name__ == '__main__':
-    stofs3d_v7_hercules()
+    stofs3d_v8_LA()
