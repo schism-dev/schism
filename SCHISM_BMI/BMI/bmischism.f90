@@ -14,7 +14,7 @@ module bmischism
   use schism_glbl, only: nsources_ngen, ieg_source_ngen, ieg_sink
   use schism_glbl, only: ieg_source_flowpath_ids, ieg_sink_flowpath_ids
   use schism_glbl, only: ne_global, rkind
-  use schism_glbl, only: np_global, xnd, ynd, znd, area
+  use schism_glbl, only: np_global, xnd, ynd, znd, area, dp
   use schism_glbl, only: nope_global, nond_global, iond_global, nsources
   use schism_glbl, only: fluxsu, fluxlu, ieg_source, ath2, ath3
   use schism_glbl, only: windx1, windy1, pr1, airt1, shum1
@@ -116,7 +116,7 @@ module bmischism
 
   ! Exchange items
   integer, parameter :: input_item_count = 18
-  integer, parameter :: output_item_count = 6
+  integer, parameter :: output_item_count = 7
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -279,6 +279,7 @@ end subroutine read_init_config
     output_items(4) = 'Q_bnd_ind'   ! Source (discharge and rainfall) boundary condition indices (N/A)
     output_items(5) = 'ETA2_bnd_ind'! Water level open boundary condition indices (N/A)
     output_items(6) = 'TROUTE_ETA2'    ! Total water level T-Route boundaries at SCHISM pre-determined stations (m)
+    output_items(7) = 'BEDLEVEL' ! Bed elevation above datum - note that this is inverse of SCHISM's depth representation (m)
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -377,7 +378,7 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2','TROUTE_ETA2','VX','VY','Q_bnd_source_t0','Q_bnd_sink_t0','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','RAINRATE_t0','Q_bnd_source_t1','Q_bnd_sink_t1','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','RAINRATE_t1')
+    case('ETA2','TROUTE_ETA2','VX','VY','Q_bnd_source_t0','Q_bnd_sink_t0','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','RAINRATE_t0','Q_bnd_source_t1','Q_bnd_sink_t1','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','RAINRATE_t1', 'BEDLEVEL')
        type = "double precision"
        bmi_status = BMI_SUCCESS
     case('Q_bnd_ind','ETA2_bnd_ind')
@@ -398,6 +399,9 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
+    case("BEDLEVEL")
+       units = "m"
+       bmi_status = BMI_SUCCESS
     case("SFCPRS_t0", "SFCPRS_t1")
        units = "Pa"
        bmi_status = BMI_SUCCESS
@@ -440,7 +444,7 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2_bnd_ind','ETA2','TROUTE_ETA2','VX','VY','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1')
+    case('ETA2_bnd_ind','ETA2','TROUTE_ETA2','VX','VY','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','BEDLEVEL')
        location = "node"
        bmi_status = BMI_SUCCESS
     case('Q_bnd_ind','RAINRATE_t0','RAINRATE_t1','Q_bnd_source_t0','Q_bnd_source_t1','Q_bnd_sink_t0','Q_bnd_sink_t1')
@@ -461,7 +465,7 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2_bnd_ind','Q_bnd_ind','ETA2','VX','VY','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1')
+    case('ETA2_bnd_ind','Q_bnd_ind','ETA2','VX','VY','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','BEDLEVEL')
        grid = 1
        bmi_status = BMI_SUCCESS
     case('RAINRATE_t0','RAINRATE_t1')
@@ -1060,11 +1064,15 @@ end function schism_finalizer
     character (len=*), intent(in) :: name
     integer, intent(out) :: size
     integer :: bmi_status
+
     !TODO think of a better way to do this
     !Use 'sizeof' in gcc & ifort
     select case(name)
     case("ETA2")
        size = sizeof(eta2)
+       bmi_status = BMI_SUCCESS
+    case("BEDLEVEL")
+       size = sizeof(dp(1))
        bmi_status = BMI_SUCCESS
     case("TROUTE_ETA2")
        size = sizeof(sta_out_gb(:,1))
@@ -1984,6 +1992,9 @@ end function schism_finalizer
     case("VY")
       dest = [vv2(1,:)]
       bmi_status=BMI_SUCCESS
+    case("BEDLEVEL")
+      dest = [-1.0 * dp(:)] ! SCHISM represents the bed as positive m BELOW the datum
+      bmi_status=BMI_SUCCESS
     case default
        dest(:) = -1.d0
        bmi_status = BMI_FAILURE
@@ -2100,6 +2111,11 @@ end function schism_finalizer
     case("VY")
       do i = 1, size(inds)
           dest(i) = vv2(1,inds(i))
+      enddo
+      bmi_status=BMI_SUCCESS
+    case("BEDLEVEL")
+      do i = 1, size(inds)
+          dest(i) = -1.0 * dp(inds(i)) ! SCHISM represents the bed as positive m BELOW the datum
       enddo
       bmi_status=BMI_SUCCESS
     case default
