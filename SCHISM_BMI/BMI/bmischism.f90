@@ -175,6 +175,7 @@ subroutine read_init_config(this, config_file, bmi_status)
       bmi_status = BMI_FAILURE
       return
   end if
+
   ! Open and read Namelist file.
   open (action='read', file=trim(config_file), iostat=rc, newunit=fu)
   read (nml=test, iostat=rc, unit=fu)
@@ -185,24 +186,31 @@ subroutine read_init_config(this, config_file, bmi_status)
        'Invalid line in namelist: '//trim(line)
       write (stderr, '(a)') 'Error: invalid Namelist format.'
       bmi_status = BMI_FAILURE
-  else
-    if (model_start_time == -1 ) then
+      return
+  end if
+
+  if (model_start_time == -1 ) then
       !model_start_time wasn't found in the name list, log the error and return
       write (stderr, *) "Config param 'model_start_time' not found in config file"
       bmi_status = BMI_FAILURE
       return
-    end if
-    !Update the model with all values found in the namelist
-    this%model%model_start_time = model_start_time
-    this%model%model_end_time = model_end_time
-    this%model%current_model_time = 0.0
-    this%model%num_time_steps = num_time_steps
-    this%model%time_step_size = time_step_size
-    this%model%iths = 0
-    this%model%ntime = 0
-    this%model%SCHISM_dir = SCHISM_dir
-    bmi_status = BMI_SUCCESS
   end if
+
+  !Update the model with all values found in the namelist
+  this%model%model_start_time = model_start_time
+  this%model%model_end_time = model_end_time
+  this%model%current_model_time = 0.0
+  this%model%num_time_steps = num_time_steps
+  this%model%time_step_size = time_step_size
+  this%model%iths = 0
+  this%model%ntime = 0
+  this%model%SCHISM_dir = SCHISM_dir
+
+  ! This global variable is a thorn in our side - PBM
+  dt = time_step_size
+
+  bmi_status = BMI_SUCCESS
+
   close (fu)
 end subroutine read_init_config
 
@@ -296,6 +304,10 @@ function schism_initialize(this, config_file) result (bmi_status)
 
   if (len(config_file) > 0) then
      call read_init_config(this, config_file, bmi_status)
+     if  (bmi_status == BMI_FAILURE) then
+        return
+     end if
+
      this%model%current_model_time = 0.0
      if ( this%model%num_time_steps == 0 .and. this%model%model_end_time == 0) then
         this%model%num_time_steps = 24
@@ -667,7 +679,7 @@ end function schism_finalizer
       ! Allocate bnd_ind array to ingest
       ! global element indices for source boundaries
       allocate(grid_x(nsources_ngen))
-      ! loop over all user sources for mesh and append T-Route 
+      ! loop over all user sources for mesh and append T-Route
       ! flow path ids from hydrofabric to array
       do i = 1, nsources
          grid_x(i) = ieg_source_flowpath_ids(i)
@@ -1366,7 +1378,7 @@ end function schism_finalizer
       endif
     case("RAINRATE_t1")
       ! Since Q_bnd is called first to set the source
-      ! term, we only just need to update the "t1" 
+      ! term, we only just need to update the "t1"
       ! source term and add the rain flux contribution
       ! Convert rainrate data to discharge flux
       ath3(:,1,2,1) = ath3(:,1,2,1) + (src(:) * area(:)/1000.0)
@@ -1750,7 +1762,7 @@ end function schism_finalizer
       endif
     case("RAINRATE_t1")
       ! Since Q_bnd is called first to set the source
-      ! term, we only just need to update the "t1" 
+      ! term, we only just need to update the "t1"
       ! source term and add the rain flux contribution
       ! Convert rainrate data to discharge flux
       do i = 1, size(inds)
@@ -1908,7 +1920,7 @@ end function schism_finalizer
     case("ETA2_bnd_ind")
       ! Since open water level boundaries
       ! are constrained by user, we must
-      ! set a count loop to break once 
+      ! set a count loop to break once
       ! we reach that threshold in ath2
       ind_count = 1
       ! Allocate bnd_ind array to ingest
@@ -1921,7 +1933,7 @@ end function schism_finalizer
             ! If we've ingested all global indices possible
             ! for the open boundary segments, then break out of loop
             if(ind_count > size(bnd_ind)) exit outer
-          
+
             bnd_ind(ind_count) = iond_global(i,j) !global node indices
             ind_count = ind_count + 1
          enddo
