@@ -24,6 +24,7 @@ module test_model
       double precision :: UU2
       double precision :: VV2
 
+      integer :: given_communicator
   end type schism_type
 
     contains

@@ -69,7 +69,9 @@ program schism_driver_test
     integer, allocatable                              :: grid_face_nodes(:) ! Get the face-node connectivity
     integer, allocatable                              :: grid_nodes_per_face(:) ! Get the number of nodes per face
     integer                                           :: counts           ! Edge-node connectivity size to calculate   
-    integer                                           :: a, b             ! Loop counters 
+    integer                                           :: a, b             ! Loop counters
+    integer :: schism_mpi_comm(1)
+    integer :: mpi_rank, mpi_err
     real, pointer                                 :: var_value_get_ptr(:) ! value of a variable for get_value_ptr
 
     integer, allocatable, target             :: get_var_Q_bnd_ind(:) ! get indices of source terms
@@ -86,9 +88,18 @@ program schism_driver_test
   !  Initialize
   !---------------------------------------------------------------------
     print*, "Initializing..."
+    call MPI_Init(mpi_err)
+    call MPI_Comm_rank(MPI_COMM_WORLD, mpi_rank, mpi_err)
     call get_command_argument(1, arg)
+    schism_mpi_comm(1) = MPI_COMM_WORLD
+    status = m%set_value('bmi_mpi_comm_handle', schism_mpi_comm)
     status = m%initialize(arg)
-    print*, "Component name = "
+
+  ! Test that all processes get here, when only a subset of processes call initialize()
+    call MPI_BARRIER(MPI_COMM_WORLD, mpi_err)
+    if (mpi_err /= MPI_SUCCESS) then
+       print*, "MPI_BARRIER call after initialize() failed"
+    end if
 
   !---------------------------------------------------------------------
   ! Get model information
@@ -125,18 +136,20 @@ program schism_driver_test
         status = m%get_var_units(trim(names_inputs(j)), var_units)
         status = m%get_var_itemsize(trim(names_inputs(j)), var_itemsize)
         status = m%get_var_nbytes(trim(names_inputs(j)), var_nbytes)
-        print*, "The variable ", trim(names_inputs(j))
+        if (mpi_rank == 0) print*, "The variable ", trim(names_inputs(j))
       else
         status = m%get_var_type(trim(names_outputs(j - n_inputs)), var_type)
         status = m%get_var_units(trim(names_outputs(j - n_inputs)), var_units)
         status = m%get_var_itemsize(trim(names_outputs(j - n_inputs)), var_itemsize)
         status = m%get_var_nbytes(trim(names_outputs(j - n_inputs)), var_nbytes)
-        print*, "The variable ", trim(names_outputs(j - n_inputs))
+        if (mpi_rank == 0) print*, "The variable ", trim(names_outputs(j - n_inputs))
       end if
-      print*, "    has a type of ", var_type
-      print*, "    units of ", var_units
-      print*, "    a size of ", var_itemsize
-      print*, "    and total n bytes of ", var_nbytes
+      if (mpi_rank == 0) then
+         print*, "    has a type of ", var_type
+         print*, "    units of ", var_units
+         print*, "    a size of ", var_itemsize
+         print*, "    and total n bytes of ", var_nbytes
+      end if
     end do
 
     
@@ -766,7 +779,9 @@ program schism_driver_test
       print*, "Finalizing..."
       status = m%finalize()
       print*, "Model is finalized!"
- 
+
+      call MPI_Finalize(mpi_err)
+
   !---------------------------------------------------------------------
   ! End test
   !---------------------------------------------------------------------

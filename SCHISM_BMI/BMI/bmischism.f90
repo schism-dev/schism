@@ -297,7 +297,6 @@ end subroutine read_init_config
 function schism_initialize(this, config_file) result (bmi_status)
   class (bmi_schism), intent(out) :: this
   character (len=*), intent(in) :: config_file
-  !integer, intent(in) :: communicator
 
   integer :: iths, ntime
   integer :: bmi_status
@@ -333,13 +332,7 @@ function schism_initialize(this, config_file) result (bmi_status)
 
      ! Initalize SCHISM with MPI communicator provided 
      ! by the NextGen framework to the BMI wrapper
-     !call parallel_init(communicator)
-
-     ! Since inital testing will be completed in a serial
-     ! mode, then just allow MPI communications to be 
-     ! initalize using default MPI_COMM_WORLD, in which
-     ! the default must be one core
-     call parallel_init
+     call parallel_init(this%model%given_communicator)
 
      ! Call SCHISM init function to initalize the model
      ! configurations that is specified in the param.nl
@@ -393,7 +386,7 @@ end function schism_finalizer
     case('ETA2','TROUTE_ETA2','VX','VY','Q_bnd_source_t0','Q_bnd_sink_t0','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','RAINRATE_t0','Q_bnd_source_t1','Q_bnd_sink_t1','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','RAINRATE_t1', 'BEDLEVEL')
        type = "double precision"
        bmi_status = BMI_SUCCESS
-    case('Q_bnd_ind','ETA2_bnd_ind')
+    case('Q_bnd_ind','ETA2_bnd_ind','bmi_mpi_comm_handle')
        type = "integer"
        bmi_status = BMI_SUCCESS
     case default
@@ -1080,6 +1073,9 @@ end function schism_finalizer
     !TODO think of a better way to do this
     !Use 'sizeof' in gcc & ifort
     select case(name)
+    case("bmi_mpi_comm_handle")
+       size = sizeof(bmi_status)
+       bmi_status = BMI_SUCCESS
     case("ETA2")
        size = sizeof(eta2)
        bmi_status = BMI_SUCCESS
@@ -1142,6 +1138,12 @@ end function schism_finalizer
     integer :: bmi_status
     integer :: s1, s2, s3, grid, grid_size, item_size
 
+    if (name == 'bmi_mpi_comm_handle') then
+       nbytes = sizeof(bmi_status)
+       bmi_status = BMI_SUCCESS
+       return
+    end if
+
     s1 = this%get_var_grid(name, grid)
     s2 = this%get_grid_size(grid, grid_size)
     s3 = this%get_var_itemsize(name, item_size)
@@ -1163,15 +1165,12 @@ end function schism_finalizer
     integer :: bmi_status
   
     select case(name)
-    !!!!!! No integer values currently advertised fo SCHISM !!!!!!
-    !case("INPUT_VAR_3")
-    !   this%model%input_var_3 = src(1)
-    !   bmi_status = BMI_SUCCESS
+    case("bmi_mpi_comm_handle")
+       this%model%given_communicator = src(1)
+       bmi_status = BMI_SUCCESS
     case default
        bmi_status = BMI_FAILURE
     end select
-    ! NOTE, if vars are gridded, then use:
-    ! this%model%var= reshape(src, [this%model%n_y, this%model%n_x])
   end function schism_set_int
 
   ! Set new real values.

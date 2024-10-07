@@ -31,8 +31,7 @@ endif()
 
 # Set CMAKE CXX Flags to compiled ParMETIS and METIS properly
 #set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS_INIT} -std=c++11 -fPIC")
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+add_compile_options("-fPIC")
 
 # https://www.intel.com/content/www/us/en/develop/documentation/oneapi-dpcpp-cpp-compiler-dev-guide-and-reference/top/compiler-setup/use-the-command-line/use-cmake-with-the-compiler.html
 if (INTEL_DPCPP)
@@ -67,13 +66,13 @@ add_compile_definitions(MPIVERSION=${MPIVERSION})
 
 add_definitions(${MPI_Fortran_COMPILE_FLAGS})
 if (CMAKE_Fortran_FLAGS)
-  set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS})
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}")
 endif (CMAKE_Fortran_FLAGS)
 include_directories(${MPI_Fortran_INCLUDE_PATH})
 
 add_definitions(${MPI_C_COMPILE_FLAGS})
 if (CMAKE_C_FLAGS)
-  set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} ${MPI_C_COMPILE_FLAGS})
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MPI_C_COMPILE_FLAGS}")
 endif (CMAKE_C_FLAGS)
 include_directories(${MPI_C_INCLUDE_PATH})
 ########### NetCDF Dependency is handled here because so many libraries use it ##############
@@ -215,17 +214,23 @@ else()
     add_library(testbmifortranmodel SHARED ${BMI_SOURCES})
 endif()
 
-set(SCHISM_INCLUDE "${PROJECT_SOURCE_DIR}/SCHISM_LIB_NWM_BMI/include")
-set(SCHISM_HYDRO "${PROJECT_SOURCE_DIR}/SCHISM_LIB_NWM_BMI/lib/libhydro.a")
-set(SCHISM_CORE "${PROJECT_SOURCE_DIR}/SCHISM_LIB_NWM_BMI/lib/libcore.a")
 
+if(DEFINED SCHISM_BUILD_DIR)
+    set(SCHISM_INCLUDE "${SCHISM_BUILD_DIR}/include" CACHE STRING "")
+    set(SCHISM_HYDRO "${SCHISM_BUILD_DIR}/lib/libhydro.a" CACHE STRING "")
+    set(SCHISM_CORE "${SCHISM_BUILD_DIR}/lib/libcore.a" CACHE STRING "")
+else()
+    set(SCHISM_INCLUDE "${PROJECT_SOURCE_DIR}/SCHISM_LIB_NWM_BMI/include" CACHE STRING "")
+    set(SCHISM_HYDRO "${PROJECT_SOURCE_DIR}/SCHISM_LIB_NWM_BMI/lib/libhydro.a" CACHE STRING "")
+    set(SCHISM_CORE "${PROJECT_SOURCE_DIR}/SCHISM_LIB_NWM_BMI/lib/libcore.a" CACHE STRING "")
+endif()
 
 include_directories(${SCHISM_INCLUDE})
-link_directories(${SCHISM_HYDRO})
-link_directories(${SCHISM_CORE})
+#link_directories(${SCHISM_HYDRO})
+#link_directories(${SCHISM_CORE})
 
 
-target_link_libraries(testbmifortranmodel PUBLIC iso_c_bmi ${SCHISM_HYDRO} ${SCHISM_CORE} ${NetCDFLIBS} parmetis)
+target_link_libraries(testbmifortranmodel PUBLIC iso_c_bmi ${SCHISM_HYDRO} ${SCHISM_CORE} ${NetCDFLIBS} parmetis ${MPI_Fortran_LIBRARIES})
 target_compile_options(testbmifortranmodel PUBLIC -cpp -DNGEN_ACTIVE)
 
 set_target_properties(testbmifortranmodel PROPERTIES VERSION ${PROJECT_VERSION})
