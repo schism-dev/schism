@@ -1069,61 +1069,18 @@ end function schism_finalizer
     character (len=*), intent(in) :: name
     integer, intent(out) :: size
     integer :: bmi_status
+    double precision :: double_dummy
 
-    !TODO think of a better way to do this
-    !Use 'sizeof' in gcc & ifort
-    select case(name)
-    case("bmi_mpi_comm_handle")
+    character (len=30) :: item_type
+
+    bmi_status = schism_var_type(this, name, item_type)
+    if (bmi_status /= BMI_SUCCESS) return
+
+    select case(trim(item_type))
+    case("integer")
        size = sizeof(bmi_status)
-       bmi_status = BMI_SUCCESS
-    case("ETA2")
-       size = sizeof(eta2)
-       bmi_status = BMI_SUCCESS
-    case("BEDLEVEL")
-       size = sizeof(dp(1))
-       bmi_status = BMI_SUCCESS
-    case("TROUTE_ETA2")
-       size = sizeof(sta_out_gb(:,1))
-       bmi_status = BMI_SUCCESS
-    case("ETA2_bnd_t0","ETA2_bnd_t1")
-       size = sizeof(ath2(1,1,:,1,1))
-       bmi_status = BMI_SUCCESS
-    case("Q_bnd_source_t0","Q_bnd_source_t1")
-       size = sizeof(ieg_source_ngen)
-       bmi_status = BMI_SUCCESS
-    case("Q_bnd_sink_t0","Q_bnd_sink_t1")
-       size = sizeof(ieg_sink)
-       bmi_status = BMI_SUCCESS
-    case("ETA2_bnd_ind")
-       size = sizeof(ath2(1,1,:,1,1))
-       bmi_status = BMI_SUCCESS
-    case("Q_bnd_ind")
-       size = sizeof(ieg_source)
-       bmi_status = BMI_SUCCESS
-    case("SFCPRS_t0","SFCPRS_t1")
-       size = sizeof(pr2)
-       bmi_status = BMI_SUCCESS
-    case("TMP2m_t0","TMP2m_t1")
-       size = sizeof(airt2)
-       bmi_status = BMI_SUCCESS
-    case("RAINRATE_t0","RAINRATE_t1")
-       size = sizeof(ieg_source)
-       bmi_status = BMI_SUCCESS
-    case("UU10m_t0","UU10m_t1")
-       size = sizeof(windx2)
-       bmi_status = BMI_SUCCESS
-    case("VV10m_t0","VV10m_t1")
-       size = sizeof(windy2)
-       bmi_status = BMI_SUCCESS
-    case("SPFH2m_t0","SPFH2m_t1")
-       size = sizeof(shum2)
-       bmi_status = BMI_SUCCESS
-    case("VX")
-       size = sizeof(uu2(1,:))
-       bmi_status = BMI_SUCCESS
-    case("VY")
-       size = sizeof(vv2(1,:))
-       bmi_status = BMI_SUCCESS
+    case("double precision")
+       size = sizeof(double_dummy)
     case default
        size = -1
        bmi_status = BMI_FAILURE
