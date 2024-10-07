@@ -2143,7 +2143,7 @@ end function schism_finalizer
     double precision, intent(out) :: time
     integer :: bmi_status
 
-    time = 0.0
+    time = this%model%model_start_time
     bmi_status = BMI_SUCCESS
   end function schism_start_time
   
@@ -2153,7 +2153,7 @@ end function schism_finalizer
     double precision, intent(out) :: time
     integer :: bmi_status
 
-    time = ceiling(dble(rnday)*86400.d0/dt+0.5d0) * dt
+    time = this%model%model_end_time
     bmi_status = BMI_SUCCESS
   end function schism_end_time
 
@@ -2173,7 +2173,7 @@ end function schism_finalizer
     double precision, intent(out) :: time_step
     integer :: bmi_status
 
-    time_step = dt
+    time_step = this%model%time_step_size
     bmi_status = BMI_SUCCESS
   end function schism_time_step
 
