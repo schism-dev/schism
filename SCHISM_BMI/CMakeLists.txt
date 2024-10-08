@@ -64,17 +64,6 @@ add_compile_definitions(MPIVERSION=${MPIVERSION})
 
 #set_property(GLOBAL APPEND PROPERTY DEFINE-LIST "MPIVERSION=${MPIVERSION}")
 
-add_definitions(${MPI_Fortran_COMPILE_FLAGS})
-if (CMAKE_Fortran_FLAGS)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}")
-endif (CMAKE_Fortran_FLAGS)
-include_directories(${MPI_Fortran_INCLUDE_PATH})
-
-add_definitions(${MPI_C_COMPILE_FLAGS})
-if (CMAKE_C_FLAGS)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MPI_C_COMPILE_FLAGS}")
-endif (CMAKE_C_FLAGS)
-include_directories(${MPI_C_INCLUDE_PATH})
 ########### NetCDF Dependency is handled here because so many libraries use it ##############
 message(STATUS "\n### Configuring NetCDF ")
 #set(NetCDF_DIR "/usr/local/dms/pkg/netcdf/4.1.3-intel12.0-parallel")
@@ -230,7 +219,7 @@ include_directories(${SCHISM_INCLUDE})
 #link_directories(${SCHISM_CORE})
 
 
-target_link_libraries(testbmifortranmodel PUBLIC iso_c_bmi ${SCHISM_HYDRO} ${SCHISM_CORE} ${NetCDFLIBS} parmetis ${MPI_Fortran_LIBRARIES})
+target_link_libraries(testbmifortranmodel PUBLIC iso_c_bmi ${SCHISM_HYDRO} ${SCHISM_CORE} ${NetCDFLIBS} parmetis MPI::MPI_Fortran)
 target_compile_options(testbmifortranmodel PUBLIC -cpp -DNGEN_ACTIVE)
 
 set_target_properties(testbmifortranmodel PROPERTIES VERSION ${PROJECT_VERSION})
