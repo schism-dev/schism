@@ -98,15 +98,6 @@ include_directories( ${NetCDF_INCLUDE_DIRS} )
 
 set (NetCDFLIBS ${NetCDF_LIBRARIES} ${HDF_LIB_NAMES})
 
-macro( add_module name option_name  default)
-  option(${option_name} "Use ${lib_name} module" ${default})
-  if (${option_name})
-    list(APPEND all_use_mod_defs "${option_name}")
-    list(APPEND schismmoddirs ${name})
-  endif(${option_name})
-endmacro(add_module)
-
-
 if(NOT NO_PARMETIS)
   ########## BEG:: PARMETIS ##########
   ### Panagiotis Velissariou 08/25/2022
