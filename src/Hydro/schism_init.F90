@@ -473,7 +473,7 @@
       ielad_weno=0; small_elad=1.d-4; i_prtnftl_weno=0;
       inu_tr(:)=0; step_nu_tr=86400._rkind; vnh1=400._rkind; vnh2=500._rkind; vnf1=0._rkind; vnf2=0._rkind;
       iref_ts=0; ref_ts_h1=100.d0; ref_ts_h2=60.d0; ref_ts_restore_depth=50.d0 
-      ref_ts_tscale=365.d0; ref_ts_dt=30.d0
+      ref_ts_tscale=100.d0; ref_ts_dt=30.d0
       moitn0=50; mxitn0=1500; rtol0=1.d-12; iflux=0; inter_mom=0; 
       h_bcc1=100._rkind; inu_elev=0; inu_uv=0; 
       ihhat=1; kr_co=1; rmaxvel=5._rkind; velmin_btrack=1.d-4; btrack_nudge=9.013d-3; 
