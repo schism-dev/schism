@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-- `95030324` (17 Sept 2024): added surfac T,S restoration (for large-scale long-term runs); 
+- `95030324` (17 Sept 2024): added surface T,S restoration (for large-scale long-term runs); 
                              related parameters are iref_ts,ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,
                              ref_ts_tscale,ref_ts_dt, and the input is surface_restore.nc;
 - `ab71be44` (26 Aug 2024): ptrack4 added biofouling option; new parameter ibiofoul and related values; 

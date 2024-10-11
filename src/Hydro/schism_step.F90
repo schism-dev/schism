@@ -796,40 +796,8 @@
 !         9) = ALPHA_CH(IP) ! Charnock Parameter gz0/ustar**2
 !        10) = CD(IP)       ! Drag Coefficient
 
-!       out_wwm(npa,35): output variables from WWM (all 2D); see names in NVARS() in the routine
-!                      BASIC_PARAMETER() in wwm_initio.F90 for details; below is a snapshot from there:
-         !OUTPAR(1)   = HS       ! Significant wave height
-         !OUTPAR(2)   = TM01     ! Mean average period
-         !OUTPAR(3)   = TM02     ! Zero down crossing period for comparison with buoy.
-         !OUTPAR(4)   = TM10     ! Average period of wave runup/overtopping ...
-         !OUTPAR(5)   = KLM      ! Mean wave number
-         !OUTPAR(6)   = WLM      ! Mean wave length
-         !OUTPAR(7)   = ETOTS    ! Etot energy in y-direction
-         !OUTPAR(8)   = ETOTC    ! Etot energy in x-direction
-         !OUTPAR(9)   = DM       ! Mean average energy transport direction
-         !OUTPAR(10)  = DSPR     ! Mean directional spreading
-         !OUTPAR(11)  = TPPD     ! Discrete peak period (sec)
-         !OUTPAR(12)  = TPP      ! Continuous peak period based on higher order moments (sec) 
-         !OUTPAR(13)  = CPP      ! Peak phase vel. (m/s)
-         !OUTPAR(14)  = WNPP     ! Peak n-factor
-         !OUTPAR(15)  = CGPP     ! Peak group vel.
-         !OUTPAR(16)  = KPP      ! Peak wave number
-         !OUTPAR(17)  = LPP      ! Peak wave length.
-         !OUTPAR(18)  = PEAKD    ! Peak (dominant) direction (degr)
-         !OUTPAR(19)  = PEAKDSPR ! Peak directional spreading
-         !OUTPAR(20)  = DPEAK    ! Discrete peak direction
-         !OUTPAR(21)  = UBOT     ! Orbital vel. (m/s)
-         !OUTPAR(22)  = ORBITAL  ! RMS Orbital vel. (m/s)
-         !OUTPAR(23)  = BOTEXPER ! Bottom excursion period.
-         !OUTPAR(24)  = TMBOT    ! Bottom wave period (sec)
-         !OUTPAR(25)  = URSELL   ! Uresell number based on peak period ...
-         !OUTPAR(26)  = USTAR    ! Friction velocity 
-         !OUTPAR(27)  = ALPHA_CH(IP) ! Charnock coefficient
-         !OUTPAR(28)  = Z0(IP)       ! Rougness length
-         !OUTPAR(29)  = WINDXY(IP,1) ! windx
-         !OUTPAR(30)  = WINDXY(IP,2) ! windy
-         !OUTPAR(31)  = CD(IP)       ! Drag coefficient
-         !...
+!       out_wwm(npa,35): output variables from WWM (all 2D); see OUTPAR(:) in routine INTPAR in wwm_output.F90, and
+!                        names in NVARS() in the routine BASIC_PARAMETER() in wwm_initio.F90
 
         if(myrank==0) write(16,*)'WWM-RS part took (sec) ',mpi_wtime()-wtmp1
 
