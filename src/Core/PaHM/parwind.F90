@@ -820,8 +820,8 @@ MODULE ParWind
   !----------------------------------------------------------------
   SUBROUTINE FillMissDataTrackFile_LinInterp(dateSTR, dataARR)
 
-    USE Utilities, ONLY     : CharUnique, GetLocAndRatio, ReAllocate
-    USE TimeDateUtils, ONLY : TimeConv
+    USE PaHM_Utilities, ONLY : CharUnique, GetLocAndRatio, ReAllocate
+    USE TimeDateUtils, ONLY  : TimeConv
 
     IMPLICIT NONE
 
