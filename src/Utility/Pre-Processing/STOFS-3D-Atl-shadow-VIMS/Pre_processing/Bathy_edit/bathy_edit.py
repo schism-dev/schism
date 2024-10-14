@@ -2,7 +2,22 @@
 
 '''
 This script is used to edit the depth of a DEM-loaded hgrid.
-This contains several steps, which can be turned on/off by setting the tasks.
+
+Multiple steps may be needed, which can be turned on/off by setting the "TASKS",
+see "def sample_usage".
+
+Each step imports scripts under the subdirectories.
+
+You can run this script inside the SCHISM git folder after
+setting paths in the sample_usage function.
+The script will copy itself and the subdirectories being used
+to the working directory to keep a record.
+
+Alternatively, you can copy the entire script folder (Bathy_edit/)
+to your working directory, then set paths in the sample_usage function.
+
+Some larger files are not included in the Git repository,
+you need to specify the paths in the "LARGE_FILES" dictionary below.
 '''
 
 import os
@@ -18,15 +33,6 @@ try:  # c++ function to speed up the grid reading
 except ImportError:
     from pylib import schism_grid as schism_read
 
-# scripts in subdirectories
-from Regional_tweaks.regional_tweaks import tweak_hgrid_depth
-from NCF.load_NCF import load_NCF
-from Levee.set_levees import set_levees
-from xGEOID.convert2xgeoid import convert2xgeoid
-from Chart.load_chart import load_chart
-from Dredge.dredge_auto_channels import dredge_auto_channels
-from SetFeederDp.set_feeder_dp import set_feeder_dp
-
 
 IMPLEMENTED_TASKS = [  # order matters
     'Regional_tweaks',  # set minimum depth in regions specified in regional_tweaks
@@ -41,8 +47,21 @@ IMPLEMENTED_TASKS = [  # order matters
 DEFAULT_TASKS = {'Regional_tweaks', 'NCF', 'Levee'}
 
 # larger files not included in the Git repository, need to be copied to the working directory
-NCF_PATH = Path('/sciclone/schism10/Hgrid_projects/NCF/')
-CHART_PATH = Path('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/SECOFS/')
+LARGE_FILES = {
+    'NCF': [
+        Path('/sciclone/schism10/Hgrid_projects/NCF/'),
+        Path('/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/DATA/NCF/')
+    ],
+    'Levee': [
+        Path('/sciclone/schism10/Hgrid_projects/Levees/Levee_v3/FEMA_regions/'
+             'FEMA_region_levees/'),
+        Path('/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/DATA/Levee/')
+    ],
+    'Chart': [
+        Path('/sciclone/schism10/Hgrid_projects/Charts/Savanna_Cooper/SECOFS/'),
+        Path('/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/DATA/Charts/Savanna_Cooper/SECOFS/')
+    ]
+}
 
 
 def handle_tasks(user_tasks: Optional[List[str]]) -> List[str]:
@@ -67,31 +86,50 @@ def handle_tasks(user_tasks: Optional[List[str]]) -> List[str]:
     if invalid_tasks:
         raise ValueError(f"Undefined tasks: {', '.join(invalid_tasks)}")
 
-    # Merge default tasks and user-provided tasks, maintaining order
-    merged_tasks_set = set(DEFAULT_TASKS).union(user_tasks_set)
-
     # Return tasks in the same order as IMPLEMENTED_TASKS
-    ordered_tasks = [task for task in IMPLEMENTED_TASKS if task in merged_tasks_set]
+    ordered_tasks = [task for task in IMPLEMENTED_TASKS if task in user_tasks]
 
     return ordered_tasks
 
 
+def copy_large_files(src_paths: List[Path], dest_dir: Path):
+    '''
+    Copy larger files not in the Git repository to the working directory.
+
+    Args:
+    - wdir: The working directory where the files will be copied.
+    - src_paths: A list of paths to the source files.
+    - dest_dir: The destination directory where the files will be copied.
+    '''
+    copy_success = False
+    for src_path in src_paths:
+        if src_path.is_dir():
+            shutil.copytree(src_path, dest_dir, dirs_exist_ok=True)
+            print(f'Copied {src_path} to {dest_dir}')
+            copy_success = True
+            break
+
+    if not copy_success:
+        raise FileNotFoundError(f'None of the source paths exist: {src_paths}')
+
+
 def prepare_dir(wdir: Path, tasks: str):
     '''
-    Make a copy of the scripts in the subdirectories to the working directory.
+    Make a copy of the scripts in the working directory.
+    This includes the scripts for each requested task and
+    the larger files not in the Git repository.
     '''
     script_dir = Path(__file__).parent
     for task in tasks:
         shutil.copytree(f'{script_dir}/{task}/', f'{wdir}/{task}/', symlinks=False, dirs_exist_ok=True)
 
     # copy larger files not in the Git repository
-    if 'Chart' in tasks:
-        shutil.copytree(CHART_PATH, f'{wdir}/Chart/', dirs_exist_ok=True)
-    if 'NCF' in tasks:
-        shutil.copytree(NCF_PATH, f'{wdir}/NCF/', dirs_exist_ok=True)
+    for task, file_path_list in LARGE_FILES.items():
+        if task in tasks:
+            copy_large_files(file_path_list, f'{wdir}/{task}/')
 
 
-def dem_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
+def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
     '''
     Edit the DEM for hgrid.
 
@@ -108,11 +146,14 @@ def dem_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
     hgrid_base_name = 'hgrid_ll_dem'
     initial_dp = hgrid_obj.dp.copy()  # save dp before processing
 
-    if 'Regional_tweaks' in tasks:  # set minimum depth in regions specified in regional_tweaks
-        hgrid_obj = tweak_hgrid_depth(hgrid=hgrid_obj, regions_dir=f'{wdir}/Regional_tweaks/regions/')
+    if 'Regional_tweaks' in tasks:  # set minimum depth in regions
+        from Regional_tweaks.regional_tweaks import tweak_hgrid_depth
+        hgrid_obj = tweak_hgrid_depth(
+            hgrid=hgrid_obj, regions_dir=f'{wdir}/Regional_tweaks/regions/')
         print("Finished setting regional tweaks.\n")
 
     if 'NCF' in tasks:  # load NCF (National Channel Framework)
+        from NCF.load_NCF import load_NCF
         hgrid_base_name += '_NCF'
         hgrid_obj = load_NCF(
             hgrid_obj=hgrid_obj, buf=20, NCF_shpfile=f'{wdir}/NCF/channel_quarter_NCF.shp')
@@ -120,6 +161,7 @@ def dem_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         print("finished loading NCF.\n")
 
     if 'Levee' in tasks:  # set levees
+        from Levee.set_levees import set_levees
         hgrid_base_name += '_levee'
         os.chdir(f'{wdir}/Levee')  # to set the directory
         hgrid_obj = set_levees(hgrid_obj=hgrid_obj, wdir=f'{wdir}/Levee/')
@@ -127,12 +169,15 @@ def dem_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         print("Finished setting levees.\n")
 
     if 'xGEOID' in tasks:  # convert from NAVD88 to xGEOID
+        from xGEOID.convert2xgeoid import convert2xgeoid
         hgrid_base_name += '_xGEOID'
         hgrid_obj, _ = convert2xgeoid(
-            wdir=f'{wdir}/xGEOID/', hgrid_obj=hgrid_obj, diag_output=f'{wdir}/{hgrid_base_name}.2dm')
+            wdir=f'{wdir}/xGEOID/', hgrid_obj=hgrid_obj,
+            diag_output=f'{wdir}/{hgrid_base_name}.2dm')
         print("Finihsed converting the vdatum to xGEOID.\n")
 
     if 'Chart' in tasks:  # load Chart, the Chart has been converted in xGEOID
+        from Chart.load_chart import load_chart
         # if the chart is in NAVD88, this step should be done before the xGEOID conversion
         initial_dp = hgrid_obj.dp.copy()  # save dp before processing
         hgrid_obj = load_chart(
@@ -148,6 +193,7 @@ def dem_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         print("Finished loading Chart.\n")
 
     if 'Dredge' in tasks:  # dredge the channels made by RiverMapper
+        from Dredge.dredge_auto_channels import dredge_auto_channels
         DREDGE_DEPTH = 2  # set the dredge depth
         hgrid_obj = dredge_auto_channels(
             hgrid_obj=hgrid_obj,
@@ -160,6 +206,7 @@ def dem_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         print("Finished loading dredging depth.\n")
 
     if 'Feeder' in tasks:  # set feeder channel depth
+        from SetFeederDp.set_feeder_dp import set_feeder_dp
         # A grid without feeder is needed to identify which feeder points are outside and should be deepened
         # Only the boundary matters, the interior of the grid doesn't matter,
         # so if you don't have a grid without feeders, you can just generate a simplified grid with the lbnd_ocean map
@@ -183,16 +230,16 @@ def dem_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
 
 def sample_usage():
     '''
-    Sample usage of the dem_edit function.
+    Sample usage of the bathy_edit function.
     '''
-    WDIR = Path('/sciclone/schism10/feiye/STOFS3D-v8/I09x/Bathy_edit/')
+    WDIR = Path('/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/Bathy_edit_example/')
     HGRID_FNAME = Path(  # Typically, this is the DEM-loaded hgrid
-        '/sciclone/schism10/feiye/STOFS3D-v8/I09x/'
-        'Bathy_edit/DEM_loading/hgrid.ll.dem_loaded.mpi.gr3'
+        '/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/'
+        'DEM_loading_example/hgrid.ll.dem_loaded.mpi.gr3'
     )
     TASKS = ['Regional_tweaks', 'NCF', 'Levee']
 
-    dem_edit(wdir=WDIR, hgrid_fname=HGRID_FNAME, tasks=TASKS)
+    bathy_edit(wdir=WDIR, hgrid_fname=HGRID_FNAME, tasks=TASKS)
 
 
 if __name__ == '__main__':
