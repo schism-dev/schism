@@ -7992,7 +7992,8 @@
           do i=1,np
             veg_h_unbent(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
           enddo !i
-          call exchange_p2d(veg_h)
+          call exchange_p2d(veg_h_unbent)
+          veg_h=veg_h_unbent
 
           do i=1,npa
             !Do not allow SAV to grow out of init patch for the time being
