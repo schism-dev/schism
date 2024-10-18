@@ -479,7 +479,7 @@ MODULE ParWind
             CASE(34, 50, 64)
               IF (bestTrackData(iFile)%rad(iCnt) == 34) useMaxRad = useMaxR34
               IF (bestTrackData(iFile)%rad(iCnt) == 50) useMaxRad = useMaxR50
-              IF (bestTrackData(iFile)%rad(iCnt) == 50) useMaxRad = useMaxR64
+              IF (bestTrackData(iFile)%rad(iCnt) == 64) useMaxRad = useMaxR64
               radiiQuad = (/ bestTrackData(iFile)%intRad1(iCnt), bestTrackData(iFile)%intRad2(iCnt),      &
                              bestTrackData(iFile)%intRad3(iCnt), bestTrackData(iFile)%intRad4(iCnt) /)
               bestTrackData(iFile)%intERmw(iCnt) = &
@@ -2176,6 +2176,7 @@ MODULE ParWind
 
         ! ----- Get all the distances of the mesh nodes from (lat, lon)
         CALL GeoToCPP(ylat_gb, xlon_gb, lat, lon, dx, dy) ! dx,dy in meters
+        rad = SQRT(dx * dx + dy * dy) ! dx,dy in meters
         WHERE(rad < 1.d-1) rad = 1.d-1
 !        WRITE(16,*)'min &max rad=',minval(rad),maxval(rad)
 
