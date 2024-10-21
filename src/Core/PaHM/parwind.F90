@@ -2159,7 +2159,7 @@ MODULE ParWind
                 wtRatio * (holStru(stCnt)%errp(jl2) - holStru(stCnt)%errp(jl1))
 
         ! This is used below for determining all nodal points inside RRP
-        rrpval = MAX(rrp, errp)
+        rrpval = 1.25 * MAX(rrp, errp)
 
         ! Radius of maximum winds
         rmw = holStru(stCnt)%rmw(jl1) + &
@@ -2798,7 +2798,7 @@ MODULE ParWind
       errp = errp1 + wtRatio * (errp2 - errp1)
 
       ! This is used below for determining all nodal points inside RRP
-      rrpval = MAX(rrp, errp)
+      rrpval = 1.25 * MAX(rrp, errp)
 
       ! Get all the distances of the mesh nodes from (lat, lon)
       !rad() is allocated inside the routine
