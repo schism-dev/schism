@@ -503,11 +503,8 @@ MODULE ParWind
         END IF
 
         ! Used to filter out possible duplicate lines
-        WRITE(filterStr(iCnt), '(a10, i3.3, a1 i4.4, a1, i2.2)')                                 &
-                               bestTrackData(iFile)%dtg(iCnt),                                   &
-                               bestTrackData(iFile)%intLat(iCnt), bestTrackData(iFile)%ns(iCnt), &
-                               bestTrackData(iFile)%intLon(iCnt), bestTrackData(iFile)%ew(iCnt), &
-                               bestTrackData(iFile)%rad(iCnt)
+        WRITE(filterStr(iCnt), '(a10, i2.2)') bestTrackData(iFile)%dtg(iCnt), &
+                                              bestTrackData(iFile)%rad(iCnt)
       END DO
 
       CALL f%Destroy()
