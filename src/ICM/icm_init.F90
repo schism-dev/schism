@@ -48,7 +48,7 @@ subroutine read_icm_param(imode)
            & Nit,TNit,KTNit,KhDOn,KhNH4n,KhDOox,KhNO3dn,   &
            & KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KCD,TRCOD,KTRCOD, &
            & KhCOD,KhN,KhP,KhSal,c2chl,n2c,p2c,o2c,o2n,dn2c,an2c,KhDO, &
-           & KPO4p,WRea,PBmin,dz_flux,KSR0,TRSR,KTRSR,KPIP
+           & KPO4p,WRea,WDOs,PBmin,dz_flux,KSR0,TRSR,KTRSR,KPIP
   namelist /Silica/ FSP,FSM,KS,TRS,KTRS,KhS,s2c,KSAp 
   namelist /ZB/ zGPM,zKhG,zTGP,zKTGP,zAG,zRG,zMRT,zMTB,zTMT,zKTMT,zFCP,zFNP,zFPP, &
            & zFSP,zFCM,zFNM,zFPM,zFSM,zKhDO,zn2c,zp2c,zs2c,z2pr,p2pr 
@@ -117,7 +117,7 @@ subroutine read_icm_param(imode)
     FNM=0; FPM=0; Nit=0; TNit=0; KTNit=0; KhDOn=0; KhNH4n=1e10; KhDOox=0; KhNO3dn=0; 
     KC0=0; KN0=0; KP0=0; KCalg=0; KNalg=0; KPalg=0; TRM=0; KTRM=0; KCD=0; TRCOD=0; KTRCOD=0;
     KhCOD=0; KhN=0; KhP=0; KhSal=0; c2chl=0; n2c=0; p2c=0; o2c=0;
-    o2n=0; dn2c=0; an2c=0; KhDO=0; KPO4p=0;  WRea=0; PBmin=0; dz_flux=0
+    o2n=0; dn2c=0; an2c=0; KhDO=0; KPO4p=0;  WRea=0; WDOs=0; PBmin=0; dz_flux=0
     KSR0=0; TRSR=0; KTRSR=0; KPIP=0
 
     !init. Silica module
@@ -816,7 +816,7 @@ subroutine icm_vars_init
 
   m=0
   !global and core modules
-  pname(1:61)=(/'KeC    ','KeS    ','KeSalt ','Ke0    ','tss2c  ', &
+  pname(1:62)=(/'KeC    ','KeS    ','KeSalt ','Ke0    ','tss2c  ', &
               & 'alpha  ','WSP    ','WSPn   ','GPM    ','TGP    ', &
               & 'PRR    ','MTB    ','TMT    ','KTMT   ','KTGP   ', &
               & 'FCP    ','FNP    ','FPP    ','FCM    ','FNM    ', &
@@ -828,7 +828,7 @@ subroutine icm_vars_init
               & 'p2c    ','KhDO   ','o2c    ','o2n    ','dn2c   ', &
               & 'an2c   ','KPO4p  ','WRea   ','PBmin  ','dz_flux', &
               & 'KSR0   ','TRSR   ','KTRSR  ','KPIP   ','MTR    ', &
-              & 'wqc0   '/)
+              & 'wqc0   ','WDOs   '/)
   sp(m+1)%p=>KeC;    sp(m+2)%p=>KeS;    sp(m+3)%p=>KeSalt;  sp(m+4)%p=>Ke0;    sp(m+5)%p=>tss2c;    m=m+5
   sp(m+1)%p1=>alpha; sp(m+2)%p1=>WSP;   sp(m+3)%p1=>WSPn;   sp(m+4)%p1=>GPM;   sp(m+5)%p1=>TGP;     m=m+5
   sp(m+1)%p1=>PRR;   sp(m+2)%p1=>MTB;   sp(m+3)%p1=>TMT;    sp(m+4)%p1=>KTMT;  sp(m+5)%p2=>KTGP;    m=m+5
@@ -841,7 +841,7 @@ subroutine icm_vars_init
   sp(m+1)%p1=>p2c;   sp(m+2)%p1=>KhDO;  sp(m+3)%p=>o2c;     sp(m+4)%p=>o2n;    sp(m+5)%p=>dn2c;     m=m+5
   sp(m+1)%p=>an2c;   sp(m+2)%p=>KPO4p;  sp(m+3)%p=>WRea;    sp(m+4)%p1=>PBmin; sp(m+5)%p1=>dz_flux; m=m+5
   sp(m+1)%p1=>KSR0;  sp(m+2)%p1=>TRSR;  sp(m+3)%p1=>KTRSR;  sp(m+4)%p=>KPIP;   sp(m+5)%p1=>MTR;     m=m+5
-  sp(m+1)%p1=>wqc0;  m=m+1
+  sp(m+1)%p1=>wqc0;  sp(m+2)%p=>WDOs;   m=m+2
 
   !SFM modules
   pname((m+1):(m+79))=&

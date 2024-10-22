@@ -90,7 +90,7 @@ subroutine ecosystem(it)
   real(rkind), parameter :: hmin=0.01
   real(rkind) :: tmp,time,rat,s,z1,z2,dzb,zs,T
   real(rkind) :: xT,xS,rKSR(3),aKe0,sKeC,vKeC(nmarsh),vLight(nmarsh)
-  real(rkind) :: usf,wspd,rIa,tdep,mKhN,mKhP,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(nmarsh)
+  real(rkind) :: usf,wspd,rIa,tdep,mKhN,mKhP,rKa,DOsat,dDOX,APB,rKTM,rKSUA,shtz,vhtz(nmarsh)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV,mLight,sLight,chl
   real(rkind),dimension(nvrt) :: srat,brat,PO4p,SAd,SAp,pH,rKHR,rDenit,rNit,rKCOD
   real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,MT,PR,GP,fPN,fT,fST,fR,fN,fP,fS,fC,rIK
@@ -306,7 +306,7 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       !surface and bottom flux
       !----------------------------------------------------------------------------------
-      sflux=0; bflux=0
+      sflux=0; bflux=0; dDOX=DOsat-DOX(nvrt)
 
       !atmospheric fluxes from ICM_rad.th.nc
       if(isflux/=0) then
@@ -315,7 +315,11 @@ subroutine ecosystem(it)
           sflux(m)=sflux(m)+sflux_in(id,m,1)+rat*(sflux_in(id,m,2)-sflux_in(id,m,1))
         enddo
       endif
-      sflux(iDOX)=rKa*(DOsat-DOX(nvrt))
+      if(dDOX>=0.d0) then
+         sflux(iDOX)=rKa*dDOX
+      else !for super-saturation
+         sflux(iDOX)=(rKa+WDOs*max(-dDOX,0.d0)/dz(nvrt))*dDOX
+      endif
 
       !benthic fluxes from ICM_rad.th.nc
       if(ibflux/=0) then
