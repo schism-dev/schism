@@ -93,6 +93,8 @@ MODULE PaHM_Global
 !################################################################
 !###   BEG :: VARIABLES RELATED TO THE CONTROL FILE
 !################################################################
+  ! It uses values(1:3) and values(5:7) from the DATE_AND_TIME subroutine
+  CHARACTER(LEN=DATETIMELEN) :: date_time_str = BLANK
   CHARACTER(LEN=FNAMELEN) :: logFileName = 'pahm_model.log'
 
   !-------------------- Input files
@@ -120,9 +122,12 @@ MODULE PaHM_Global
   REAL(SZ), PARAMETER     :: DEFV_WINDREDUCTION = 0.90_SZ
   REAL(SZ)                :: windReduction      = DEFV_WINDREDUCTION  ! BL reduction factor used in the Holland model
 
-  ! Used when estinating the ROCI
-  INTEGER, PARAMETER      :: DEFV_USEMAXR34 = 1
-  INTEGER                 :: useMaxR34      = DEFV_USEMAXR34
+  ! Used when estinating the ROCI or RMW
+  ! ROCI calculations use only the useMaxR34 value
+  ! RMW calculations can use all three values
+  INTEGER                 :: useMaxR34 = 1
+  INTEGER                 :: useMaxR50 = 1
+  INTEGER                 :: useMaxR64 = 1
 
   !====================
   !=== This block is for the : time/date and time stepping variables

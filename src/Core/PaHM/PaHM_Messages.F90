@@ -15,7 +15,7 @@
 
 MODULE PaHM_Messages
 
-  USE PaHM_Sizes, ONLY : FNAMELEN
+  USE PaHM_Sizes, ONLY : FNAMELEN, DATETIMELEN
   USE PaHM_Global, ONLY : LUN_SCREEN, LUN_LOG, logFileName
 
 #ifdef __INTEL_COMPILER

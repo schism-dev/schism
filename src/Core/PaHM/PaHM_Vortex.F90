@@ -88,8 +88,8 @@ MODULE PaHM_Vortex
   ! @param radiusToMaxWinds radius from storm center to vmaxBoundaryLayer
   ! @param coriolis Coriolis parameter
   ! @return estimate to Rossby number
-  !/
-   SUBROUTINE RossbyNumber(vmaxBoundaryLayer, radiusToMaxWinds, coriolis,Rzero)
+  !
+  SUBROUTINE RossbyNumber(vmaxBoundaryLayer, radiusToMaxWinds, coriolis, Rzero)
 
     USE PaHM_Global, ONLY : DEG2RAD
     USE PaHM_Utilities, ONLY : SphericalDistance
@@ -100,9 +100,15 @@ MODULE PaHM_Vortex
     REAL(SZ), INTENT(IN)  :: coriolis
     REAL(SZ), INTENT(OUT) :: Rzero
 
-    Rzero = vmaxBoundaryLayer / (abs(coriolis) * abs(radiusToMaxWinds))
-   END SUBROUTINE RossbyNumber
+    Rzero = 0.0
 
+    IF (radiusToMaxWinds > 0.0_SZ) THEN
+      Rzero = vmaxBoundaryLayer / (ABS(coriolis) * radiusToMaxWinds)
+    ELSE
+      PRINT *, 'Found zero Radius of Maximum Winds (RMW)'
+    END IF
+
+  END SUBROUTINE RossbyNumber
 
   !----------------------------------------------------------------
   ! S U B R O U T I N E   C A L C  I N T E N S I T Y  C H A N G E
@@ -606,7 +612,7 @@ MODULE PaHM_Vortex
     vMax = vm
 !PV Check conversions
     ! evaluate basic physical params
-    corio = abs(2.0_SZ * OMEGA * SIN(DEG2RAD * cLat))
+    corio = ABS(2.0_SZ * OMEGA * SIN(DEG2RAD * cLat))
     B = (vMax * KT2MS)**2 * rhoAir * EXP(1.0_SZ) / ((pn - pc) * MB2PA)
     B = MAX(MIN(B, 2.0_SZ), 1.0_SZ) ! limit B to range 1.0->2.5
 !PV Data already have been converted
@@ -660,7 +666,7 @@ MODULE PaHM_Vortex
     vMax = vm
  
     ! evaluate basic physical params
-    corio = abs(2.0_SZ * OMEGA * SIN(DEG2RAD * cLat))
+    corio = ABS(2.0_SZ * OMEGA * SIN(DEG2RAD * cLat))
     B = (vMax * KT2MS)**2 * rhoAir * EXP(1.0_SZ) / ((pn - pc) * MB2PA)
     phi       = 1.0_SZ
     bs(1:6)   = B
@@ -711,7 +717,7 @@ MODULE PaHM_Vortex
     cLon = lon
 
     ! evaluate basic physical params
-    corio = abs(2.0_SZ * OMEGA * SIN(DEG2RAD * cLat))
+    corio = ABS(2.0_SZ * OMEGA * SIN(DEG2RAD * cLat))
 
   END SUBROUTINE SetVortex
 
@@ -813,7 +819,6 @@ MODULE PaHM_Vortex
       !    0 (if r1 = r2)
       !   +1 (if r1 > r2)
       vicinity = ABS(root - radius(quad)) / root
-      !PV DEL IF ((root < 0.0_SZ) .OR. (vicinity <= 0.1_SZ)) THEN
       IF (CompareReals(root, 0.0_SZ) == -1 .OR. CompareReals(vicinity, 0.1_SZ) /= 1) THEN
         r1 = INNERRADIUS
         r2 = OUTERRADIUS
@@ -1556,15 +1561,15 @@ MODULE PaHM_Vortex
 
     ! Now reduce the wind speed to the surface
     speed = speed * windReduction
-    
-    ! Caution NH and SH hemisphere
-    if(cLat.lt.0.0_SZ) then
-     u =  speed * COS(DEG2RAD * angle)
-     v = -speed * SIN(DEG2RAD * angle)
-    else
-     u = -speed * COS(DEG2RAD * angle)
-     v =  speed * SIN(DEG2RAD * angle)
-    endif
+
+    ! Caution with SH/NH
+    IF (cLat < 0.0_SZ) THEN
+      u =  speed * COS(DEG2RAD * angle)
+      v = -speed * SIN(DEG2RAD * angle)
+    ELSE
+      u = -speed * COS(DEG2RAD * angle)
+      v =  speed * SIN(DEG2RAD * angle)
+    END IF
 
     ! Alter wind direction by adding a frictional inflow angle
     CALL Rotate(u, v, FAng(dist, rmx), cLat, uf, vf)
@@ -1638,7 +1643,7 @@ MODULE PaHM_Vortex
   !>
   !----------------------------------------------------------------
   SUBROUTINE UVPR(iDist, iAngle, iRmx, iRmxTrue, iB, iVm, iPhi, &
-                  uTrans, vTrans, geof, u, v, p)
+                  uTrans, vTrans, geof, u, v, p, corin)
 
     USE PaHM_Global, ONLY : windReduction, ONE2TEN, DEG2RAD, MB2PA, KT2MS, NM2M
 
@@ -1659,18 +1664,26 @@ MODULE PaHM_Vortex
     REAL(SZ), INTENT(OUT) :: v
     REAL(SZ), INTENT(OUT) :: p
 
+    REAL(SZ), OPTIONAL    :: corin
+
     REAL(SZ)              :: transSpdX  !NWS8-style translation speed
     REAL(SZ)              :: transSpdY  !NWS8-style translation speed
     REAL(SZ)              :: rmx
     REAL(SZ)              :: speed
     REAL(SZ)              :: uf
     REAL(SZ)              :: vf
-    REAL(SZ)              :: percentCoriolis
+    REAL(SZ)              :: coriolis, percentCoriolis
       
     rmx  = iRmx
     B    = iB
     vMax = iVm
     phi  = iPhi
+
+    IF (PRESENT(corin)) THEN
+      coriolis = corin
+    ELSE
+      coriolis = corio
+    END IF
 
     !----------------------------------------
     ! Handle special case at eye of hurricane
@@ -1697,15 +1710,15 @@ MODULE PaHM_Vortex
     percentCoriolis = 1.0_SZ
 
     IF (geof == 1) THEN
-      speed = SQRT(((vMax * KT2MS)**2 + vMax * KT2MS * rmx * NM2M * percentCoriolis * corio) *   &
-                   (rmx / iDist)**B * EXP(phi * (1.0_SZ - (rmx / iDist)**B)) +                   &
-                   (NM2M * iDist * percentCoriolis * corio / 2.0_SZ)**2) -                       &
-                  NM2M * iDist * percentCoriolis * corio / 2.0_SZ 
+      speed = SQRT(((vMax * KT2MS)**2 + vMax * KT2MS * rmx * NM2M * percentCoriolis * coriolis) *  &
+                   (rmx / iDist)**B * EXP(phi * (1.0_SZ - (rmx / iDist)**B)) +                     &
+                   (NM2M * iDist * percentCoriolis * coriolis / 2.0_SZ)**2) -                      &
+                  NM2M * iDist * percentCoriolis * coriolis / 2.0_SZ
     ELSE 
-      speed = SQRT((vMax * KT2MS)**2 * (rmx / iDist)**B * EXP(1.0_SZ - (rmx / iDist)**B) + &
-                   (NM2M * iDist * percentCoriolis * corio / 2.0_SZ)**2) -                 &
-                  NM2M * iDist * percentCoriolis * corio / 2.0_SZ      
-    ENDIF
+      speed = SQRT((vMax * KT2MS)**2 * (rmx / iDist)**B * EXP(1.0_SZ - (rmx / iDist)**B) +  &
+                   (NM2M * iDist * percentCoriolis * coriolis / 2.0_SZ)**2) -               &
+                  NM2M * iDist * percentCoriolis * coriolis / 2.0_SZ
+    END IF
 
     ! Calculate NWS8-like translation speed
     transSpdX = (ABS(speed / (vMax * KT2MS))) * uTrans * KT2MS
@@ -1714,14 +1727,14 @@ MODULE PaHM_Vortex
     ! Now reduce the wind speed to the surface
     speed = speed * windReduction
 
-    ! Caution NH and SH hemisphere
-    if(cLat.lt.0.0_SZ) then
-     u = speed * COS(DEG2RAD * iAngle)
-     v = -speed * SIN(DEG2RAD * iAngle)            
-    else        
-     u = -speed * COS(DEG2RAD * iAngle)
-     v =  speed * SIN(DEG2RAD * iAngle)
-    endif
+    ! Caution with SH/NH
+    IF (cLat < 0.0_SZ) THEN
+      u =  speed * COS(DEG2RAD * iAngle)
+      v = -speed * SIN(DEG2RAD * iAngle)
+    ELSE
+      u = -speed * COS(DEG2RAD * iAngle)
+      v =  speed * SIN(DEG2RAD * iAngle)
+    END IF
 
     ! Alter wind direction by adding a frictional inflow angle
     CALL Rotate(u, v, FAng(iDist, iRmxTrue), cLat, uf, vf)
@@ -1742,7 +1755,7 @@ MODULE PaHM_Vortex
       p = MB2PA * (pc + (pn - pc) * EXP( - phi * (rmx / iDist)**B))
     ELSE
       p = MB2PA * (pc + (pn - pc) * EXP(-(rmx / iDist)**B))
-    ENDIF
+    END IF
 
     ! cut off the vortex field after 401nm !PV Attend to this
     ! TODO: 401nm should be replaced with something less
