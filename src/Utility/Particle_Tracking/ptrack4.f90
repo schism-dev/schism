@@ -24,7 +24,7 @@
 !                 Assume the quads are not split in the nc outputs.
 !
 !       Behavior when particles hit horizontal bnd or dry interface:
-!       reflect off like LTRAN
+!       reflect off like LTRAN or slide
 !										
 !	Inputs: 
 !          a) hgrid.ll (if ics=2 in particle.bp) or hgrid.gr3 (if ics=1 in
@@ -41,6 +41,7 @@
 !         (3) mod_part: model #. 0-passive; 1: oil spill (Dr. Jung)
 !	  (4) ibf: forward (=1) or backward (=-1) tracking.			
 !         (5) istiff: stiff (fixed distance frm f.s.; 1) or not (0).		
+!         (6) ibnd_beh: reflect off (0) or slide (1)
 !	  (6) ics,slam0,sfea0: coordinate system and center for CPP projection
 !             (same as in param.in). If ics=2, inputs/outputs are in
 !             lon/lat;

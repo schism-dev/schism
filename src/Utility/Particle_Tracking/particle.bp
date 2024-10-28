@@ -4,6 +4,7 @@ Input for ptrack*
 0 ibiofoul (0: no biofouling; 1: with biofouling)
 1 ibf
 0 istiff
+0 ibnd_beh (behavior near bnd or wet/dry; 0: reflect off; 1: slide)
 1 -122.6 37.38 ics slam0 sfea0
 0.01 140. 120. 30 720 40 !h0,rnday,dtm,nspool,ihfskip,ndeltp
 2 !# of particles
