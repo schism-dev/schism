@@ -57,9 +57,7 @@
 !										
 !	Output: particle.pth, particle.pth.more (more info), fort.11 (fatal errors).		
 !										
-! ifort -mcmodel=medium -assume byterecl -O2 -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
-! pgf90 -mcmodel=medium -O2 -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
-! gfortran -O2 -ffree-line-length-none  -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifx -mcmodel=medium -assume byterecl -O2 -o ptrack3.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack3.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !...  Data type consts
       module kind_par
@@ -86,7 +84,7 @@
         real(kind=dbl_kind), parameter :: pi=3.1415926d0 
 
 !...  	Important variables
-        integer, save :: np,ne,ns,nvrt,mnei,mod_part,ibf,istiff,ivcor,kz,nsig
+        integer, save :: np,ne,ns,nvrt,mnei,mod_part,ibf,istiff,ivcor,kz,nsig,ibnd_beh
       	real(kind=dbl_kind), save :: h0,rho0,dt
         real(kind=dbl_kind), save :: h_c,theta_b,theta_f,h_s !s_con1
 
@@ -186,6 +184,12 @@
       read(95,*) istiff !1: fixed distance from F.S.
       if(istiff/=0.and.istiff/=1) then
         write(*,*)'Wrong istiff',istiff
+        stop
+      endif
+      !Option for behavior when particle hits boundary or wet/dry interface
+      read(95,*) ibnd_beh !0: refleect off; 1: slide tangentially
+      if(ibnd_beh/=0.and.ibnd_beh/=1) then
+        write(*,*)'Wrong boundary behavior flag:',ibnd_beh
         stop
       endif
       read(95,*) ics,slam0,sfea0
@@ -1623,42 +1627,53 @@
           endif !ic3
         endif !mod_part
 
-!       Reflect off
-!        eps=1.e-2
-!        xin=(1-eps)*xin+eps*xctr(nel)
-!        yin=(1-eps)*yin+eps*yctr(nel)
-        xcg=xin
-        ycg=yin
+        if(ibnd_beh/=0) then !slide
+          eps=1.e-2
+          xin=(1-eps)*xin+eps*xctr(nel)
+          yin=(1-eps)*yin+eps*yctr(nel)
+          xcg=xin
+          ycg=yin
 
-        !Original vel
-        uvel0=(xt-xin)/trm
-        vvel0=(yt-yin)/trm
-        vnorm=uvel0*snx(isd)+vvel0*sny(isd)
-        vtan=-uvel0*sny(isd)+vvel0*snx(isd)
-        !vtan=-(uu2(md1,jlev0)+uu2(md2,jlev0))/2*sny(isd)+(vv2(md1,jlev0)+vv2(md2,jlev0))/2*snx(isd)
-        !Reverse normal vel
-        vnorm=-vnorm
+          !Tangential vel
+          vtan=-(uu2(md1,jlev0)+uu2(md2,jlev0))/2*sny(isd)+(vv2(md1,jlev0)+vv2(md2,jlev0))/2*snx(isd)
+          xvel=-vtan*sny(isd)
+          yvel=vtan*snx(isd)
+          zvel=(ww2(md1,jlev0)+ww2(md2,jlev0))/2
+          xt=xin+xvel*trm
+          yt=yin+yvel*trm
+          zt=zin+zvel*trm
 
-        !tmp=max(abs(vtan),1.d-2) !to prevent getting stuck
-        !vtan=tmp*sign(1.d0,tmp)
-        xvel=vnorm*snx(isd)-vtan*sny(isd)
-        yvel=vnorm*sny(isd)+vtan*snx(isd)
-        zvel=(ww2(md1,jlev0)+ww2(md2,jlev0))/2
-        xt=xin+xvel*trm
-        yt=yin+yvel*trm
-        zt=zin+zvel*trm
-!        hvel=dsqrt(xvel**2+yvel**2)
-!        if(hvel<1.e-4) then
-!          write(11,*)'Impossible (5):',hvel
-!          nfl=1
-!          xt=xin
-!          yt=yin
-!          zt=zin
-!          nnel1=nel
-!          exit loop4
-!        endif
-        !pathl unchanged since hvel is unchanged
-!        pathl=hvel*trm
+          hvel=sqrt(xvel**2+yvel**2)
+          if(hvel<1.e-4) then
+            nfl=1
+            xt=xin
+            yt=yin
+            zt=zin
+            nnel1=nel
+            exit loop4
+          endif
+          pathl=hvel*trm
+        else !reflect off
+          xcg=xin
+          ycg=yin
+
+          !Original vel
+          uvel0=(xt-xin)/trm
+          vvel0=(yt-yin)/trm
+          vnorm=uvel0*snx(isd)+vvel0*sny(isd)
+          vtan=-uvel0*sny(isd)+vvel0*snx(isd)
+          !Reverse normal vel
+          vnorm=-vnorm
+
+          !tmp=max(abs(vtan),1.d-2) !to prevent getting stuck
+          !vtan=tmp*sign(1.d0,tmp)
+          xvel=vnorm*snx(isd)-vtan*sny(isd)
+          yvel=vnorm*sny(isd)+vtan*snx(isd)
+          zvel=(ww2(md1,jlev0)+ww2(md2,jlev0))/2
+          xt=xin+xvel*trm
+          yt=yin+yvel*trm
+          zt=zin+zvel*trm
+        endif !ibnd_beh
       endif !abnormal cases
 
 !     Search for nel's neighbor with edge nel_j, or in abnormal cases, the same element
