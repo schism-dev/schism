@@ -296,7 +296,7 @@ def prep_run_dir(parent_dir, runid, scr_dir=None):
     os.system(f'ln -sf {output_dir} .')
     os.system(f'ln -sf {model_input_path}/hgrid.gr3 .')
 
-    return model_input_path
+    return model_input_path, rundir, output_dir
 
 
 # ---------------------------------------------------------------------
@@ -516,7 +516,7 @@ def main():
         'bctides': True,
         'vgrid': False,
         'gr3': True,
-        'nudge_gr3': True,
+        'nudge_gr3': False,
         'shapiro': True,
         'drag': True,
         'elev_ic': True,
@@ -534,7 +534,7 @@ def main():
     # -----------------begin generating model inputs---------------------
 
     # define and make the model_input_path, the run_dir and the output dir
-    model_input_path = prep_run_dir(project_dir, runid)
+    model_input_path, run_dir, _ = prep_run_dir(project_dir, runid)
 
     # make a copy of the script itself to the model_input_path
     os.system(f'cp -r {script_path} {model_input_path}/')
@@ -556,6 +556,10 @@ def main():
             start_date=config.startdate,
             rnday=config.rnday,
         )
+
+        os.chdir(run_dir)
+        os.system(f'ln -sf ../I{runid}/{sub_dir}/bctides.in .')
+        os.chdir(model_input_path)
 
     # -----------------Vgrid---------------------
     if input_files['vgrid']:
@@ -602,7 +606,10 @@ def main():
             print(f'{DRIVER_PRINT_PREFIX}Generating {name}.gr3 ...')
             try_remove(f'{model_input_path}/{sub_dir}/{name}.gr3')
             hgrid.write(f'{model_input_path}/{sub_dir}/{name}.gr3', value=value)
-
+        
+        os.chdir(run_dir)
+        os.system(f'ln -sf ../I{runid}/{sub_dir}/*.gr3 .')
+        
         os.chdir(model_input_path)
 
     # -------------------------------------------------
@@ -627,6 +634,8 @@ def main():
         try_remove(f'{model_input_path}/{sub_dir}/TEM_nudge.gr3')
         os.system('ln -s nudge.gr3 TEM_nudge.gr3')
 
+        os.chdir(run_dir)
+        os.system(f'ln -sf ../I{runid}/{sub_dir}/*_nudge.gr3 .')
         os.chdir(model_input_path)
 
     # -----------------shapiro.gr3---------------------
@@ -646,6 +655,8 @@ def main():
 
         hgrid.save(f'{model_input_path}/{sub_dir}/shapiro.gr3', value=shapiro)
 
+        os.chdir(run_dir)
+        os.system(f'ln -sf ../I{runid}/{sub_dir}/shapiro.gr3 .')
         os.chdir(model_input_path)
 
     # -----------------drag.gr3---------------------
@@ -657,6 +668,8 @@ def main():
 
         hgrid.save(f'{model_input_path}/{sub_dir}/drag.gr3', value=drag)
 
+        os.chdir(run_dir)
+        os.system(f'ln -sf ../I{runid}/{sub_dir}/drag.gr3 .')
         os.chdir(model_input_path)
 
     # -----------------elev_ic---------------------
@@ -676,6 +689,8 @@ def main():
             f'{model_input_path}/{sub_dir}/elev_ic.gr3',
             f'{model_input_path}/{sub_dir}/elev.ic')
 
+        os.chdir(run_dir)
+        os.system(f'ln -sf ../I{runid}/{sub_dir}/elev.ic .')
         os.chdir(model_input_path)
 
     # ----- end spatially varying Gr3 -----------------
@@ -752,6 +767,8 @@ def main():
                   total_ss.vsink.df.mean().values]
         )
 
+        os.chdir(run_dir)
+        os.system(f'ln -sf ../I{runid}/{sub_dir}/source.nc .')
         os.chdir(model_input_path)
 
     # -----------------*prop---------------------
@@ -762,6 +779,9 @@ def main():
 
         os.system(f'cp {script_path}/Prop/* .')
         gen_tvd_prop(hgrid, config.tvd_regions)
+
+        os.chdir(run_dir)
+        os.system(f'ln -sf ../I{runid}/{sub_dir}/tvd_prop .')
 
     # -----------------hotstart.nc---------------------
     if input_files['hotstart.nc']:
