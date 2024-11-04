@@ -269,10 +269,10 @@ if __name__ == '__main__':
     idxs=np.argmax(elev,axis=0)
     time_maxelev=times[idxs]
 
-    #disturbance
+    #disturbance, maxdist = maxelev in ocean, so just need to deal with land values
     maxdist=copy.deepcopy(maxelev)
     land_node_idx = depth < 0
-    maxdist[land_node_idx]=np.maximum(0, maxelev[land_node_idx]+depth[land_node_idx])
+    maxdist[land_node_idx]=np.maximum(0, maxelev[land_node_idx]+depth[land_node_idx])  # need to include city idx
 
     #find city nodes
     if input_city_identifier_file is None:

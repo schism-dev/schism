@@ -606,10 +606,9 @@ def main():
             print(f'{DRIVER_PRINT_PREFIX}Generating {name}.gr3 ...')
             try_remove(f'{model_input_path}/{sub_dir}/{name}.gr3')
             hgrid.write(f'{model_input_path}/{sub_dir}/{name}.gr3', value=value)
-        
+
         os.chdir(run_dir)
         os.system(f'ln -sf ../I{runid}/{sub_dir}/*.gr3 .')
-        
         os.chdir(model_input_path)
 
     # -------------------------------------------------
