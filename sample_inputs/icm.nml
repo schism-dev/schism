@@ -86,7 +86,7 @@ alpha  = 8.0   8.0  8.0  !init. slope of P-I curve (g[C]*m2/g[Chl]/E), (iLight=0
 !-----------------------------------------------------------------------
 !options of phytoplankton' predation term
 !-----------------------------------------------------------------------
-iPR = 1   !(0: linear formulation; 1: quadratic)
+iPR = 1    1      1    !(0: linear formulation; 1: quadratic)
 PRR = 0.1  0.2  0.05   !predation rate by higher trophic level (day-1, or day-1.g-1.m3)
 
 !-----------------------------------------------------------------------
@@ -559,6 +559,7 @@ vp2c   = 0.01   0.01   0.01   !phosphorus to carbon ratio [nmarsh]
 !vKPOM (order same as WSP): (PB1,PB2,PB3)   (RPOC,LPOC,DOC)   (RPON,LPON,DON,NH4,NO3)     (RPOP,LPOP,DOP,PO4)    (COD,DO)    (SRPOM, PIP)
 !----------------------
 vAw    =   0.1                !ratio between marsh area to adjacent water volume (m-1)
+vdz    =   2.0                !surface layer thickness that wetland effect is applied on (m)
 vKNO3  =   0.01               !mass-transfer coefficient for NO3 removal (m.day-1)
 vKTw   =   0.069              !temperature dependence for wetland effect (oC-1)
 vRTw   =   20                 !reference temperature for wetland effect (oC)
@@ -623,6 +624,9 @@ cDoyh   =  122 122 122 122 122    274 274 274 274 274 !date range for predation 
 cn2c    =  0.167  0.167  0.167  0.167  0.167   !nitrogen to carbon ratio
 cp2c    =  0.011  0.011  0.011  0.011  0.011   !phosphorus to carbon ratio
 clamm   =  0.001  0.001  0.001  0.001  0.001    1.0  1.0  1.0  1.0  1.0   !minimum and maximum clam conc. [g[C].m-2)
+cFCM    =  0.0    0.5    0.5                   !partition of FPOC from clam to different G1-3 classes
+cFNM    =  0.0    0.5    0.5                   !partition of FPON from clam to different G1-3 classes
+cFPM    =  0.0    0.5    0.5                   !partition of FPOP from clam to different G1-3 classes
 /
 
 &ERO

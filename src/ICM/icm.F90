@@ -245,7 +245,7 @@ subroutine ecosystem(it)
 
           !metabolism, predation
           MT(i,k)=MTR(i)*GP(i,k)+MTB(i)*exp(KTMT(i)*(temp(k)-TMT(i)))*PBS(i,k)
-          if(iPR==0) then
+          if(iPR(i)==0) then
             PR(i,k)=PRR(i)*exp(KTMT(i)*(temp(k)-TMT(i)))*PBS(i,k)
           else
             PR(i,k)=PRR(i)*exp(KTMT(i)*(temp(k)-TMT(i)))*PBS(i,k)*PBS(i,k)
@@ -701,8 +701,8 @@ subroutine marsh_calc(id,kb,zid,vhtz,vLight)
   real(rkind),intent(in) :: zid(nvrt),vhtz(nmarsh),vLight(nmarsh)
 
   !local variables
-  integer :: i,j,k,m
-  real(rkind) :: fR,fT,fST,fI,fN,fP,fDO,mLight,mtemp,msalt,rIK,Kd,xT,xS,vdc,drat
+  integer :: i,j,k,m,kv
+  real(rkind) :: fR,fT,fST,fI,fN,fP,fDO,mLight,mtemp,msalt,rIK,Kd,xT,xS,vdc,drat,zv,zrat
   real(rkind),dimension(nmarsh) :: BMw,BMb,srat,orat
   real(rkind) :: tdep,dz(nvrt),GP(nmarsh),MT(3,nmarsh)
   real(rkind),pointer,dimension(:) :: vleaf,vstem,vroot
@@ -796,24 +796,35 @@ subroutine marsh_calc(id,kb,zid,vhtz,vLight)
     !update canopy height
     call get_canopy(id)
   elseif(vpatch(id)==1.and.jmarsh==2.and.idry_e(id)==0) then
-    !currently, the sink due marsh doesn't go to the sediment (todo) for this simple model
+    !currently, the sink due to marsh doesn't go to the sediment (todo) for this simple model
     db_vdNO3(id)=0; db_vdDOX(id)=0; db_vdRPOC(id)=0; db_vdLPOC(id)=0; db_vdRPON(id)=0; db_vdLPON(id)=0
     db_vdRPOP(id)=0; db_vdLPOP(id)=0; db_vdSRPOC(id)=0; db_vdSRPON(id)=0; db_vdSRPOP(id)=0; db_vdPIP(id)=0
-    do k=kb+1,nvrt
+
+    !apply wetland effect only only top vdz meters
+    kv=kb+1; zv=0
+    do k=nvrt,kb+1,-1
+      zv=zv+dz(k)
+      if(zv>=vdz) then
+        kv=k; exit
+      endif
+    enddo !k
+    zrat=max(tdep/max(zv,1.d-5),1.d0) !concentrate the effect on surface layers
+
+    do k=kv,nvrt
       fT=exp(vKTw*(temp(k)-vRTw)); fDO=DOX(k)/(vKhDO+DOX(k))  !pre-compute
-      vdc=vKNO3*vAw*fT*NO3(k);  vdwqc(iNO3,k)=-vdc;  db_vdNO3(id)=db_vdNO3(id)+vdc*dz(k) !vdNO3: g.m-2.day
-      vdc=vAw*fDO*fT*vOCw;      vdwqc(iDOX,k)=-vdc;  db_vdDOX(id)=db_vdDOX(id)+vdc*dz(k)
-      vdc=vKPOM(iRPOC)*vAW*RPOC(k);  vdwqc(iRPOC,k)=-vdc;  db_vdRPOC(id)=db_vdRPOC(id)+vdc*dz(k)
-      vdc=vKPOM(iLPOC)*vAW*LPOC(k);  vdwqc(iLPOC,k)=-vdc;  db_vdLPOC(id)=db_vdLPOC(id)+vdc*dz(k)
-      vdc=vKPOM(iRPON)*vAW*RPON(k);  vdwqc(iRPON,k)=-vdc;  db_vdRPON(id)=db_vdRPON(id)+vdc*dz(k)
-      vdc=vKPOM(iLPON)*vAW*LPON(k);  vdwqc(iLPON,k)=-vdc;  db_vdLPON(id)=db_vdLPON(id)+vdc*dz(k)
-      vdc=vKPOM(iRPOP)*vAW*RPOP(k);  vdwqc(iRPOP,k)=-vdc;  db_vdRPOP(id)=db_vdRPOP(id)+vdc*dz(k)
-      vdc=vKPOM(iLPOP)*vAW*LPOP(k);  vdwqc(iLPOP,k)=-vdc;  db_vdLPOP(id)=db_vdLPOP(id)+vdc*dz(k)
+      vdc=zrat*vKNO3*vAw*fT*NO3(k);  vdwqc(iNO3,k)=-vdc;  db_vdNO3(id)=db_vdNO3(id)+vdc*dz(k) !vdNO3: g.m-2.day
+      vdc=zrat*vAw*fDO*fT*vOCw;      vdwqc(iDOX,k)=-vdc;  db_vdDOX(id)=db_vdDOX(id)+vdc*dz(k)
+      vdc=zrat*vKPOM(iRPOC)*vAw*RPOC(k);  vdwqc(iRPOC,k)=-vdc;  db_vdRPOC(id)=db_vdRPOC(id)+vdc*dz(k)
+      vdc=zrat*vKPOM(iLPOC)*vAw*LPOC(k);  vdwqc(iLPOC,k)=-vdc;  db_vdLPOC(id)=db_vdLPOC(id)+vdc*dz(k)
+      vdc=zrat*vKPOM(iRPON)*vAw*RPON(k);  vdwqc(iRPON,k)=-vdc;  db_vdRPON(id)=db_vdRPON(id)+vdc*dz(k)
+      vdc=zrat*vKPOM(iLPON)*vAw*LPON(k);  vdwqc(iLPON,k)=-vdc;  db_vdLPON(id)=db_vdLPON(id)+vdc*dz(k)
+      vdc=zrat*vKPOM(iRPOP)*vAw*RPOP(k);  vdwqc(iRPOP,k)=-vdc;  db_vdRPOP(id)=db_vdRPOP(id)+vdc*dz(k)
+      vdc=zrat*vKPOM(iLPOP)*vAw*LPOP(k);  vdwqc(iLPOP,k)=-vdc;  db_vdLPOP(id)=db_vdLPOP(id)+vdc*dz(k)
       if(iSRM==1) then
-        vdc=vKPOM(iSRPOC)*vAw*SRPOC(k);  vdwqc(iSRPOC,k)=-vdc;  db_vdSRPOC(id)=db_vdSRPOC(id)+vdc*dz(k)
-        vdc=vKPOM(iSRPON)*vAw*SRPON(k);  vdwqc(iSRPON,k)=-vdc;  db_vdSRPON(id)=db_vdSRPON(id)+vdc*dz(k)
-        vdc=vKPOM(iSRPOP)*vAw*SRPOP(k);  vdwqc(iSRPOP,k)=-vdc;  db_vdSRPOP(id)=db_vdSRPOP(id)+vdc*dz(k)
-        vdc=vKPOM(iPIP)*vAw*PIP(k);      vdwqc(iPIP,k)  =-vdc;  db_vdPIP(id)  =db_vdPIP(id)  +vdc*dz(k)
+        vdc=zrat*vKPOM(iSRPOC)*vAw*SRPOC(k);  vdwqc(iSRPOC,k)=-vdc;  db_vdSRPOC(id)=db_vdSRPOC(id)+vdc*dz(k)
+        vdc=zrat*vKPOM(iSRPON)*vAw*SRPON(k);  vdwqc(iSRPON,k)=-vdc;  db_vdSRPON(id)=db_vdSRPON(id)+vdc*dz(k)
+        vdc=zrat*vKPOM(iSRPOP)*vAw*SRPOP(k);  vdwqc(iSRPOP,k)=-vdc;  db_vdSRPOP(id)=db_vdSRPOP(id)+vdc*dz(k)
+        vdc=zrat*vKPOM(iPIP)*vAw*PIP(k);      vdwqc(iPIP,k)  =-vdc;  db_vdPIP(id)  =db_vdPIP(id)  +vdc*dz(k)
       endif
     enddo
   endif !vpatch(id)
@@ -1261,16 +1272,12 @@ subroutine clam_calc(id,kb,wdz)
     cdwqc(iDOX, kb+1)=o2c*sum(cFc*((ATFC-GP)+MT))/wdz
 
     !interaction with sediment layer
-    cFPOC(id,1:2)=0; cFPON(id,1:2)=0; cFPOP(id,1:2)=0
+    cFPOC(id)=0; cFPON(id)=0; cFPOP(id)=0
     do i=1,nclam
-      cFPOC(id,1)=cFPOC(id,1)+sum(cFc(i)*((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PC(1:4))+sum(cFc(i)*(RT+PR))
-      cFPON(id,1)=cFPON(id,1)+sum(cFc(i)*((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PN(1:4))+sum(cFc(i)*cn2c(i)*(RT+PR))
-      cFPOP(id,1)=cFPOP(id,1)+sum(cFc(i)*((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PP(1:4))+sum(cFc(i)*cp2c(i)*(RT+PR))
+      cFPOC(id)=cFPOC(id)+sum(cFc(i)*((1-cIF(i))+(1.0-calpha(i,1:5))*cIF(i))*Fr(i)*CLAM(i,id)*PC(1:5))+sum(cFc(i)*(RT+PR))
+      cFPON(id)=cFPON(id)+sum(cFc(i)*((1-cIF(i))+(1.0-calpha(i,1:5))*cIF(i))*Fr(i)*CLAM(i,id)*PN(1:5))+sum(cFc(i)*cn2c(i)*(RT+PR))
+      cFPOP(id)=cFPOP(id)+sum(cFc(i)*((1-cIF(i))+(1.0-calpha(i,1:5))*cIF(i))*Fr(i)*CLAM(i,id)*PP(1:5))+sum(cFc(i)*cp2c(i)*(RT+PR))
     enddo !i
-    cFPOC(id,2)=sum(cFc*((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PC(5))
-    cFPON(id,2)=sum(cFc*((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PN(5))
-    cFPOP(id,2)=sum(cFc*((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PP(5))
-
   endif !iClam
 end subroutine clam_calc
 

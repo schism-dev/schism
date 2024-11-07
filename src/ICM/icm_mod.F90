@@ -27,7 +27,7 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !global switch and variables
   !-------------------------------------------------------------------------------
-  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSFM,iBA,iRad,isflux,ibflux,idbg(10),iout_icm,nspool_icm
+  integer,save,target :: nsub,iKe,iLight,iPR(3),iLimit,iSFM,iBA,iRad,isflux,ibflux,idbg(10),iout_icm,nspool_icm
   integer,save,target :: iSilica,iZB,iPh,iSRM,isav_icm,imarsh_icm,nmarsh,idry_icm,iClam,nclam
   real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,PRR(3),wqc0(29),WSP(29),WSPn(29)
   real(rkind),save,target,dimension(3) :: alpha
@@ -126,7 +126,7 @@ module icm_mod
   !metabolism partition, growth limit of nutrient,light,salinity,inundation
   real(rkind),save,target,allocatable,dimension(:) :: vFW,vKhN,vKhP,valpha,vKe,vSopt,vKs,vInun
   real(rkind),save,target,allocatable :: vht0(:),vcrit(:),v2ht(:,:),vc2dw(:),vn2c(:),vp2c(:) !misc
-  real(rkind),save,target :: vAw,vKNO3,vKTW,vRTw,vKhDO,vOCw
+  real(rkind),save,target :: vAw,vdz,vKNO3,vKTW,vRTw,vKhDO,vOCw
   real(rkind),save,target,allocatable :: vKPOM(:)
 
   integer,save,allocatable :: vpatch(:)  !marsh regions
@@ -174,13 +174,14 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !Clam model (CLAM) parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: cpatch0
+  real(rkind),save,target :: cpatch0,cFCM(3),cFNM(3),cFPM(3)
   real(rkind),save,target,allocatable,dimension(:) :: cFc,clam0,cfrmax,cTFR,csalt,cKDO,cDOh,cfTSSm,cRF, &
                                                     & cIFmax,cMTB,cTMT,cKTMT,cMRT,cPRR,cHSR,cn2c,cp2c
   real(rkind),save,target,allocatable,dimension(:,:) :: cKTFR,cKTSS,cTSS,calpha,cDoyp,cDoyh,clamm
 
   integer,save,allocatable,dimension(:) :: cpatch
-  real(rkind),save,target,allocatable,dimension(:,:) :: CLAM,cFPOC,cFPON,cFPOP
+  real(rkind),save,target,allocatable,dimension(:) :: cFPOC,cFPON,cFPOP
+  real(rkind),save,target,allocatable,dimension(:,:) :: CLAM
 
   !debug
   real(rkind),save,pointer,dimension(:,:) :: db_cfT,db_cfS,db_cfDO,db_cfTSS,db_cFr,db_cIF,db_cTFC,db_cATFC,db_cfN, &
