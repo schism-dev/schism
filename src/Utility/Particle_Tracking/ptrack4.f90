@@ -39,6 +39,7 @@
 !	  (1) description;						
 !	  (2) nscreen;								
 !         (3) mod_part: model #. 0-passive; 1: oil spill (Dr. Jung)
+!         (4) ibiofoul: biofouling on(1) / off(0)
 !	  (4) ibf: forward (=1) or backward (=-1) tracking.			
 !         (5) istiff: stiff (fixed distance frm f.s.; 1) or not (0).		
 !         (6) ibnd_beh: reflect off (0) or slide (1)
