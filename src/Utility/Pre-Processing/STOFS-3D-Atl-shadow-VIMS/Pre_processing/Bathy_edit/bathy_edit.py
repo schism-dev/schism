@@ -120,8 +120,14 @@ def prepare_dir(wdir: Path, tasks: str):
     the larger files not in the Git repository.
     '''
     script_dir = Path(__file__).parent
-    for task in tasks:
-        shutil.copytree(f'{script_dir}/{task}/', f'{wdir}/{task}/', symlinks=False, dirs_exist_ok=True)
+    if script_dir == wdir:
+        print('The script is already in the working directory; no need to copy.')
+    else:
+        print(f'Copying the script and the subdirectories to {wdir}')
+        for task in tasks:
+            shutil.copytree(
+                f'{script_dir}/{task}/', f'{wdir}/{task}/',
+                symlinks=False, dirs_exist_ok=True)
 
     # copy larger files not in the Git repository
     for task, file_path_list in LARGE_FILES.items():
@@ -150,7 +156,8 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         from Regional_tweaks.regional_tweaks import tweak_hgrid_depth
         hgrid_obj = tweak_hgrid_depth(
             hgrid=hgrid_obj, regions_dir=f'{wdir}/Regional_tweaks/regions/')
-        print("Finished setting regional tweaks.\n")
+        initial_dp = hgrid_obj.dp.copy()  # treat the regional tweaks as the initial dp
+        print("Finished setting regional tweaks and updating initial dp.\n")
 
     if 'NCF' in tasks:  # load NCF (National Channel Framework)
         from NCF.load_NCF import load_NCF
@@ -232,10 +239,10 @@ def sample_usage():
     '''
     Sample usage of the bathy_edit function.
     '''
-    WDIR = Path('/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/Bathy_edit_example/')
+    WDIR = Path('/sciclone/schism10/feiye/STOFS3D-v8/I10/Bathy_edit/')
     HGRID_FNAME = Path(  # Typically, this is the DEM-loaded hgrid
-        '/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/'
-        'DEM_loading_example/hgrid.ll.dem_loaded.mpi.gr3'
+        '/sciclone/schism10/feiye/STOFS3D-v8/I10/Bathy_edit/'
+        'DEM_loading/hgrid.ll.dem_loaded.mpi.gr3'
     )
     TASKS = ['Regional_tweaks', 'NCF', 'Levee']
 
