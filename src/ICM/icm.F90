@@ -942,7 +942,7 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight0)
 
   !local variables
   integer :: i,k
-  real(rkind) :: drat,srat,leafC,stemC,xT,mLight,rIK,Ns,Ps,fT,fI,fN,fP,zm,sFCPm(4)
+  real(rkind) :: drat,srat,leafC,stemC,xT,mLight,rIK,Ns,Ps,fT,fI,fN,fP,zm,rm,sFCPm(4)
   real(rkind) :: sfPN,sfPNb,sfPPb,leaf0,stem0,TB,MT0(4),BM,BMb,sfT,sfI,sfN,sfP,s
   real(rkind) :: efT,eKd,efI,efN,efP,efEP,eGP,eMT,ePR,efPN,zEP0,eMT0
   real(rkind),dimension(nvrt) :: sLight,dz,zleaf,zstem,GP,MT1,MT2,zEP
@@ -1017,14 +1017,14 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight0)
     Ps=drat*PO4d(k)/sKhP(1)+bPO4(id)/sKhP(2); fP=Ps/(1+Ps)
 
     !grwoth, metabolism,transfer
-    GP(k)=sGPM*fT*min(fI,fN,fP)*zleaf(k)
-    MT1(k)=sMTB(1)*exp(sKTMT(1)*(temp(k)-sTMT(1)))*zleaf(k)
-    MT2(k)=sMTB(2)*exp(sKTMT(2)*(temp(k)-sTMT(2)))*zstem(k)
+    GP(k)=sGPM*fT*min(fI,fN,fP)*zleaf(k); rm=max(dble(nint(iMTs)),1.d0)
+    MT1(k)=sMTB(1)*exp(sKTMT(1)*(temp(k)-sTMT(1)))*zleaf(k)**rm
+    MT2(k)=sMTB(2)*exp(sKTMT(2)*(temp(k)-sTMT(2)))*zstem(k)**rm
     if(k==nvrt) then
-      MT0(1)=sMTB(1)*exp(sKTMT(1)*(temp(nvrt)-sTMT(1)))*leaf0
-      MT0(2)=sMTB(2)*exp(sKTMT(2)*(temp(nvrt)-sTMT(2)))*stem0
-      MT0(3)=sMTB(3)*exp(sKTMT(3)*(temp(kb+1)-sTMT(3)))*sroot
-      MT0(4)=sMTB(4)*exp(sKTMT(4)*(temp(kb+1)-sTMT(4)))*tuber
+      MT0(1)=sMTB(1)*exp(sKTMT(1)*(temp(nvrt)-sTMT(1)))*leaf0**rm
+      MT0(2)=sMTB(2)*exp(sKTMT(2)*(temp(nvrt)-sTMT(2)))*stem0**rm
+      MT0(3)=sMTB(3)*exp(sKTMT(3)*(temp(kb+1)-sTMT(3)))*sroot**rm
+      MT0(4)=sMTB(4)*exp(sKTMT(4)*(temp(kb+1)-sTMT(4)))*tuber**rm
     endif
 
     !apply minimum and maximum conc.

@@ -449,6 +449,7 @@ inu_ph   = 0                  !nudge option for pH model
 !-----------------------------------------------------------------------
 spatch0 = -999                     !region flag for SAV. (1: ON all elem.; -999: spatial)
 sFc     = 1.0                      !SAV bed fraction [0,1]
+iMTs    = 1                        !1:1st-order metabolism;  2: 2nd-order metabolism formulation
 sav0    = 100.0  50.0  10.0  20.0  !init. SAV leaf/stem/root/tuber conc. (g[C].m-2)
 
 !growth coefficients
