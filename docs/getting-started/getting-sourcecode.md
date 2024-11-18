@@ -5,7 +5,7 @@ git clone --recurse-submodules https://github.com/schism-dev/schism.git
 cd schism
 ```
 
-This will give you the latest master branch. If you want to get certain tagged versions use the `tag` command of git as (for example) `git checkout tags/v5.10.0` - for v5.10.0.
+This will give you the latest master branch and all submodules inside (e.g. GOTM5). If you want to get certain tagged versions use the `tag` command of git as (for example) `git checkout tags/v5.10.0` - for v5.10.0.
 
 Note that sometimes you might need to add your system’s ssh public key to your github.com account first before cloning. 
 If cloning fails, you can also go to https://github.com/schism-dev and directly download the zip files.

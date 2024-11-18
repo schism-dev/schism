@@ -27,7 +27,7 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !global switch and variables
   !-------------------------------------------------------------------------------
-  integer,save,target :: nsub,iKe,iLight,iPR,iLimit,iSFM,iBA,iRad,isflux,ibflux,idbg(10),iout_icm,nspool_icm
+  integer,save,target :: nsub,iKe,iLight,iPR(3),iLimit,iSFM,iBA,iRad,isflux,ibflux,idbg(10),iout_icm,nspool_icm
   integer,save,target :: iSilica,iZB,iPh,iSRM,isav_icm,imarsh_icm,nmarsh,idry_icm,iClam,nclam
   real(rkind),save,target :: KeC,KeS,KeSalt,Ke0,tss2c,PRR(3),wqc0(29),WSP(29),WSPn(29)
   real(rkind),save,target,dimension(3) :: alpha
@@ -54,7 +54,8 @@ module icm_mod
 
   !debug variables
   real(rkind),save,pointer,dimension(:,:) :: db_CHLA,db_Ke
-  real(rkind),save,pointer,dimension(:) :: db_TN,db_TP
+  real(rkind),save,pointer,dimension(:) :: db_TN,db_TP,db_GP,db_MT,db_PR,db_oNit,db_oDOC,db_oCOD,db_oGP, &
+                                         & db_oMT,db_oFlx,db_Denit
  
   !-------------------------------------------------------------------------------
   !ICM parameters and variables
@@ -66,7 +67,7 @@ module icm_mod
   real(rkind),save,target,dimension(3) :: KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KSR0,TRSR,KTRSR
   real(rkind),save,target :: KCD,TRCOD,KTRCOD,KhCOD,KPIP
   real(rkind),save,target,dimension(3) :: KhN,KhP,KhSal,c2chl,n2c,p2c,KhDO,PBmin
-  real(rkind),save,target :: o2c,o2n,dn2c,an2c,KPO4p,WRea,dz_flux(2)
+  real(rkind),save,target :: o2c,o2n,dn2c,an2c,KPO4p,WRea,WDOs,dz_flux(2)
 
   real(rkind),save :: dtw     !ICM time step (day)
   real(rkind),save:: time_ph  !time stamp for WQinput
@@ -99,14 +100,14 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !SAV parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: spatch0,sav0(4)  !sav patch, and init conc.
+  real(rkind),save,target :: spatch0,sFc,sav0(4)  !sav patch, and init conc.
   real(rkind),save,target :: sGPM,sTGP,sKTGP(2),sFAM,sFCP(4) !growth related coefficients
   real(rkind),save,target :: sMTB(4),sTMT(4),sKTMT(4)        !meta. coefficients (rate, temp, temp dependence)
   real(rkind),save,target :: sFCM(4),sFNM(4),sFPM(4)         !metabolism of leaf/stem to (RPOM,RLOM,DOM,DIM)
   real(rkind),save,target :: sFCMb(4),sFNMb(4),sFPMb(4)      !metabolism of root to (POM(G1-G3),dissolved nutrients)
   real(rkind),save,target :: sKTB,sDoy(2),sKhN(2),sKhP(2)    !tuber mass transfer, half-saturation conc. of N, P
   real(rkind),save,target :: salpha,sKe,shtm(2),s2ht(3)      !(P-I curve, light attenu., canopy height)
-  real(rkind),save,target :: sc2dw,sn2c,sp2c                 !convert ratios
+  real(rkind),save,target :: sc2dw,sn2c,sp2c,savm(4,2)       !convert ratios,min and max conc.
   real(rkind),save,target :: EP0,eGPM,eTGP,eKTGP(2),eKe,ealpha,eMTB,eTMT,eKTMT,ePRR,eKhN,eKhP,eKhE !epiphytes growth,metabolism, predation
   real(rkind),save,target :: eFCM(4),eFNM(4),eFPM(4),eFCP(4),eFNP(4),eFPP(4),en2c,ep2c !epiphytes partition
 
@@ -125,7 +126,7 @@ module icm_mod
   !metabolism partition, growth limit of nutrient,light,salinity,inundation
   real(rkind),save,target,allocatable,dimension(:) :: vFW,vKhN,vKhP,valpha,vKe,vSopt,vKs,vInun
   real(rkind),save,target,allocatable :: vht0(:),vcrit(:),v2ht(:,:),vc2dw(:),vn2c(:),vp2c(:) !misc
-  real(rkind),save,target :: vAw,vKNO3,vKTW,vRTw,vKhDO,vOCw
+  real(rkind),save,target :: vAw,vdz,vKNO3,vKTW,vRTw,vKhDO,vOCw
   real(rkind),save,target,allocatable :: vKPOM(:)
 
   integer,save,allocatable :: vpatch(:)  !marsh regions
@@ -173,13 +174,14 @@ module icm_mod
   !-------------------------------------------------------------------------------
   !Clam model (CLAM) parameters and variables
   !-------------------------------------------------------------------------------
-  real(rkind),save,target :: cpatch0
+  real(rkind),save,target :: cpatch0,cFCM(3),cFNM(3),cFPM(3)
   real(rkind),save,target,allocatable,dimension(:) :: cFc,clam0,cfrmax,cTFR,csalt,cKDO,cDOh,cfTSSm,cRF, &
                                                     & cIFmax,cMTB,cTMT,cKTMT,cMRT,cPRR,cHSR,cn2c,cp2c
-  real(rkind),save,target,allocatable,dimension(:,:) :: cKTFR,cKTSS,cTSS,calpha,cDoyp,cDoyh
+  real(rkind),save,target,allocatable,dimension(:,:) :: cKTFR,cKTSS,cTSS,calpha,cDoyp,cDoyh,clamm
 
   integer,save,allocatable,dimension(:) :: cpatch
-  real(rkind),save,target,allocatable,dimension(:,:) :: CLAM,cFPOC,cFPON,cFPOP
+  real(rkind),save,target,allocatable,dimension(:) :: cFPOC,cFPON,cFPOP
+  real(rkind),save,target,allocatable,dimension(:,:) :: CLAM
 
   !debug
   real(rkind),save,pointer,dimension(:,:) :: db_cfT,db_cfS,db_cfDO,db_cfTSS,db_cFr,db_cIF,db_cTFC,db_cATFC,db_cfN, &
@@ -221,6 +223,9 @@ module icm_mod
     real(rkind),pointer,dimension(:,:) :: p2=>null()   !param of 2D array
     real(rkind),pointer,dimension(:,:,:) :: p3=>null() !param of 2D array
     real(rkind),allocatable,dimension(:,:,:) :: data
+
+    contains !functions
+      procedure,pass :: init=>icm_pointer_init
   end type icm_pointer
   type(icm_pointer),save,target,allocatable,dimension(:) :: sp,wqout,wqhot
 
@@ -244,6 +249,79 @@ module icm_mod
   end type
   type(station_data),save :: dg
 
+  contains
+    integer function icm_pointer_init(p,varname,nlayer,npt,nt,p1,p2,p3,v1d,v2d,v3d)
+      !this part is used to initialize icm_pointer
+      !when external data (v1d,v2d,v3d) provided, link (p%p1,p%p2,p%p3)  to the data
+      !when external pointer (p1,p2,p3) provided, link exteranl pointer to (p%p1,p%p2,p%p3) (p%data is also allocated)
+      use schism_glbl, only : rkind,nea,npa,nsa,nvrt
+      use schism_msgp, only : parallel_abort
+      implicit none
+      class(icm_pointer),target,intent(inout) :: p
+      character(*) ::varname
+      integer,intent(in) :: nlayer,npt
+      integer,optional,intent(in) :: nt !1st dimension of p%data (e.g. ntimes or ntracers)
+      real(rkind),optional,pointer,dimension(:),intent(inout) :: p1
+      real(rkind),optional,pointer,dimension(:,:),intent(inout) :: p2
+      real(rkind),optional,pointer,dimension(:,:,:),intent(inout) :: p3
+      real(rkind),optional,target,dimension(:),intent(inout) :: v1d
+      real(rkind),optional,target,dimension(:,:),intent(inout) :: v2d
+      real(rkind),optional,target,dimension(:,:,:),intent(inout) :: v3d
+      integer :: istat
+
+      !init 1D/2D/3D data
+      p%name=trim(adjustl(varname))  !assign variable name
+      p%dims=(/1,nlayer,npt/)        !assign variable dimension
+      if(present(nt)) then !3D data
+        p%dims(1)=nt     !assign variable's 1st dimension
+        if(present(v3d)) then !external 3D data already exist, make a link
+          p%p3=>v3d; p%ndim=3
+        else !external 3D data not avaiable
+          if(.not.associated(p%p3)) then
+            allocate(p%data(nt,nlayer,npt),stat=istat)
+            if(istat/=0) call parallel_abort('failed in alloc. '//trim(adjustl(p%name)))
+            p%data=0
+          endif
+          p%p3=>p%data; p%ndim=3
+          if(present(p3)) p3=>p%p3
+        endif
+      elseif(nlayer/=1) then !2D data
+        if(present(v2d)) then !external 2D data already exist, make a link
+          p%p2=>v2d; p%ndim=2
+        else !external 2D data not avaiable
+          if(.not.associated(p%p2)) then
+            allocate(p%data(1,nlayer,npt),stat=istat)
+            if(istat/=0) call parallel_abort('failed in alloc. '//trim(adjustl(p%name)))
+            p%data(1,:,:)=0
+          endif
+          p%p2=>p%data(1,:,:); p%ndim=2
+          if(present(p2)) p2=>p%p2
+        endif
+
+        !assign data type for ICM output
+        if(nlayer==nvrt.and.npt==npa) p%itype=2
+        if(nlayer==nvrt.and.npt==nea) p%itype=6
+        if(nlayer==nvrt.and.npt==nsa) p%itype=8
+      else !1D data
+        if(present(v1d)) then !external 1D data already exist, make a link
+          p%p1=>v1d; p%ndim=1
+        else !external 2D data not avaiable
+          if(.not.associated(p%p1)) then
+            allocate(p%data(1,1,npt),stat=istat)
+            if(istat/=0) call parallel_abort('failed in alloc. '//trim(adjustl(p%name)))
+            p%data(1,1,:)=0; p%ndim=1
+          endif
+          p%p1=>p%data(1,1,:)
+          if(present(p1)) p1=>p%p1
+        endif
+
+        !assign data type for ICM outputs
+        if(npt==npa) p%itype=1
+        if(npt==nea) p%itype=4
+        if(npt==nsa) p%itype=7
+      endif
+      icm_pointer_init=0
+    end function icm_pointer_init
 end module icm_mod
 
 module icm_interface

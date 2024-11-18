@@ -297,9 +297,6 @@
      &dr_dxy(2,nvrt,nea),bcc(2,nvrt,nsa),stat=istat)
       if(istat/=0) call parallel_abort('STEP: other allocation failure')
 
-      allocate(swild9(nvrt,mnu_pts),stat=istat)
-      if(istat/=0) call parallel_abort('STEP: alloc failure (3)')
-
 !     Source
       if(if_source/=0) then
         allocate(msource(ntracers,nea),stat=istat)
@@ -799,40 +796,8 @@
 !         9) = ALPHA_CH(IP) ! Charnock Parameter gz0/ustar**2
 !        10) = CD(IP)       ! Drag Coefficient
 
-!       out_wwm(npa,35): output variables from WWM (all 2D); see names in NVARS() in the routine
-!                      BASIC_PARAMETER() in wwm_initio.F90 for details; below is a snapshot from there:
-         !OUTPAR(1)   = HS       ! Significant wave height
-         !OUTPAR(2)   = TM01     ! Mean average period
-         !OUTPAR(3)   = TM02     ! Zero down crossing period for comparison with buoy.
-         !OUTPAR(4)   = TM10     ! Average period of wave runup/overtopping ...
-         !OUTPAR(5)   = KLM      ! Mean wave number
-         !OUTPAR(6)   = WLM      ! Mean wave length
-         !OUTPAR(7)   = ETOTS    ! Etot energy in y-direction
-         !OUTPAR(8)   = ETOTC    ! Etot energy in x-direction
-         !OUTPAR(9)   = DM       ! Mean average energy transport direction
-         !OUTPAR(10)  = DSPR     ! Mean directional spreading
-         !OUTPAR(11)  = TPPD     ! Discrete peak period (sec)
-         !OUTPAR(12)  = TPP      ! Continuous peak period based on higher order moments (sec) 
-         !OUTPAR(13)  = CPP      ! Peak phase vel. (m/s)
-         !OUTPAR(14)  = WNPP     ! Peak n-factor
-         !OUTPAR(15)  = CGPP     ! Peak group vel.
-         !OUTPAR(16)  = KPP      ! Peak wave number
-         !OUTPAR(17)  = LPP      ! Peak wave length.
-         !OUTPAR(18)  = PEAKD    ! Peak (dominant) direction (degr)
-         !OUTPAR(19)  = PEAKDSPR ! Peak directional spreading
-         !OUTPAR(20)  = DPEAK    ! Discrete peak direction
-         !OUTPAR(21)  = UBOT     ! Orbital vel. (m/s)
-         !OUTPAR(22)  = ORBITAL  ! RMS Orbital vel. (m/s)
-         !OUTPAR(23)  = BOTEXPER ! Bottom excursion period.
-         !OUTPAR(24)  = TMBOT    ! Bottom wave period (sec)
-         !OUTPAR(25)  = URSELL   ! Uresell number based on peak period ...
-         !OUTPAR(26)  = USTAR    ! Friction velocity 
-         !OUTPAR(27)  = ALPHA_CH(IP) ! Charnock coefficient
-         !OUTPAR(28)  = Z0(IP)       ! Rougness length
-         !OUTPAR(29)  = WINDXY(IP,1) ! windx
-         !OUTPAR(30)  = WINDXY(IP,2) ! windy
-         !OUTPAR(31)  = CD(IP)       ! Drag coefficient
-         !...
+!       out_wwm(npa,35): output variables from WWM (all 2D); see OUTPAR(:) in routine INTPAR in wwm_output.F90, and
+!                        names in NVARS() in the routine BASIC_PARAMETER() in wwm_initio.F90
 
         if(myrank==0) write(16,*)'WWM-RS part took (sec) ',mpi_wtime()-wtmp1
 
@@ -1049,6 +1014,9 @@
       if(myrank==0) write(16,*)'done adjusting wind stress ...'
 
 !...  Read in tracer nudging
+      allocate(swild9(nvrt,mnu_pts),stat=istat)
+      if(istat/=0) call parallel_abort('STEP: alloc failure (3)')
+
       if(time>time_nu_tr) then
         icount3=time/step_nu_tr+2 !time record #
         do k=1,natrm
@@ -1123,6 +1091,54 @@
 !$OMP end parallel workshare
         endif !inu_tr(k)
       enddo !k
+      deallocate(swild9)
+
+!...  Read in surface relax
+      if(iref_ts/=0) then
+        allocate(swild9(np_global,1),stat=istat)
+        if(istat/=0) call parallel_abort('STEP: alloc failure (3.0)')
+        if(time>time_ref_ts) then
+          icount3=time/ref_ts_dt/86400.d0+2 !next time record #
+          ref_ts1=ref_ts2
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid_ref_ts,"reference_sst",nwild(1))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: surf relax (1)')
+            j=nf90_inq_varid(ncid_ref_ts,"reference_sss",nwild(2))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: surf relax (2)')
+          endif
+ 
+          do k=1,2 !T,S
+            swild9=-9999.
+            if(myrank==0) then
+              j=nf90_get_var(ncid_ref_ts,nwild(k),swild9(1:np_global,1), &
+     &(/1,icount3/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: surf relax(2.1)')
+            endif !myrank
+            call mpi_bcast(swild9,np_global,mpi_real,0,comm,istat)
+            do i=1,np_global
+              if(ipgl(i)%rank==myrank) then
+                ip=ipgl(i)%id
+                ref_ts2(ip,k)=swild9(i,1)
+                !Debug
+                !write(12,*)'Step nu:',i,nd,swild9(i,1)
+              endif
+            enddo !i
+          enddo !k
+          time_ref_ts=time_ref_ts+ref_ts_dt*86400.d0 ![sec]; shared among all tracers
+        endif !time>time_nu_tr
+
+!       Compute tracer
+        rat=(time_ref_ts-time)/ref_ts_dt/86400.d0
+        if(rat<0.d0.or.rat>1.d0) then
+          write(errmsg,*)'Impossible 82.2:',rat
+          call parallel_abort(errmsg)
+        endif
+!$OMP parallel workshare default(shared)
+        !may be junk (check later)
+        ref_ts=rat*ref_ts1+(1.d0-rat)*ref_ts2
+!$OMP end parallel workshare
+        deallocate(swild9)
+      endif !iref_ts/=0
 
 !...  Compute hydraulic transfer blocks together with reading in flux values
 !...  in case the blocks are taken out
@@ -7375,7 +7391,7 @@
 !...    Initialize S,T as flags
 !        tr_nd(1:2,:,:)=-99 !flags
 
-!$OMP parallel default(shared) private(i,evap,precip,sflux_e,itmp,rr,d_1,d_2,k,dp1,dp2,l,srad1,srad2,j)
+!$OMP parallel default(shared) private(i,evap,precip,sflux_e,itmp,rr,d_1,d_2,k,dp1,dp2,l,srad1,srad2,j,tmp,tmp2)
 
 !$OMP   workshare
         bdy_frc=0.d0; flx_sf=0.d0; flx_bt=0.d0
@@ -7393,15 +7409,19 @@
               if(ze(nvrt,i)-ze(kbe(i),i)<hmin_salt_ex) cycle
             endif
 
-!#ifdef      IMPOSE_NET_FLUX
-!              precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
-!              flx_sf(2,i)=tr_el(2,nvrt,i)*(-precip)/rho0
-!#else
             evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
             precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
             flx_sf(2,i)=tr_el(2,nvrt,i)*(evap-precip)/rho0
-!            endif !impose_net_flux
-!#endif
+
+            !Virtual flux (surface restoration)
+            if(iref_ts/=0) then
+              tmp=sum(ref_ts(elnode(1:i34(i),i),2))/real(i34(i),rkind)
+              if(tmp>0.d0) then
+                tmp2=max(0.d0,min(1.d0,(dpe(i)-ref_ts_h2)/(ref_ts_h1-ref_ts_h2)))
+                flx_sf(2,i)=flx_sf(2,i)+ref_ts_restore_depth/ref_ts_tscale/86400.d0*tmp2* &
+                        &(tmp-tr_el(2,nvrt,i))
+              endif !tmp>
+            endif !iref_ts/
           enddo !i
 !$OMP     end do
         endif !isconsv/=0
@@ -7422,6 +7442,16 @@
 !           Surface flux
             sflux_e=sum(sflux(elnode(1:i34(i),i)))/real(i34(i),rkind)
             flx_sf(1,i)=sflux_e/rho0/shw
+
+            !Virtual flux (surface restoration)
+            if(iref_ts/=0) then
+              tmp=sum(ref_ts(elnode(1:i34(i),i),1))/real(i34(i),rkind)
+              if(tmp>-99.d0) then
+                tmp2=max(0.d0,min(1.d0,(dpe(i)-ref_ts_h2)/(ref_ts_h1-ref_ts_h2)))
+                flx_sf(1,i)=flx_sf(1,i)+ref_ts_restore_depth/ref_ts_tscale/86400.d0*tmp2* &
+                        &(tmp-tr_el(1,nvrt,i))
+              endif !tmp>
+            endif !iref_ts/
 
 !           Solar
 !           Calculate water type
@@ -7962,7 +7992,8 @@
           do i=1,np
             veg_h_unbent(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
           enddo !i
-          call exchange_p2d(veg_h)
+          call exchange_p2d(veg_h_unbent)
+          veg_h=veg_h_unbent
 
           do i=1,npa
             !Do not allow SAV to grow out of init patch for the time being
@@ -10609,8 +10640,6 @@
       deallocate(hp_int,uth,vth,d2uv,dr_dxy,bcc)
       if(allocated(rwild)) deallocate(rwild)
       if(allocated(rwild6)) deallocate(rwild6)
-      deallocate(swild9)
-      !if(allocated(ts_offline)) deallocate(ts_offline)
 
 #ifdef USE_NAPZD
       deallocate(Bio_bdefp)

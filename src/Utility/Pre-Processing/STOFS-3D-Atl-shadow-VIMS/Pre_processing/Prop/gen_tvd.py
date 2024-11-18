@@ -1,37 +1,59 @@
-import os
+'''
+Generate tvd.prop file for the high-order transport schemes in SCHISM
+'''
 import numpy as np
 
-from pylib import schism_grid, read_schism_bpfile, inside_polygon
-
-if __name__ == '__main__':
-
-    #Read hgrid
-    hgrid_name='hgrid.gr3'
-    gr3_pkl = 'hgrid.pkl'
-    if os.path.exists(gr3_pkl):
-        print('Reading hgrid.pkl')
-        gd = schism_grid(gr3_pkl)
-    else:
-        print('Reading hgrid.gr3')
-        gd = schism_grid(hgrid_name)
-        gd.save(gr3_pkl)
+import socket
+import pylib
+from pylib import read_schism_bpfile, inside_polygon
+if 'sciclone' in socket.gethostname():
+    from pylib_experimental.schism_file import cread_schism_hgrid as schism_read
+else:
+    from pylib import schism_grid as schism_read
 
 
-    #gd = read_schism_hgrid('hgrid.gr3')
-    gd.compute_ctr()
+def gen_tvd_prop(hg: pylib.schism_grid, regions: list):
+    '''
+    Generate tvd.prop file for the high-order transport schemes in SCHISM
 
-    regions = ['tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg', \
-        'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg', \
-        'upwind_east_Carribbean.rgn', 'upwind_west_Carribbean.rgn']
+    Parameters
+    ----------
+    hg : schism_grid
+        SCHISM grid object
+    regions : list
+        list of region files,
+        in the final output tvd.prop: 1 for inside region, 0 for outside region
 
-    #write constant (=1) *prop
-    ab = np.ones(gd.ne)
+    Returns
+    -------
+    None
 
-    #reset values (=0) within region
+    '''
+    hg.compute_ctr()
+    tvd = np.zeros(hg.ne)
+
     for region in regions:
         bp = read_schism_bpfile(region, fmt=1)
-        sind = inside_polygon(np.c_[gd.xctr,gd.yctr], bp.x, bp.y)
-        ab[sind==1] = 0
+        idx = inside_polygon(np.c_[hg.xctr, hg.yctr], bp.x, bp.y)
+        tvd[idx == 1] = 1
 
-    gd.write_prop('tvd.prop',value=ab, fmt='{:d}')
+    hg.write_prop('tvd.prop', value=tvd, fmt='{:d}')
 
+
+def sample_usage():
+    '''
+    Sample usage of gen_tvd_prop
+    '''
+    gd = schism_read('hgrid.gr3')
+
+    regions = [
+        'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
+        'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg',
+        'upwind_east_Carribbean.rgn', 'upwind_west_Carribbean.rgn'
+    ]
+
+    gen_tvd_prop(gd, regions)
+
+
+if __name__ == '__main__':
+    sample_usage()

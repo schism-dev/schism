@@ -123,13 +123,10 @@ subroutine sfm_calc(id,kb,tdep,wdz,it,isub)
 
   !CLAM effect
   if(iClam==1.and.cpatch(id)==1) then
-    FPOC(1)=FPOC(1)+cFPOC(id,1)
-    FPON(1)=FPON(1)+cFPON(id,1)
-    FPOP(1)=FPOP(1)+cFPOP(id,1)
     do m=1,3
-      FPOC(m)=FPOC(m)+cFPOC(id,2)*bFCM(m)
-      FPON(m)=FPON(m)+cFPON(id,2)*bFNM(m)
-      FPOP(m)=FPOP(m)+cFPOP(id,2)*bFPM(m)
+      FPOC(m)=FPOC(m)+cFPOC(id)*cFCM(m)
+      FPON(m)=FPON(m)+cFPON(id)*cFNM(m)
+      FPOP(m)=FPOP(m)+cFPOP(id)*cFPM(m)
     enddo
   endif
 

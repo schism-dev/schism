@@ -109,7 +109,8 @@ module schism_glbl
                       &xlsc0,rearth_pole,rearth_eq,hvis_coef0,disch_coef(10),hw_depth,hw_ratio, &
                       &slr_rate,rho0,shw,gen_wsett,turbinj,turbinjds,alphaw,h1_bcc,h2_bcc,vclose_surf_frac, &
                       &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
-                      &stemp_stc,stemp_dz(2)
+                      &stemp_stc,stemp_dz(2),ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
+                      &ref_ts_dt
   real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:)
 
   ! Misc. variables shared between routines
@@ -117,7 +118,7 @@ module schism_glbl
                   &ihconsv,isconsv,i_hmin_airsea_ex,i_hmin_salt_ex,ihdif,ntracers, & 
                   &ihydraulics,irouse_test,iwbl_itmax,nettype,nfltype, &
                   &ntetype,nsatype,ntrtype1(natrm),nettype2,nnode_et,nfltype2,nnode_fl, &
-                  &ntetype2,nsatype2,nnode_tr2(natrm),inu_tr(natrm), &
+                  &ntetype2,nsatype2,nnode_tr2(natrm),inu_tr(natrm),iref_ts, &
                   &nvar_sta,nout_sta,ntip,nbfr,itr_met,if_source,mass_source,nsources,nsinks, &
                   &max_flreg,irange_tr(2,natrm),nea_wwm,mnei_wwm,ne_wwm,neg_wwm, &
                   &max_iadjust_mass_consv,nsteps_from_cold
@@ -126,7 +127,7 @@ module schism_glbl
                       &vis_coe1,vis_coe2,h_bcc1,velmin_btrack,h_tvd,rmaxvel1,rmaxvel2, &
                       &difnum_max_l2,wtime1,wtime2,cmiu0, &
                       &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,veg_di0,veg_h0,veg_nv0, &
-                      &veg_cd0,dtb_min_transport,bounds_lon(2)
+                      &veg_cd0,dtb_min_transport,bounds_lon(2),time_ref_ts
 
 !  logical,save :: lm2d !2D or 3D model
   logical,save :: lhas_quad=.false. !existence of quads
@@ -164,7 +165,7 @@ module schism_glbl
   character(len= 4),save :: a_4
   integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D,irec0_schout, &
  &istack0_schout,ncid_source,ncid_schout(7),ncid_schout_2(7),nrec_schout,nstride_schout, &
- &ncid_atmos
+ &ncid_atmos,ncid_ref_ts
         
   ! ADT for global-to-local linked-lists
   type :: llist_type
@@ -494,6 +495,7 @@ module schism_glbl
   logical,save :: lice_free_gb
 
   real(4),save,dimension(:,:,:),allocatable :: trnd_nu1,trnd_nu2,trnd_nu
+  real(4),save,dimension(:,:),allocatable :: ref_ts1,ref_ts2,ref_ts
   integer,save,allocatable :: iadv(:),iwater_type(:) 
 
   !weno>

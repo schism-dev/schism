@@ -658,6 +658,17 @@
   step_nu_tr = 86400. !time step [sec] in all [MOD]_nu.nc (for inu_[MOD]=2)
 
 !-----------------------------------------------------------------------
+! Surface T,S restoration (for large-scale long-term runs). If invoked, 
+! the input is surface_restore.nc
+!-----------------------------------------------------------------------
+  iref_ts = 0 !on/off
+  ref_ts_restore_depth = 50. !restoration depth [m]
+  ref_ts_tscale = 100. !restoration time scale [days]
+  ref_ts_h1 = 100. !ramp-down depth 1 [m] (to turn off restoration in shallows)
+  ref_ts_h2 = 60. !ramp-down depth 2 [m]; must <ref_ts_h1
+  ref_ts_dt = 30. !time step in surface_restore.nc [days]
+
+!-----------------------------------------------------------------------
 ! Cut-off depth for cubic spline interpolation near bottom when computing horizontal gradients
 ! e.g. using hgrad_nodes() (radiation stress, and gradients of qnon and qhat in non-hydro model). 
 ! If depth > h_bcc1 ('deep'),

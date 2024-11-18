@@ -308,16 +308,25 @@ def convert2xgeoid(wdir, hgrid_obj, diag_output=None):
     return hgrid_obj, depth_diff
 
 
-if __name__ == "__main__":
-    # sample usage
-    WORKING_DIR = '/sciclone/schism10/Hgrid_projects/TMP/DEM_edit/xGEOID/'
+def sample1():
+    '''Sample usage of the point_conversion function.'''
     xyz = np.loadtxt('/sciclone/schism10/Hgrid_projects/TMP/'
                      'DEM_edit/xGEOID/vdatum/region4_failed/hgrid_secofs_nccoast11.txt')
     xyz = xyz[:, 1:]
-    point_conversion(xyz[:, 0], xyz[:, 1], xyz[:, 2])
+    print(f'Original z: {xyz[:, 2]}')
+    print(f'Converted z: {point_conversion(xyz[:, 0], xyz[:, 1], xyz[:, 2])}')
 
-    # sample usage
+    print('Done')
+
+
+def sample2():
+    """Sample usage of the convert2xgeoid function."""
+    WORKING_DIR = '/sciclone/schism10/Hgrid_projects/TMP/DEM_edit/xGEOID/'
     hg = read_schism_hgrid(f'{WORKING_DIR}/hgrid.gr3')
     hg = convert2xgeoid(wdir=WORKING_DIR, hgrid_obj=hg)
 
     print('Done!')
+
+
+if __name__ == "__main__":
+    sample1()

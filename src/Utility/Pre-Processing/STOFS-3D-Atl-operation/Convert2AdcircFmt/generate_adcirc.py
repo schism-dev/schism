@@ -159,8 +159,8 @@ def split_quads(elements=None):  # modified by FY
     triangles = deepcopy(elements)
     quad_idx = ~elements[:, -1].mask
     quads = elements[quad_idx]
-    upper_triangle = np.c_[quads[:, 0], quads[:, 1], quads[:, 2], -np.ones((quads.shape[0], 1))]  # last node is masked
-    lower_triangle = np.c_[quads[:, 0], quads[:, 1], quads[:, 2], -np.ones((quads.shape[0], 1))]  # last node is masked
+    upper_triangle = np.c_[quads[:, 0], quads[:, 1], quads[:, 3], -np.ones((quads.shape[0], 1))]  # last node is masked
+    lower_triangle = np.c_[quads[:, 1], quads[:, 2], quads[:, 3], -np.ones((quads.shape[0], 1))]  # fixed a bug where lower triangle is the same as upper triangle
 
     # replace quads with upper triangle
     triangles[quad_idx, :] = upper_triangle
@@ -269,10 +269,10 @@ if __name__ == '__main__':
     idxs=np.argmax(elev,axis=0)
     time_maxelev=times[idxs]
 
-    #disturbance
+    #disturbance, maxdist = maxelev in ocean, so just need to deal with land values
     maxdist=copy.deepcopy(maxelev)
     land_node_idx = depth < 0
-    maxdist[land_node_idx]=np.maximum(0, maxelev[land_node_idx]+depth[land_node_idx])
+    maxdist[land_node_idx]=np.maximum(0, maxelev[land_node_idx]+depth[land_node_idx])  # need to include city idx
 
     #find city nodes
     if input_city_identifier_file is None:
@@ -349,7 +349,7 @@ if __name__ == '__main__':
         fout.createVariable('depth', 'f8', ('node',))
         fout['depth'].long_name=f"distance below {datum}"
         fout['depth'].standard_name=f"depth below {datum}"
-        fout['depth'].coordinates="time y x"
+        fout['depth'].coordinates="y x"  # fixed a bug "time y x"
         fout['depth'].location="node"
         fout['depth'].units="m"
         fout['depth'][:]=depth

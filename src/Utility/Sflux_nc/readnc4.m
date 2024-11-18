@@ -28,7 +28,6 @@ lat2=reshape(double(lat),nxout*nyout,1);
 
 %Read dataset "1"
 fill_in=1.e9; %junk value from nc files
-avi_out = avifile('out.avi');
 for i=1:nfiles 
   char=sprintf('%4.4d',i);
   filen=strcat(setnm1,char,'.nc');
@@ -121,10 +120,6 @@ for i=1:nfiles
 %      axis([xmin-0.1 xmax+0.1 ymin-0.1 ymax+0.1]);
       axis([-81 -72.6 33.32 40.45]);
       xlabel('Lon'); ylabel('Lat');
-
-      frame = getframe(gca);
-      avi_out=addframe(avi_out,frame);
-      clf; %clear figure
     end %plot
   end %j - time steps
 
@@ -168,4 +163,3 @@ for i=1:nfiles
   netcdf.putVar(ncid2,hid,spfh_out);
   netcdf.close(ncid2);
 end %for all nc files
-avi_out=close(avi_out);

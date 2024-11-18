@@ -40,9 +40,9 @@
 #
 
 if ( @ARGV < 3 ) {
-    print "Usage: $0 [SMS version (0: before 9.; 1: 10.xx, 13.0.10 ; 2: 11.xx & above)] 
-    [SMS grid file in meter with boundary information] [.gr3 file in meters] [river1] ... [riverN]\n";
-    print "River name is checked against boundary types.\n";
+    print "Usage: $0 [SMS version (0: before 9.; 1: 10.xx, 13.0.10 ; 2: 11.xx and 12.xx )] 
+    [SMS grid file in meter with optional boundary information] [.gr3 file in meters] [river1] ... [riverN]\n";
+    print "Rivers are optional and checked against boundary types.\n";
     exit(1);
 }
 
