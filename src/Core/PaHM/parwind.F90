@@ -670,6 +670,14 @@ MODULE ParWind
       ! Here, we check for missing values for specific fields in the best track file.
       ! Namely: POuter, ROuter, Rmw, others ...?
 
+      ! --- (1) Mslp - central pressure in millibars
+      ! Sometimes central pressure values are missing from the best track files,
+      ! for example hurricane Beryl 2024. If this happens, GaHM model fails, so
+      ! we fill the missing values by linear interpolation first as we need to check
+      ! against POuter next.
+      CALL FillMissDataTrackFile_LinInterp(bestTrackData(iFile)%dtg, bestTrackData(iFile)%intMslp)
+
+      ! --- (2) POuter - pressure in millibars of the last closed isobar
       ! --- (1) POuter - pressure in millibars of the last closed isobar
       ! POuter needs a special treatment, sometimes the reported POuter value is less
       ! than CPress so we need to correct this here before applying the linear interpolation.
@@ -690,6 +698,14 @@ MODULE ParWind
         END IF
       END IF
 
+      ! --- (3) ESTIMATED EROuter (ROCI) - radius of the last closed isobar in nm
+      ! We might need to use this to fill missing values in ROuter below
+      CALL FillMissDataTrackFile_LinInterp(bestTrackData(iFile)%dtg, bestTrackData(iFile)%intEROuter)
+
+      ! --- (4) ROuter (ROCI) - radius of the last closed isobar in nm
+      CALL FillMissDataTrackFile_LinInterp(bestTrackData(iFile)%dtg, bestTrackData(iFile)%intROuter)
+
+      ! --- (5) ESTIMATED ERmw (RMW) - radius of max winds in nm
       ! --- (2) ESTIMATED EROuter (ROCI) - radius of the last closed isobar in nm
       ! We might need to use this to fill missing values in ROuter below
       CALL FillMissDataTrackFile_LinInterp(bestTrackData(iFile)%dtg, bestTrackData(iFile)%intEROuter)
