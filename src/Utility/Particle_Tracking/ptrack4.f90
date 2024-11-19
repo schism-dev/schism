@@ -55,7 +55,13 @@
 !	  (8) nparticle: # of particles;					
 !	  (9) idp(i),st_p(i),xpar(i),ypar(i),zpar0(i): particle id, start time (sec),
 !		starting x,y, and z relative to the instant f.s. (<=0).		
-!         (10) additional parameters for oil spill
+!         (10) (additional parameters for oil spill) comment line
+!         (11) ihdf  : turn on Smagorinsky algorithm - off(0), on(1)
+!         (12) ibuoy,iwind: turn on(1)/off(0) buoyancy of particle; wind effect on(1)/off(0)
+!         (13) pbeach: set minimum percentage of stranding on shore (particles may be stranded if the random # exceeds this threshold)
+!         (14) (optional for biofouling) comment line
+!         (15) bio_R0,bio_BT0,bio_BR,bio_den0,bio_den_biolayer: init plastic radius (m),init thickness of fouling layer (m), 
+!                 bio growth (m/day),init density of plastic particle (kg/m^3), density of biofoul layer (kg/m^3)
 !										
 !	Output: particle.pth, particle.pth.more (more info), fort.11 (fatal errors).		
 !										
@@ -246,11 +252,6 @@
       enddo !i
 
 !...  Additional parameters for oil spill
-! ... Description of parameters
-!     ihdf  : turn on Smagorinsky algorithm - off(0), on(1)
-!     ibuoy : turn buoyancy of particle  - off(0), on(1)
-!     iwind : turn wind effect - off(0), on(1)
-!     pbeach  : set percentage of stranding on shore
 ! ........................................................
       if(mod_part==1) then
         read(95,*) !comment line
@@ -261,9 +262,6 @@
 
       if(ibiofoul/=0) then
         read(95,*) !comment line
-        !init plastic radius (m),init thickness of fouling layer (m), 
-        !bio growth (m/day),init density of plastic particle (kg/m^3),
-        !density of biofoul layer (kg/m^3)
         read(95,*)bio_R0,bio_BT0,bio_BR,bio_den0,bio_den_biolayer
       endif !ibiofoul/
 
