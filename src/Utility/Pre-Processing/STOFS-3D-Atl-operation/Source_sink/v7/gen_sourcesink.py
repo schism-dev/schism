@@ -84,7 +84,7 @@ def main():
     idx = np.argsort(np.array([int(key) for key in source2fid_dict.keys()]))
     # write source time history file
     np.savetxt(f'{working_dir}/vsource.th',
-               np.c_[times, sources[:, idx]], fmt='%10.4f', delimiter=' ')
+               np.c_[times, sources[:, idx]], fmt='%.4f', delimiter=' ')
 
 
 if __name__ == '__main__':

@@ -18,6 +18,12 @@ to your working directory, then set paths in the sample_usage function.
 
 Some larger files are not included in the Git repository,
 you need to specify the paths in the "LARGE_FILES" dictionary below.
+
+Note that xGEOID is just a wrapper around vdatum.jar,
+which takes a lot of memory and quite slow.
+Running xGEOID on a large grid may take hours.
+Use viz.sciclone.wm.edu; other SciClone subclusters often run out of memory.
+This is deprecated, use Felicio's workflow after testing.
 '''
 
 import os
@@ -29,7 +35,7 @@ import numpy as np
 
 from pylib import grd2sms, sms2grd
 try:  # c++ function to speed up the grid reading
-    from pylib_experimental.schism_file import cread_schism_hgrid as schism_read
+    from pylib_experimental.schism_file import xread_schism_hgrid as schism_read
 except ImportError:
     from pylib import schism_grid as schism_read
 
@@ -217,11 +223,11 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         # A grid without feeder is needed to identify which feeder points are outside and should be deepened
         # Only the boundary matters, the interior of the grid doesn't matter,
         # so if you don't have a grid without feeders, you can just generate a simplified grid with the lbnd_ocean map
-        gd_no_feeder = sms2grd('/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v20.0/no_feeder.2dm')
+        gd_no_feeder = sms2grd('/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.1/hgrid.2dm')
         gd_no_feeder.proj(prj0='esri:102008', prj1='epsg:4326')
         initial_dp = hgrid_obj.dp.copy()
         hgrid_obj = set_feeder_dp(
-            feeder_info_dir='/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v20.0/Feeder/',
+            feeder_info_dir='/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v23.3/Feeder/',
             hgrid_obj=hgrid_obj, hgrid_obj_no_feeder=gd_no_feeder
         )
         dp_diff = initial_dp - hgrid_obj.dp
@@ -239,12 +245,12 @@ def sample_usage():
     '''
     Sample usage of the bathy_edit function.
     '''
-    WDIR = Path('/sciclone/schism10/feiye/STOFS3D-v8/I10/Bathy_edit/')
+    WDIR = Path('/sciclone/schism10/feiye/STOFS3D-v8/I10/Bathy_edit2/')
     HGRID_FNAME = Path(  # Typically, this is the DEM-loaded hgrid
         '/sciclone/schism10/feiye/STOFS3D-v8/I10/Bathy_edit/'
         'DEM_loading/hgrid.ll.dem_loaded.mpi.gr3'
     )
-    TASKS = ['Regional_tweaks', 'NCF', 'Levee']
+    TASKS = ['xGEOID']
 
     bathy_edit(wdir=WDIR, hgrid_fname=HGRID_FNAME, tasks=TASKS)
 

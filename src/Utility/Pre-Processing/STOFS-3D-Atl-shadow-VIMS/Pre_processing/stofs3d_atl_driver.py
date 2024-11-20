@@ -48,7 +48,8 @@ if 'sciclone' in socket.gethostname():
 else:
     from pylib import schism_grid as schism_read
     print('Using python function to read hgrid')
-from pyschism.mesh import Hgrid
+from pyschism.mesh import Hgrid, Vgrid
+from pyschism.forcing.hycom.hycom2schism import Nudge
 
 # Import from the sub folders. These are not from installed packages.
 from Source_sink.NWM.gen_sourcesink_nwm import gen_sourcesink_nwm
@@ -59,6 +60,9 @@ from Prop.gen_tvd import gen_tvd_prop
 from Bctides.bctides.bctides import Bctides  # temporary, bctides.py will be merged into pyschism
 # from pyschism.forcing.bctides import Bctides
 
+# Import configuration
+from stofs3d_atl_config import ConfigStofs3dAtlantic
+
 # Global variables:
 # use the full path of the Pre-Processing dir inside your schism repo
 # e.g, script_path = '/my_dir/schism/src/Utility/Pre-Processing/'
@@ -67,145 +71,6 @@ script_path = os.path.dirname(os.path.realpath(__file__))
 print(f"script_path: {script_path}")
 
 DRIVER_PRINT_PREFIX = '\n-----------------STOFS3D-ATL driver:---------------------\n'
-
-
-# ---------------------------------------------------------------------
-#                               Classes
-# ---------------------------------------------------------------------
-class ConfigStofs3dAtlantic():
-    '''A class to handle the configuration of STOFS-3D-ATL model,
-    i.e., processing the parameters and storing the factory settings.
-    '''
-    def __init__(
-        self,
-        startdate=datetime(2017, 12, 1),  # start date of the model
-        rnday=60,  # number of days to run the model
-        nudging_zone_width=1.5,  # in degrees
-        nudging_day=1.0,  # in days
-        shapiro_zone_width=2.5,  # in degrees
-        shapiro_tilt=2.0,  # more abrupt transition in the shapiro zone
-        bctides_flags=None,  # a list of lists, each sublist is a set of flags for an open boundary
-        nwm_cache_folder=None,
-        relocate_source=True,
-        feeder_info_file=None,  # file containing feeder info,
-                                # made by make_feeder_channel.py in RiverMapper
-        gr3_values=None,
-        tvd_regions=None
-    ):
-
-        self.startdate = startdate
-        self.rnday = rnday
-        self.nudging_zone_width = nudging_zone_width
-        self.nudging_day = nudging_day
-        self.shapiro_zone_width = shapiro_zone_width
-        self.shapiro_tilt = shapiro_tilt
-        self.relocate_source = relocate_source
-        self.nwm_cache_folder = nwm_cache_folder
-        self.feeder_info_file = feeder_info_file
-        if bctides_flags is None:
-            self.bctides_flags = [
-                [3, 3, 0, 0],  # tides for elev and vel
-                [3, 3, 0, 0],  # tides for elev and vel
-                [3, 3, 0, 0],  # tides for elev and vel
-                [3, 3, 0, 0],  # tides for elev and vel
-                [3, 3, 0, 0],  # tides for elev and vel
-            ]
-        else:
-            self.bctides_flags = bctides_flags
-
-        if gr3_values is None:
-            self.gr3_values = {  # uniform gr3 values
-                'albedo': 0.1,
-                'diffmax': 1.0,
-                'diffmin': 1e-6,
-                'watertype': 1.0,
-                'windrot_geo2proj': 0.0
-            }
-        else:
-            self.gr3_values = gr3_values
-
-        if tvd_regions is None:
-            self.tvd_regions = []
-        else:
-            self.tvd_regions = tvd_regions
-
-    @classmethod
-    def v6(cls):
-        '''Factory method to create a configuration for STOFS3D-v6'''
-        return cls(
-            nudging_zone_width=.3,  # very wide nudging zone
-            shapiro_zone_width=11.5,  # very wide shapiro zone
-            shapiro_tilt=3.5,  # very abrupt transition in the shapiro zone
-            feeder_info_file=(
-                '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/'
-                'SMS_proj/feeder/feeder.pkl'),
-            bctides_flags=[[5, 5, 4, 4]],
-            tvd_regions=[
-                'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
-                'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg',
-                'upwind_east_Carribbean.rgn', 'upwind_west_Carribbean.rgn'
-            ]
-        )
-
-    @classmethod
-    def v7(cls):
-        '''Factory method to create a configuration for STOFS3D-v7'''
-        return cls(
-            nudging_zone_width=7.3,  # default nudging zone
-            shapiro_zone_width=11.5,  # default shapiro zone
-            shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
-            feeder_info_file=(
-                '/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v20.0/Feeder/'
-                'feeder_heads_bases.xy'),
-            nwm_cache_folder=Path('/sciclone/schism10/whuang07/schism20/NWM_v2.1/'),
-            bctides_flags=[
-                [3, 3, 0, 0],  # Atlantic Ocean
-                [3, 3, 0, 0],  # Gulf of St. Lawrence
-                [0, 1, 0, 0],  # St. Lawrence River
-            ],
-            tvd_regions=[
-                'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
-                'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg',
-                'upwind_east_Carribbean.rgn', 'upwind_west_Carribbean.rgn'
-            ]
-        )
-
-    @classmethod
-    def v7_hercules_test(cls):
-        '''Factory method to create a configuration for STOFS3D-v7'''
-        return cls(
-            nudging_zone_width=7.3,  # default nudging zone
-            shapiro_zone_width=11.5,  # default shapiro zone
-            shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
-            relocate_source=True,  # need the feeder info file
-            feeder_info_file=(
-                '/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/DATA/'
-                'Feeder_channels/feeder_heads_bases.xy'),
-            nwm_cache_folder=None,
-            bctides_flags=[
-                [3, 3, 0, 0],  # Atlantic Ocean
-                [3, 3, 0, 0],  # Gulf of St. Lawrence
-                [0, 1, 0, 0],  # St. Lawrence River
-            ],
-            tvd_regions=[
-                'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
-                'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg',
-                'upwind_east_Carribbean.rgn', 'upwind_west_Carribbean.rgn'
-            ]
-        )
-
-    @classmethod
-    def v8_louisianna(cls):
-        '''Factory method to create a configuration for STOFS3D-v8's local test in Louisianna'''
-        return cls(
-            nudging_zone_width=0,  # default nudging zone
-            shapiro_zone_width=0,  # default shapiro zone
-            shapiro_tilt=0,  # default abrupt transition in the shapiro zone
-            feeder_info_file='',
-            relocate_source=False,
-            nwm_cache_folder=Path('/sciclone/schism10/whuang07/schism20/NWM_v2.1/'),
-            bctides_flags=[[5, 5, 4, 4]]
-        )
 
 
 # ---------------------------------------------------------------------
@@ -335,6 +200,22 @@ def gen_nudge_coef(hgrid: pylib.schism_grid, rlmax=1.5, rnu_day=0.25, open_bnd_l
         nudge_coeff = np.maximum(this_nudge_coeff, nudge_coeff)
 
     return nudge_coeff
+
+
+def gen_nudge_stofs(hgrid_fname, vgrid_fname, outdir, start_date, rnday):
+    '''
+    Generate nudge coefficient,
+    adapted from pyschism's sample script
+    '''
+    hgrid = Hgrid.open(hgrid_fname, crs='epsg:4326')
+
+    # ocean_bnd_ids - segment indices, starting from zero.
+    nudge = Nudge(hgrid=hgrid, ocean_bnd_ids=[0, 1])
+
+    # rlmax - max relax distance in m or degree
+    # rnu_day - max relax strength in days
+    # restart = True will append to the existing nc file, works when first try doesn't break.
+    nudge.fetch_data(outdir, vgrid_fname, start_date, rnday, restart=False, rnu_day=1, rlmax=7.3)
 
 
 def gen_drag(hgrid: pylib.schism_grid):
@@ -491,12 +372,12 @@ def main():
 
     # -----------------input---------------------
     # hgrid generated by SMS, pre-processed, and converted to *.gr3
-    hgrid_path = ('/sciclone/schism10/feiye/STOFS3D-v8/I10a/hgrid.gr3')
+    hgrid_path = ('/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.1/hgrid_with_bnd.gr3')
 
     # get a configuration preset and make changes if necessary
     # alternatively, you can set the parameters directly on an
     # new instance of ConfigStofs3dAtlantic
-    config = ConfigStofs3dAtlantic.v7()
+    config = ConfigStofs3dAtlantic.v8()
     config.rnday = 36
     config.startdate = datetime(2024, 3, 5)
     config.nwm_cache_folder = Path(
@@ -510,7 +391,7 @@ def main():
     # R{runid}: run directory, where the run will be submitted to queue;
     # O{runid}: output directory for holding raw outputs and post-processing.
     # under project_dir
-    runid = '10a'
+    runid = '11a'
 
     # swithes to generate different input files
     input_files = {
@@ -518,13 +399,13 @@ def main():
         'vgrid': False,
         'gr3': False,
         'nudge_gr3': False,
-        'shapiro': True,
-        'drag': True,
-        'elev_ic': True,
+        'shapiro': False,
+        'drag': False,
+        'elev_ic': False,
         'source_sink': False,
         'hotstart.nc': False,
         '*D.th.nc': False,
-        '*nu.nc': False,
+        '*nu.nc': True,
         '*.prop': False,
     }
     # -----------------end input---------------------
@@ -703,13 +584,13 @@ def main():
 
         # mkcd_new_dir(f'{model_input_path}/{sub_dir}')
 
-        # generate source_sink files by intersecting NWM river segments
-        # with the model land boundary
-        mkcd_new_dir(f'{model_input_path}/{sub_dir}/original_source_sink/')
-        os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
-        gen_sourcesink_nwm(
-            startdate=config.startdate, rnday=config.rnday,
-            cache_folder=config.nwm_cache_folder)
+        # # generate source_sink files by intersecting NWM river segments
+        # # with the model land boundary
+        # mkcd_new_dir(f'{model_input_path}/{sub_dir}/original_source_sink/')
+        # os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
+        # gen_sourcesink_nwm(
+        #     startdate=config.startdate, rnday=config.rnday,
+        #     cache_folder=config.nwm_cache_folder)
 
         # relocate source locations to resolved river channels, the result is the "base" source/sink
         if config.relocate_source:
@@ -721,7 +602,7 @@ def main():
                 feeder_info_file=config.feeder_info_file,
                 hgrid_fname=f'{model_input_path}/hgrid.gr3',
                 outdir=f'{model_input_path}/{sub_dir}/relocated_source_sink/',
-                max_search_radius=2100, mandatory_sources_coor=v19p2_mandatory_sources_coor,
+                max_search_radius=2100, mandatory_sources_coor=config.mandatory_sources_coor,
                 allow_neglection=False
             )
             # regenerate source/sink based on relocated sources.json and sinks.json
@@ -803,12 +684,20 @@ def main():
 
     # -----------------*nu.nc---------------------
     if input_files['*nu.nc']:
-        sub_dir = 'Nu'
+        sub_dir = 'Nudge'
         print(f'{DRIVER_PRINT_PREFIX}Generating *nu.nc files ...')
         mkcd_new_dir(f'{model_input_path}/{sub_dir}')
 
-        # generate *nu.nc
-        raise NotImplementedError('*nu.nc is not implemented yet')
+        os.system(f'cp {script_path}/Nudge/* .')
+        gen_nudge_stofs(
+            hgrid_fname=f'{model_input_path}/hgrid.gr3',
+            vgrid_fname=f'{model_input_path}/vgrid.in',
+            outdir=f'{model_input_path}/{sub_dir}',
+            rnday=config.rnday, start_date=config.startdate
+        )
+
+        os.chdir(run_dir)
+        os.system(f'ln -sf ../I{runid}/{sub_dir}/*nu.nc .')
 
 
 def test():
