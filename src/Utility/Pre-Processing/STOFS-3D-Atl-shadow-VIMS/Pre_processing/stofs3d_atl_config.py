@@ -1,0 +1,178 @@
+"""
+Configuration for STOFS-3D-ATL model,
+used by stofs3d_atl_driver.py
+"""
+
+
+from pathlib import Path
+from datetime import datetime
+
+import Source_sink.Relocate.relocate_source_feeder as rsf
+
+
+# ---------------------------------------------------------------------
+#                               Classes
+# ---------------------------------------------------------------------
+class ConfigStofs3dAtlantic():
+    '''A class to handle the configuration of STOFS-3D-ATL model,
+    i.e., processing the parameters and storing the factory settings.
+    '''
+    def __init__(
+        self,
+        startdate=datetime(2017, 12, 1),  # start date of the model
+        rnday=60,  # number of days to run the model
+        nudging_zone_width=1.5,  # in degrees
+        nudging_day=1.0,  # in days
+        shapiro_zone_width=2.5,  # in degrees
+        shapiro_tilt=2.0,  # more abrupt transition in the shapiro zone
+        bctides_flags=None,  # a list of lists, each sublist is a set of flags for an open boundary
+        nwm_cache_folder=None,
+        relocate_source=True,
+        feeder_info_file=None,  # file containing feeder info,
+                                # made by make_feeder_channel.py in RiverMapper
+        mandatory_sources_coor=None,  # a dictionary of mandatory sources' coordinates
+        gr3_values=None,
+        tvd_regions=None
+    ):
+
+        self.startdate = startdate
+        self.rnday = rnday
+        self.nudging_zone_width = nudging_zone_width
+        self.nudging_day = nudging_day
+        self.shapiro_zone_width = shapiro_zone_width
+        self.shapiro_tilt = shapiro_tilt
+        self.relocate_source = relocate_source
+        self.nwm_cache_folder = nwm_cache_folder
+        self.feeder_info_file = feeder_info_file
+        self.mandatory_sources_coor = mandatory_sources_coor
+        if bctides_flags is None:
+            self.bctides_flags = [
+                [3, 3, 0, 0],  # tides for elev and vel
+                [3, 3, 0, 0],  # tides for elev and vel
+                [3, 3, 0, 0],  # tides for elev and vel
+                [3, 3, 0, 0],  # tides for elev and vel
+                [3, 3, 0, 0],  # tides for elev and vel
+            ]
+        else:
+            self.bctides_flags = bctides_flags
+
+        if gr3_values is None:
+            self.gr3_values = {  # uniform gr3 values
+                'albedo': 0.1,
+                'diffmax': 1.0,
+                'diffmin': 1e-6,
+                'watertype': 1.0,
+                'windrot_geo2proj': 0.0
+            }
+        else:
+            self.gr3_values = gr3_values
+
+        if tvd_regions is None:
+            self.tvd_regions = []
+        else:
+            self.tvd_regions = tvd_regions
+
+    @classmethod
+    def v6(cls):
+        '''Factory method to create a configuration for STOFS3D-v6'''
+        return cls(
+            nudging_zone_width=.3,  # very wide nudging zone
+            shapiro_zone_width=11.5,  # very wide shapiro zone
+            shapiro_tilt=3.5,  # very abrupt transition in the shapiro zone
+            feeder_info_file=(
+                '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/'
+                'SMS_proj/feeder/feeder.pkl'),
+            mandatory_sources_coor=rsf.v19p2_mandatory_sources_coor,
+            bctides_flags=[[5, 5, 4, 4]],
+            tvd_regions=[
+                'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
+                'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg',
+                'upwind_east_Carribbean.rgn', 'upwind_west_Carribbean.rgn'
+            ]
+        )
+
+    @classmethod
+    def v7(cls):
+        '''Factory method to create a configuration for STOFS3D-v7'''
+        return cls(
+            nudging_zone_width=7.3,  # default nudging zone
+            shapiro_zone_width=11.5,  # default shapiro zone
+            shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
+            feeder_info_file=(
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v20.0/Feeder/'
+                'feeder_heads_bases.xy'),
+            mandatory_sources_coor=rsf.v19p2_mandatory_sources_coor,
+            nwm_cache_folder=Path('/sciclone/schism10/whuang07/schism20/NWM_v2.1/'),
+            bctides_flags=[
+                [5, 5, 4, 4],  # Atlantic Ocean
+                [5, 5, 4, 4],  # Gulf of St. Lawrence
+                [0, 1, 2, 2],  # St. Lawrence River
+            ],
+            tvd_regions=[
+                'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
+                'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg',
+                'upwind_east_Carribbean.rgn', 'upwind_west_Carribbean.rgn'
+            ]
+        )
+
+    @classmethod
+    def v7_hercules_test(cls):
+        '''Factory method to create a configuration for STOFS3D-v7'''
+        return cls(
+            nudging_zone_width=7.3,  # default nudging zone
+            shapiro_zone_width=11.5,  # default shapiro zone
+            shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
+            relocate_source=True,  # need the feeder info file
+            feeder_info_file=(
+                '/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/DATA/'
+                'Feeder_channels/feeder_heads_bases.xy'),
+            mandatory_sources_coor=rsf.v19p2_mandatory_sources_coor,
+            nwm_cache_folder=None,
+            bctides_flags=[
+                [3, 3, 0, 0],  # Atlantic Ocean
+                [3, 3, 0, 0],  # Gulf of St. Lawrence
+                [0, 1, 0, 0],  # St. Lawrence River
+            ],
+            tvd_regions=[
+                'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
+                'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg',
+                'upwind_east_Carribbean.rgn', 'upwind_west_Carribbean.rgn'
+            ]
+        )
+
+    @classmethod
+    def v8_louisianna(cls):
+        '''Factory method to create a configuration for STOFS3D-v8's local test in Louisianna'''
+        return cls(
+            nudging_zone_width=0,  # default nudging zone
+            shapiro_zone_width=0,  # default shapiro zone
+            shapiro_tilt=0,  # default abrupt transition in the shapiro zone
+            feeder_info_file='',
+            relocate_source=False,
+            nwm_cache_folder=Path('/sciclone/schism10/whuang07/schism20/NWM_v2.1/'),
+            bctides_flags=[[5, 5, 4, 4]]
+        )
+
+    @classmethod
+    def v8(cls):
+        '''Factory method to create a configuration for STOFS3D-v8'''
+        return cls(
+            nudging_zone_width=7.3,  # default nudging zone
+            shapiro_zone_width=11.5,  # default shapiro zone
+            shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
+            feeder_info_file=(
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.3/Feeder/'
+                'feeder_heads_bases.xy'),
+            mandatory_sources_coor=rsf.v23p3_mandatory_sources_coor,
+            nwm_cache_folder=None,
+            bctides_flags=[
+                [3, 3, 0, 0],  # Atlantic Ocean
+                [3, 3, 0, 0],  # Gulf of St. Lawrence
+                [0, 1, 0, 0],  # St. Lawrence River
+            ],
+            tvd_regions=[
+                'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
+                'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg',
+                'upwind_east_Carribbean.rgn', 'upwind_west_Carribbean.rgn'
+            ]
+        )
