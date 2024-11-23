@@ -4,6 +4,12 @@ This is the driver script to set up the STOFS-3D-ATL model.
 Simpler tasks such as generating uniform *.gr3 are included in this script.
 More complex tasks such as generating source_sink are imported as modules from subfolders.
 
+Some scripts are written in Fortran and C++ for speed.
+You may need to compile them before running this driver script.
+See compile instructions at the beginning of each script.
+
+- Vgrid/: gen_vqs.f90, change_vgrid.f90
+
 Usage:
     Under the current schism git directory,
 
@@ -16,7 +22,9 @@ Usage:
     Alternatively, you can copy the current directory (Pre_processing/) to your preferred
     location and run the script there.
 
-Default settings for the STOFS-3D-ATL model are set in the ConfigStofs3dAtlantic class.
+Default settings for the STOFS-3D-ATL model are set in the ConfigStofs3dAtlantic class
+in the stofs3d_atl_config.py file.
+
 Read the docstring of the main function for how to use a configuration preset.
 Also, set paths at the beginning of the main function for each new setup.
 
@@ -33,14 +41,16 @@ from pathlib import Path
 import shutil
 from datetime import datetime
 import copy
+import logging
 
 import numpy as np
 from scipy.spatial import cKDTree
 import shapefile  # from pyshp
+import netCDF4
 
 # self-defined modules
 import pylib
-from pylib import inside_polygon, read_schism_reg
+from pylib import inside_polygon, read_schism_reg, read_schism_vgrid
 from pylib_experimental.schism_file import source_sink
 if 'sciclone' in socket.gethostname():
     from pylib_experimental.schism_file import cread_schism_hgrid as schism_read
@@ -49,6 +59,8 @@ else:
     from pylib import schism_grid as schism_read
     print('Using python function to read hgrid')
 from pyschism.mesh import Hgrid, Vgrid
+from pyschism.forcing.hycom.hycom2schism import OpenBoundaryInventory as OpenBoundaryInventoryHYCOM
+from AVISO.aviso2schism import OpenBoundaryInventory as OpenBoundaryInventoryAVISO
 from pyschism.forcing.hycom.hycom2schism import Nudge
 
 # Import from the sub folders. These are not from installed packages.
@@ -76,10 +88,11 @@ DRIVER_PRINT_PREFIX = '\n-----------------STOFS3D-ATL driver:-------------------
 # ---------------------------------------------------------------------
 #                         Utility functions
 # ---------------------------------------------------------------------
-def mkcd_new_dir(path):
+def mkcd_new_dir(path, remove=True):
     '''Make a new directory and change to it'''
-    remove_folder(path)
-    os.makedirs(path)
+    if remove:
+        remove_folder(path)
+    os.makedirs(path, exist_ok=True)
     os.chdir(path)
 
 
@@ -200,6 +213,105 @@ def gen_nudge_coef(hgrid: pylib.schism_grid, rlmax=1.5, rnu_day=0.25, open_bnd_l
         nudge_coeff = np.maximum(this_nudge_coeff, nudge_coeff)
 
     return nudge_coeff
+
+
+def gen_3dbc(hgrid_fname, vgrid_fname, outdir, start_date, rnday):
+    """
+    Generate 3D boundary conditions based on the HYCOM data
+
+    Sometimes the server can be busy, and the connection may be lost.
+    """
+    # check input files
+    if not os.path.exists(hgrid_fname):
+        raise FileNotFoundError(f'{hgrid_fname} not found')
+    if not os.path.exists(vgrid_fname):
+        raise FileNotFoundError(f'{vgrid_fname} not found')
+    # enable pyschism's logging
+    logging.basicConfig(
+        format="[%(asctime)s] %(name)s %(levelname)s: %(message)s",
+        force=True,
+    )
+    logger = logging.getLogger('pyschism')
+    logger.setLevel(logging.INFO)
+    
+    max_attempts = 10
+    restart = False  # first attempt doesn't need "restart"
+
+    hgrid = Hgrid.open(hgrid_fname, crs='epsg:4326')
+    bnd = OpenBoundaryInventoryHYCOM(hgrid, vgrid_fname)
+ 
+    nattempts = max_attempts
+    while nattempts > 0:
+        try:
+            if nattempts < max_attempts:
+                restart = True  # continue from the last attempt
+            bnd.fetch_data(
+                outdir, start_date, rnday,
+                elev2D=True, TS=True, UV=True,
+                ocean_bnd_ids=[0, 1], restart=restart
+            )
+            break  # Exit the loop if fetch_data is successful
+        except Exception as e:
+            nattempts -= 1
+            print(f"Attempt failed: {e}. Retrying... ({nattempts} attempts left)")
+
+    if nattempts == 0:
+        raise Exception(f"Failed to fetch 3D boundary conditions after {max_attempts} attempts")
+
+
+def gen_elev2d(hgrid_fname, outdir, start_date, rnday, uniform_shift=0.0):
+    '''
+    Generate 2D elevation boundary conditions based on AVISO (CMEMS) data
+
+    Needs to pre-download data from AVISO website, because
+    some clusters like Hercules and SciClone do not allow direct downloading
+    via copernicusmarine.
+
+    See instructions in AVISO/README and sample download script in AVISO/download_aviso*.py
+
+    Save the downloaded data in the current diretory as aviso.nc
+
+    A uniform shift can be applied to the elevation data, e.g., -0.42 m in STOFS-3D v7
+    '''
+    if not os.path.exists(hgrid_fname):
+        raise FileNotFoundError(f'{hgrid_fname} not found')
+    # enable pyschism's logging
+    logging.basicConfig(
+        format="[%(asctime)s] %(name)s %(levelname)s: %(message)s",
+        force=True,
+    )
+    logger = logging.getLogger('pyschism')
+    logger.setLevel(logging.INFO)
+
+    while True:  # search for aviso.nc until it is provided
+        if not os.path.exists('aviso.nc'):
+            print('\n' + '-'*50)
+            print(f'aviso.nc not found, please download the data to {outdir}')
+            print(f'See instructions in {script_path}/AVISO/README and '
+                  f'{script_path}/AVISO/download_aviso*.py')
+            input('Press Enter to continue after downloading aviso.nc')
+            print('\n' + '-'*50)
+        else:
+            break
+        
+    hgrid = Hgrid.open(hgrid_fname, crs='epsg:4326')
+    bnd = OpenBoundaryInventoryAVISO(hgrid)
+    bnd.fetch_data(outdir, start_date, rnday, ocean_bnd_ids=[0, 1], elev2D=True)
+
+    # modify the elevation data based on the uniform shift
+    if np.abs(uniform_shift) > 1e-6:
+        print(f'shifting {uniform_shift}')
+
+        with netCDF4.Dataset(f'{outdir}/elev2D.th.nc', mode="r+") as nc_file:
+            time_series = nc_file.variables["time_series"]
+            print("Original values:", time_series[:10])
+            time_series[:] = time_series[:] + uniform_shift
+            print("Updated values:", time_series[:10])
+
+        # os.system(f'mv {outdir}/elev2D.th.nc {outdir}/elev2D.th.nc.aviso')
+        # ds = xr.open_dataset(f'{outdir}/elev2D.th.nc.aviso', engine="netcdf4")
+        # ds['time_series'] += uniform_shift
+        # ds.to_netcdf(f'{outdir}/elev2D.th.nc', engine="netcdf4")
 
 
 def gen_nudge_stofs(hgrid_fname, vgrid_fname, outdir, start_date, rnday):
@@ -372,26 +484,28 @@ def main():
 
     # -----------------input---------------------
     # hgrid generated by SMS, pre-processed, and converted to *.gr3
-    hgrid_path = ('/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.1/hgrid_with_bnd.gr3')
+    # hgrid_path = ('/sciclone/schism10/feiye/STOFS3D-v8/I11/hgrid.gr3')
+    hgrid_path = ('/work/noaa/nosofs/feiye/Runs/R16x/hgrid.gr3')
 
     # get a configuration preset and make changes if necessary
     # alternatively, you can set the parameters directly on an
     # new instance of ConfigStofs3dAtlantic
     config = ConfigStofs3dAtlantic.v8()
-    config.rnday = 36
+    config.rnday = 3
     config.startdate = datetime(2024, 3, 5)
     config.nwm_cache_folder = Path(
         '/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/20240305/')
 
     # define the project dir, where the run folders are located
-    project_dir = '/sciclone/schism10/feiye/STOFS3D-v8/'
+    # project_dir = '/sciclone/schism10/feiye/STOFS3D-v8/'
+    project_dir = '/work/noaa/nosofs/feiye/Runs/'
 
     # run ID. e.g, 00, 01a, 10b, etc.; the run folders are named using this ID as follows:
     # I{runid}: input directory for holding model input files and scripts;
     # R{runid}: run directory, where the run will be submitted to queue;
     # O{runid}: output directory for holding raw outputs and post-processing.
     # under project_dir
-    runid = '11a'
+    runid = '16y'
 
     # swithes to generate different input files
     input_files = {
@@ -404,8 +518,9 @@ def main():
         'elev_ic': False,
         'source_sink': False,
         'hotstart.nc': False,
-        '*D.th.nc': False,
-        '*nu.nc': True,
+        '3D.th.nc': False,
+        'elev2D.th.nc': True,
+        '*nu.nc': False,
         '*.prop': False,
     }
     # -----------------end input---------------------
@@ -431,8 +546,10 @@ def main():
         mkcd_new_dir(f'{model_input_path}/{sub_dir}')
         Bctides(
             hgrid=hgrid_pyschism,  # needs hgrid in pyschism's Hgrid class
-            flags=config.bctides_flags,
-            database='fes2014'
+            bc_flags=config.bc_flags,
+            bc_const=config.bc_const,
+            bc_relax=config.bc_relax,
+            database='fes2014',
         ).write(
             output_directory=f'{model_input_path}/{sub_dir}',
             start_date=config.startdate,
@@ -452,28 +569,17 @@ def main():
 
         # call a fortran program to generate vgrid.in
         print(f'compile the fortran program {script_path}/Vgrid/gen_vqs if necessary')
-        # fortran_script_path = '/path/to/your/fortran_script.f90'
-        # fortran_command = ['gfortran', fortran_script_path, '-o', 'fortran_script']
         fortran_process = subprocess.Popen(
             f'{script_path}/Vgrid/gen_vqs', stdin=subprocess.PIPE
-        )  # , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        )
 
         # the command line argument 0 means no outputs of a sample vgrid along a given transect
         fortran_process.communicate(input=str(0).encode())
 
         print(f'{DRIVER_PRINT_PREFIX}converting the format of vgrid.in ...')
-        # rename vgrid.in to vgrid.in.old
-        try_remove(f'{model_input_path}/{sub_dir}/vgrid.in.old')
+        vg = read_schism_vgrid(f'{model_input_path}/{sub_dir}/vgrid.in')
         os.rename('vgrid.in', 'vgrid.in.old')
-
-        # convert the format of the vgrid.in file using a fortran script
-        subprocess.run(
-            [f'{script_path}/Vgrid/change_vgrid'], check=True
-        )  # , stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-        # rename vgrid.in.new to vgrid.in
-        try_remove(f'{model_input_path}/{sub_dir}/vgrid.in')
-        os.rename('vgrid.in.new', 'vgrid.in')
+        vg.save(f'{model_input_path}/{sub_dir}/vgrid.in')
 
         os.chdir(model_input_path)
         os.system(f'ln -sf {sub_dir}/vgrid.in .')
@@ -673,14 +779,35 @@ def main():
         # generate hotstart.nc
         raise NotImplementedError('hotstart.nc is not implemented yet')
 
-    # -----------------*D.th.nc---------------------
-    if input_files['*D.th.nc']:
-        sub_dir = 'D.th'
-        print(f'{DRIVER_PRINT_PREFIX}Generating *D.th.nc files ...')
+    # -----------------3D.th.nc---------------------
+    if input_files['3D.th.nc']:
+        sub_dir = '3Dth'
+        print(f'{DRIVER_PRINT_PREFIX}Generating *3D.th.nc files ...')
         mkcd_new_dir(f'{model_input_path}/{sub_dir}')
 
         # generate *D.th.nc
-        raise NotImplementedError('*D.th.nc is not implemented yet')
+        gen_3dbc(
+            hgrid_fname=f'{model_input_path}/hgrid.gr3',
+            vgrid_fname=f'{model_input_path}/vgrid.in',
+            outdir=f'{model_input_path}/{sub_dir}',
+            start_date=config.startdate, rnday=config.rnday
+        )
+
+        os.chdir(run_dir)
+        os.system(f'ln -sf ../I{runid}/{sub_dir}/*3D.th.nc .')
+    
+    # -----------------elev2D.th.nc---------------------
+    if input_files['elev2D.th.nc']:
+        sub_dir = 'Elev2Dth'
+        print(f'{DRIVER_PRINT_PREFIX}Generating elev2D.th.nc ...')
+        mkcd_new_dir(f'{model_input_path}/{sub_dir}', remove=False)
+
+        gen_elev2d(
+            hgrid_fname=f'{model_input_path}/hgrid.gr3',
+            outdir=f'{model_input_path}/{sub_dir}',
+            start_date=config.startdate, rnday=config.rnday,
+            uniform_shift=config.elev2d_uniform_shift
+        )
 
     # -----------------*nu.nc---------------------
     if input_files['*nu.nc']:
