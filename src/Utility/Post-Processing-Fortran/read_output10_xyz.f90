@@ -26,7 +26,7 @@
 !              (1) screen; 
 !              (2) station.bp or station.sta
 !              (3) vgrid.in: in this dir or ../
-!              (4) out2d*.nc (for forecast, assume hotstart occurs at end of 1st stack of each forecast)
+!              (4) out2d*.nc 
 !              (5) nc outputs for that variable(tri-quad)
 
 !       Outputs: fort.1[89]; fort.21 (magnitude), fort.22 (dir in deg in math convention); fort.20 - local depth for each pt.
@@ -90,7 +90,9 @@
         print*, 'Input start and end record # within each forecast:'
         read(*,*)ifct_rec1,ifct_rec2
         if(ifct_rec1>ifct_rec2) stop 'ifct_rec1>ifct_rec2'
-        print*, 'Input time offset (days) to be added to output start time:'
+        print*, 'Input # of offset stacks between starts of consecutive forecasts:'
+        read(*,*)istagger
+        print*, 'Input time origin offset (days) to be added to output start time:'
         read(*,*)t_offset
       endif
 
@@ -206,7 +208,7 @@
 !...  Time iteration
 !...
       !Start time at the start of stack for forecast mode
-      start_time0=dtout*nrec*(iday1-1)
+      start_time0=dtout*istagger*nrec*(iday1-1)
       do iday=iday1,iday2
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       write(it_char,'(i12)')iday
