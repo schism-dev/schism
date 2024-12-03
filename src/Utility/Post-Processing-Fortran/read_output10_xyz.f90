@@ -26,8 +26,8 @@
 !              (1) screen; 
 !              (2) station.bp or station.sta
 !              (3) vgrid.in: in this dir or ../
-!              (4) out2d*.nc
-!              (4) nc outputs for that variable(tri-quad)
+!              (4) out2d*.nc (for forecast, assume hotstart occurs at end of 1st stack of each forecast)
+!              (5) nc outputs for that variable(tri-quad)
 
 !       Outputs: fort.1[89]; fort.21 (magnitude), fort.22 (dir in deg in math convention); fort.20 - local depth for each pt.
 !       For ics=2 (e.g. for lon/lat), use nearest node for output
@@ -87,10 +87,10 @@
       print*, 'Is this a hindcast (0) or forecast(1):'
       read(*,*)iforecast
       if(iforecast/=0) then
-        print*, 'Input start and end record # from each forecast:'
+        print*, 'Input start and end record # within each forecast:'
         read(*,*)ifct_rec1,ifct_rec2
         if(ifct_rec1>ifct_rec2) stop 'ifct_rec1>ifct_rec2'
-        print*, 'Input time offset (days) for output start time:'
+        print*, 'Input time offset (days) to be added to output start time:'
         read(*,*)t_offset
       endif
 
