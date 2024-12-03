@@ -1584,7 +1584,7 @@
 <li>hgrid.gr3</li>
 <li>vgrid.in</li>
 <li>param.nml</li>
-<li>[your_choice_of_bottom_friction].gr3</li>
+<li>[your_choice_of_bottom_friction].gr3 (drag.gr3, rough.gr3, manning.gr3)</li>
 <li>bctides.in</li>
 </ol>
 <p>The model is usually run through a batch script, which in essence executes the code like:</p>
@@ -1608,7 +1608,7 @@
 </ul>
 <div class="admonition caution">
 <p class="admonition-title">WWM</p>
-<p>When running with WWM, make sure to remove fort.<em> in the directory where hgrid.gr3 is; otherwise the code will try to read in fort.</em> which may result in NaN error. You can add this into your batch script.</p>
+<p>When running with WWM, make sure to remove <code>fort.*</code> in the directory where hgrid.gr3 is; otherwise the code will try to read in <code>fort.*</code> which may result in NaN error. You can add this into your batch script.</p>
 </div>
 
               
