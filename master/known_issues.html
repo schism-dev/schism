@@ -1623,14 +1623,14 @@
 injection places; (3) baroclinic model. The main symptom is that the freshwater seemingly gets stuck near the 
  injection points and does not flow out as expected.</p>
 <p>The reason is that insufficient number of vertical layers cannot properly set up an exchange flow (that 
-requires stratification), and as a result, the fresh/salt water interface oscillates instead of tilting as expects.
+requires stratification), and as a result, the fresh/salt water interface oscillates instead of tilting as expected.
 Some work-arounds are:</p>
 <ol>
 <li>Change to open boundary condition approach</li>
 <li>Better salinity initial condition. If the salt intrusion should never reach the injection place, create
    a freswater zone near the injection in the I.C.</li>
-<li>Use more vertical layers near injection (one way to do this is to deepen the local depths to allow more layers)</li>
-<li>Nudge (inu_SAL=1 or 2) strongly in a region near injection</li>
+<li>Use more vertical layers near injection (one way to do this is to deepen the local depths to allow for more layers)</li>
+<li>Nudge (inu_tr(2)=1 or 2) strongly in a region near injection</li>
 </ol>
 <h2 id="numerical-dispersion-with-weno">Numerical dispersion with WENO<a class="headerlink" href="#numerical-dispersion-with-weno" title="Permanent link">&para;</a></h2>
 <p>The 3rd-order WENO scheme has numerical dispersion that needs to be controlled, usually by adjusting <code>epsilon[12]</code> 
@@ -1643,6 +1643,7 @@ In those cases, the users need to adjust <code>tvd.prop</code> to make some area
  regions of Chesapeake Bay. Higher-order WENO, 1st-order upwind and ELM solvers are applied in adjacent
  elements in close proximity in those upriver regions
  (note that <code>h_tvd</code>=5m in this case). Making those upriver elements upwind via <code>tvd.prop</code> resolves this issue; cf. Fig. <a href="#figure_weno2">2</a>.</p>
+<p>There are scripts in Utility/ that can be used to create appropriate <code>tvd.prop</code> for cross-scale applications.</p>
 <figure id="figure_weno1" markdown="block">
 <img alt="WENO1" src="assets/hi_SSS_CB_RUN13t3.png"  width="500" height="500" /> 
 <figcaption markdown="off">Numerical dispersion in WENO led to high surface salinity in Chesapeake Bay (circled area).</figcaption>
