@@ -41,8 +41,12 @@ def main():
     # startdate = datetime(2024, 3, 5)
 
     # ------------------------- hardwired inputs for operation--------------------------
-    working_dir = '/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/relocated_source_sink2/'
-    nwm_folder = '/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/original_source_sink/20240305/'
+    #zy-working_dir = '/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/relocated_source_sink2/'
+    #zy-nwm_folder = '/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/original_source_sink/20240305/'
+    working_dir = './'
+    nwm_folder = './'
+
+
     layer = 'conus'
     # ------------------------- end hardwired inputs--------------------------
 

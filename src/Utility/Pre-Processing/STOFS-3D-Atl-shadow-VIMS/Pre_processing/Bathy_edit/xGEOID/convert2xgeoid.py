@@ -32,9 +32,9 @@ def prep_folder(wdir):
     os.chdir(wdir)
 
     # copy over the polygons
-    source_path = ('/sciclone/schism10/hjyoo/task/task6_SECOFS/'
-                   'simulation/Whole_Domain/Grid/Script/xGEOID/VDatum_polygons/')
-    os.system(f'cp -rL {source_path} .')
+    # source_path = ('/sciclone/schism10/hjyoo/task/task6_SECOFS/'
+    #                'simulation/Whole_Domain/Grid/Script/xGEOID/VDatum_polygons/')
+    # os.system(f'cp -rL {source_path} .')
 
 
 def generate_input_txt(hgrid_obj, wdir, n_sub=500000):

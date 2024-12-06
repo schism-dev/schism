@@ -50,7 +50,7 @@ IMPLEMENTED_TASKS = [  # order matters
     'Feeder',  # set feeder channel depth, relative, datum doesn't matter
 ]
 
-DEFAULT_TASKS = {'Regional_tweaks', 'NCF', 'Levee'}
+DEFAULT_TASKS = {'Regional_tweaks', 'NCF', 'Levee', 'xGEOID'}
 
 # larger files not included in the Git repository, need to be copied to the working directory
 LARGE_FILES = {
@@ -245,10 +245,9 @@ def sample_usage():
     '''
     Sample usage of the bathy_edit function.
     '''
-    WDIR = Path('/sciclone/schism10/feiye/STOFS3D-v8/I10/Bathy_edit2/')
+    WDIR = Path('/sciclone/schism10/feiye/STOFS3D-v8/I14/Bathy_edit/')
     HGRID_FNAME = Path(  # Typically, this is the DEM-loaded hgrid
-        '/sciclone/schism10/feiye/STOFS3D-v8/I10/Bathy_edit/'
-        'DEM_loading/hgrid.ll.dem_loaded.mpi.gr3'
+        '/sciclone/schism10/feiye/STOFS3D-v8/I14/09b.gr3'
     )
     TASKS = ['xGEOID']
 

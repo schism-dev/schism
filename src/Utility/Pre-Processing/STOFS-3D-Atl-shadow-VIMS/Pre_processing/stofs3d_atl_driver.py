@@ -30,6 +30,18 @@ Also, set paths at the beginning of the main function for each new setup.
 
 The script will prepare the model folders and keep a record of itself in the
 model input folder.
+
+For the author, there are a few "todo" items in the script.
+1) The second call to gen_sourcesink_nwm is not optimal, because it downloads
+    the NWM data again if config.nwm_cache_folder is not set.
+    This cost time for longer runs.
+    It is better to directly use generated sources/sinks.
+    As a temporary solution, run the script with config.relocate_source = False,
+    locate the downloaded data in {model_input_path}/Source_sink/original_source_sink/,
+    symlink all downloaded NWM data in a single folder and set config.nwm_cache_folder.
+    The symlink is necessary because NWM data may be stored in subfolders of different years.
+
+2) hotstart.nc
 '''
 
 
@@ -215,12 +227,18 @@ def gen_nudge_coef(hgrid: pylib.schism_grid, rlmax=1.5, rnu_day=0.25, open_bnd_l
     return nudge_coeff
 
 
-def gen_3dbc(hgrid_fname, vgrid_fname, outdir, start_date, rnday):
+def gen_3dbc(
+    hgrid_fname, vgrid_fname, outdir, start_date, rnday,
+    ocean_bnd_ids=None, max_attempts=10
+):
     """
     Generate 3D boundary conditions based on the HYCOM data
 
     Sometimes the server can be busy, and the connection may be lost.
     """
+    if ocean_bnd_ids is None:
+        raise ValueError("ocean_bnd_ids must be specified, e.g., [0, 1]")
+
     # check input files
     if not os.path.exists(hgrid_fname):
         raise FileNotFoundError(f'{hgrid_fname} not found')
@@ -233,33 +251,38 @@ def gen_3dbc(hgrid_fname, vgrid_fname, outdir, start_date, rnday):
     )
     logger = logging.getLogger('pyschism')
     logger.setLevel(logging.INFO)
-    
-    max_attempts = 10
-    restart = False  # first attempt doesn't need "restart"
 
     hgrid = Hgrid.open(hgrid_fname, crs='epsg:4326')
     bnd = OpenBoundaryInventoryHYCOM(hgrid, vgrid_fname)
- 
-    nattempts = max_attempts
-    while nattempts > 0:
+
+    restart = False  # First attempt doesn't need "restart"
+    last_error = None  # To store the last exception
+    for attempt in range(max_attempts):
         try:
-            if nattempts < max_attempts:
-                restart = True  # continue from the last attempt
             bnd.fetch_data(
                 outdir, start_date, rnday,
                 elev2D=True, TS=True, UV=True,
-                ocean_bnd_ids=[0, 1], restart=restart
+                ocean_bnd_ids=ocean_bnd_ids,
+                restart=restart
             )
-            break  # Exit the loop if fetch_data is successful
-        except Exception as e:
-            nattempts -= 1
-            print(f"Attempt failed: {e}. Retrying... ({nattempts} attempts left)")
+            return  # Successful fetch
+        except Exception as e:  # Replace with specific exceptions
+            last_error = e
+            restart = True
+            print(f"Attempt failed: {e}. Retrying..."
+                  f" ({max_attempts-attempt-1} attempts left)")
 
-    if nattempts == 0:
-        raise Exception(f"Failed to fetch 3D boundary conditions after {max_attempts} attempts")
+    # Raise an exception after exhausting all retries
+    raise Exception(
+        f"Failed to fetch 3D boundary conditions after {max_attempts} attempts. "
+        f"Last error: {last_error}"
+    )
 
 
-def gen_elev2d(hgrid_fname, outdir, start_date, rnday, uniform_shift=0.0):
+def gen_elev2d(
+    hgrid_fname, outdir, start_date, rnday,
+    ocean_bnd_ids=None, uniform_shift=0.0
+):
     '''
     Generate 2D elevation boundary conditions based on AVISO (CMEMS) data
 
@@ -273,6 +296,8 @@ def gen_elev2d(hgrid_fname, outdir, start_date, rnday, uniform_shift=0.0):
 
     A uniform shift can be applied to the elevation data, e.g., -0.42 m in STOFS-3D v7
     '''
+    if ocean_bnd_ids is None:
+        raise ValueError("ocean_bnd_ids must be specified, e.g., [0, 1]")
     if not os.path.exists(hgrid_fname):
         raise FileNotFoundError(f'{hgrid_fname} not found')
     # enable pyschism's logging
@@ -296,7 +321,8 @@ def gen_elev2d(hgrid_fname, outdir, start_date, rnday, uniform_shift=0.0):
         
     hgrid = Hgrid.open(hgrid_fname, crs='epsg:4326')
     bnd = OpenBoundaryInventoryAVISO(hgrid)
-    bnd.fetch_data(outdir, start_date, rnday, ocean_bnd_ids=[0, 1], elev2D=True)
+    bnd.fetch_data(
+        outdir, start_date, rnday, ocean_bnd_ids=ocean_bnd_ids, elev2D=True)
 
     # modify the elevation data based on the uniform shift
     if np.abs(uniform_shift) > 1e-6:
@@ -314,20 +340,39 @@ def gen_elev2d(hgrid_fname, outdir, start_date, rnday, uniform_shift=0.0):
         # ds.to_netcdf(f'{outdir}/elev2D.th.nc', engine="netcdf4")
 
 
-def gen_nudge_stofs(hgrid_fname, vgrid_fname, outdir, start_date, rnday):
+def gen_nudge_stofs(
+    hgrid_fname, vgrid_fname, outdir, start_date, rnday,
+    ocean_bnd_ids=None, max_retry=10
+):
     '''
     Generate nudge coefficient,
     adapted from pyschism's sample script
     '''
+    if ocean_bnd_ids is None:
+        raise ValueError("ocean_bnd_ids must be specified, e.g., [0, 1]")
+
     hgrid = Hgrid.open(hgrid_fname, crs='epsg:4326')
 
     # ocean_bnd_ids - segment indices, starting from zero.
-    nudge = Nudge(hgrid=hgrid, ocean_bnd_ids=[0, 1])
+    nudge = Nudge(hgrid=hgrid, ocean_bnd_ids=ocean_bnd_ids)
 
+    # for nudge.fetch_data:
     # rlmax - max relax distance in m or degree
     # rnu_day - max relax strength in days
     # restart = True will append to the existing nc file, works when first try doesn't break.
-    nudge.fetch_data(outdir, vgrid_fname, start_date, rnday, restart=False, rnu_day=1, rlmax=7.3)
+    restart = False
+    retries_left = max_retry  # Keep track of retries separately
+    while retries_left > 0:
+        try:
+            nudge.fetch_data(outdir, vgrid_fname, start_date, rnday, restart=restart, rnu_day=1, rlmax=7.3)
+            return  # Successful fetch
+        except Exception as e:  # Replace with specific exceptions as needed
+            retries_left -= 1
+            print(f"Attempt failed: {e}. Retrying... ({retries_left} attempts left)")
+            restart = True
+
+    # Include the last exception in the error message
+    raise Exception(f"Failed to fetch nudge coefficient after {max_retry} attempts. Last error: {e}")
 
 
 def gen_drag(hgrid: pylib.schism_grid):
@@ -484,17 +529,16 @@ def main():
 
     # -----------------input---------------------
     # hgrid generated by SMS, pre-processed, and converted to *.gr3
-    hgrid_path = ('/sciclone/schism10/feiye/STOFS3D-v8/I11/hgrid.gr3')
-    # hgrid_path = ('/work/noaa/nosofs/feiye/Runs/R16x/hgrid.gr3')
+    hgrid_path = '/sciclone/schism10/feiye/STOFS3D-v8/I09/hgrid.gr3'
 
     # get a configuration preset and make changes if necessary
     # alternatively, you can set the parameters directly on an
     # new instance of ConfigStofs3dAtlantic
-    config = ConfigStofs3dAtlantic.v8()
+    config = ConfigStofs3dAtlantic.v8_louisianna()
     config.rnday = 3
-    config.startdate = datetime(2024, 3, 5)
-    config.nwm_cache_folder = Path(
-        '/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/20240305/')
+    config.startdate = datetime(2017, 12, 1)
+    config.nwm_cache_folder = ('/sciclone/schism10/feiye/STOFS3D-v8/I13/'
+                               'Source_sink/original_source_sink/20171201/')
 
     # define the project dir, where the run folders are located
     project_dir = '/sciclone/schism10/feiye/STOFS3D-v8/'
@@ -505,7 +549,7 @@ def main():
     # R{runid}: run directory, where the run will be submitted to queue;
     # O{runid}: output directory for holding raw outputs and post-processing.
     # under project_dir
-    runid = '11y'
+    runid = '14'
 
     # swithes to generate different input files
     input_files = {
@@ -519,8 +563,8 @@ def main():
         'source_sink': False,
         'hotstart.nc': False,
         '3D.th.nc': False,
-        'elev2D.th.nc': True,
-        '*nu.nc': False,
+        'elev2D.th.nc': False,
+        '*nu.nc': True,
         '*.prop': False,
     }
     # -----------------end input---------------------
@@ -688,15 +732,15 @@ def main():
         sub_dir = 'Source_sink'
         print(f'{DRIVER_PRINT_PREFIX}Generating source_sink.in ...')
 
-        # mkcd_new_dir(f'{model_input_path}/{sub_dir}')
+        mkcd_new_dir(f'{model_input_path}/{sub_dir}')
 
-        # # generate source_sink files by intersecting NWM river segments
-        # # with the model land boundary
-        # mkcd_new_dir(f'{model_input_path}/{sub_dir}/original_source_sink/')
-        # os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
-        # gen_sourcesink_nwm(
-        #     startdate=config.startdate, rnday=config.rnday,
-        #     cache_folder=config.nwm_cache_folder)
+        # generate source_sink files by intersecting NWM river segments
+        # with the model land boundary
+        mkcd_new_dir(f'{model_input_path}/{sub_dir}/original_source_sink/')
+        os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
+        gen_sourcesink_nwm(
+            startdate=config.startdate, rnday=config.rnday,
+            cache_folder=config.nwm_cache_folder)
 
         # relocate source locations to resolved river channels, the result is the "base" source/sink
         if config.relocate_source:
@@ -713,6 +757,9 @@ def main():
             )
             # regenerate source/sink based on relocated sources.json and sinks.json
             os.symlink('../original_source_sink/sinks.json', 'sinks.json')  # dummy
+            # todo: use existing sources/sinks instead of calling gen_sourcesink_nwm
+            # to save time and avoid potential errors in the future when
+            # some sources are adjusted before this step
             gen_sourcesink_nwm(
                 startdate=config.startdate, rnday=config.rnday,
                 cache_folder=config.nwm_cache_folder)
@@ -777,6 +824,7 @@ def main():
         mkcd_new_dir(f'{model_input_path}/{sub_dir}')
 
         # generate hotstart.nc
+        # todo: implement this function
         raise NotImplementedError('hotstart.nc is not implemented yet')
 
     # -----------------3D.th.nc---------------------
@@ -790,7 +838,8 @@ def main():
             hgrid_fname=f'{model_input_path}/hgrid.gr3',
             vgrid_fname=f'{model_input_path}/vgrid.in',
             outdir=f'{model_input_path}/{sub_dir}',
-            start_date=config.startdate, rnday=config.rnday
+            start_date=config.startdate, rnday=config.rnday,
+            ocean_bnd_ids=config.ocean_bnd_ids,
         )
 
         os.chdir(run_dir)
@@ -806,7 +855,8 @@ def main():
             hgrid_fname=f'{model_input_path}/hgrid.gr3',
             outdir=f'{model_input_path}/{sub_dir}',
             start_date=config.startdate, rnday=config.rnday,
-            uniform_shift=config.elev2d_uniform_shift
+            ocean_bnd_ids=config.ocean_bnd_ids,
+            uniform_shift=config.elev2d_uniform_shift,
         )
 
         os.chdir(run_dir)
@@ -823,7 +873,8 @@ def main():
             hgrid_fname=f'{model_input_path}/hgrid.gr3',
             vgrid_fname=f'{model_input_path}/vgrid.in',
             outdir=f'{model_input_path}/{sub_dir}',
-            rnday=config.rnday, start_date=config.startdate
+            rnday=config.rnday, start_date=config.startdate,
+            ocean_bnd_ids=config.ocean_bnd_ids,
         )
 
         os.chdir(run_dir)

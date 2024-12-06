@@ -21,6 +21,7 @@ class ConfigStofs3dAtlantic():
         self,
         startdate=datetime(2017, 12, 1),  # start date of the model
         rnday=60,  # number of days to run the model
+        ocean_bnd_ids=[0],  # list of open boundary ids for *D.th.nc
         elev2d_uniform_shift=0.0,  # add a uniform shift to elev2D
         nudging_zone_width=1.5,  # in degrees
         nudging_day=1.0,  # in days
@@ -40,6 +41,7 @@ class ConfigStofs3dAtlantic():
 
         self.startdate = startdate
         self.rnday = rnday
+        self.ocean_bnd_ids = ocean_bnd_ids
         self.elev2d_uniform_shift = elev2d_uniform_shift
         self.nudging_zone_width = nudging_zone_width
         self.nudging_day = nudging_day
@@ -110,6 +112,7 @@ class ConfigStofs3dAtlantic():
                 '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/'
                 'SMS_proj/feeder/feeder.pkl'),
             mandatory_sources_coor=rsf.v19p2_mandatory_sources_coor,
+            ocean_bnd_ids=[0, 1],
             bc_flags=[[5, 5, 4, 4]],
             tvd_regions=[
                 'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
@@ -122,6 +125,7 @@ class ConfigStofs3dAtlantic():
     def v7(cls):
         '''Factory method to create a configuration for STOFS3D-v7'''
         return cls(
+            ocean_bnd_ids=[0, 1],
             elev2d_uniform_shift=-0.42,  # add a uniform shift to elev2D
             nudging_zone_width=7.3,  # default nudging zone
             shapiro_zone_width=11.5,  # default shapiro zone
@@ -157,6 +161,7 @@ class ConfigStofs3dAtlantic():
     def v7_hercules_test(cls):
         '''Factory method to create a configuration for STOFS3D-v7 2D setup'''
         return cls(
+            ocean_bnd_ids=[0, 1],
             elev2d_uniform_shift=-0.42,  # add a uniform shift to elev2D
             nudging_zone_width=7.3,  # default nudging zone
             shapiro_zone_width=11.5,  # default shapiro zone
@@ -183,19 +188,23 @@ class ConfigStofs3dAtlantic():
     def v8_louisianna(cls):
         '''Factory method to create a configuration for STOFS3D-v8's local test in Louisianna'''
         return cls(
+            ocean_bnd_ids=[0],
             nudging_zone_width=0,  # default nudging zone
             shapiro_zone_width=0,  # default shapiro zone
             shapiro_tilt=0,  # default abrupt transition in the shapiro zone
             feeder_info_file='',
             relocate_source=False,
             nwm_cache_folder=Path('/sciclone/schism10/whuang07/schism20/NWM_v2.1/'),
-            bc_flags=[[5, 5, 4, 4]]
+            bc_flags=[[5, 3, 0, 0]],
+            bc_relax=[[None, None, None, None]],
+            bc_const=[[None, None, None, None]],
         )
 
     @classmethod
     def v8(cls):
         '''Factory method to create a configuration for STOFS3D-v8 3D setup'''
         return cls(
+            ocean_bnd_ids=[0, 1],
             elev2d_uniform_shift=-0.42,  # add a uniform shift to elev2D
             nudging_zone_width=7.3,  # default nudging zone
             shapiro_zone_width=11.5,  # default shapiro zone

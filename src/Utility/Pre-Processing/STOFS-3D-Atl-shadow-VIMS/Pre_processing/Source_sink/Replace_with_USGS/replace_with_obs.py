@@ -450,9 +450,14 @@ def source_nwm2usgs(
     )
     # build df
     nwm_df = pd.DataFrame({'datetime': my_date_range}).join(pd.DataFrame(stream_flow, columns=fid_subset))
+    # assign utc time zone
+    nwm_df['datetime'] = nwm_df['datetime'].dt.tz_localize('UTC')
     nwm_df = nwm_df.loc[:, ~nwm_df.columns.duplicated()]  # drop duplicate columns
     # nwm_df = nwm_df.set_index('datetime').resample("H").mean()
     # nwm_df = nwm_df.interpolate(method='time')  # fill in missing data
+
+    # set datetime as index
+    nwm_df = nwm_df.set_index('datetime')
 
     print(f'---------------reading nwm data took: {time.time()-t1} s ---------------\n')
 
@@ -505,9 +510,7 @@ def source_nwm2usgs(
             print(f'warning: source {i}_{my_source.hgrid_ie} does not have nearby usgs obs')
             continue
 
-        this_vsource_nwm_array = nwm_df[mysrc_nwm_fid].to_numpy()
-
-        # interpolate usgs to vsource/nwm time
+        # interpolate usgs to vsource time
         this_vs_usgs_array = np.zeros((nrec, len(mysrc_usgs_id)), dtype=float)
         for k, idx in enumerate(mysrc_usgs_idx):
             this_vs_usgs_array[:, k] = np.interp(
@@ -516,10 +519,21 @@ def source_nwm2usgs(
                 my_obs.stations[idx].df.iloc[:, 1].to_numpy()*0.028316847
             )
 
+        # this_vsource_nwm_array = nwm_df[mysrc_nwm_fid].to_numpy()
+        this_vsource_nwm_array = np.zeros((nrec, len(mysrc_nwm_fid)), dtype=float)
+        # interpolate nwm to vsource time
+        for k, idx in enumerate(mysrc_nwm_fid):
+            this_vsource_nwm_array[:, k] = np.interp(
+                (df.index - df.index[0]).total_seconds().to_numpy(),
+                (nwm_df.index - df.index[0]).total_seconds().to_numpy(),
+                nwm_df[mysrc_nwm_fid].to_numpy().squeeze()
+            )
+            
+        plt.figure(figsize=(10, 6)) 
         plt.plot(df.index, df['Data'], '.k', label="original vsource")
         for k, usgs_id in enumerate(mysrc_usgs_id):
-            plt.plot(df.index, this_vs_usgs_array[:, k], linestyle1[k], label=f'usgs {usgs_id}')
-            plt.plot(df.index, this_vsource_nwm_array[:, k], linestyle2[k], label=f'NWM near usgs {usgs_id}')
+            plt.plot(df.index, this_vs_usgs_array[:, k], linestyle1[k], linewidth=0.5, label=f'usgs {usgs_id}')
+            plt.plot(df.index, this_vsource_nwm_array[:, k], linestyle2[k], linewidth=0.5, label=f'NWM near usgs {usgs_id}')
 
         # take the diff (including all relavant usgs-nwm pairs found)
         diff_usgs_nwm = this_vs_usgs_array - this_vsource_nwm_array
@@ -543,10 +557,18 @@ def source_nwm2usgs(
 
 if __name__ == "__main__":
     # sample usage (the final product is "adjusted_vsource.th" in the output_dir):
+    # source_nwm2usgs(
+    #     start_time_str="2024-03-05 00:00:00",
+    #     f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
+    #     original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/',
+    #     nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/20240305/',
+    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/USGS_adjusted_sources/',
+    # )
+
     source_nwm2usgs(
-        start_time_str="2024-03-05 00:00:00",
+        start_time_str="2017-12-01 00:00:00",
         f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
-        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/',
-        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/20240305/',
-        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/USGS_adjusted_sources/',
+        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I14/Source_sink/USGS_adjusted_sources/original/',
+        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I13/Source_sink/original_source_sink/20171201/',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I14/Source_sink/USGS_adjusted_sources/',
     )
