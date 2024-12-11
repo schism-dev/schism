@@ -30,6 +30,10 @@
       use netcdf
       use misc_modules
 
+#ifdef SH_MEM_COMM
+      use iso_c_binding, only: c_ptr, c_f_pointer
+#endif  ! SH_MEM_COMM
+
 #ifdef USE_PAHM
       use ParWind, only : ReadCsvBestTrackFile
       use PaHM_Utilities, only : ReadControlFile
@@ -2816,8 +2820,29 @@
         call mpi_bcast(nsinks,1,itype,0,comm,istat)
 
         if(iorder==0) then
+#ifdef SH_MEM_COMM
+          allocate(ieg_sink(max(1,nsinks)),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_sink failure')
+     ! On each node, rank 0 allocates the storage, other ranks allocate with size zero and get a pointer 
+          disp_unit = 4 ! size of real(4)
+          If (myrank_node==0) THEN
+            win_size = disp_unit * max(1,nsources,nsinks) * ntracers * 2 * nthfiles3
+            call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL, comm_node,
+            c_window_ptr, h_win, istat)
+            if(istat/=0) call parallel_abort('INIT: MPI_Win_allocate failed, node rank 0')
+          ELSE
+            win_size = 0     
+            call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL, comm_node, c_window_ptr, h_win, istat) 
+            if(istat/=0) call parallel_abort('INIT: MPI_Win_allocate failed, node rank>0')
+            call MPI_Win_shared_query(h_win, 0, win_size, disp_unit, c_window_ptr, istat)
+            if(istat/=0) call parallel_abort('INIT: MPI_Win_shared_query failed, node rank>0')
+          ENDIF
+     ! point ath3 array at the shared buffer
+          call C_F_POINTER(c_window_ptr, ath3, SHAPE = [max(1,nsources,nsinks),ntracers,2,nthfiles3])
+#else  ! SH_MEM_COMM
           allocate(ieg_sink(max(1,nsinks)),ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
           if(istat/=0) call parallel_abort('INIT: ieg_sink failure')
+#endif  ! SH_MEM_COMM
         endif
 
         if(myrank==0) then
@@ -2832,7 +2857,11 @@
       endif !if_source
 
       if(if_source==-1) then !nc
+#ifdef SH_MEM_COMM
+        if(myrank_node==0) then
+#else  ! SH_MEM_COMM
         if(myrank==0) then
+#endif  ! SH_MEM_COMM
           j=nf90_open(in_dir(1:len_in_dir)//'source.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_source)
           if(j/=NF90_NOERR) call parallel_abort('init: source.nc')
           j=nf90_inq_dimid(ncid_source,'nsources',mm)
@@ -2871,12 +2900,36 @@
         call mpi_bcast(th_dt3,nthfiles3,rtype,0,comm,istat)
 
         if(iorder==0) then
-          allocate(ieg_source(max(1,nsources)),ieg_sink(max(1,nsinks)), &
-     &ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
-          if(istat/=0) call parallel_abort('INIT: ieg_source failure(3)')
+#ifdef SH_MEM_COMM
+          allocate(ieg_source(max(1,nsources)),ieg_sink(max(1,nsinks)),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_sink failure')
+     ! On each node, rank 0 allocates the storage, other ranks allocate with size zero and get a pointer
+          disp_unit = 4 ! size of real(4)
+          If (myrank_node==0) THEN
+            win_size = disp_unit * max(1,nsources,nsinks) * ntracers * 2 * nthfiles3
+            call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL, comm_node,
+            c_window_ptr, h_win, istat)
+            if(istat/=0) call parallel_abort('INIT: MPI_Win_allocate failed, node rank 0')
+          ELSE
+            win_size = 0
+            call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL, comm_node, c_window_ptr, h_win, istat)
+            if(istat/=0) call parallel_abort('INIT: MPI_Win_allocate failed, node rank>0')
+            call MPI_Win_shared_query(h_win, 0, win_size, disp_unit, c_window_ptr, istat)
+            if(istat/=0) call parallel_abort('INIT: MPI_Win_shared_query failed, node rank>0')
+          ENDIF
+     ! point ath3 array at the shared buffer
+          call C_F_POINTER(c_window_ptr, ath3, SHAPE = [max(1,nsources,nsinks),ntracers,2,nthfiles3])
+#else  ! SH_MEM_COMM
+          allocate(ieg_sink(max(1,nsinks)),ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_sink failure')
+#endif  ! SH_MEM_COMM
         endif
 
+#ifdef SH_MEM_COMM
+        if(myrank_node==0) then
+#else  ! SH_MEM_COMM
         if(myrank==0) then
+#endif  ! SH_MEM_COMM
           if(nsources>0) then
             j=nf90_inq_varid(ncid_source, "source_elem",mm)
             if(j/=NF90_NOERR) call parallel_abort('init: source_elem')

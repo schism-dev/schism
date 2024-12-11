@@ -89,6 +89,15 @@ module schism_msgp
   integer,public,save,allocatable :: ranknbr_s3(:)  ! Mapping from MPI rank to neighbor index (elements)
   !<weno
 
+#ifdef SH_MEM_COMM   
+! variables supporting shared memory communications
+  integer,public,save ::  h_win  ! handle for shared window for ath3
+  integer(KIND=MPI_ADDRESS_KIND),public,save :: win_size
+  TYPE(C_PTR),public,save :: c_window_ptr
+  real(4),public,save,pointer :: ath3(:,:,:,:)
+  integer,public,save :: disp_unit       ! displacement stride in shared window  
+#endif  ! SH_MEM_COMM   
+
   !-----------------------------------------------------------------------------
   ! Private data
   !-----------------------------------------------------------------------------
@@ -416,6 +425,15 @@ subroutine parallel_init(communicator)
   CALL MPI_Comm_split(comm_schism,task_id,myrank_schism,comm2,ierr)
   CALL MPI_Comm_size(comm2, nproc3, ierr)
   CALL MPI_Comm_rank(comm2, myrank3,ierr)
+
+#ifdef SH_MEM_COMM
+! Set up by-node shared-memory communicator for compute nodes
+  if(task_id==1) then
+    CALL MPI_Comm_split_type(comm2,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,comm_node,ierr)
+    CALL MPI_Comm_size(comm_node, nproc_node, ierr)
+    CALL MPI_Comm_rank(comm_node, myrank_node,ierr)
+  endif
+#endif ! SH_MEM_COMM
 
   if(task_id==1) then !compute
     comm=comm2
