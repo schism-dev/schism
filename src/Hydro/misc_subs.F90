@@ -720,8 +720,12 @@
 
       ath3(:,1,1,1:2)=0.d0
       ath3(:,1,1,3)=-9999.d0
-#else
+#else ! USE_NWM_BMI
+#ifdef SH_MEM_COMM
+      if(if_source==1.and.myrank_node==0) then !ASCII
+#else   ! SH_MEM_COMM
       if(if_source==1.and.myrank==0) then !ASCII
+#endif  ! SH_MEM_COMM
         if(nsources>0) then
           open(63,file=in_dir(1:len_in_dir)//'vsource.th',status='old') !values (>=0) in m^3/s
           rewind(63)
@@ -772,7 +776,11 @@
         endif !nsinks
       endif !if_source=1
 
+#ifdef SH_MEM_COMM
+      if(if_source==-1.and.myrank_node==0) then !nc
+#else  ! SH_MEM_COMM
       if(if_source==-1.and.myrank==0) then !nc
+#endif  ! SH_MEM_COMM
         if(nsources>0) then
           ninv=time/th_dt3(1)
           th_time3(1,1)=dble(ninv)*th_dt3(1)
@@ -813,7 +821,9 @@
       if(if_source/=0) then
         call mpi_bcast(th_dt3,nthfiles3,rtype,0,comm,istat)
         call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
+#ifndef SH_MEM_COMM
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
+#endif  ! SH_MEM_COMM
       endif 
 #endif /*USE_NWM_BMI*/
 

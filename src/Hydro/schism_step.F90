@@ -1622,7 +1622,11 @@
 
 #else
         !Reading by rank 0
+#ifdef SH_MEM_COMM
+        if(nsources>0.and.myrank_node==0) then
+#else  ! SH_MEM_COMM
         if(nsources>0.and.myrank==0) then
+#endif  ! SH_MEM_COMM
           if(time>th_time3(2,1)) then !not '>=' to avoid last step
             ath3(:,1,1,1)=ath3(:,1,2,1)
             th_time3(1,1)=th_time3(2,1)
@@ -1655,7 +1659,11 @@
           endif !time
         endif !nsources>0.and.myrank==0
  
+#ifdef SH_MEM_COMM
+        if(nsinks>0.and.myrank_node==0) then
+#else  ! SH_MEM_COMM
         if(nsinks>0.and.myrank==0) then
+#endif  ! SH_MEM_COMM
           if(time>th_time3(2,2)) then !not '>=' to avoid last step
             ath3(:,1,1,2)=ath3(:,1,2,2)
             th_time3(1,2)=th_time3(2,2)
@@ -1673,7 +1681,12 @@
         endif !nsinks
 !       Finished reading; bcast
         call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
+#ifdef SH_MEM_COMM
+  ! ath3 data now in shared buffer, no longer necessary to broadcast
+        call mpi_barrier(comm_node, istat)
+        #else  ! SH_MEM_COMM      
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
+#endif  ! SH_MEM_COMM
 #endif /*USE_NWM_BMI*/
 
         if(nsources>0) then

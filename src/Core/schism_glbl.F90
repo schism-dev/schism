@@ -388,7 +388,9 @@ module schism_glbl
                                   &ath(:,:,:,:),carea(:),clen(:),eta_mean(:),q_block(:),vnth_block(:,:), &
                                   &dir_block(:,:),q_block_lcl(:)
   real(4),save,allocatable :: ath2(:,:,:,:,:) !used to read *.nc for b.c. time series
+#ifndef SH_MEM_COMM
   real(4),save,allocatable :: ath3(:,:,:,:) !used to read source/sink inputs
+#endif
 
   ! Land boundary segment data
   integer,save :: nland_global                 ! Global number of land bndry segments

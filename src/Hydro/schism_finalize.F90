@@ -117,6 +117,10 @@
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
 
+#ifdef SH_MEM_COMM
+      call mpi_win_free(h_win,ierr) ! free ath3 shared memory window
+#endif  ! SH_MEM_COMM
+
       if(ihydraulics/=0) call finalize_hydraulic_structures
 
 #ifdef USE_PETSC
