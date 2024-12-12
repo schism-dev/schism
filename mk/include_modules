@@ -3,8 +3,8 @@
 # EXEC := $(EXEC)_NOPM
 
 # Share memory communicator
- SH_MEM_COMM = yes
- EXEC := $(EXEC)_SH_MEM_COMM
+# SH_MEM_COMM = yes
+# EXEC := $(EXEC)_SH_MEM_COMM
 
 # Old nc output option (each rank dumps its own data)
 # USE_OLDIO = yes

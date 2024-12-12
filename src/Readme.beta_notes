@@ -615,7 +615,8 @@ git versions:
 151. `5914ae2` (Mar 26, 2024): fix an init error for diffm* (c/o Ufuk)
 161. `ca44ba0` (1 May 2024): fixed bugs in vegetation&marsh module (uninited sav_h0 etc) 
 162. `cfb58a5` [5 July 2024] replace fatal errors with warning in btrack (no intersecting edges). These are exaordinary exceptions that occur rarely.
-163. - `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter;
+163. `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter;
+164. `` (Dec 2024): added share memory communicator for efficient bcast
 
 ================================================================================================
 (D) Auto-test history:
