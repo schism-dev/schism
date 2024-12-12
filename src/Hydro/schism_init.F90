@@ -2857,11 +2857,11 @@
       endif !if_source
 
       if(if_source==-1) then !nc
-!#ifdef SH_MEM_COMM
-!        if(myrank_node==0) then
-!#else  /*SH_MEM_COMM*/
+#ifdef SH_MEM_COMM
+        if(myrank_node==0) then
+#else  /*SH_MEM_COMM*/
         if(myrank==0) then
-!#endif /*SH_MEM_COMM*/
+#endif /*SH_MEM_COMM*/
           j=nf90_open(in_dir(1:len_in_dir)//'source.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_source)
           if(j/=NF90_NOERR) call parallel_abort('init: source.nc')
           j=nf90_inq_dimid(ncid_source,'nsources',mm)
@@ -2894,7 +2894,8 @@
           if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsink(2)')
           if(floatout<dt) call parallel_abort('INIT: dt_vsink wrong')
           th_dt3(2)=dble(floatout)
-        endif !myrank=0
+        endif !myrank*=0
+        !For share mem option, rank 0 also satisfied myrank_node=0
         call mpi_bcast(nsources,1,itype,0,comm,istat)
         call mpi_bcast(nsinks,1,itype,0,comm,istat)
         call mpi_bcast(th_dt3,nthfiles3,rtype,0,comm,istat)
@@ -2925,11 +2926,11 @@
 #endif /*SH_MEM_COMM*/
         endif
 
-!#ifdef SH_MEM_COMM
-!        if(myrank_node==0) then
-!#else
+#ifdef SH_MEM_COMM
+        if(myrank_node==0) then
+#else
         if(myrank==0) then
-!#endif
+#endif
           if(nsources>0) then
             j=nf90_inq_varid(ncid_source, "source_elem",mm)
             if(j/=NF90_NOERR) call parallel_abort('init: source_elem')
@@ -2948,6 +2949,7 @@
      & call parallel_abort('init: check sink elem')
           endif !nsinks
         endif !myrank=0
+        !For share mem option, rank 0 also satisfied myrank_node=0
         call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
         call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source=-1
