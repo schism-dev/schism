@@ -39,6 +39,11 @@ module schism_msgp
                        &ns_global,ns,nsg,nsa,islg,isgl,isdel,isidenode, &
                        &errmsg,fdb,lfdb,ntracers,msc2,mdc2,i34,nea2, &
                        &ielg2,iegl2,is_inter,iside_table,in_dir,out_dir,len_in_dir,len_out_dir
+
+#ifdef SH_MEM_COMM
+  use iso_c_binding, only: c_ptr, c_f_pointer
+#endif
+
   implicit none
 !#ifndef USE_MPIMODULE
   include 'mpif.h'
@@ -91,10 +96,12 @@ module schism_msgp
 
 #ifdef SH_MEM_COMM   
 ! variables supporting shared memory communications
-  integer,public,save ::  h_win  ! handle for shared window for ath3
+  integer,public,save ::  comm_node !communicator for SM 
+  integer,public,save ::  nproc_node, myrank_node
+  integer,public,save ::  h_win  ! handle for shared window for ath3 etc
   integer(KIND=MPI_ADDRESS_KIND),public,save :: win_size
   TYPE(C_PTR),public,save :: c_window_ptr
-  real(4),public,save,pointer :: ath3(:,:,:,:)
+!  real(4),public,save,pointer :: ath3(:,:,:,:)
   integer,public,save :: disp_unit       ! displacement stride in shared window  
 #endif  ! SH_MEM_COMM   
 

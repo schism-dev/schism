@@ -76,6 +76,7 @@ define_opt(USE_AGE "Enable age tracer module" OFF)
 define_opt(ICM_PH "Enable pH module in ICM" OFF)
 define_opt(USE_DVD "Enable DVD module" OFF)
 define_opt(BLD_STANDALONE "Standalone build mode" ON)
+define_opt(SH_MEM_COMM "Shared mem communicator" OFF)
 define_opt(BUILD_TOOLS "Build pschism and all the utilities" ON)
 
 if(NOT DEFINED TVD_LIM)

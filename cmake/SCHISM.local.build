@@ -13,6 +13,7 @@
 #####################################################################
 #Leave this on
 set(BLD_STANDALONE ON CACHE BOOLEAN "SCHISM standalone")
+set(SH_MEM_COMM ON CACHE BOOLEAN "Use shared memory communicator")
 
 #Default is NO_PARMETIS=OFF, i.e. use ParMETIS
 set(NO_PARMETIS OFF CACHE BOOLEAN "Turn off ParMETIS")

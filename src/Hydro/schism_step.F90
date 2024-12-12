@@ -1620,13 +1620,14 @@
           th_time3(2,2)=th_time3(2,2)+th_dt3(2)
         endif
 
-#else
+#else /*USE_NWM_BMI*/
+
         !Reading by rank 0
 #ifdef SH_MEM_COMM
         if(nsources>0.and.myrank_node==0) then
-#else  ! SH_MEM_COMM
+#else  
         if(nsources>0.and.myrank==0) then
-#endif  ! SH_MEM_COMM
+#endif
           if(time>th_time3(2,1)) then !not '>=' to avoid last step
             ath3(:,1,1,1)=ath3(:,1,2,1)
             th_time3(1,1)=th_time3(2,1)
@@ -1657,13 +1658,13 @@
               if(j/=NF90_NOERR) call parallel_abort('STEP: msource')
             endif !if_source
           endif !time
-        endif !nsources>0.and.myrank==0
+        endif !nsources>0.and.myrank*==0
  
 #ifdef SH_MEM_COMM
         if(nsinks>0.and.myrank_node==0) then
-#else  ! SH_MEM_COMM
+#else 
         if(nsinks>0.and.myrank==0) then
-#endif  ! SH_MEM_COMM
+#endif
           if(time>th_time3(2,2)) then !not '>=' to avoid last step
             ath3(:,1,1,2)=ath3(:,1,2,2)
             th_time3(1,2)=th_time3(2,2)
@@ -1679,14 +1680,14 @@
             endif !if_source
           endif !time
         endif !nsinks
-!       Finished reading; bcast
+!       Finished reading; bcast from rank 0 of comm (which must be a member of myrank_node=0)
         call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
 #ifdef SH_MEM_COMM
-  ! ath3 data now in shared buffer, no longer necessary to broadcast
+        ! ath3 data now in shared buffer, no longer necessary to broadcast
         call mpi_barrier(comm_node, istat)
-        #else  ! SH_MEM_COMM      
+#else
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
-#endif  ! SH_MEM_COMM
+#endif
 #endif /*USE_NWM_BMI*/
 
         if(nsources>0) then
