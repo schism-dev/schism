@@ -1680,10 +1680,12 @@
             endif !if_source
           endif !time
         endif !nsinks
+
 !       Finished reading; bcast from rank 0 of comm (which must be a member of myrank_node=0)
         call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
 #ifdef SH_MEM_COMM
-        ! ath3 data now in shared buffer, no longer necessary to broadcast
+        ! ath3 data in shared buffer, no longer necessary to broadcast
+        !Sync to ensure the buffer is filled
         call mpi_barrier(comm_node, istat)
 #else
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)

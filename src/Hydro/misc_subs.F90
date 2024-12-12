@@ -823,8 +823,10 @@
         !First 2 vars are bcast from rank 0 of comm, which must be a member of myrank_node=0?
         call mpi_bcast(th_dt3,nthfiles3,rtype,0,comm,istat)
         call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
-#ifndef SH_MEM_COMM
+#ifdef SH_MEM_COMM
         !For share mem, ath3 is already filled
+        call mpi_barrier(comm_node, istat)
+#else
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
 #endif
       endif 
