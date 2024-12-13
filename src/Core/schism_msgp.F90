@@ -103,7 +103,7 @@ module schism_msgp
   TYPE(C_PTR),public,save :: c_window_ptr
 !  real(4),public,save,pointer :: ath3(:,:,:,:)
   integer,public,save :: disp_unit       ! displacement stride in shared window  
-#endif  ! SH_MEM_COMM   
+#endif /*SH_MEM_COMM*/
 
   !-----------------------------------------------------------------------------
   ! Private data
@@ -394,7 +394,7 @@ subroutine parallel_init(communicator)
   implicit none
   integer, optional :: communicator
 
-  integer :: comm2,nproc3,myrank3,nproc_compute
+  integer :: comm2,nproc3,myrank3,nproc_compute,itmp,itmp2
 
 
   if (present(communicator)) then
@@ -433,15 +433,6 @@ subroutine parallel_init(communicator)
   CALL MPI_Comm_size(comm2, nproc3, ierr)
   CALL MPI_Comm_rank(comm2, myrank3,ierr)
 
-#ifdef SH_MEM_COMM
-! Set up by-node shared-memory communicator for compute nodes
-  if(task_id==1) then
-    CALL MPI_Comm_split_type(comm2,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,comm_node,ierr)
-    CALL MPI_Comm_size(comm_node, nproc_node, ierr)
-    CALL MPI_Comm_rank(comm_node, myrank_node,ierr)
-  endif
-#endif ! SH_MEM_COMM
-
   if(task_id==1) then !compute
     comm=comm2
     nproc=nproc3
@@ -453,6 +444,29 @@ subroutine parallel_init(communicator)
     myrank_scribe=myrank3
 !    print*, 'Scribes:',myrank_schism,nproc_schism,myrank3,nproc3,nproc_compute,nscribes,task_id
   endif
+
+#ifdef SH_MEM_COMM
+! Set up by-node shared-memory communicator for compute nodes
+  if(task_id==1) then
+    CALL MPI_Comm_split_type(comm,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,comm_node,ierr)
+    CALL MPI_Comm_size(comm_node, nproc_node, ierr)
+    CALL MPI_Comm_rank(comm_node, myrank_node,ierr)
+
+    !Ensure that myrank_node=0 includes myrank=0 for some bcast (read in by
+    !myrank_node=0 and then bcast from myrank=0 in comm)
+    if(myrank_node==0.and.myrank==0) then
+      itmp=1 !true
+    else
+      itmp=0
+    endif
+    !comm_node seems to cause error, maybe due to non-unique ranks?
+    call mpi_allreduce(itmp,itmp2,1,itype,MPI_SUM,comm,ierr)
+    if(itmp2==0) then
+      write(*,*)'Ranks:',myrank_node,myrank,itmp,itmp2
+      call parallel_abort('MSGP: myrank=0 is not the head process in share mem')
+    endif
+  endif !task_id
+#endif /*SH_MEM_COMM*/
 
 end subroutine parallel_init
 
