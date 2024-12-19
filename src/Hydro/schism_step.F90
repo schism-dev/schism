@@ -1685,7 +1685,8 @@
         call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
 #ifdef SH_MEM_COMM
         ! ath3 data in shared buffer, no longer necessary to broadcast
-        !Sync to ensure the buffer is filled
+        !Sync (on each compute node) to ensure the buffer is filled
+        !The barrier may not be necessary
         call mpi_barrier(comm_node, istat)
 #else
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)

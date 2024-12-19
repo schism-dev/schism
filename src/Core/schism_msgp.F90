@@ -452,14 +452,14 @@ subroutine parallel_init(communicator)
     CALL MPI_Comm_size(comm_node, nproc_node, ierr)
     CALL MPI_Comm_rank(comm_node, myrank_node,ierr)
 
-    !Ensure that myrank_node=0 includes myrank=0 for some bcast (read in by
+    !Ensure that myrank_node=0 (nonunique) includes myrank=0 for some bcast (read in by
     !myrank_node=0 and then bcast from myrank=0 in comm)
     if(myrank_node==0.and.myrank==0) then
       itmp=1 !true
     else
       itmp=0
     endif
-    !comm_node seems to cause error, maybe due to non-unique ranks?
+    !Collectives on comm_node won't work as they are on per node basis!
     call mpi_allreduce(itmp,itmp2,1,itype,MPI_SUM,comm,ierr)
     if(itmp2==0) then
       write(*,*)'Ranks:',myrank_node,myrank,itmp,itmp2

@@ -390,7 +390,7 @@ module schism_glbl
   real(4),save,allocatable :: ath2(:,:,:,:,:) !used to read *.nc for b.c. time series
 #ifdef SH_MEM_COMM
   !Use more efficient share mem communicator for I/O
-  real(4),public,save,pointer :: ath3(:,:,:,:)
+  real(4),save,pointer :: ath3(:,:,:,:)
 #else
   real(4),save,allocatable :: ath3(:,:,:,:) !used to read source/sink inputs
 #endif
