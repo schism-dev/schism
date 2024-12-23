@@ -2740,7 +2740,7 @@
 !        endif
 !cde=cmiu0**3
 !$OMP   master
-        if(myrank==0) write(16,*)'cde, cmiu0**3 = ',cde,cmiu0**3.d0
+        if(myrank==0) write(16,*)'starting GOTM; cde, cmiu0**3 = ',cde,cmiu0**3.d0
 !$OMP   end master
 
 !$OMP   do

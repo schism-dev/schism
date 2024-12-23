@@ -607,6 +607,7 @@
 
 !-----------------------------------------------------------------------
 ! Turbulence closure.
+! itur=4 requires building with GOTM (input in gotmturb.nml). In this case, mid, stab are not used. 
 !-----------------------------------------------------------------------
   itur = 3 !Default: 0
   dfv0 = 1.e-2 !needed if itur=0
