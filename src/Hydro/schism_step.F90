@@ -9271,10 +9271,10 @@
 #endif
 
 #ifdef USE_MICE
-        if(iof_ice(1)==1) call writeout_nc(id_out_var(noutput+5), &
-     &'ICE_velocity',1,1,npa,u_ice,v_ice)
-        if(iof_ice(2)==1) call writeout_nc(id_out_var(noutput+6), &
+        if(iof_ice(1)==1) call writeout_nc(id_out_var(noutput+6), &
      &'ICE_strain_rate',4,1,nea,delta_ice)
+        if(iof_ice(2)==1) call writeout_nc(id_out_var(noutput+5), &
+     &'ICE_velocity',1,1,npa,u_ice,v_ice)
         if(iof_ice(3)==1) call writeout_nc(id_out_var(noutput+7), &
      &'ICE_net_heat_flux',1,1,npa,net_heat_flux)
         if(iof_ice(4)==1) call writeout_nc(id_out_var(noutput+8), &
@@ -9292,7 +9292,7 @@
         enddo !i
         noutput=noutput+ntr_ice
         call io_icepack(noutput)
-#endif
+#endif /*USE_MICE*/
 
 #ifdef USE_ICE
         if(iof_ice(1)==1) call writeout_nc(id_out_var(noutput+5), &
@@ -9315,7 +9315,7 @@
      &'ICE_tracer_'//it_char(1:lit),1,1,npa,ice_tr(i,:))
         enddo !i
         noutput=noutput+ntr_ice
-#endif
+#endif /*USE_ICE*/
 
 #ifdef USE_ANALYSIS
         if(iof_ana(1)==1) call writeout_nc(id_out_var(noutput+5), &
@@ -9572,6 +9572,32 @@
         enddo !i
 #endif /*USE_ICE*/
 
+#ifdef USE_MICE
+        if(iof_mice(2)==1) then
+          icount=icount+2
+          if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.31)')
+          varout_2dnode(icount-1,:)=u_ice(1:np)
+          varout_2dnode(icount,:)=v_ice(1:np)
+        endif
+
+        do i=3,5+ntr_ice
+          if(iof_mice(i)==1) then
+            icount=icount+1
+            if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.41)')
+            if(i==3) then
+              varout_2dnode(icount,:)=net_heat_flux(1:np)
+            else if(i==4) then
+              varout_2dnode(icount,:)=fresh_wa_flux(1:np)
+            else if(i==5) then
+              varout_2dnode(icount,:)=t_oi(1:np)
+            else
+              varout_2dnode(icount,:)=ice_tr(i-5,1:np)
+            endif
+          endif !iof
+        enddo !i
+        call io_icepack(noutput)
+#endif /*USE_MICE*/
+
         !Check total # of vars
         if(icount/=ncount_2dnode) then
           write(errmsg,*)'STEP: 2D count wrong:',icount,ncount_2dnode
@@ -9638,6 +9664,14 @@
         if(iof_ice(1)==1) then
           icount=icount+1
           if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.3)')
+          varout_2delem(icount,:)=delta_ice(1:ne)
+        endif
+#endif
+
+#ifdef USE_MICE
+        if(iof_mice(1)==1) then
+          icount=icount+1
+          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.31)')
           varout_2delem(icount,:)=delta_ice(1:ne)
         endif
 #endif

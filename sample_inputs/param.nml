@@ -1077,6 +1077,19 @@
 !  iof_ice(8)= 0 !snow volume [m] {iceTracer_3}  2D
 
 !-----------------------------------------------------------------------
+! Multi-class ice module outputs (if USE_MICE is on)
+!-----------------------------------------------------------------------
+!  iof_mice(1)= 0 !divergence @ elem ('Delta') [1/sec] {iceStrainRate}  2D
+!  iof_mice(2)= 0 !ice advective velcoity vector [m/s] {iceVelocityX,Y}  2D vector
+!  iof_mice(3)= 0 !net heat flux to ocean (>0 warm up SST) [W/m/m] {iceNetHeatFlux}  2D
+!  iof_mice(4)= 0 !net fresh water flux to ocean (>0 freshens up SSS) [kg/s/m/m] {iceFreshwaterFlux}  2D
+!  iof_mice(5)= 0 !ice temperature [C] at air-ice interface {iceTopTemperature}  2D
+
+!  iof_mice(6)= 0 !ice volume [m] {iceTracer_1}   2D
+!  iof_mice(7)= 0 !ice concentration [-] {iceTracer_2}  2D
+!  iof_mice(8)= 0 !snow volume [m] {iceTracer_3}  2D
+
+!-----------------------------------------------------------------------
 ! Analysis module outputs (USE_ANALYSIS)
 !-----------------------------------------------------------------------
 !  iof_ana(1) = 0 !min time step at each element over all subcycles in horizontal transport solver [s]   {minTransportTimeStep}  2D
