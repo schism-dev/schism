@@ -258,8 +258,10 @@ subroutine ice_mevp
           !tmp2 = mass
 
          if(ics==1) then
-            sum1=sum1+tmp2*deta(1,ie)*area(ie)/3
-            sum2=sum2+tmp2*deta(2,ie)*area(ie)/3
+            sum1=sum1+tmp2*deta_pice(1,ie)*area(ie)/3
+            sum2=sum2+tmp2*deta_pice(2,ie)*area(ie)/3
+            !sum1=sum1+tmp2*deta(1,ie)*area(ie)/3
+            !sum2=sum2+tmp2*deta(2,ie)*area(ie)/3
           else
             sum1=sum1+tmp2*deta_pice(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,1,i))+tmp2*deta_pice(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,1,i))
             sum2=sum2+tmp2*deta_pice(1,ie)*area(ie)/3*dot_product(eframe(1:3,1,ie),pframe(1:3,2,i))+tmp2*deta_pice(2,ie)*area(ie)/3*dot_product(eframe(1:3,2,ie),pframe(1:3,2,i))
