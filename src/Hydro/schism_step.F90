@@ -9271,15 +9271,15 @@
 #endif
 
 #ifdef USE_MICE
-        if(iof_ice(1)==1) call writeout_nc(id_out_var(noutput+6), &
+        if(iof_mice(1)==1) call writeout_nc(id_out_var(noutput+6), &
      &'ICE_strain_rate',4,1,nea,delta_ice)
-        if(iof_ice(2)==1) call writeout_nc(id_out_var(noutput+5), &
+        if(iof_mice(2)==1) call writeout_nc(id_out_var(noutput+5), &
      &'ICE_velocity',1,1,npa,u_ice,v_ice)
-        if(iof_ice(3)==1) call writeout_nc(id_out_var(noutput+7), &
+        if(iof_mice(3)==1) call writeout_nc(id_out_var(noutput+7), &
      &'ICE_net_heat_flux',1,1,npa,net_heat_flux)
-        if(iof_ice(4)==1) call writeout_nc(id_out_var(noutput+8), &
+        if(iof_mice(4)==1) call writeout_nc(id_out_var(noutput+8), &
      &'ICE_fresh_water_flux',1,1,npa,fresh_wa_flux)
-        if(iof_ice(5)==1) call writeout_nc(id_out_var(noutput+9), &
+        if(iof_mice(5)==1) call writeout_nc(id_out_var(noutput+9), &
      &'ICE_top_T',1,1,npa,t_oi)
         noutput=noutput+5
         icount=5 !offset
@@ -9287,7 +9287,7 @@
         do i=1,ntr_ice
           write(it_char,'(i72)')i
           it_char=adjustl(it_char); lit=len_trim(it_char)
-          if(iof_ice(icount+i)==1) call writeout_nc(id_out_var(noutput+i+4), &
+          if(iof_mice(icount+i)==1) call writeout_nc(id_out_var(noutput+i+4), &
      &'ICE_tracer_'//it_char(1:lit),1,1,npa,ice_tr(i,:))
         enddo !i
         noutput=noutput+ntr_ice

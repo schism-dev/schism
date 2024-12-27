@@ -6500,7 +6500,7 @@
 #endif
 
 #ifdef USE_MICE
-      if(iof_ice(1)==1) then
+      if(iof_mice(1)==1) then
         ncount_2delem=ncount_2delem+1
         counter_out_name=counter_out_name+1
         out_name(counter_out_name)='iceStrainRate'
