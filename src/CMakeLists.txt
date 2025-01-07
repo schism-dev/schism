@@ -52,6 +52,8 @@ add_compile_options(${C_PREPROCESS_FLAG})
 
 ######### Algorithmic switches and build options involving functionality
 
+define_opt(BUILD_SHARED_LIBS "Shared libraries" ON)
+
 message(STATUS "\n### Processing algorithmic switches and build options involving functionality for main project")
 
 define_opt(NO_PARMETIS "Disable ParMETIS" OFF)
