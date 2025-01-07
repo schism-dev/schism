@@ -31,7 +31,6 @@ endif()
 
 # Set CMAKE CXX Flags to compiled ParMETIS and METIS properly
 #set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS_INIT} -std=c++11 -fPIC")
-add_compile_options("-fPIC")
 
 # https://www.intel.com/content/www/us/en/develop/documentation/oneapi-dpcpp-cpp-compiler-dev-guide-and-reference/top/compiler-setup/use-the-command-line/use-cmake-with-the-compiler.html
 if (INTEL_DPCPP)
@@ -46,6 +45,7 @@ endif()
 set(comp_lang_list C Fortran)
 add_definitions("-DSCHISM")
 
+option(BUILD_SHARED_LIBS "Shared libraries" ON)
 
 ########### MPI Library ########
 # The typical pattern with cmake is to use the mpi wrapper (e.g. mpif90)
