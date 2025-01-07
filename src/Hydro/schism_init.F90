@@ -545,9 +545,6 @@
         call parallel_abort(errmsg)
       endif
 
-!      if(itransport_only/=0.and.ielm_transport/=0) &
-!     &call parallel_abort('INIT: ielm_transport not available for itransport_only')
-
 !     Mass consv adjustment not working for SED
       if(iadjust_mass_consv0(5)>0) call parallel_abort('INIT: SED cannot use mass adjustment')
 

@@ -91,7 +91,7 @@ d07d75d (April 21, 2021): added T,S in required inputs for offline transport (to
 b66e554 (April 14, 2021): added ishapiro=2 - Smagorinsky like filter option. In this option, shapiro0 is the coefficient;
 b43afea (April 2, 2021): changed x,y to double in nc outputs (for newer visIT);
 9150d86 (Mar 31, 2021): added a new SAL option (iloadtide=2) using scaling;
-084e149 (Feb 25, 2021): Removed parameters: ibtrack_openbnd, iwindoff, dzb_decay (with hardwire); also
+084e149 (Feb 25, 2021): removed parameters: ibtrack_openbnd, iwindoff, dzb_decay (with hardwire); also
                         removed option for negative roughness. Fixed race condition for marsh module.
 3576c9c (Jan 24, 2021): added new option for source/sink input: if_source=-1 requires source.nc (which
                         includes elem list inside; allows different time steps and # of records for
