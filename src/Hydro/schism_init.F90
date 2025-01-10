@@ -1128,8 +1128,8 @@
 
 !     Volume and mass sources/sinks option (-1:nc; 1:ASCII)
       if(iabs(if_source)>1) call parallel_abort('INIT: wrong if_source')
-#ifdef USE_NWM_BMI
-      if(if_source==0) call parallel_abort('INIT: USE_NWM_BMI cannot go with if_source=0')
+#ifdef USE_BMI
+      if(if_source==0) call parallel_abort('INIT: USE_BMI cannot go with if_source=0')
 #endif
 
 !     Check all ramp periods
@@ -2795,7 +2795,7 @@
 ! sources and sinks that intersect the SCHISM inland
 ! boundaries, we will use a modified source_sink.in file
 ! containing that information here
-#ifdef USE_NWM_BMI
+#ifdef USE_BMI
 !     Read in source/sink info
       if(if_source==1) then !ASCII
         if(myrank==0) then
@@ -2921,7 +2921,7 @@
         endif !myrank
         call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source
-#endif /*USE_NWM_BMI*/
+#endif /*USE_BMI*/
 
       if(if_source==-1) then !nc
 #ifdef SH_MEM_COMM

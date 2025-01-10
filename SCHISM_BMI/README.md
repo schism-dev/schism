@@ -20,7 +20,7 @@ The online documentation can be accessed at https://schism-dev.github.io/schism.
 2. Insert/replace the following three lines in the file: "SCHISM.local.build"
   * set (OLDIO ON CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
   * set (USE_ATMOS ON CACHE BOOLEAN "Coupling with atmospheric model via ESMF")
-  * set (USE_NWM_BMI ON CACHE BOOLEAN "Use NWM BMI for source and some b.c.")
+  * set (USE_BMI ON CACHE BOOLEAN "Use NWM BMI for source and some b.c.")
 3. Insert the following lines within CMakeLists.txt in ../src directory to enable BMI compliancy for SCHISM
   ########### SCHISM BMI ADDITIONAL FLAGS TO ENABLE PARMETIS/METIS SHARED LIBRARIES ##########
   * set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")

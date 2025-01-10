@@ -688,7 +688,7 @@
           wtime1=wtime2
           wtime2=wtime2+wtiminc
 
-#ifndef   USE_NWM_BMI
+#ifndef   USE_BMI
 !$OMP parallel do default(shared) private(i)
           do i=1,npa
             windx1(i)=windx2(i)
@@ -698,7 +698,7 @@
             shum1(i)=shum2(i)
           enddo
 !$OMP end parallel do
-#endif /*USE_NWM_BMI*/
+#endif /*USE_BMI*/
 
 #ifdef    USE_ATMOS
           !ESMF may not extend to ghosts
@@ -1426,7 +1426,7 @@
       enddo !i
 
       if(nettype2>0) then
-#ifdef USE_NWM_BMI
+#ifdef USE_BMI
         if(time>th_time2(2,1)) then
           th_time2(1,1)=th_time2(2,1)
           th_time2(2,1)=th_time2(2,1)+th_dt2(1)
@@ -1444,7 +1444,7 @@
           th_time2(1,1)=th_time2(2,1)
           th_time2(2,1)=th_time2(2,1)+th_dt2(1)
         endif !time
-#endif /*USE_NWM_BMI*/
+#endif /*USE_BMI*/
 !        if(it==iths_main+1.and.abs(floatout-time)>1.e-4) then
 !          write(errmsg,*)'Starting time wrong for eta 2',it,floatout
 !          call parallel_abort(errmsg)
@@ -1608,7 +1608,7 @@
         !Exceptions
         msource(1:2,:)=-9999.d0 !junk so ambient values will be used
 
-#ifdef USE_NWM_BMI
+#ifdef USE_BMI
         !Update everything except time series at new time (need to coordinate
         !with BMI on the timing of updates)
         if(nsources>0) then
@@ -1701,7 +1701,7 @@
 #else
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
 #endif
-#endif /*USE_NWM_BMI*/
+#endif /*USE_BMI*/
 
         if(nsources>0) then
           rat=(time-th_time3(1,1))/th_dt3(1)

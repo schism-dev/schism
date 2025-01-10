@@ -25,7 +25,7 @@ set (TVD_LIM VL CACHE STRING "Flux limiter")
 set (OLDIO OFF CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
 
 set (USE_ATMOS ON CACHE BOOLEAN "Coupling with atmospheric model via ESMF")
-set (USE_NWM_BMI ON CACHE BOOLEAN "Use NWM BMI for source and some b.c.")
+set (USE_BMI ON CACHE BOOLEAN "Build a library that can be used from BMI, with sources and some b.c. provided by BMI")
 set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
 ## GOTM5.2 is installed by default, and has been tested successfully, defined GOTM_BASE to use a non-standard GOTM source 
