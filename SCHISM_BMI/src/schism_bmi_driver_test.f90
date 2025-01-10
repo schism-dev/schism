@@ -748,8 +748,8 @@ program schism_driver_test
     print*, "The grid rank for ", 'Q_bnd_source_t1', " is ", grid_rank
 
     ! allocate source discharge point coords arrays
-    allocate(grid_x_qbnd(nsources_ngen))
-    allocate(grid_y_qbnd(nsources_ngen))
+    allocate(grid_x_qbnd(nsources_bmi))
+    allocate(grid_y_qbnd(nsources_bmi))
     !allocate(grid_z_qbnd(size(ieg_source_ngen)))
     ! get_grid_x/y/z
     ! should return 0 for a 1 node "grid" because not currently spatially

@@ -11,7 +11,7 @@ module bmischism
   use schism_glbl, only: iplg, ielg, idry_e, idry, ynd, xnd
   use schism_glbl, only: ylat, xlon, npa, np, nea, ne, ics
   use schism_glbl, only: xel, yel, nnode_et, nsources, nsinks
-  use schism_glbl, only: nsources_ngen, ieg_source_ngen, ieg_sink
+  use schism_glbl, only: nsources_bmi, ieg_source_ngen, ieg_sink
   use schism_glbl, only: ieg_source_flowpath_ids, ieg_sink_flowpath_ids
   use schism_glbl, only: ne_global, rkind
   use schism_glbl, only: np_global, xnd, ynd, znd, area, dp
@@ -543,7 +543,7 @@ end function schism_finalizer
        size = nnode_et
        bmi_status = BMI_SUCCESS
     case(SCHISM_BMI_GRID_SOURCE_ELEMENTS)
-       size = nsources_ngen
+       size = nsources_bmi
        bmi_status = BMI_SUCCESS
     case(SCHISM_BMI_GRID_SINK_ELEMENTS)
        size = nsinks
@@ -681,7 +681,7 @@ end function schism_finalizer
     case(SCHISM_BMI_GRID_SOURCE_ELEMENTS)
       ! Allocate bnd_ind array to ingest
       ! global element indices for source boundaries
-      allocate(grid_x(nsources_ngen))
+      allocate(grid_x(nsources_bmi))
       ! loop over all user sources for mesh and append T-Route
       ! flow path ids from hydrofabric to array
       do i = 1, nsources
@@ -777,7 +777,7 @@ end function schism_finalizer
     case(SCHISM_BMI_GRID_SOURCE_ELEMENTS)
       ! Allocate bnd_ind array to ingest
       ! global element indices for source boundaries
-      allocate(grid_y(nsources_ngen))
+      allocate(grid_y(nsources_bmi))
       ! loop over all user sources for mesh and append T-Route
       ! flow path ids from hydrofabric to array
       do i = 1, nsources
@@ -1175,11 +1175,11 @@ end function schism_finalizer
         ath2(1,1,:,2,1) = src(:)
         bmi_status=BMI_SUCCESS
     case("Q_bnd_source_t0")
-        ath3(ieg_source_ngen(1:nsources_ngen),1,1,1) = src(1:nsources_ngen)
+        ath3(ieg_source_ngen(1:nsources_bmi),1,1,1) = src(1:nsources_bmi)
         bmi_status=BMI_SUCCESS
     case("Q_bnd_source_t1")
-        ath3(ieg_source_ngen(1:nsources_ngen),1,1,1) = ath3(ieg_source_ngen(1:nsources_ngen),1,2,1)
-        ath3(ieg_source_ngen(1:nsources_ngen),1,2,1) = src(1:nsources_ngen)
+        ath3(ieg_source_ngen(1:nsources_bmi),1,1,1) = ath3(ieg_source_ngen(1:nsources_bmi),1,2,1)
+        ath3(ieg_source_ngen(1:nsources_bmi),1,2,1) = src(1:nsources_bmi)
         bmi_status=BMI_SUCCESS
     case("Q_bnd_sink_t0")
         ath3(ieg_sink(1:nsinks),1,1,2) = src(1:nsinks)
