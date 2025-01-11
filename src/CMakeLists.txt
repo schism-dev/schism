@@ -372,6 +372,11 @@ if (BLD_STANDALONE OR BUILD_TOOLS)
   set_property( DIRECTORY "Driver" APPEND PROPERTY COMPILE_DEFINITIONS ${all_define_options} ${all_use_mod_defs})
 endif()
 
+######## BMI Implementation Module #######
+if (USE_BMI)
+  add_subdirectory(BMI)
+endif(USE_BMI)
+
 ######## Utilities ########
 if (BLD_STANDALONE OR BUILD_TOOLS)
 message(STATUS "\n### Configuring Utilities")

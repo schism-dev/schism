@@ -1,1 +1,0 @@
-Once you have finished compiling the SCHISM model, copy over the "lib" and "include" directories within your SCHISM build directory here. This is where the CMakeLists.txt file expects them to be placed.
