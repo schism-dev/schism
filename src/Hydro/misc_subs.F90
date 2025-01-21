@@ -829,6 +829,8 @@
         endif !nsinks>0
       endif !if_source=-1
 
+#endif /*USE_BMI*/
+
 !     Bcast
       if(if_source/=0) then
         !First 2 vars are bcast from rank 0 of comm, which must be a member of myrank_node=0?
@@ -842,7 +844,6 @@
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
 #endif
       endif 
-#endif /*USE_BMI*/
 
 #ifdef USE_SED
 !...  Sediment model initialization
