@@ -285,6 +285,14 @@
         wtime1=ninv*wtiminc
         wtime2=(ninv+1)*wtiminc
 
+#ifdef USE_ATMOS
+!         Init
+          windx1=0._rkind; windy1=0._rkind; windx2=0._rkind; windy2=0._rkind
+          pr1=real(1.e5,rkind); pr2=real(1.e5,rkind)
+          airt1=20._rkind; airt2=20._rkind
+          shum1=0._rkind; shum2=0._rkind
+
+#else /*USE_ATMOS*/
         !Read 1st record
         if(myrank==0) then
           j=nf90_open(in_dir(1:len_in_dir)//'atmos.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_atmos)
@@ -307,10 +315,10 @@
           j=nf90_get_var(ncid_atmos,mm,rwild(3,:),(/1,ninv+1/),(/np_global,1/))
           if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prmsl(2)')
           if(ihconsv/=0) then
-            j=nf90_inq_varid(ncid_atmos, "downwardNetFlux",mm)
-            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc netflux')
+            j=nf90_inq_varid(ncid_atmos, "downwardLongWaveFlux",mm)
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc long flux')
             j=nf90_get_var(ncid_atmos,mm,rwild(4,:),(/1,ninv+1/),(/np_global,1/))
-            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc netflux(2)')
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc long flux(2)')
             j=nf90_inq_varid(ncid_atmos, "solar",mm)
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc solar')
             j=nf90_get_var(ncid_atmos,mm,rwild(5,:),(/1,ninv+1/),(/np_global,1/))
@@ -321,10 +329,10 @@
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prate')
             j=nf90_get_var(ncid_atmos,mm,rwild(6,:),(/1,ninv+1/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prate(2)')
-            j=nf90_inq_varid(ncid_atmos, "evap",mm)
-            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc evap')
+            j=nf90_inq_varid(ncid_atmos, "snow_rate",mm)
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc srate')
             j=nf90_get_var(ncid_atmos,mm,rwild(7,:),(/1,ninv+1/),(/np_global,1/))
-            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc evap(2)')
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc srate(2)')
           endif !isconsv/
         endif !myrank
         call mpi_bcast(rwild,7*np_global,MPI_REAL4,0,comm,istat)
@@ -336,12 +344,12 @@
             windy1(nd)=rwild(2,i)
             pr1(nd)=rwild(3,i)
             if(ihconsv/=0) then
-              sflux(nd)=rwild(4,i)
+              hradd(nd)=rwild(4,i)
               srad(nd)=rwild(5,i)
             endif !ihconsv/
             if(isconsv/=0) then
               fluxprc(nd)=rwild(6,i)
-              fluxevp(nd)=rwild(7,i)
+              prec_snow(nd)=rwild(7,i)
             endif !isconsv/
           endif
         enddo !i
@@ -368,24 +376,15 @@
             pr2(nd)=rwild(3,i)
           endif
         enddo !i
+#endif /*USE_ATMOS*/
       endif !nws=4
 
       if(nws==2) then
         ninv=time/wtiminc
         wtime1=real(ninv,rkind)*wtiminc 
         wtime2=real(ninv+1,rkind)*wtiminc 
-#ifndef USE_ATMOS
-          call get_wind(wtime1,windx1,windy1,pr1,airt1,shum1)
-          call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
-#else
-!         Init
-          windx1=0._rkind; windy1=0._rkind; windx2=0._rkind; windy2=0._rkind
-          pr1=real(1.e5,rkind); pr2=real(1.e5,rkind)
-          airt1=20._rkind; airt2=20._rkind
-          shum1=0._rkind; shum2=0._rkind
-#endif
-!        endif
-
+        call get_wind(wtime1,windx1,windy1,pr1,airt1,shum1)
+        call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
       endif !nws
 
 #ifdef USE_SIMPLE_WIND
@@ -956,13 +955,24 @@
 !...  Initialize heat budget model - this needs to be called after nodalvel as
 !     (uu2,vv2) are needed
 !     For USE_ATMOS, sflux etc are init'ed as 0 in _init
-      if(ihconsv/=0.and.nws==2) then
-        call surf_fluxes(wtime1,windx1,windy1,pr1,airt1,shum1, &
+      if(ihconsv/=0.and.(nws==2.or.nws==4)) then
+        if(nws==4) then !include USE_ATMOS
+          !surf_fluxes2 assumes all vars in sflu*.nc are available now
+          call surf_fluxes2 (wtime1,windx1,windy1,pr1,airt1,shum1, &
      &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
-     &                   fluxprc,fluxevp, prec_snow, &
+     &fluxprc,fluxevp, prec_snow, &
 #endif
-     &                   nws) 
+     &nws) 
+
+        else !nws=2
+          call surf_fluxes (wtime1,windx1,windy1,pr1,airt1,shum1, &
+     &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
+#ifdef PREC_EVAP
+     &fluxprc,fluxevp, prec_snow, &
+#endif
+     &nws) 
+        endif !nws
 !       fluxsu: the turbulent flux of sensible heat (upwelling) (W/m^2)
 !       fluxlu: the turbulent flux of latent heat (upwelling) (W/m^2)
 !       hradu: upwelling infrared (longwave) radiative fluxes at surface (W/m^2)
@@ -976,7 +986,6 @@
 !$OMP end parallel do
         if(myrank==0) write(16,*)'heat budge model completes...'
       endif !nws==2
-
 
       if(allocated(rwild)) deallocate(rwild)
       deallocate(swild)

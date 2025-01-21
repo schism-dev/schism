@@ -547,6 +547,183 @@
 
       return
       end !surf_fluxes
+
+!---------------------------------------------------------------------
+!     Alternative entry point to heat/salt exchange modules, assuming 
+!     all inputs in sflux*.nc are already read in or provided (e.g. by atmos model)
+!---------------------------------------------------------------------
+      subroutine surf_fluxes2 (time, u_air, v_air, p_air, &
+     &                   t_air, q_air, shortwave_d, &
+     &                   sen_flux, lat_flux, longwave_u, longwave_d, &
+     &                   tau_xz, tau_yz, &
+#ifdef PREC_EVAP
+     &                   precip_flux, evap_flux, prec_snow, &
+#endif
+     &                   nws) 
+
+        use schism_glbl, only : rkind, npa, uu2, vv2, tr_nd, & 
+     &                     idry, nvrt, ivcor,ipgl,fdb,lfdb
+        use schism_msgp, only : myrank,parallel_abort
+        implicit none
+
+! input/output variables
+        real(rkind), intent(in) :: time 
+        real(rkind), dimension(npa), intent(in) :: u_air,v_air,p_air,t_air,q_air,shortwave_d,longwave_d
+        real(rkind), dimension(npa), intent(out) :: sen_flux, lat_flux, longwave_u, tau_xz, tau_yz
+        integer, intent(in) :: nws
+#ifdef PREC_EVAP
+        real(rkind), dimension(npa), intent(in) :: precip_flux,prec_snow
+        real(rkind), dimension(npa), intent(out) :: evap_flux
+#endif
+        
+! local variables
+        integer num_nodes, i_node, sfc_lev,ne_global,np_global,itmp
+        logical dry
+        real(rkind), parameter :: t_freeze = 273.15d0
+        real(rkind), parameter :: stefan = 5.67d-8
+        real(rkind), parameter :: emissivity = 1.0d0
+        integer, parameter :: printit = 1000
+        character, parameter :: grid_file*50 = 'sflux.gr3'
+        real(rkind) :: x_tmp, y_tmp, sflux_frac
+        integer i_node_tmp
+        logical, save :: first_call = .true.
+
+! define the local variables num_nodes
+        num_nodes = npa
+
+#ifdef DEBUG
+        write(38,*)
+        write(38,*) 'enter surf_fluxes2'
+#endif
+
+! retrieve the downwelling radiative fluxes
+!        call get_rad (time, shortwave_d, longwave_d)
+!#ifdef PREC_EVAP
+!! retrieve the surface precipitation flux
+!        call get_precip_flux (time, precip_flux)
+!#ifdef USE_MICE
+!        call get_precsnow_flux (time, prec_snow)
+!#else
+!        prec_snow=0.d0 !not used
+!#endif
+!#endif
+
+! output info to debug file
+!#ifdef DEBUG
+!        write(38,*)
+!        write(38,*) 'surf_fluxes: time      = ', time
+!        write(38,*) 'first_call             = ', first_call
+!        write(38,*) 'num_nodes              = ', num_nodes
+!#endif
+
+! output debugging info
+        do i_node = 1, num_nodes !=npa
+
+! specify the surface level at this node (depends on coordinate system)
+!          if (ivcor .eq. -1) then         ! z
+!            sfc_lev = kfp(i_node)
+!          else                            ! sigma
+          sfc_lev = nvrt
+!          endif
+
+#ifdef DEBUG
+          if (mod(i_node-1,printit) .eq. 0) then
+            write(38,*)
+            write(38,*) 'i_node, sfc u, v, T = ', i_node, &
+     &                  uu2(sfc_lev,i_node), &
+     &                  vv2(sfc_lev,i_node), &
+     &                  tr_nd(1,sfc_lev,i_node)
+            write(38,*) 'u, v, p, T, q (air) = ', u_air(i_node), &
+     &                  v_air(i_node), p_air(i_node), t_air(i_node), &
+     &                  q_air(i_node)
+          endif
+#endif
+
+        enddo !i_node
+
+! calculate the turbulent fluxes at the nodes
+#ifdef DEBUG
+        write(38,*) 'above turb_fluxes'
+#endif
+
+#ifdef USE_BULK_FAIRALL
+        call FAIRALL(num_nodes, &
+     &                    u_air, v_air, p_air, t_air, q_air, &
+     &                    sen_flux, lat_flux, &
+#ifdef PREC_EVAP
+     &                    evap_flux, &
+#endif
+     &                    tau_xz, tau_yz)
+
+#else
+        !Zeng's 
+        call turb_fluxes (num_nodes, &
+     &                    u_air, v_air, p_air, t_air, q_air, &
+     &                    sen_flux, lat_flux, &
+#ifdef PREC_EVAP
+     &                    evap_flux, &
+#endif
+     &                    tau_xz, tau_yz)
+#endif /*USE_BULK_FAIRALL*/
+
+#ifdef DEBUG
+        write(38,*) 'below turb_fluxes'
+#endif
+
+! now calculate upwards longwave flux at the surface, using black-body
+! equation
+#ifdef DEBUG
+        write(38,*) 'calculating longwave_u'
+#endif
+
+!$OMP parallel do default(shared) private(i_node,sfc_lev)
+        do i_node = 1, num_nodes !npa
+          sfc_lev = nvrt
+          longwave_u(i_node) = emissivity * stefan * &
+     &( t_freeze + tr_nd(1,sfc_lev,i_node) ) ** 4.d0
+        enddo !i_node
+!$OMP end parallel do 
+
+#ifdef DEBUG
+        do i_node = 1, num_nodes
+          if (mod(i_node-1,printit) .eq. 0) then
+
+! define whether this node is dry or not (depends on coordinate system)
+            dry = idry(i_node) .eq. 1
+!     &          ( (ivcor .eq. -1) .and. (kfp(i_node)  .eq. -1) ) & ! z
+!     &        .or. &
+!     &          ( (ivcor .ne. -1) .and. (idry(i_node) .eq. 1) )   !sigma
+
+            if (.not. dry) then
+              write(38,*)
+              write(38,*) 'i_node = ', i_node
+              write(38,*) 'net_sfc_flux_d = ', &
+     &                     - sen_flux(i_node) - lat_flux(i_node) &
+     &                     - ( longwave_u(i_node) - longwave_d(i_node) )
+              write(38,*) 'shortwave_d = ', shortwave_d(i_node)
+              write(38,*) 'longwave_d, longwave_u = ', &
+     &                     longwave_d(i_node), longwave_u(i_node)
+              write(38,*) 'sen_flux, lat_flux = ', &
+     &                     sen_flux(i_node), lat_flux(i_node)
+#ifdef PREC_EVAP
+              write(38,*) 'precip_flux, evap_flux = ', &
+     &                     precip_flux(i_node), evap_flux(i_node)
+#endif
+            else
+              write(38,*)
+              write(38,*) 'i_node = ', i_node
+              write(38,*) 'dry!'
+            endif
+          endif !mod
+        enddo !i
+#endif /*DEBUG*/
+
+! set first_call to false, so subsequent calls will know that they're
+! not the first call
+        first_call = .false.
+
+      return
+      end !surf_fluxes
 !-----------------------------------------------------------------------
 !
 ! Calculate bulk aerodynamic surface fluxes over water using method of

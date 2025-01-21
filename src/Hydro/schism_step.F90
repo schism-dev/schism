@@ -529,8 +529,54 @@
 
 !$OMP end parallel
 
-      if(nws==4) then
+      if(nws==4) then !include USE_ATMOS
         if(time>wtime2) then
+!...      Heat budget & wind stresses
+          if(ihconsv/=0) then
+            !Assume all vars in sflux*.nc are available from atmos model or read in from atmos.nc,
+            !and this routine compute other fluxes
+            call surf_fluxes2 (wtime2,windx2,windy2,pr2,airt2, &
+     &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
+#ifdef PREC_EVAP
+     &fluxprc,fluxevp,prec_snow, &
+#endif
+     &nws) 
+
+!$OMP parallel do default(shared) private(i)
+            do i=1,npa
+              sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
+#ifdef USE_MICE
+              srad_o(i) = srad(i)
+              prec_rain(i)=fluxprc(i)-prec_snow(i)
+              if(prec_rain(i)<0.d0) then
+                prec_rain(i)=0.d0
+                prec_snow(i)=fluxprc(i)
+              endif
+#endif
+            enddo !i
+!$OMP end parallel do
+
+            !Turn off precip near land bnd
+            if(iprecip_off_bnd/=0) then
+!$OMP parallel do default(shared) private(i,j)
+              loop_prc2: do i=1,np
+                if(isbnd(1,i)==-1) then
+                  fluxprc(i)=0.d0; cycle loop_prc2
+                endif
+
+                do j=1,nnp(i)
+                  if(isbnd(1,indnd(j,i))==-1) then
+                    fluxprc(i)=0.d0; cycle loop_prc2
+                  endif
+                enddo !j
+              end do loop_prc2 !i=1,np
+!$OMP end parallel do
+              call exchange_p2d(fluxprc)
+            endif !iprecip_off_bnd
+
+            if(myrank==0) write(16,*)'heat budge model completes...'
+          endif !ihconsv.ne.0
+
           wtime1=wtime2
           wtime2=wtime2+wtiminc
           windx1=windx2
@@ -538,6 +584,7 @@
           pr1=pr2
 
           !Read in next record
+#ifndef USE_ATMOS
           itmp2=wtime2/wtiminc+1
           if(myrank==0) then
             j=nf90_inq_varid(ncid_atmos, "uwind",mm)
@@ -553,10 +600,10 @@
             j=nf90_get_var(ncid_atmos,mm,rwild6(3,:),(/1,itmp2/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl(2)')
             if(ihconsv/=0) then
-              j=nf90_inq_varid(ncid_atmos, "downwardNetFlux",mm)
-              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux')
+              j=nf90_inq_varid(ncid_atmos, "downwardLongWaveFlux",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc long flux')
               j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
-              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux(2)')
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc longflux(2)')
               j=nf90_inq_varid(ncid_atmos, "solar",mm)
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar')
               j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
@@ -567,10 +614,10 @@
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate')
               j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate(2)')
-              j=nf90_inq_varid(ncid_atmos, "evap",mm)
-              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap')
+              j=nf90_inq_varid(ncid_atmos, "snow_rate",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc srate')
               j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
-              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap(2)')
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc srate(2)')
             endif !isconsv/
           endif !myrank=0
           call mpi_bcast(rwild6,7*np_global,MPI_REAL4,0,comm,istat)
@@ -583,17 +630,32 @@
               pr2(nd)=rwild6(3,i)
 
               if(ihconsv/=0) then
-                sflux(nd)=rwild6(4,i)
+                hradd(nd)=rwild6(4,i)
                 srad(nd)=rwild6(5,i)
               endif !ihconsv/
               if(isconsv/=0) then
                 fluxprc(nd)=rwild6(6,i)
-                fluxevp(nd)=rwild6(7,i)
+                prec_snow(nd)=rwild6(7,i)
               endif !isconsv/
             endif !ipgl
           enddo !i
-        endif !time
+#endif /*USE_ATMOS*/
+        endif !time>wtime2
 
+#ifdef USE_ATMOS
+          !ESMF may not extend to ghosts
+          call exchange_p2d(windx2)
+          call exchange_p2d(windy2)
+          call exchange_p2d(pr2)
+          call exchange_p2d(airt2)
+          call exchange_p2d(shum2)
+          call exchange_p2d(srad)
+          call exchange_p2d(hradd)
+#ifdef PREC_EVAP
+          call exchange_p2d(precip_flux)
+          call exchange_p2d(prec_snow)
+#endif 
+#else /*USE_ATMOS*/
         wtratio=(time-wtime1)/wtiminc
 !$OMP parallel do default(shared) private(i)
         do i=1,npa
@@ -602,6 +664,9 @@
           pr(i)=pr1(i)+wtratio*(pr2(i)-pr1(i))
         enddo !i
 !$OMP end parallel do
+
+#endif /*USE_ATMOS*/
+
       endif !nws=4
 
 #ifdef USE_SIMPLE_WIND
@@ -636,14 +701,12 @@
         if(time>=wtime2) then
 !...      Heat budget & wind stresses
           if(ihconsv/=0) then
-#ifndef     USE_ATMOS
             call surf_fluxes(wtime2,windx2,windy2,pr2,airt2, &
      &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
-     &                       fluxprc,fluxevp,prec_snow, &
+     &fluxprc,fluxevp,prec_snow, &
 #endif
-     &                       nws ) 
-#endif /*USE_ATMOS*/
+     &nws) 
 
 !$OMP parallel do default(shared) private(i)
             do i=1,npa
@@ -656,11 +719,6 @@
                 prec_snow(i)=fluxprc(i)
               endif
 #endif
-
-!#ifdef IMPOSE_NET_FLUX
-!                sflux(i)=hradd(i) 
-!                !fluxprc is net P-E 
-!#endif
             enddo !i
 !$OMP end parallel do
 
@@ -697,14 +755,7 @@
           enddo
 !$OMP end parallel do
 
-#ifdef    USE_ATMOS
-          !ESMF may not extend to ghosts
-          call exchange_p2d(windx2)
-          call exchange_p2d(windy2)
-          call exchange_p2d(pr2)
-#else
           call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
-#endif
         endif !time>=wtime2
 
         wtratio=(time-wtime1)/wtiminc
@@ -847,7 +898,7 @@
         if(nws==0) then
           tau(1,i)=0.d0
           tau(2,i)=0.d0
-        else if(nws==2.and.ihconsv==1.and.iwind_form==0) then !tauxz and tauyz defined; USE_ATMOS not defined
+        else if(nws==2.and.ihconsv==1.and.iwind_form==0) then !tauxz and tauyz defined
           if(idry(i)==1) then
             tau(1,i)=0.d0
             tau(2,i)=0.d0
@@ -1751,20 +1802,12 @@
       endif !if_source/=0
 
 !...  Volume sources from evap and precip
-!...  For USE_ATMOS, needs evap from atmos model 
       if(isconsv/=0) then
-!#ifdef  IMPOSE_NET_FLUX
-!          do i=1,nea
-!            precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
-!            vsource(i)=vsource(i)+precip/rho0*area(i) !m^3/s
-!          enddo !i 
-!#else
         do i=1,nea
           evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
           precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
           vsource(i)=vsource(i)+(precip-evap)/rho0*area(i) !m^3/s
         enddo !i
-!#endif /*IMPOSE_NET_FLUX*/
       endif !isconsv/=0
 
 !...  Zero out net sink @dry elem

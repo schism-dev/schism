@@ -754,8 +754,8 @@
 #endif
 
 #ifdef USE_ATMOS
-      if(nws/=2) call parallel_abort('INIT: USE_ATMOS must use nws=2')
-      if(iwind_form==0) call parallel_abort('INIT: USE_ATMOS must not have iwind_form==0')
+      if(nws/=4) call parallel_abort('INIT: USE_ATMOS must use nws=4')
+!      if(iwind_form==0) call parallel_abort('INIT: USE_ATMOS must not have iwind_form==0')
 #endif
 
       if(ihconsv/=0) then
