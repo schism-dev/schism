@@ -307,62 +307,6 @@ program schism_driver_test
     status = m%get_end_time(end_time)
 
 
-
-  !---------------------------------------------------------------------
-  ! SCHISM debugging of internal variables, ignore for now 
-  !---------------------------------------------------------------------
-
-    !print*, "np_global"
-    !print*, np_global
-    !print*, "np"
-    !print*, np
-    !print*, "npa"
-    !print*, npa
-    !print*, "npg"
-    !print*, npg
-    !print*, "size of eta2"
-    !print*, size(eta2)
-    !print*, "size of uu2"
-    !print*, size(uu2)
-    !print*, "uu2 for vertical layer"
-    !print*, uu2(1,100)
-    !print*, uu2(2,100)
-    !print*, "vv2 for vertical layer"
-    !print*, vv2(1,500)
-    !print*, vv2(2,500)
-    !print*, "size of met variables pr2, airt2, shum2, windx2"
-    !print*, size(pr2)
-    !print*, size(airt2)
-    !print*, size(shum2)
-    !print*, size(windx2)
-    !print*, "neta_global"
-    !print*, neta_global
-    !print*, "neta"
-    !print*, neta
-    !print*, "nthfiles 2 and 3"
-    !print*, nthfiles2
-    !print*, nthfiles3
-    !print*, "nsources"
-    !print*, nsources
-    !print*, "ntracers"
-    !print*, ntracers
-    !print*, "nvrt"
-    !print*, nvrt
-    !print*, "iond global shape"
-    !print*, shape(iond_global)
-    !print*, "ath2 open bnd shape"
-    !print*, size(ath2(1,1,:,1,1))
-    !print*, "ath3 diff"
-    !print*, ath3(10,1,1,1)
-    !print*, ath3(10,1,2,1)
-    !print*, "ath2 diff"
-    !print*, ath2(1,1,10,1,1)
-    !print*, ath2(1,1,10,2,1)
-    !print*, "iond global shape 1"
-    !print*, iond_global(1,:)
-    !print*, "iond global shape 2"
-    !print*, iond_global(2,:)
-
   !---------------------------------------------------------------------
   ! Test the get/set_value functionality with BMI
   ! and update the following timestep one more time
@@ -471,75 +415,6 @@ program schism_driver_test
       status = m%update()                       ! run the model one time step
       status = m%get_current_time(current_time) ! update current_time
     end do
-    !---------------------------------------------------------------------
-    ! Run some time steps with the update_until function
-    !---------------------------------------------------------------------
-    !time_until = 3600.0
-    !status = m%update_until(time_until)
-
-
-  !---------------------------------------------------------------------
-  ! Test the get_value_ptr functionality with BMI
-  !---------------------------------------------------------------------
-  !  var_value_get_ptr => var_value_get
-  !  ! test the get value pointer  functions
-  !  ! Loop through the input vars
-  !  do iBMI = 1, n_inputs
-  !    status = m%get_value_ptr(trim(names_inputs(iBMI)), var_value_get_ptr)
-  !    if ( status .eq. BMI_FAILURE ) then
-  !      print*, trim(names_inputs(iBMI)), " from get_value_ptr returned BMI_FAILURE --- test passed" 
-  !    else
-  !      print*, trim(names_inputs(iBMI)), " from get_value_ptr returned ", status, " TEST FAILED!" 
-  !    end if
-  !  end do
-
-  !  ! Loop through the output vars
-  !  do iBMI = 1, n_outputs
-  !    status = m%get_value_ptr(trim(names_outputs(iBMI)), var_value_get_ptr)
-  !    if ( status .eq. BMI_FAILURE ) then
-  !      print*, trim(names_outputs(iBMI)), " from get_value_ptr returned BMI_FAILURE --- test passed" 
-  !    else
-  !      print*, trim(names_outputs(iBMI)), " from get_value_ptr returned ", status, " TEST FAILED!" 
-  !    end if
-  !  end do
-
-  !---------------------------------------------------------------------
-  ! Test the get_value_at_indices functionality with BMI
-  !---------------------------------------------------------------------
-  !  ! Loop through the input vars
-  !  do iBMI = 1, n_inputs
-  !    status = m%get_value_at_indices(trim(names_inputs(iBMI)), var_value_get, grid_indices)
-  !    if ( status .eq. BMI_FAILURE ) then
-  !      print*, trim(names_inputs(iBMI)), " from get_value_at_indices returned BMI_FAILURE --- test passed" 
-  !    else
-  !      print*, trim(names_inputs(iBMI)), " from get_value_at_indices returned ", status, " TEST FAILED!" 
-  !    end if
-  !    status = m%set_value_at_indices(trim(names_inputs(iBMI)), grid_indices, var_value_set)
-  !    if ( status .eq. BMI_FAILURE ) then
-  !      print*, trim(names_inputs(iBMI)), " from set_value_at_indices returned BMI_FAILURE --- test passed" 
-  !    else
-  !      print*, trim(names_inputs(iBMI)), " from set_value_at_indices returned ", status, " TEST FAILED!" 
-  !    end if
-  !  end do
-  !  
-  !  ! Loop through the output vars
-  !  do iBMI = 1, n_outputs
-  !    status = m%get_value_at_indices(trim(names_outputs(iBMI)), var_value_get, grid_indices)
-  !    if ( status .eq. BMI_FAILURE ) then
-  !      print*, trim(names_outputs(iBMI)), " from get_value_at_indices returned BMI_FAILURE --- test passed" 
-  !    else
-  !      print*, trim(names_outputs(iBMI)), " from get_value_at_indices returned ", status, " TEST FAILED!" 
-  !    end if
-  !    status = m%set_value_at_indices(trim(names_outputs(iBMI)), grid_indices, var_value_set)
-  !    if ( status .eq. BMI_FAILURE ) then
-  !      print*, trim(names_outputs(iBMI)), " from set_value_at_indices returned BMI_FAILURE --- test passed" 
-  !    else
-  !      print*, trim(names_outputs(iBMI)), " from set_value_at_indices returned ", status, " TEST FAILED!" 
-  !    end if
-  !  end do
-  !
-    !nullify( var_value_get_ptr )
-    !deallocate(var_value_set)
 
   !---------------------------------------------------------------------
   ! Test the grid info functionality with BMI
