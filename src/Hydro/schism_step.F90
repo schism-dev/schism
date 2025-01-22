@@ -341,7 +341,7 @@
       endif 
 
       if(nws==4) then
-        allocate(rwild6(7,np_global),stat=istat)
+        allocate(rwild6(9,np_global),stat=istat)
         if(istat/=0) call parallel_abort('MAIN: failed to alloc. (71)')
       endif !nws=4
 
@@ -599,28 +599,37 @@
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl')
             j=nf90_get_var(ncid_atmos,mm,rwild6(3,:),(/1,itmp2/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl(2)')
+            j=nf90_inq_varid(ncid_atmos, "stmp",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc stmp')
+            j=nf90_get_var(ncid_atmos,mm,rwild(4,:),(/1,ninv+1/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc stmp(2)')
+            j=nf90_inq_varid(ncid_atmos, "spfh",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc spfh')
+            j=nf90_get_var(ncid_atmos,mm,rwild(5,:),(/1,ninv+1/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc spfh(2)')
+
             if(ihconsv/=0) then
               j=nf90_inq_varid(ncid_atmos, "downwardLongWaveFlux",mm)
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc long flux')
-              j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
+              j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc longflux(2)')
               j=nf90_inq_varid(ncid_atmos, "solar",mm)
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar')
-              j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
+              j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar(2)')
             endif !ihconsv/
             if(isconsv/=0) then
               j=nf90_inq_varid(ncid_atmos, "prate",mm)
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate')
-              j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
+              j=nf90_get_var(ncid_atmos,mm,rwild6(8,:),(/1,itmp2/),(/np_global,1/))
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate(2)')
               j=nf90_inq_varid(ncid_atmos, "snow_rate",mm)
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc srate')
-              j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
+              j=nf90_get_var(ncid_atmos,mm,rwild6(9,:),(/1,itmp2/),(/np_global,1/))
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc srate(2)')
             endif !isconsv/
           endif !myrank=0
-          call mpi_bcast(rwild6,7*np_global,MPI_REAL4,0,comm,istat)
+          call mpi_bcast(rwild6,9*np_global,MPI_REAL4,0,comm,istat)
 
           do i=1,np_global
             if(ipgl(i)%rank==myrank) then
@@ -628,14 +637,16 @@
               windx2(nd)=rwild6(1,i)
               windy2(nd)=rwild6(2,i)
               pr2(nd)=rwild6(3,i)
+              airt2(nd)=rwild6(4,i)
+              shum2(nd)=rwild6(5,i)
 
               if(ihconsv/=0) then
-                hradd(nd)=rwild6(4,i)
-                srad(nd)=rwild6(5,i)
+                hradd(nd)=rwild6(6,i)
+                srad(nd)=rwild6(7,i)
               endif !ihconsv/
               if(isconsv/=0) then
-                fluxprc(nd)=rwild6(6,i)
-                prec_snow(nd)=rwild6(7,i)
+                fluxprc(nd)=rwild6(8,i)
+                prec_snow(nd)=rwild6(9,i)
               endif !isconsv/
             endif !ipgl
           enddo !i

@@ -110,7 +110,7 @@
       allocate(swild(nsa+nvrt+12+ntracers),stat=istat)
       if(istat/=0) call parallel_abort('MISC: swild')
       if(nws==4) then
-        allocate(rwild(7,np_global),stat=istat)
+        allocate(rwild(9,np_global),stat=istat)
         if(istat/=0) call parallel_abort('MISC: failed to alloc. (71)')
       endif !nws=4
 
@@ -314,28 +314,36 @@
           if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prmsl')
           j=nf90_get_var(ncid_atmos,mm,rwild(3,:),(/1,ninv+1/),(/np_global,1/))
           if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prmsl(2)')
+          j=nf90_inq_varid(ncid_atmos, "stmp",mm)
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc stmp')
+          j=nf90_get_var(ncid_atmos,mm,rwild(4,:),(/1,ninv+1/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc stmp(2)')
+          j=nf90_inq_varid(ncid_atmos, "spfh",mm)
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc spfh')
+          j=nf90_get_var(ncid_atmos,mm,rwild(5,:),(/1,ninv+1/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc spfh(2)')
           if(ihconsv/=0) then
             j=nf90_inq_varid(ncid_atmos, "downwardLongWaveFlux",mm)
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc long flux')
-            j=nf90_get_var(ncid_atmos,mm,rwild(4,:),(/1,ninv+1/),(/np_global,1/))
+            j=nf90_get_var(ncid_atmos,mm,rwild(6,:),(/1,ninv+1/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc long flux(2)')
             j=nf90_inq_varid(ncid_atmos, "solar",mm)
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc solar')
-            j=nf90_get_var(ncid_atmos,mm,rwild(5,:),(/1,ninv+1/),(/np_global,1/))
+            j=nf90_get_var(ncid_atmos,mm,rwild(7,:),(/1,ninv+1/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc solar(2)')
           endif !'ihconsv/
           if(isconsv/=0) then
             j=nf90_inq_varid(ncid_atmos, "prate",mm)
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prate')
-            j=nf90_get_var(ncid_atmos,mm,rwild(6,:),(/1,ninv+1/),(/np_global,1/))
+            j=nf90_get_var(ncid_atmos,mm,rwild(8,:),(/1,ninv+1/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prate(2)')
             j=nf90_inq_varid(ncid_atmos, "snow_rate",mm)
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc srate')
-            j=nf90_get_var(ncid_atmos,mm,rwild(7,:),(/1,ninv+1/),(/np_global,1/))
+            j=nf90_get_var(ncid_atmos,mm,rwild(9,:),(/1,ninv+1/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc srate(2)')
           endif !isconsv/
         endif !myrank
-        call mpi_bcast(rwild,7*np_global,MPI_REAL4,0,comm,istat)
+        call mpi_bcast(rwild,9*np_global,MPI_REAL4,0,comm,istat)
 
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
@@ -343,13 +351,15 @@
             windx1(nd)=rwild(1,i)
             windy1(nd)=rwild(2,i)
             pr1(nd)=rwild(3,i)
+            airt1(nd)=rwild(4,i)
+            shum1(nd)=rwild(5,i)
             if(ihconsv/=0) then
-              hradd(nd)=rwild(4,i)
-              srad(nd)=rwild(5,i)
+              hradd(nd)=rwild(6,i)
+              srad(nd)=rwild(7,i)
             endif !ihconsv/
             if(isconsv/=0) then
-              fluxprc(nd)=rwild(6,i)
-              prec_snow(nd)=rwild(7,i)
+              fluxprc(nd)=rwild(8,i)
+              prec_snow(nd)=rwild(9,i)
             endif !isconsv/
           endif
         enddo !i
@@ -365,8 +375,14 @@
           j=nf90_inq_varid(ncid_atmos, "prmsl",mm)
           j=nf90_get_var(ncid_atmos,mm,rwild(3,:),(/1,ninv+2/),(/np_global,1/))
           if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prmsl(3)')
+          j=nf90_inq_varid(ncid_atmos, "stmp",mm)
+          j=nf90_get_var(ncid_atmos,mm,rwild(4,:),(/1,ninv+1/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc stmp(3)')
+          j=nf90_inq_varid(ncid_atmos, "spfh",mm)
+          j=nf90_get_var(ncid_atmos,mm,rwild(5,:),(/1,ninv+1/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc spfh(3)')
         endif !'myrank
-        call mpi_bcast(rwild,7*np_global,MPI_REAL4,0,comm,istat)
+        call mpi_bcast(rwild,9*np_global,MPI_REAL4,0,comm,istat)
 
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
@@ -374,6 +390,8 @@
             windx2(nd)=rwild(1,i)
             windy2(nd)=rwild(2,i)
             pr2(nd)=rwild(3,i)
+            airt2(nd)=rwild(4,i)
+            shum2(nd)=rwild(5,i)
           endif
         enddo !i
 #endif /*USE_ATMOS*/
