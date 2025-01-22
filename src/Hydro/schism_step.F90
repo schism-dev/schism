@@ -601,11 +601,11 @@
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl(2)')
             j=nf90_inq_varid(ncid_atmos, "stmp",mm)
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc stmp')
-            j=nf90_get_var(ncid_atmos,mm,rwild(4,:),(/1,ninv+1/),(/np_global,1/))
+            j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc stmp(2)')
             j=nf90_inq_varid(ncid_atmos, "spfh",mm)
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc spfh')
-            j=nf90_get_var(ncid_atmos,mm,rwild(5,:),(/1,ninv+1/),(/np_global,1/))
+            j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc spfh(2)')
 
             if(ihconsv/=0) then
