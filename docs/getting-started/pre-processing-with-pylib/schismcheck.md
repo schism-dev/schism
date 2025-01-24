@@ -1,4 +1,5 @@
 * one can find the location of `schismcheck` by executing the following code. Then, running it in your schism run directory <br>
+`python -c "from pylib import *; print(path_scripts+'/schismcheck')"`. For ealier pylibs versions, use <br>
 `python -c "from pylib import *; print(mylib.__file__[:-16]+'Scripts/schismcheck')"`
 
 * `schismcheck` is still under development/testing mode (please report bugs either on SCHISM maillist or to wzhengui@gmail.com), but it is now able to view most of SCHISM inputs in different ways. It is a good way of sanity check for your model inputs. So far, 5 types of inputs are supported (see figures below). 
