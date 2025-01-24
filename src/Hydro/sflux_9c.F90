@@ -67,6 +67,7 @@
 !	get_rad          (called from within surf_fluxes)
 !	get_precip_flux  (called from within surf_fluxes - IF ENABLED)
 !	surf_fluxes      (called from within SCHISM)
+!	surf_fluxes2      (alternative form called from within SCHISM)
 !
 ! In addition, there are a number of secondary routines and functions
 ! that are called by those listed above. For a complete list see below
@@ -266,6 +267,7 @@
 !
 ! List of all routines in this file:
 !   surf_fluxes
+!   surf_fluxes2
 !   turb_fluxes:  Calculate bulk aerodynamic surface fluxes over water using method of
 !                 Zeng et al or Fairall (computes the bulk parameterization of surface wind stress and
 !                 surface net heat fluxes using method of Fairall et al.

@@ -599,7 +599,8 @@
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl')
             j=nf90_get_var(ncid_atmos,mm,rwild6(3,:),(/1,itmp2/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl(2)')
-            j=nf90_inq_varid(ncid_atmos, "stmp",mm)
+            !air T in centigrade not Kelvin
+            j=nf90_inq_varid(ncid_atmos, "stmp_in_centigrade",mm)
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc stmp')
             j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc stmp(2)')
@@ -658,7 +659,7 @@
           call exchange_p2d(windx2)
           call exchange_p2d(windy2)
           call exchange_p2d(pr2)
-          call exchange_p2d(airt2)
+          call exchange_p2d(airt2) !centigrade
           call exchange_p2d(shum2)
           call exchange_p2d(srad)
           call exchange_p2d(hradd)
