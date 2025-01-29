@@ -9309,14 +9309,55 @@
 #endif
 
 #if defined USE_WW3
-        ! Eastward wave radiation stress
-        call writeout_nc(id_out_ww3(1),'rsxx',1,1,npa,rsxx)
+        if (RADFLAG == 'VOR') then
+           ! Significant wave height
+           call writeout_nc(id_out_ww3(1),'hs',1,1,npa,wave_hs)
 
-        ! Eastward northward wave radiation stress
-        call writeout_nc(id_out_ww3(2),'rsxy',1,1,npa,rsxy)
+           ! Mean wave direction
+           call writeout_nc(id_out_ww3(2),'dir',1,1,npa,wave_dir)
 
-        ! Northward wave radiation stress
-        call writeout_nc(id_out_ww3(3),'rsyy',1,1,npa,rsyy)
+           ! Mean wave period
+           call writeout_nc(id_out_ww3(3),'tm1',1,1,npa,wave_tm1)
+
+           ! Mean wave number
+           call writeout_nc(id_out_ww3(4),'wnm',1,1,npa,wave_wnm)
+
+           ! Wave-induced Bernoulli head pressure
+           call writeout_nc(id_out_ww3(5),'bhd',1,1,npa,wave_pres)
+
+           ! Stokes drift, x component
+           call writeout_nc(id_out_ww3(6),'ussx',1,1,npa,wave_stokes_x)
+
+           ! Stokes drift, y component
+           call writeout_nc(id_out_ww3(7),'ussy',1,1,npa,wave_stokes_y)
+
+           ! Wave-ocean mom flux, x component
+           call writeout_nc(id_out_ww3(8),'twox',1,1,npa,wave_ocean_flux_x)
+
+           ! Wave-ocean mom flux, y component
+           call writeout_nc(id_out_ww3(9),'twoy',1,1,npa,wave_ocean_flux_y)
+
+           ! Momentum flux due to bottom friction, x component
+           call writeout_nc(id_out_ww3(10),'tbbx',1,1,npa,wave_flux_friction_x)
+
+           ! Momentum flux due to bottom friction, x component
+           call writeout_nc(id_out_ww3(11),'tbby',1,1,npa,wave_flux_friction_y)
+
+           ! Near bed orbital vel, x component
+           call writeout_nc(id_out_ww3(12),'ubrx',1,1,npa,wave_orbu)
+
+           ! Near bed orbital vel, y component
+           call writeout_nc(id_out_ww3(13),'ubry',1,1,npa,wave_orbv)
+        else
+           ! Eastward wave radiation stress
+           call writeout_nc(id_out_ww3(1),'rsxx',1,1,npa,rsxx)
+
+           ! Eastward northward wave radiation stress
+           call writeout_nc(id_out_ww3(2),'rsxy',1,1,npa,rsxy)
+
+           ! Northward wave radiation stress
+           call writeout_nc(id_out_ww3(3),'rsyy',1,1,npa,rsyy)
+        end if
 #endif
 
 #ifdef USE_MARSH
