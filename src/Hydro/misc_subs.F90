@@ -6473,7 +6473,6 @@
 !     /sciclone/home/yinglong/git/CoastalApp/WW3/model/ftn/w3oacpmd.ftn
 !     (search /OASOCM)
 !=========================================================================
-#ifdef USE_WW3
 !     Grab necessary arrays from WW3 and save into SCHISM arrays and compute wave forces
       SUBROUTINE get_WW3_arrays(WW3__OHS,WW3__DIR,WW3_T0M1,WW3__WNM,WW3__BHD,WW3_USSX,WW3_USSY, &
      &WW3_TWOX,WW3_TWOY,WW3_TBBX,WW3_TBBY,WW3_UBRX,WW3_UBRY)
@@ -7052,4 +7051,3 @@
         CALL exchange_s3d_2(wwave_force)
 
       END SUBROUTINE COMPUTE_STREAMING_VF_TERMS_SCHISM
-#endif /*USE_WW3*/
