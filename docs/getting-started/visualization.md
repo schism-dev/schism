@@ -9,6 +9,7 @@ pylib provides `schismview` to visualize outputs (scribed outputs, OLDIO not sup
 ### **[Installation of pylib](./pre-processing-with-pylib/installation.md)**
 
 By running the following code, you can locate the executable of `schismview` <br>
+`python -c "from pylib import *; print(path_scripts+'/schismview')"`. For ealier pylibs versions, use <br>
 `python -c "from pylib import *; print(mylib.__file__[:-16]+'Scripts/schismview')"`
 
 ### **How to use `schismview`**

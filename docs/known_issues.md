@@ -4,14 +4,14 @@ injection places; (3) baroclinic model. The main symptom is that the freshwater 
  injection points and does not flow out as expected.
  
  The reason is that insufficient number of vertical layers cannot properly set up an exchange flow (that 
-requires stratification), and as a result, the fresh/salt water interface oscillates instead of tilting as expects.
+requires stratification), and as a result, the fresh/salt water interface oscillates instead of tilting as expected.
 Some work-arounds are:
 
 1. Change to open boundary condition approach
 2. Better salinity initial condition. If the salt intrusion should never reach the injection place, create
    a freswater zone near the injection in the I.C.
-3. Use more vertical layers near injection (one way to do this is to deepen the local depths to allow more layers)
-4. Nudge (inu_SAL=1 or 2) strongly in a region near injection
+3. Use more vertical layers near injection (one way to do this is to deepen the local depths to allow for more layers)
+4. Nudge (inu_tr(2)=1 or 2) strongly in a region near injection
 
 ## Numerical dispersion with WENO
 
@@ -26,6 +26,8 @@ Figure [1](#figure_weno1) shows the result of disperion symptom from WENO, in th
  regions of Chesapeake Bay. Higher-order WENO, 1st-order upwind and ELM solvers are applied in adjacent
  elements in close proximity in those upriver regions
  (note that `h_tvd`=5m in this case). Making those upriver elements upwind via `tvd.prop` resolves this issue; cf. Fig. [2](#figure_weno2).
+
+There are scripts in Utility/ that can be used to create appropriate `tvd.prop` for cross-scale applications.
 
  <figure markdown id='figure_weno1'>
 <img alt="WENO1" src="assets/hi_SSS_CB_RUN13t3.png"  width="500" height="500" /> 

@@ -98,7 +98,8 @@
 
       real(rkind), intent(in) :: time
 
-      integer :: it_now,it,i,j,k,m,mm,ntr_l,ninv,nd,itmp,itmp1,itmp2,ntmp,istat,ip,icount,n1,n2,kl
+      integer :: it_now,it,i,j,k,m,mm,ntr_l,ninv,nd,itmp,itmp1,itmp2,ntmp, &
+                 &istat,ip,icount,n1,n2,kl,nwild(2)
       real :: floatout 
       real(rkind) :: tmp,wx1,wx2,wy1,wy2,wtratio,ttt,dep,eqstate
       character(len=48) :: inputfile
@@ -106,10 +107,10 @@
       real(4), allocatable :: swild9(:,:) !used in tracer nudging
       real(4), allocatable :: rwild(:,:) !used in nws=4
 
-      allocate(swild9(nvrt,mnu_pts),swild(nsa+nvrt+12+ntracers),stat=istat)
-      if(istat/=0) call parallel_abort('MISC: swild9')
+      allocate(swild(nsa+nvrt+12+ntracers),stat=istat)
+      if(istat/=0) call parallel_abort('MISC: swild')
       if(nws==4) then
-        allocate(rwild(7,np_global),stat=istat)
+        allocate(rwild(9,np_global),stat=istat)
         if(istat/=0) call parallel_abort('MISC: failed to alloc. (71)')
       endif !nws=4
 
@@ -284,6 +285,14 @@
         wtime1=ninv*wtiminc
         wtime2=(ninv+1)*wtiminc
 
+#ifdef USE_ATMOS
+!         Init
+          windx1=0._rkind; windy1=0._rkind; windx2=0._rkind; windy2=0._rkind
+          pr1=real(1.e5,rkind); pr2=real(1.e5,rkind)
+          airt1=20._rkind; airt2=20._rkind
+          shum1=0._rkind; shum2=0._rkind
+
+#else /*USE_ATMOS*/
         !Read 1st record
         if(myrank==0) then
           j=nf90_open(in_dir(1:len_in_dir)//'atmos.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_atmos)
@@ -305,28 +314,36 @@
           if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prmsl')
           j=nf90_get_var(ncid_atmos,mm,rwild(3,:),(/1,ninv+1/),(/np_global,1/))
           if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prmsl(2)')
+          j=nf90_inq_varid(ncid_atmos, "stmp_in_centigrade",mm)
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc stmp')
+          j=nf90_get_var(ncid_atmos,mm,rwild(4,:),(/1,ninv+1/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc stmp(2)')
+          j=nf90_inq_varid(ncid_atmos, "spfh",mm)
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc spfh')
+          j=nf90_get_var(ncid_atmos,mm,rwild(5,:),(/1,ninv+1/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc spfh(2)')
           if(ihconsv/=0) then
-            j=nf90_inq_varid(ncid_atmos, "downwardNetFlux",mm)
-            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc netflux')
-            j=nf90_get_var(ncid_atmos,mm,rwild(4,:),(/1,ninv+1/),(/np_global,1/))
-            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc netflux(2)')
+            j=nf90_inq_varid(ncid_atmos, "downwardLongWaveFlux",mm)
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc long flux')
+            j=nf90_get_var(ncid_atmos,mm,rwild(6,:),(/1,ninv+1/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc long flux(2)')
             j=nf90_inq_varid(ncid_atmos, "solar",mm)
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc solar')
-            j=nf90_get_var(ncid_atmos,mm,rwild(5,:),(/1,ninv+1/),(/np_global,1/))
+            j=nf90_get_var(ncid_atmos,mm,rwild(7,:),(/1,ninv+1/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc solar(2)')
           endif !'ihconsv/
           if(isconsv/=0) then
             j=nf90_inq_varid(ncid_atmos, "prate",mm)
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prate')
-            j=nf90_get_var(ncid_atmos,mm,rwild(6,:),(/1,ninv+1/),(/np_global,1/))
+            j=nf90_get_var(ncid_atmos,mm,rwild(8,:),(/1,ninv+1/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prate(2)')
-            j=nf90_inq_varid(ncid_atmos, "evap",mm)
-            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc evap')
-            j=nf90_get_var(ncid_atmos,mm,rwild(7,:),(/1,ninv+1/),(/np_global,1/))
-            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc evap(2)')
+            j=nf90_inq_varid(ncid_atmos, "snow_rate",mm)
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc srate')
+            j=nf90_get_var(ncid_atmos,mm,rwild(9,:),(/1,ninv+1/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc srate(2)')
           endif !isconsv/
         endif !myrank
-        call mpi_bcast(rwild,7*np_global,MPI_REAL4,0,comm,istat)
+        call mpi_bcast(rwild,9*np_global,MPI_REAL4,0,comm,istat)
 
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
@@ -334,13 +351,15 @@
             windx1(nd)=rwild(1,i)
             windy1(nd)=rwild(2,i)
             pr1(nd)=rwild(3,i)
+            airt1(nd)=rwild(4,i)
+            shum1(nd)=rwild(5,i)
             if(ihconsv/=0) then
-              sflux(nd)=rwild(4,i)
-              srad(nd)=rwild(5,i)
+              hradd(nd)=rwild(6,i)
+              srad(nd)=rwild(7,i)
             endif !ihconsv/
             if(isconsv/=0) then
-              fluxprc(nd)=rwild(6,i)
-              fluxevp(nd)=rwild(7,i)
+              fluxprc(nd)=rwild(8,i)
+              prec_snow(nd)=rwild(9,i)
             endif !isconsv/
           endif
         enddo !i
@@ -356,8 +375,14 @@
           j=nf90_inq_varid(ncid_atmos, "prmsl",mm)
           j=nf90_get_var(ncid_atmos,mm,rwild(3,:),(/1,ninv+2/),(/np_global,1/))
           if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc prmsl(3)')
+          j=nf90_inq_varid(ncid_atmos, "stmp_in_centigrade",mm)
+          j=nf90_get_var(ncid_atmos,mm,rwild(4,:),(/1,ninv+1/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc stmp(3)')
+          j=nf90_inq_varid(ncid_atmos, "spfh",mm)
+          j=nf90_get_var(ncid_atmos,mm,rwild(5,:),(/1,ninv+1/),(/np_global,1/))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc spfh(3)')
         endif !'myrank
-        call mpi_bcast(rwild,7*np_global,MPI_REAL4,0,comm,istat)
+        call mpi_bcast(rwild,9*np_global,MPI_REAL4,0,comm,istat)
 
         do i=1,np_global
           if(ipgl(i)%rank==myrank) then
@@ -365,26 +390,19 @@
             windx2(nd)=rwild(1,i)
             windy2(nd)=rwild(2,i)
             pr2(nd)=rwild(3,i)
+            airt2(nd)=rwild(4,i)
+            shum2(nd)=rwild(5,i)
           endif
         enddo !i
+#endif /*USE_ATMOS*/
       endif !nws=4
 
       if(nws==2) then
         ninv=time/wtiminc
         wtime1=real(ninv,rkind)*wtiminc 
         wtime2=real(ninv+1,rkind)*wtiminc 
-#ifndef USE_ATMOS
-          call get_wind(wtime1,windx1,windy1,pr1,airt1,shum1)
-          call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
-#else
-!         Init
-          windx1=0._rkind; windy1=0._rkind; windx2=0._rkind; windy2=0._rkind
-          pr1=real(1.e5,rkind); pr2=real(1.e5,rkind)
-          airt1=20._rkind; airt2=20._rkind
-          shum1=0._rkind; shum2=0._rkind
-#endif
-!        endif
-
+        call get_wind(wtime1,windx1,windy1,pr1,airt1,shum1)
+        call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
       endif !nws
 
 #ifdef USE_SIMPLE_WIND
@@ -419,6 +437,9 @@
 #endif      
 
 !...  Nudging 
+      allocate(swild9(nvrt,mnu_pts),stat=istat)
+      if(istat/=0) call parallel_abort('MISC: swild9')
+
       !Shared variables for inu_tr=2 (not used if none of inu_tr=2)
       ntmp=time/step_nu_tr+1
       time_nu_tr=real(ntmp,rkind)*step_nu_tr !points to next time pt
@@ -477,6 +498,56 @@
           enddo !m
         endif !inu_tr(k)
       enddo !k
+      deallocate(swild9)
+
+!...  Surface TS restore
+      if(iref_ts/=0) then
+        allocate(swild9(np_global,1),stat=istat)
+        if(istat/=0) call parallel_abort('MISC: swild9(2)')
+
+        !Shared variables
+        ntmp=time/ref_ts_dt/86400.d0+1 !next time record
+        time_ref_ts=real(ntmp,rkind)*ref_ts_dt*86400.d0 ![sec]; points to next time pt
+        ref_ts1=-9999.; ref_ts2=-9999. !init
+
+        if(myrank==0) then
+          j=nf90_inq_varid(ncid_ref_ts, "reference_sst",nwild(1))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: ref SST')
+          j=nf90_inq_varid(ncid_ref_ts, "reference_sss",nwild(2))
+          if(j/=NF90_NOERR) call parallel_abort('MISC: ref SSS')
+        endif 
+
+        do m=1,2 !T,S
+          swild9=-9999.
+          if(myrank==0) then
+            j=nf90_get_var(ncid_ref_ts,nwild(m),swild9(1:np_global,1), &
+     &(/1,ntmp/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('MISC: surface relax (2)')
+          endif !myrank
+          call mpi_bcast(swild9,np_global,mpi_real,0,comm,istat)
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+              ip=ipgl(i)%id
+              ref_ts1(ip,m)=swild9(i,1)
+            endif 
+          enddo !i
+
+          swild9=-9999.
+          if(myrank==0) then
+            j=nf90_get_var(ncid_ref_ts,nwild(m),swild9(1:np_global,1), &
+     &(/1,ntmp+1/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('MISC: surface relax(2.2)')
+          endif !myrank
+          call mpi_bcast(swild9,np_global,mpi_real,0,comm,istat)
+          do i=1,np_global
+            if(ipgl(i)%rank==myrank) then
+              ip=ipgl(i)%id
+              ref_ts2(ip,m)=swild9(i,1)
+            endif
+          enddo !i
+        enddo !m: T,S
+        deallocate(swild9)
+      endif !iref_ts/=0
 
 !     The following to init th_dt*, th_time* and ath* is only done by
 !     rank 0, not bcast'ed, b/c in _step we'll continue the reading
@@ -666,8 +737,13 @@
 
       ath3(:,1,1,1:2)=0.d0
       ath3(:,1,1,3)=-9999.d0
-#else
+#else /*USE_NWM_BMI*/
+
+#ifdef SH_MEM_COMM
+      if(if_source==1.and.myrank_node==0) then !ASCII
+#else 
       if(if_source==1.and.myrank==0) then !ASCII
+#endif
         if(nsources>0) then
           open(63,file=in_dir(1:len_in_dir)//'vsource.th',status='old') !values (>=0) in m^3/s
           rewind(63)
@@ -718,7 +794,11 @@
         endif !nsinks
       endif !if_source=1
 
+#ifdef SH_MEM_COMM
+      if(if_source==-1.and.myrank_node==0) then !nc
+#else  
       if(if_source==-1.and.myrank==0) then !nc
+#endif
         if(nsources>0) then
           ninv=time/th_dt3(1)
           th_time3(1,1)=dble(ninv)*th_dt3(1)
@@ -757,9 +837,16 @@
 
 !     Bcast
       if(if_source/=0) then
+        !First 2 vars are bcast from rank 0 of comm, which must be a member of myrank_node=0?
         call mpi_bcast(th_dt3,nthfiles3,rtype,0,comm,istat)
         call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
+#ifdef SH_MEM_COMM
+        !For share mem, ath3 is already filled. Collective on comm_node is per node
+        !The barrier may not be necessary
+        call mpi_barrier(comm_node, istat)
+#else
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
+#endif
       endif 
 #endif /*USE_NWM_BMI*/
 
@@ -886,13 +973,24 @@
 !...  Initialize heat budget model - this needs to be called after nodalvel as
 !     (uu2,vv2) are needed
 !     For USE_ATMOS, sflux etc are init'ed as 0 in _init
-      if(ihconsv/=0.and.nws==2) then
-        call surf_fluxes(wtime1,windx1,windy1,pr1,airt1,shum1, &
+      if(ihconsv/=0.and.(nws==2.or.nws==4)) then
+        if(nws==4) then !include USE_ATMOS
+          !surf_fluxes2 assumes all vars in sflu*.nc are available now
+          call surf_fluxes2 (wtime1,windx1,windy1,pr1,airt1,shum1, &
      &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
-     &                   fluxprc,fluxevp, prec_snow, &
+     &fluxprc,fluxevp, prec_snow, &
 #endif
-     &                   nws) 
+     &nws) 
+
+        else !nws=2
+          call surf_fluxes (wtime1,windx1,windy1,pr1,airt1,shum1, &
+     &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
+#ifdef PREC_EVAP
+     &fluxprc,fluxevp, prec_snow, &
+#endif
+     &nws) 
+        endif !nws
 !       fluxsu: the turbulent flux of sensible heat (upwelling) (W/m^2)
 !       fluxlu: the turbulent flux of latent heat (upwelling) (W/m^2)
 !       hradu: upwelling infrared (longwave) radiative fluxes at surface (W/m^2)
@@ -907,9 +1005,8 @@
         if(myrank==0) write(16,*)'heat budge model completes...'
       endif !nws==2
 
-
       if(allocated(rwild)) deallocate(rwild)
-      deallocate(swild,swild9)
+      deallocate(swild)
 
       end subroutine other_hot_init
 
@@ -6377,13 +6474,13 @@
 !     (search /OASOCM)
 !=========================================================================
 #ifdef USE_WW3
-!     Grab necessary arrays from WW3 and save into SCHISM arrays
+!     Grab necessary arrays from WW3 and save into SCHISM arrays and compute wave forces
       SUBROUTINE get_WW3_arrays(WW3__OHS,WW3__DIR,WW3_T0M1,WW3__WNM,WW3__BHD,WW3_USSX,WW3_USSY, &
      &WW3_TWOX,WW3_TWOY,WW3_TBBX,WW3_TBBY,WW3_UBRX,WW3_UBRY)
-        USE schism_glbl, ONLY: rkind,errmsg,np,npa,wave_hs,wave_dir,wave_tm1, &
-     &wave_wnm,wave_pres,wave_stokes_x,wave_stokes_y,wave_ocean_flux_x, &
-     &wave_ocean_flux_y,wave_flux_friction_x,wave_flux_friction_y, &
-     &wave_orbu,wave_orbv
+        USE schism_glbl !, ONLY: rkind,errmsg,np,npa,wave_hs,wave_dir,wave_tm1, &
+!     &wave_wnm,wave_pres,wave_stokes_x,wave_stokes_y,wave_ocean_flux_x, &
+!     &wave_ocean_flux_y,wave_flux_friction_x,wave_flux_friction_y, &
+!     &wave_orbu,wave_orbv
         USE schism_msgp
         IMPLICIT NONE
 
@@ -6430,6 +6527,23 @@
           write(errmsg,*)'WW3 input has nan:',tmp
           call parallel_abort(errmsg)
         endif
+
+        !Temp fixes
+        where(wave_wnm<=0.d0) wave_wnm=0.16d0
+
+        !Compute wave forces
+        ! Compute Stokes drift velocities and pressure terms
+        call STOKES_STRESS_INTEGRAL_SCHISM
+        ! Conservative terms (relative to Stokes drift advection, Coriolis and pressure head: Eq. 17, 19 and 20 from Bennis 2011)
+        call COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM
+        ! Sink of momentum due to wave breaking
+        IF (fwvor_breaking == 1) call COMPUTE_BREAKING_VF_TERMS_SCHISM
+        ! Sink of momentum due to bottom streaming
+        IF (fwvor_streaming == 1) call COMPUTE_STREAMING_VF_TERMS_SCHISM
+        !No veg yet
+        !IF (fwvor_wveg == 1) CALL COMPUTE_VEGDISS_VF_TERMS_SCHISM     ! Sink of momentum due to wave dissipation by vegetation and update wwave_force
+        !IF (fwvor_wveg_NL == 1) CALL COMPUTE_INTRAWAVE_VEG_FORCE      ! Compute non linear intrawave vegetation force and update wwave_force
+
       end SUBROUTINE get_WW3_arrays
 
 !**********************************************************************
@@ -6466,12 +6580,12 @@
           D_loc = max(znl(nvrt,ip)-znl(kbp(ip),ip),hmin_radstress) !>0
 
           !new40
-          jpress(ip)=wave_pres(ip)/rho0 !needs to be [m2/s2]
+          jpress(ip)=wave_pres(ip) !/rho0 !needs to be [m2/s2]
 
           k_loc=wave_wnm(ip) !MIN(KDMAX/DEP(IP),WK(IS,IP))
           kD_loc=k_loc*D_loc !MIN(KDMAX,WK(IS,IP)*D_loc)
           IF(kD_loc <= 0) THEN
-            WRITE(errmsg,*)'WWM: kD_loc<=0'
+            WRITE(errmsg,*)'WW3: kD_loc<=0:',jpress(ip),k_loc,kD_loc
             CALL parallel_abort(errmsg)
           END IF
 
@@ -6742,7 +6856,7 @@
         REAL(rkind) :: Fdb_x_loc, Fdb_y_loc, Fds_x_loc, Fds_y_loc
         REAL(rkind) :: swild_2D(nvrt), swild_3D(nvrt)
         
-        ZPROF_BREAK=2
+        ZPROF_BREAK=2 !vel profile method
 
         ! Compute sink of momentum due to wave breaking 
         DO is = 1, ns

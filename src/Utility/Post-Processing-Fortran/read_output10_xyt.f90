@@ -228,7 +228,10 @@
      
           !Find nc file
           file63=varname(1:len_var)//'_'//it_char(1:leng)//'.nc'
-          if(ivs==2) varname2=varname(1:len_var-1)//'Y'
+          if(ivs==2) then
+            if(varname(len_var:len_var).ne."X") stop 'Vector name must end with X'
+            varname2=varname(1:len_var-1)//'Y'
+          endif
           inquire(file=file63,exist=lexist)
           if(lexist) then !3D var
             i23d=2 

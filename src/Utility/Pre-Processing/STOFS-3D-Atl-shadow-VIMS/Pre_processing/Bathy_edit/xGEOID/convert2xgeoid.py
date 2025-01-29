@@ -32,9 +32,9 @@ def prep_folder(wdir):
     os.chdir(wdir)
 
     # copy over the polygons
-    source_path = ('/sciclone/schism10/hjyoo/task/task6_SECOFS/'
-                   'simulation/Whole_Domain/Grid/Script/xGEOID/VDatum_polygons/')
-    os.system(f'cp -rL {source_path} .')
+    # source_path = ('/sciclone/schism10/hjyoo/task/task6_SECOFS/'
+    #                'simulation/Whole_Domain/Grid/Script/xGEOID/VDatum_polygons/')
+    # os.system(f'cp -rL {source_path} .')
 
 
 def generate_input_txt(hgrid_obj, wdir, n_sub=500000):
@@ -223,7 +223,7 @@ def convert2xgeoid(wdir, hgrid_obj, diag_output=None):
 
     # this generates the input files for vdatum.jar, including
     # hgrid_stofs3d_inland_?.txt and hgrid_stofs3d_inland_ches_del.txt
-    generated_input_files = generate_input_txt(hgrid_obj=hgrid_obj, wdir=wdir, n_sub=100000)
+    generated_input_files = generate_input_txt(hgrid_obj=hgrid_obj, wdir=wdir, n_sub=500000)
 
     # see if the input files are complete
 
@@ -241,7 +241,7 @@ def convert2xgeoid(wdir, hgrid_obj, diag_output=None):
 
     # the first group should have no failed files, since they are strictly in region 4
     # this may not be true for other domains, so manually go over the workflow first before using the script
-    input_fnames = glob("*_[0-9].txt")
+    input_fnames = glob("hgrid*.txt")
     # Starting the processes
     processes = [subprocess.Popen(
             f"java -jar vdatum.jar  ihorz:NAD83_2011 ivert:navd88:m:{z_convention} "
@@ -308,16 +308,25 @@ def convert2xgeoid(wdir, hgrid_obj, diag_output=None):
     return hgrid_obj, depth_diff
 
 
-if __name__ == "__main__":
-    # sample usage
-    WORKING_DIR = '/sciclone/schism10/Hgrid_projects/TMP/DEM_edit/xGEOID/'
+def sample1():
+    '''Sample usage of the point_conversion function.'''
     xyz = np.loadtxt('/sciclone/schism10/Hgrid_projects/TMP/'
                      'DEM_edit/xGEOID/vdatum/region4_failed/hgrid_secofs_nccoast11.txt')
     xyz = xyz[:, 1:]
-    point_conversion(xyz[:, 0], xyz[:, 1], xyz[:, 2])
+    print(f'Original z: {xyz[:, 2]}')
+    print(f'Converted z: {point_conversion(xyz[:, 0], xyz[:, 1], xyz[:, 2])}')
 
-    # sample usage
+    print('Done')
+
+
+def sample2():
+    """Sample usage of the convert2xgeoid function."""
+    WORKING_DIR = '/sciclone/schism10/Hgrid_projects/TMP/DEM_edit/xGEOID/'
     hg = read_schism_hgrid(f'{WORKING_DIR}/hgrid.gr3')
     hg = convert2xgeoid(wdir=WORKING_DIR, hgrid_obj=hg)
 
     print('Done!')
+
+
+if __name__ == "__main__":
+    sample1()

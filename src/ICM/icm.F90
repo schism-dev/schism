@@ -90,7 +90,7 @@ subroutine ecosystem(it)
   real(rkind), parameter :: hmin=0.01
   real(rkind) :: tmp,time,rat,s,z1,z2,dzb,zs,T
   real(rkind) :: xT,xS,rKSR(3),aKe0,sKeC,vKeC(nmarsh),vLight(nmarsh)
-  real(rkind) :: usf,wspd,rIa,tdep,mKhN,mKhP,rKa,DOsat,APB,rKTM,rKSUA,shtz,vhtz(nmarsh)
+  real(rkind) :: usf,wspd,rIa,tdep,mKhN,mKhP,rKa,DOsat,dDOX,APB,rKTM,rKSUA,shtz,vhtz(nmarsh)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV,mLight,sLight,chl
   real(rkind),dimension(nvrt) :: srat,brat,PO4p,SAd,SAp,pH,rKHR,rDenit,rNit,rKCOD
   real(rkind),dimension(3,nvrt) :: rKC,rKN,rKP,MT,PR,GP,fPN,fT,fST,fR,fN,fP,fS,fC,rIK
@@ -245,7 +245,7 @@ subroutine ecosystem(it)
 
           !metabolism, predation
           MT(i,k)=MTR(i)*GP(i,k)+MTB(i)*exp(KTMT(i)*(temp(k)-TMT(i)))*PBS(i,k)
-          if(iPR==0) then
+          if(iPR(i)==0) then
             PR(i,k)=PRR(i)*exp(KTMT(i)*(temp(k)-TMT(i)))*PBS(i,k)
           else
             PR(i,k)=PRR(i)*exp(KTMT(i)*(temp(k)-TMT(i)))*PBS(i,k)*PBS(i,k)
@@ -306,7 +306,7 @@ subroutine ecosystem(it)
       !----------------------------------------------------------------------------------
       !surface and bottom flux
       !----------------------------------------------------------------------------------
-      sflux=0; bflux=0
+      sflux=0; bflux=0; dDOX=DOsat-DOX(nvrt)
 
       !atmospheric fluxes from ICM_rad.th.nc
       if(isflux/=0) then
@@ -315,7 +315,11 @@ subroutine ecosystem(it)
           sflux(m)=sflux(m)+sflux_in(id,m,1)+rat*(sflux_in(id,m,2)-sflux_in(id,m,1))
         enddo
       endif
-      sflux(iDOX)=rKa*(DOsat-DOX(nvrt))
+      if(dDOX>=0.d0) then
+         sflux(iDOX)=rKa*dDOX
+      else !for super-saturation
+         sflux(iDOX)=(rKa+WDOs*max(-dDOX,0.d0)/dz(nvrt))*dDOX
+      endif
 
       !benthic fluxes from ICM_rad.th.nc
       if(ibflux/=0) then
@@ -531,20 +535,37 @@ subroutine ecosystem(it)
       !debug mode for 2D/3D variables (for ICM developers)
       !----------------------------------------------------------------------------------
       if(idbg(1)/=0) then
-        !Core
-        db_TN=0; db_TP=0 !TN, TP
+        !init
+        db_GP(id)=0;  db_MT(id)=0;  db_PR(id)=0;   db_oNit(id)=0; db_oDOC(id)=0; db_oCOD(id)=0
+        db_oGP(id)=0; db_oMT(id)=0; db_oFlx(id)=0; db_Denit(id)=0
+        if(idbg(1)==2) then; db_TN(id)=0; db_TP(id)=0; endif
+
+        !compute debug variables
+        db_oFlx(id)=sflux(iDOX)
         do k=kb+1,nvrt
           dzb=(zid(k)-zid(k-1))
-          db_TN(id)=dzb*(RPON(k)+LPON(k)+DON(k)+NH4(k)+NO3(k)+sum(n2c*PBS(1:3,k)))
-          db_TP(id)=dzb*(RPOP(k)+LPOP(k)+DOP(k)+PO4(k)+sum(p2c*PBS(1:3,k)))
-          if(iSRM==1) then
-            db_TN(id)=db_TN(id)+dzb*SRPON(k)
-            db_TP(id)=db_TP(id)+dzb*SRPOP(k)
+          !2D variables
+          db_GP(id)  =db_GP(id)+dzb*sum(GP(:,k));           db_MT(id)  =db_MT(id)+dzb*sum(MT(:,k))
+          db_PR(id)  =db_PR(id)+dzb*sum(PR(:,k));           db_oNit(id)=db_oNit(id)+dzb*o2n*rNit(k)*NH4(k)
+          db_oDOC(id)=db_oDOC(id)+dzb*o2c*rKHR(k)*DOC(k);   db_oCOD(id)=db_oCOD(id)+dzb*rKCOD(k)*COD(k)
+          db_oGP(id) =db_oGP(id)+dzb*o2c*sum((1.3-0.3*fPN(:,k))*GP(:,k))
+          db_oMT(id) =db_oMT(id)+dzb*o2c*sum(((1.0-sum(FCM(:,1:4)))*DOX(k)/(DOX(k)+KhDO(:)))*MT(:,k))
+          db_Denit(id)=db_Denit(id)+dzb*dn2c*rDenit(k)*DOC(k)
+
+          if(idbg(1)==2) then
+            db_TN(id)=db_TN(id)+dzb*(RPON(k)+LPON(k)+DON(k)+NH4(k)+NO3(k)+sum(n2c*PBS(1:3,k)))
+            db_TP(id)=db_TP(id)+dzb*(RPOP(k)+LPOP(k)+DOP(k)+PO4(k)+sum(p2c*PBS(1:3,k)))
+            if(iSRM==1) then
+              db_TN(id)=db_TN(id)+dzb*SRPON(k)
+              db_TP(id)=db_TP(id)+dzb*SRPOP(k)
+            endif
           endif
-        enddo
-        do k=kb+1,nvrt
-          db_CHLA(k,id)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0) !CHLA
-          db_Ke(k,id)=rKe(k)
+
+          !3D variables
+          if(idbg(1)==2) then
+            db_CHLA(k,id)=max(sum(PBS(1:3,k)/c2chl(1:3)),0.d0) !CHLA
+            db_Ke(k,id)=rKe(k)
+          endif
         enddo
       endif !idbg(1)/=0
 
@@ -680,8 +701,8 @@ subroutine marsh_calc(id,kb,zid,vhtz,vLight)
   real(rkind),intent(in) :: zid(nvrt),vhtz(nmarsh),vLight(nmarsh)
 
   !local variables
-  integer :: i,j,k,m
-  real(rkind) :: fR,fT,fST,fI,fN,fP,fDO,mLight,mtemp,msalt,rIK,Kd,xT,xS,rc,vdc,drat
+  integer :: i,j,k,m,kv
+  real(rkind) :: fR,fT,fST,fI,fN,fP,fDO,mLight,mtemp,msalt,rIK,Kd,xT,xS,vdc,drat,zv,zrat
   real(rkind),dimension(nmarsh) :: BMw,BMb,srat,orat
   real(rkind) :: tdep,dz(nvrt),GP(nmarsh),MT(3,nmarsh)
   real(rkind),pointer,dimension(:) :: vleaf,vstem,vroot
@@ -775,23 +796,35 @@ subroutine marsh_calc(id,kb,zid,vhtz,vLight)
     !update canopy height
     call get_canopy(id)
   elseif(vpatch(id)==1.and.jmarsh==2.and.idry_e(id)==0) then
-    !currently, the sink due marsh doesn't go to the sediment (todo) for this simple model
+    !currently, the sink due to marsh doesn't go to the sediment (todo) for this simple model
     db_vdNO3(id)=0; db_vdDOX(id)=0; db_vdRPOC(id)=0; db_vdLPOC(id)=0; db_vdRPON(id)=0; db_vdLPON(id)=0
-    db_vdRPOP(id)=0; db_vdLPOP(id)=0; db_vdSRPOC(id)=0; db_vdSRPON(id)=0; db_vdSRPOP(id)=0
-    do k=kb+1,nvrt
-      fT=exp(vKTw*(temp(k)-vRTw)); fDO=DOX(k)/(vKhDO+DOX(k)); rc=vKPOM*vAw  !pre-compute 
-      vdc=vKNO3*vAw*fT*NO3(k);  vdwqc(iNO3,k)=-vdc;  db_vdNO3(id)=db_vdNO3(id)+vdc*dz(k) !vdNO3: g.m-2.day
-      vdc=vAw*fDO*fT*vOCw;      vdwqc(iDOX,k)=-vdc;  db_vdDOX(id)=db_vdDOX(id)+vdc*dz(k)
-      vdc=rc*RPOC(k);  vdwqc(iRPOC,k)=-vdc;  db_vdRPOC(id)=db_vdRPOC(id)+vdc*dz(k)
-      vdc=rc*LPOC(k);  vdwqc(iLPOC,k)=-vdc;  db_vdLPOC(id)=db_vdLPOC(id)+vdc*dz(k)
-      vdc=rc*RPON(k);  vdwqc(iRPON,k)=-vdc;  db_vdRPON(id)=db_vdRPON(id)+vdc*dz(k)
-      vdc=rc*LPON(k);  vdwqc(iLPON,k)=-vdc;  db_vdLPON(id)=db_vdLPON(id)+vdc*dz(k)
-      vdc=rc*RPOP(k);  vdwqc(iRPOP,k)=-vdc;  db_vdRPOP(id)=db_vdRPOP(id)+vdc*dz(k)
-      vdc=rc*LPOP(k);  vdwqc(iLPOP,k)=-vdc;  db_vdLPOP(id)=db_vdLPOP(id)+vdc*dz(k)
+    db_vdRPOP(id)=0; db_vdLPOP(id)=0; db_vdSRPOC(id)=0; db_vdSRPON(id)=0; db_vdSRPOP(id)=0; db_vdPIP(id)=0
+
+    !apply wetland effect only only top vdz meters
+    kv=kb+1; zv=0
+    do k=nvrt,kb+1,-1
+      zv=zv+dz(k)
+      if(zv>=vdz) then
+        kv=k; exit
+      endif
+    enddo !k
+    zrat=max(tdep/max(zv,1.d-5),1.d0) !concentrate the effect on surface layers
+
+    do k=kv,nvrt
+      fT=exp(vKTw*(temp(k)-vRTw)); fDO=DOX(k)/(vKhDO+DOX(k))  !pre-compute
+      vdc=zrat*vKNO3*vAw*fT*NO3(k);  vdwqc(iNO3,k)=-vdc;  db_vdNO3(id)=db_vdNO3(id)+vdc*dz(k) !vdNO3: g.m-2.day
+      vdc=zrat*vAw*fDO*fT*vOCw;      vdwqc(iDOX,k)=-vdc;  db_vdDOX(id)=db_vdDOX(id)+vdc*dz(k)
+      vdc=zrat*vKPOM(iRPOC)*vAw*RPOC(k);  vdwqc(iRPOC,k)=-vdc;  db_vdRPOC(id)=db_vdRPOC(id)+vdc*dz(k)
+      vdc=zrat*vKPOM(iLPOC)*vAw*LPOC(k);  vdwqc(iLPOC,k)=-vdc;  db_vdLPOC(id)=db_vdLPOC(id)+vdc*dz(k)
+      vdc=zrat*vKPOM(iRPON)*vAw*RPON(k);  vdwqc(iRPON,k)=-vdc;  db_vdRPON(id)=db_vdRPON(id)+vdc*dz(k)
+      vdc=zrat*vKPOM(iLPON)*vAw*LPON(k);  vdwqc(iLPON,k)=-vdc;  db_vdLPON(id)=db_vdLPON(id)+vdc*dz(k)
+      vdc=zrat*vKPOM(iRPOP)*vAw*RPOP(k);  vdwqc(iRPOP,k)=-vdc;  db_vdRPOP(id)=db_vdRPOP(id)+vdc*dz(k)
+      vdc=zrat*vKPOM(iLPOP)*vAw*LPOP(k);  vdwqc(iLPOP,k)=-vdc;  db_vdLPOP(id)=db_vdLPOP(id)+vdc*dz(k)
       if(iSRM==1) then
-        vdc=rc*SRPOC(k);  vdwqc(iSRPOC,k)=-vdc;  db_vdSRPOC(id)=db_vdSRPOC(id)+vdc*dz(k)
-        vdc=rc*SRPON(k);  vdwqc(iSRPON,k)=-vdc;  db_vdSRPON(id)=db_vdSRPON(id)+vdc*dz(k)
-        vdc=rc*SRPOP(k);  vdwqc(iSRPOP,k)=-vdc;  db_vdSRPOP(id)=db_vdSRPOP(id)+vdc*dz(k)
+        vdc=zrat*vKPOM(iSRPOC)*vAw*SRPOC(k);  vdwqc(iSRPOC,k)=-vdc;  db_vdSRPOC(id)=db_vdSRPOC(id)+vdc*dz(k)
+        vdc=zrat*vKPOM(iSRPON)*vAw*SRPON(k);  vdwqc(iSRPON,k)=-vdc;  db_vdSRPON(id)=db_vdSRPON(id)+vdc*dz(k)
+        vdc=zrat*vKPOM(iSRPOP)*vAw*SRPOP(k);  vdwqc(iSRPOP,k)=-vdc;  db_vdSRPOP(id)=db_vdSRPOP(id)+vdc*dz(k)
+        vdc=zrat*vKPOM(iPIP)*vAw*PIP(k);      vdwqc(iPIP,k)  =-vdc;  db_vdPIP(id)  =db_vdPIP(id)  +vdc*dz(k)
       endif
     enddo
   endif !vpatch(id)
@@ -898,28 +931,35 @@ subroutine zoo_calc(kb,PR)
 
 end subroutine zoo_calc
 
-subroutine sav_calc(id,kb,zid,shtz,tdep,sLight)
-  use schism_glbl, only : rkind,errmsg,idry_e,nvrt,errmsg
+subroutine sav_calc(id,kb,zid,shtz,tdep,sLight0)
+  use schism_glbl, only : rkind,errmsg,idry_e,nvrt,errmsg,dp,elnode,i34
   use schism_msgp, only : myrank,parallel_abort
   use icm_mod
   implicit none
   integer,intent(in) :: id,kb
   real(rkind),intent(in) :: shtz,tdep
-  real(rkind),intent(in),dimension(nvrt) :: zid,sLight
+  real(rkind),intent(in),dimension(nvrt) :: zid,sLight0
 
   !local variables
-  integer :: k
-  real(rkind) :: drat,srat,leafC,stemC,xT,mLight,rIK,Ns,Ps,fT,fI,fN,fP
+  integer :: i,k
+  real(rkind) :: drat,srat,leafC,stemC,xT,mLight,rIK,Ns,Ps,fT,fI,fN,fP,zm,rm,sFCPm(4)
   real(rkind) :: sfPN,sfPNb,sfPPb,leaf0,stem0,TB,MT0(4),BM,BMb,sfT,sfI,sfN,sfP,s
   real(rkind) :: efT,eKd,efI,efN,efP,efEP,eGP,eMT,ePR,efPN,zEP0,eMT0
-  real(rkind),dimension(nvrt) :: dz,zleaf,zstem,GP,MT1,MT2,zEP
+  real(rkind),dimension(nvrt) :: sLight,dz,zleaf,zstem,GP,MT1,MT2,zEP
   real(rkind),pointer :: sleaf,sstem,sroot,tuber,Hs
 
   !pre-proc
   sleaf=>sav(1,id); sstem=>sav(2,id); sroot=>sav(3,id); tuber=>sav(4,id); Hs=>sht(id)
-  zleaf=0; zstem=0; dz=0; drat=1.0; leaf0=0; stem0=0
-  if(idry_e(id)==1) drat=0.0
+  zleaf=0; zstem=0; dz=0; drat=1.0; leaf0=0; stem0=0; zm=minval(dp(elnode(1:i34(id),id)))
+  if(idry_e(id)==1) drat=0.0 !set water column contribution to zero
   do k=kb+1,nvrt; dz(k)=max(zid(k)-zid(k-1),0.d0); enddo !re-compute dz to ensure strict mass-conservation
+  do k=nvrt,kb+1,-1 !use shallowest node for computing light condition
+    if((zid(nvrt)-zid(k))<=zm) then
+      sLight(k)=sLight0(k)
+    else
+      sLight(k)=sLight(k+1)
+    endif
+  enddo
   do k=kb+1,nvrt !distribute sav biomass in the vertical
     srat=max(min(shtz-zid(k-1),dz(k)),0.d0)/max(dz(k),1.d-12)
     zleaf(k)=srat*sleaf/(Hs+1.d-12)
@@ -949,19 +989,19 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight)
       !interaction with water column
       efPN=(NH4(k)/(eKhN+NO3(k)))*(NO3(k)/(eKhN+NH4(k))+eKhN/(NH4(k)+NO3(k)))
       if(k==nvrt) eMT=eMT+eMT0/max(dz(k),1.d-5) !add the MT mass above water
-      sdwqc(iRPOC,k)=eFCM(1)*eMT+eFCP(1)*ePR
-      sdwqc(iLPOC,k)=eFCM(2)*eMT+eFCP(2)*ePR
-      sdwqc(iDOC,k) =eFCM(3)*eMT+eFCP(3)*ePR
-      sdwqc(iDOX,k) =o2c*(eGP-eFCM(4)*eMT-eFCP(4)*ePR)
-      sdwqc(iRPON,k)=en2c*(eFNM(1)*eMT+eFNP(1)*ePR)
-      sdwqc(iLPON,k)=en2c*(eFNM(2)*eMT+eFNP(2)*ePR)
-      sdwqc(iDON,k) =en2c*(eFNM(3)*eMT+eFNP(3)*ePR)
-      sdwqc(iNH4,k) =en2c*(-efPN*eGP+eFNM(4)*eMT+eFNP(4)*ePR)
-      sdwqc(iNO3,k) =-en2c*(1.0-efPN)*eGP
-      sdwqc(iRPOP,k)=ep2c*(eFPM(1)*eMT+eFPP(1)*ePR)
-      sdwqc(iLPOP,k)=ep2c*(eFPM(2)*eMT+eFPP(2)*ePR)
-      sdwqc(iDOP,k) =ep2c*(eFPM(3)*eMT+eFPP(3)*ePR)
-      sdwqc(iPO4,k) =ep2c*(-eGP+eFPM(4)*eMT+eFPP(4)*ePR)
+      sdwqc(iRPOC,k)=sFc*(eFCM(1)*eMT+eFCP(1)*ePR)
+      sdwqc(iLPOC,k)=sFc*(eFCM(2)*eMT+eFCP(2)*ePR)
+      sdwqc(iDOC,k) =sFc*(eFCM(3)*eMT+eFCP(3)*ePR)
+      sdwqc(iDOX,k) =sFc*o2c*(eGP-eFCM(4)*eMT-eFCP(4)*ePR)
+      sdwqc(iRPON,k)=sFc*en2c*(eFNM(1)*eMT+eFNP(1)*ePR)
+      sdwqc(iLPON,k)=sFc*en2c*(eFNM(2)*eMT+eFNP(2)*ePR)
+      sdwqc(iDON,k) =sFc*en2c*(eFNM(3)*eMT+eFNP(3)*ePR)
+      sdwqc(iNH4,k) =sFc*en2c*(-efPN*eGP+eFNM(4)*eMT+eFNP(4)*ePR)
+      sdwqc(iNO3,k) =-sFc*en2c*(1.0-efPN)*eGP
+      sdwqc(iRPOP,k)=sFc*ep2c*(eFPM(1)*eMT+eFPP(1)*ePR)
+      sdwqc(iLPOP,k)=sFc*ep2c*(eFPM(2)*eMT+eFPP(2)*ePR)
+      sdwqc(iDOP,k) =sFc*ep2c*(eFPM(3)*eMT+eFPP(3)*ePR)
+      sdwqc(iPO4,k) =sFc*ep2c*(-eGP+eFPM(4)*eMT+eFPP(4)*ePR)
     enddo
     TEP(id)=max(sum(zEP*dz)+zEP0,1.d-12)
   endif
@@ -977,24 +1017,39 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight)
     Ps=drat*PO4d(k)/sKhP(1)+bPO4(id)/sKhP(2); fP=Ps/(1+Ps)
 
     !grwoth, metabolism,transfer
-    GP(k)=sGPM*fT*min(fI,fN,fP)*zleaf(k)
-    MT1(k)=sMTB(1)*exp(sKTMT(1)*(temp(k)-sTMT(1)))*zleaf(k)
-    MT2(k)=sMTB(2)*exp(sKTMT(2)*(temp(k)-sTMT(2)))*zstem(k)
+    GP(k)=sGPM*fT*min(fI,fN,fP)*zleaf(k); rm=max(dble(nint(iMTs)),1.d0)
+    MT1(k)=sMTB(1)*exp(sKTMT(1)*(temp(k)-sTMT(1)))*zleaf(k)**rm
+    MT2(k)=sMTB(2)*exp(sKTMT(2)*(temp(k)-sTMT(2)))*zstem(k)**rm
     if(k==nvrt) then
-      MT0(1)=sMTB(1)*exp(sKTMT(1)*(temp(nvrt)-sTMT(1)))*leaf0
-      MT0(2)=sMTB(2)*exp(sKTMT(2)*(temp(nvrt)-sTMT(2)))*stem0
-      MT0(3)=sMTB(3)*exp(sKTMT(3)*(temp(kb+1)-sTMT(3)))*sroot
-      MT0(4)=sMTB(4)*exp(sKTMT(4)*(temp(kb+1)-sTMT(4)))*tuber
+      MT0(1)=sMTB(1)*exp(sKTMT(1)*(temp(nvrt)-sTMT(1)))*leaf0**rm
+      MT0(2)=sMTB(2)*exp(sKTMT(2)*(temp(nvrt)-sTMT(2)))*stem0**rm
+      MT0(3)=sMTB(3)*exp(sKTMT(3)*(temp(kb+1)-sTMT(3)))*sroot**rm
+      MT0(4)=sMTB(4)*exp(sKTMT(4)*(temp(kb+1)-sTMT(4)))*tuber**rm
     endif
 
+    !apply minimum and maximum conc.
+    sFCPm=sFCP !initial partitioning coefficient
+    do i=1,4
+      if(sav(i,id)<savm(i,1)) then !reach the minimum
+        MT0(i)=0.0
+        if(i==1) MT1(k)=0.0
+        if(i==2) MT2(k)=0.0
+        if(i==4) TB=0.0
+      elseif(sav(i,id)>savm(i,2)) then !reach the maximum
+        sFCPm(i)=0.0
+      endif
+    enddo
+    s=sum(sFCPm); sFCPm=sFCPm/max(s,1.d-3) !modify mass distribution
+    if(s<1.d-6) GP(k)=0.0 !turn off growth if maximum concentrations are reached
+
     !new concentration
-    zleaf(k)=zleaf(k)+(sFCP(1)*(1.0-sFAM)*GP(k)-MT1(k)+TB/Hs)*dtw
-    zstem(k)=zstem(k)+(sFCP(2)*(1.0-sFAM)*GP(k)-MT2(k))*dtw
+    zleaf(k)=zleaf(k)+(sFCPm(1)*(1.0-sFAM)*GP(k)-MT1(k)+TB/Hs)*dtw
+    zstem(k)=zstem(k)+(sFCPm(2)*(1.0-sFAM)*GP(k)-MT2(k))*dtw
     if(k==nvrt) then !For SAV above water, only metabolism is allowed
        leaf0=leaf0-MT0(1)*dtw
        stem0=stem0-MT0(2)*dtw
-       sroot=sroot+(sFCP(3)*(1.0-sFAM)*sum(GP((kb+1):nvrt)*dz((kb+1):nvrt))-MT0(3))*dtw
-       tuber=tuber+(sFCP(4)*(1.0-sFAM)*sum(GP((kb+1):nvrt)*dz((kb+1):nvrt))-MT0(4)-TB)*dtw
+       sroot=sroot+(sFCPm(3)*(1.0-sFAM)*sum(GP((kb+1):nvrt)*dz((kb+1):nvrt))-MT0(3))*dtw
+       tuber=tuber+(sFCPm(4)*(1.0-sFAM)*sum(GP((kb+1):nvrt)*dz((kb+1):nvrt))-MT0(4)-TB)*dtw
     endif
 
     !debug
@@ -1022,33 +1077,33 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight)
     sfPPb=(bPO4(id)/sKhP(2))/(bPO4(id)/sKhP(2)+drat*PO4d(k)/sKhP(1))
 
     !interaction with water column: nutrient uptake and metabolism from/to water
-    sdwqc(iRPOC,k)= sFCM(1)*BM
-    sdwqc(iLPOC,k)= sFCM(2)*BM
-    sdwqc(iDOC,k) = sFCM(3)*BM
-    sdwqc(iDOX,k) = o2c*(GP(k)-sFCM(4)*BM)
-    sdwqc(iRPON,k)= sn2c*sFNM(1)*BM
-    sdwqc(iLPON,k)= sn2c*sFNM(2)*BM
-    sdwqc(iDON,k) = sn2c*sFNM(3)*BM
-    sdwqc(iNH4,k) = sn2c*(sFNM(4)*BM-(1.0-sfPNb)*sfPN*GP(k))
-    sdwqc(iNO3,k) =-sn2c*(1.0-sfPNb)*(1.0-sfPN)*GP(k)
-    sdwqc(iRPOP,k)= sp2c*sFPM(1)*BM
-    sdwqc(iLPOP,k)= sp2c*sFPM(2)*BM
-    sdwqc(iDOP,k) = sp2c*sFPM(3)*BM
-    sdwqc(iPO4,k) = sp2c*(sFPM(4)*BM-(1.0-sfPPb)*GP(k))
+    sdwqc(iRPOC,k)= sFc*sFCM(1)*BM
+    sdwqc(iLPOC,k)= sFc*sFCM(2)*BM
+    sdwqc(iDOC,k) = sFc*sFCM(3)*BM
+    sdwqc(iDOX,k) = sFc*o2c*(GP(k)-sFCM(4)*BM)
+    sdwqc(iRPON,k)= sFc*sn2c*sFNM(1)*BM
+    sdwqc(iLPON,k)= sFc*sn2c*sFNM(2)*BM
+    sdwqc(iDON,k) = sFc*sn2c*sFNM(3)*BM
+    sdwqc(iNH4,k) = sFc*sn2c*(sFNM(4)*BM-(1.0-sfPNb)*sfPN*GP(k))
+    sdwqc(iNO3,k) =-sFc*sn2c*(1.0-sfPNb)*(1.0-sfPN)*GP(k)
+    sdwqc(iRPOP,k)= sFc*sp2c*sFPM(1)*BM
+    sdwqc(iLPOP,k)= sFc*sp2c*sFPM(2)*BM
+    sdwqc(iDOP,k) = sFc*sp2c*sFPM(3)*BM
+    sdwqc(iPO4,k) = sFc*sp2c*(sFPM(4)*BM-(1.0-sfPPb)*GP(k))
     if(idry_e(id)==1) sdwqc=0 !reset to zero for dry condition
 
     !interaction with sediment
     if(k==(kb+1)) then
       BMb=MT0(3)+MT0(4)+(1.0-drat)*BM*dz(k) !include leaf/stem BM under dry condition
-      sFPOC(1:3,id)=sFCMb(1:3)*BMb
-      sFPON(1:3,id)=sn2c*sFNMb(1:3)*BMb
-      sFPOP(1:3,id)=sp2c*sFPMb(1:3)*BMb
-      sSOD(id) =o2c*sFCMb(4)*BMb
-      sbNH4(id)=sn2c*sFNMb(4)*BMb
-      sbPO4(id)=sp2c*sFPMb(4)*BMb
+      sFPOC(1:3,id)=sFc*sFCMb(1:3)*BMb
+      sFPON(1:3,id)=sFc*sn2c*sFNMb(1:3)*BMb
+      sFPOP(1:3,id)=sFc*sp2c*sFPMb(1:3)*BMb
+      sSOD(id) =sFc*o2c*sFCMb(4)*BMb
+      sbNH4(id)=sFc*sn2c*sFNMb(4)*BMb
+      sbPO4(id)=sFc*sp2c*sFPMb(4)*BMb
     endif
-    sbNH4(id)=sbNH4(id)-sfPNb*GP(k)*dz(k)
-    sbPO4(id)=sbPO4(id)-sfPPb*GP(k)*dz(k)
+    sbNH4(id)=sbNH4(id)-sFc*sfPNb*GP(k)*dz(k)
+    sbPO4(id)=sbPO4(id)-sFc*sfPPb*GP(k)*dz(k)
   enddo
 
   !update canopy height, and EP abundance
@@ -1168,7 +1223,7 @@ subroutine clam_calc(id,kb,wdz)
         fTSS(i)=1.0-(1.0-cfTSSm(i))*(TSSc-cTSS(i,3))/(cTSS(i,4)-cTSS(i,3))
       endif
       Fr(i)=cfrmax(i)*fT(i)*fS(i)*fDO(i)*fTSS(i) !filtration rate (m3.g[C_clam].day-1)
-      cIF(i)=min(1.d0,cIFmax(i)/max(sum(Fr(i)*PC),1.d-5)) !ingestion rate
+      cIF(i)=min(1.d0,cIFmax(i)/max(sum(Fr(i)*PC),1.d-12)) !ingestion rate
 
       !filtered matters
       TFC(i)=sum(PC*Fr(i)*CLAM(i,id))   !POC filtered (g[C].m-2.day-1)
@@ -1177,7 +1232,7 @@ subroutine clam_calc(id,kb,wdz)
       ATFC(i)=sum(calpha(i,1:5)*PC*Fr(i)*cIF(i)*CLAM(i,id))   !potential POC assimilated (g[C].m-2.day-1)
       ATFN(i)=sum(calpha(i,1:5)*PN*Fr(i)*cIF(i)*CLAM(i,id))   !potential PON assimilated (g[N].m-2.day-1)
       ATFP(i)=sum(calpha(i,1:5)*PP*Fr(i)*cIF(i)*CLAM(i,id))   !potential POP assimilated (g[P].m-2.day-1)
-      fN(i)=min(1.d0, ATFN(i)/max(cn2c(i)*ATFC(i),1.d-5),ATFP(i)/max(cp2c(i)*ATFC(i),1.d-5)) !nutrient(N,P) limitation
+      fN(i)=min(1.d0, ATFN(i)/max(cn2c(i)*ATFC(i),1.d-12),ATFP(i)/max(cp2c(i)*ATFC(i),1.d-12)) !nutrient(N,P) limitation
 
       !growth, metabolism, and mortality
       GP(i)=sum(fN(i)*calpha(i,1:5)*cIF(i)*(1.0-cRF(i))*PC(1:5)*Fr(i)*CLAM(i,id)) !growth (g[C].m-2.day-1)
@@ -1185,7 +1240,14 @@ subroutine clam_calc(id,kb,wdz)
       RT(i)=cMRT(i)*(1.d0-fDO(i))*CLAM(i,id) !mortality (g[C].m-2.day-1)
       if(idoy>=cDoyp(i,1).and.idoy<=cDoyp(i,2)) PR(i) =cPRR(i)*CLAM(i,id) !predation (g[C].m-2.day-1)
       if(idoy>=cDoyh(i,1).and.idoy<=cDoyh(i,2)) HST(i)=cHSR(i)*CLAM(i,id) !harvest (g[C].m-2.day-1)
-      CLAM(i,id)=CLAM(i,id)+(GP(i)-MT(i)-RT(i)-PR(i)-HST(i))*dtw !update clam biomass
+
+      !update clam biomass
+      if(CLAM(i,id)<clamm(i,1)) then !reach minimum biomass conc.
+        MT(i)=0.0; RT(i)=0.0; RT(i)=0.0; HST(i)=0.0
+      elseif (CLAM(i,id)>clamm(i,2)) then !reach maximum biomass conc.
+        Fr(i)=0.0; GP(i)=0.0; TFC(i)=0.0; TFN(i)=0.0; TFP(i)=0.0; ATFC(i)=0.0; ATFN(i)=0.0; ATFP(i)=0.0
+      endif
+      CLAM(i,id)=CLAM(i,id)+(GP(i)-MT(i)-RT(i)-PR(i)-HST(i))*dtw
 
       !debug
       if(idbg(10)/=0) then
@@ -1196,30 +1258,26 @@ subroutine clam_calc(id,kb,wdz)
     enddo !i=1,nclam
 
     !interaction with water column variables;  change rate of conc. (g.m-3.day-1)
-    cdwqc(iPB1, kb+1)=-sum(PC(1)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iPB2, kb+1)=-sum(PC(2)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iPB3, kb+1)=-sum(PC(3)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iLPOC,kb+1)=-sum(PC(4)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iRPOC,kb+1)=-sum(PC(5)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iLPON,kb+1)=-sum(PN(4)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iRPON,kb+1)=-sum(PN(5)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iLPOP,kb+1)=-sum(PP(4)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iRPOP,kb+1)=-sum(PP(5)*Fr*CLAM(1:nclam,id))/wdz
-    cdwqc(iNH4, kb+1)=sum((ATFN-cn2c*GP)+cn2c*MT)/wdz
-    cdwqc(iPO4, kb+1)=sum((ATFP-cp2c*GP)+cp2c*MT)/wdz
-    cdwqc(iDOX, kb+1)=o2c*sum((ATFC-GP)+MT)/wdz
+    cdwqc(iPB1, kb+1)=-sum(cFc*PC(1)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iPB2, kb+1)=-sum(cFc*PC(2)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iPB3, kb+1)=-sum(cFc*PC(3)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iLPOC,kb+1)=-sum(cFc*PC(4)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iRPOC,kb+1)=-sum(cFc*PC(5)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iLPON,kb+1)=-sum(cFc*PN(4)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iRPON,kb+1)=-sum(cFc*PN(5)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iLPOP,kb+1)=-sum(cFc*PP(4)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iRPOP,kb+1)=-sum(cFc*PP(5)*Fr*CLAM(1:nclam,id))/wdz
+    cdwqc(iNH4, kb+1)=sum(cFc*((ATFN-cn2c*GP)+cn2c*MT))/wdz
+    cdwqc(iPO4, kb+1)=sum(cFc*((ATFP-cp2c*GP)+cp2c*MT))/wdz
+    cdwqc(iDOX, kb+1)=o2c*sum(cFc*((ATFC-GP)+MT))/wdz
 
     !interaction with sediment layer
-    cFPOC(id,1:2)=0; cFPON(id,1:2)=0; cFPOP(id,1:2)=0
+    cFPOC(id)=0; cFPON(id)=0; cFPOP(id)=0
     do i=1,nclam
-      cFPOC(id,1)=cFPOC(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PC(1:4))+sum(RT+PR)
-      cFPON(id,1)=cFPON(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PN(1:4))+sum(cn2c(i)*(RT+PR))
-      cFPOP(id,1)=cFPOP(id,1)+sum(((1-cIF(i))+(1.0-calpha(i,1:4))*cIF(i))*Fr(i)*CLAM(i,id)*PP(1:4))+sum(cp2c(i)*(RT+PR))
+      cFPOC(id)=cFPOC(id)+sum(cFc(i)*((1-cIF(i))+(1.0-calpha(i,1:5))*cIF(i))*Fr(i)*CLAM(i,id)*PC(1:5))+sum(cFc(i)*(RT+PR))
+      cFPON(id)=cFPON(id)+sum(cFc(i)*((1-cIF(i))+(1.0-calpha(i,1:5))*cIF(i))*Fr(i)*CLAM(i,id)*PN(1:5))+sum(cFc(i)*cn2c(i)*(RT+PR))
+      cFPOP(id)=cFPOP(id)+sum(cFc(i)*((1-cIF(i))+(1.0-calpha(i,1:5))*cIF(i))*Fr(i)*CLAM(i,id)*PP(1:5))+sum(cFc(i)*cp2c(i)*(RT+PR))
     enddo !i
-    cFPOC(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PC(5))
-    cFPON(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PN(5))
-    cFPOP(id,2)=sum(((1-cIF)+(1.0-calpha(1:nclam,5))*cIF)*Fr*CLAM(1:nclam,id)*PP(5))
-
   endif !iClam
 end subroutine clam_calc
 

@@ -4,14 +4,19 @@
 clear all; close all;
 
 scrsz = get(0,'ScreenSize'); %screen size
+%4 parameters of position: left bottom_coord width height
 figure('Position',[1 scrsz(4)/2 scrsz(3)/2 scrsz(4)/2]);
+fname='sflux.avi';
+delete(fname);
+vidObj = VideoWriter(fname);
+vidObj.FrameRate = 10;  % Default 30; smaller ->slower
+open(vidObj);
+
 
 CB_bnd=load('CB_bnd.xy'); %load domain bnd
 
 %NARR files
 fill_in=1.e9; %junk value from nc files
-delete('sflux.avi','f');
-avi_out = avifile('sflux.avi','FPS',5);
 for i=1:10 %stack # for nc files
   char=sprintf('%3.3d',i);
   filen=strcat('sflux_air_1.',char,'.nc');
@@ -91,11 +96,12 @@ for i=1:10 %stack # for nc files
 %   Stop here for testing
 %    return;
 
-    frame = getframe(gcf);
-    avi_out=addframe(avi_out,frame);
-    clf; %clear figure
+    set(gcf,'nextplot','replacechildren');
+    currFrame = getframe(gcf);
+    writeVideo(vidObj,currFrame);
+    clf; %clear figure to avoid overlay
   end %j
 
   clear base time_narr lon_narr lat_narr uwind_narr vwind_narr pres_narr airt_narr spfh_narr;
 end %for all nc files
-avi_out=close(avi_out);
+close(vidObj);

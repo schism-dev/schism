@@ -52,7 +52,7 @@ def contour_to_gdf(disturbance, levels, triangulation):
 
     #MinMax = [(-99999, levels[0])]
     MinMax = [(disturbance.min(), levels[0])]
-    for i in np.arange(len(levels)-1): 
+    for i in np.arange(len(levels)-1):
         MinMax.append((levels[i], levels[i+1]))
     #MinMax.append((levels[-1], np.max(disturbance)))
 
@@ -88,12 +88,12 @@ def contour_to_gdf(disturbance, levels, triangulation):
             mpoly = MultiPolygon(mpoly)
             polygons.append(mpoly)
             colors.append(polygon.get_facecolor().tolist()[0])
-            data.append({'id': i+1, 'minWaterLevel': MinMax[i][0], 'maxWaterLevel': MinMax[i][1], 
+            data.append({'id': i+1, 'minWaterLevel': MinMax[i][0], 'maxWaterLevel': MinMax[i][1],
                     'verticalDatum': 'XGEOID20B', 'units': 'meters', 'geometry': mpoly})
         elif len(mpoly) == 1:
             polygons.append(mpoly[0])
             colors.append(polygon.get_facecolor().tolist()[0])
-            data.append({'id': i+1, 'minWaterLevel': MinMax[i][0], 'maxWaterLevel': MinMax[i][1], 
+            data.append({'id': i+1, 'minWaterLevel': MinMax[i][0], 'maxWaterLevel': MinMax[i][1],
                     'verticalDatum': 'XGEOID20B', 'units': 'meters', 'geometry': mpoly[0]})
     plt.close('all')
 
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     input_filename = args.input_filename
-    input_fileindex = os.path.basename(input_filename).replace("_", ".").split(".")[1]    
+    input_fileindex = os.path.basename(input_filename).replace("_", ".").split(".")[1]
 
     #reading netcdf dataset
     ds = Dataset(input_filename)
@@ -162,6 +162,8 @@ if __name__ == "__main__":
 
     #t0 = time()
     levels = [round(i, 1) for i in np.arange(0.3, 2.1, 0.1)]
+    levels.append(20)  # Add 20 as the maximum level
+
     #print(levels)
     #get_disturbance(maxelev, depth, levels, my_fillvalue, filename_output)
     #print(f'Calculating and masking disturbance took {time()-t0} seconds')
@@ -175,7 +177,7 @@ if __name__ == "__main__":
     #    + f't00z_{dates[i].strftime("%Y%m%d")}t{dates[i].strftime("%H")}z.gpkg' for i in range(len(times))]
     #print(filenames)
     filenames = [f'stofs_3d_atl.t12z.disturbance.n{i-1:03d}.gpkg' for i in range(24, 0,-1)]
-    
+
     #for i in range(48):
     for i in range(96):
         filenames.append(f'stofs_3d_atl.t12z.disturbance.f{i+1:03d}.gpkg')
