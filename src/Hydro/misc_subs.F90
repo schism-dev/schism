@@ -6532,16 +6532,16 @@
 
         !Compute wave forces
         ! Compute Stokes drift velocities and pressure terms
-        call STOKES_STRESS_INTEGRAL_SCHISM
+        call STOKES_STRESS_INTEGRAL_SCHISM2
         ! Conservative terms (relative to Stokes drift advection, Coriolis and pressure head: Eq. 17, 19 and 20 from Bennis 2011)
-        call COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM
+        call COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM2
         ! Sink of momentum due to wave breaking
-        IF (fwvor_breaking == 1) call COMPUTE_BREAKING_VF_TERMS_SCHISM
+        IF (fwvor_breaking == 1) call COMPUTE_BREAKING_VF_TERMS_SCHISM2
         ! Sink of momentum due to bottom streaming
-        IF (fwvor_streaming == 1) call COMPUTE_STREAMING_VF_TERMS_SCHISM
+        IF (fwvor_streaming == 1) call COMPUTE_STREAMING_VF_TERMS_SCHISM2
         !No veg yet
-        !IF (fwvor_wveg == 1) CALL COMPUTE_VEGDISS_VF_TERMS_SCHISM     ! Sink of momentum due to wave dissipation by vegetation and update wwave_force
-        !IF (fwvor_wveg_NL == 1) CALL COMPUTE_INTRAWAVE_VEG_FORCE      ! Compute non linear intrawave vegetation force and update wwave_force
+        !IF (fwvor_wveg == 1) CALL COMPUTE_VEGDISS_VF_TERMS_SCHISM2     ! Sink of momentum due to wave dissipation by vegetation and update wwave_force
+        !IF (fwvor_wveg_NL == 1) CALL COMPUTE_INTRAWAVE_VEG_FORCE2      ! Compute non linear intrawave vegetation force and update wwave_force
 
       end SUBROUTINE get_WW3_arrays
 
@@ -6551,7 +6551,7 @@
 !*  at sides when calculating the forces) and the Stokes drift velocities. The latter are 
 !*  computed at all levels, at nodes and sides, and for both the wave and roller (kept separated).
 !**********************************************************************
-      SUBROUTINE STOKES_STRESS_INTEGRAL_SCHISM
+      SUBROUTINE STOKES_STRESS_INTEGRAL_SCHISM2
         USE schism_glbl, ONLY: rkind,errmsg,hmin_radstress,np,npa,ns,nsa,kbs,kbe, &
      &ne,nea,idry_e, nvrt,kbp,idry,dp, &
      &isdel,indel,elnode,dldxy,zs,area,idry_s,isidenode,nne,rho0,znl, &
@@ -6729,7 +6729,7 @@
            END DO
         END DO !is
 
-      END SUBROUTINE STOKES_STRESS_INTEGRAL_SCHISM
+      END SUBROUTINE STOKES_STRESS_INTEGRAL_SCHISM2
 
 !**********************************************************************
 !*  This routine is used with RADFLAG=VOR (3D vortex formulation, after
@@ -6737,7 +6737,7 @@
 !*  => Computation of the conservative terms A1 and B1 from Eq. (11) and
 !(12) respectively
 !**********************************************************************
-      SUBROUTINE COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM
+      SUBROUTINE COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM2
         USE schism_glbl, ONLY: rkind,np,npa,kbs,ns,nsa,nvrt,idry_e,isdel,elnode,dldxy,cori,zs, &
      &su2,sv2,uu2,vv2,idry_s,jpress,wwave_force,stokes_hvel_side, &
      &stokes_wvel_side,fwvor_gradpress,fwvor_advz_stokes,fwvor_advxy_stokes
@@ -6833,7 +6833,7 @@
         ! Exchange between ghost regions
         CALL exchange_s3d_2(wwave_force)
 
-      END SUBROUTINE COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM
+      END SUBROUTINE COMPUTE_CONSERVATIVE_VF_TERMS_SCHISM2
 
 
 !**********************************************************************
@@ -6842,7 +6842,7 @@
 !*  March 2022 : update LRU team
 !    Accounts for depth-induced breaking, roller (if turned on) and whitecapping contribution
 !**********************************************************************
-      SUBROUTINE COMPUTE_BREAKING_VF_TERMS_SCHISM
+      SUBROUTINE COMPUTE_BREAKING_VF_TERMS_SCHISM2
         USE schism_glbl, ONLY: rkind,nvrt,hmin_radstress,kbs,ns,isbs,dps,h0, &
      &zs,nsa,idry_s,isidenode,eta2,errmsg,wwave_force,wave_hs, &
      &wave_ocean_flux_x,wave_ocean_flux_y
@@ -6962,14 +6962,14 @@
         ! Exchange between ghost regions
         CALL exchange_s3d_2(wwave_force)
 
-      END SUBROUTINE COMPUTE_BREAKING_VF_TERMS_SCHISM
+      END SUBROUTINE COMPUTE_BREAKING_VF_TERMS_SCHISM2
 
 !**********************************************************************
 !*  This routine is used with RADFLAG=VOR (3D vortex formulation, after Bennis et al., 2011)
 !*  => Computation of the non-conservative terms (Fb) due to bottom friction (see Uchiyama et al., 2010)
 !*  TO DO : pass the vertical distribution in option similar to breaking wave force
 !**********************************************************************
-      SUBROUTINE COMPUTE_STREAMING_VF_TERMS_SCHISM
+      SUBROUTINE COMPUTE_STREAMING_VF_TERMS_SCHISM2
         USE schism_glbl, ONLY: rkind,nvrt,hmin_radstress,kbs,ns,isbs,dps,h0,out_wwm, &
      &zs,idry_s,isidenode,nchi,rough_p,iwbl,delta_wbl,errmsg,small1, &
      &wwave_force,wave_flux_friction_x,wave_flux_friction_y,eta2
@@ -7050,4 +7050,4 @@
         ! Exchange between ghost regions
         CALL exchange_s3d_2(wwave_force)
 
-      END SUBROUTINE COMPUTE_STREAMING_VF_TERMS_SCHISM
+      END SUBROUTINE COMPUTE_STREAMING_VF_TERMS_SCHISM2
