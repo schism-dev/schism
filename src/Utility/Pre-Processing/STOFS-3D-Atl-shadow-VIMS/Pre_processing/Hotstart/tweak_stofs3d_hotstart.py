@@ -42,19 +42,19 @@ def gen_elev_ic(hgrid=None, h0=0.1, city_shape_fnames=None, aviso_file=None):
     ds = xr.open_dataset(aviso_file)
     lon2 = ds.longitude.values
     lat2 = ds.latitude.values
-    x2, y2=transform_ll_to_cpp(lon2, lat2)
+    x2, y2 = transform_ll_to_cpp(lon2, lat2)
     ssh = np.squeeze(ds.adt.values[0, :, :])
     ds.close()
     # interpolate aviso data onto model grid
     ssh_int = interp_to_points_2d(y2, x2, np.c_[y1, x1], ssh)
 
-    elev_ic[ocean] = ssh_int[ocean]
+    elev_ic[ocean] = ssh_int[ocean] - 0.42  # nEw, uniform shift for STOFS-3D-Atl v7
 
     return elev_ic
 
 
 def tweak_stofs3d_hotstart(
-    wdir ='./', hotstart_date_str='2021-05-01', city_shapefile_names=[], aviso_file=None,
+    wdir='./', hotstart_date_str='2021-05-01', city_shapefile_names=[], aviso_file='aviso.nc',
     hycom_TS_file='TS_1.nc', hycom_hot_file='hotstart.nc.hycom',
 ):
     '''
@@ -63,13 +63,13 @@ def tweak_stofs3d_hotstart(
         TS_1.nc: Temperature and Salinity from HYCOM, the first time in the nc file should match model start time.
                  This file should already be prepared in the previous step of hotstart.nc generation
         hotstart.nc.hycom: hotstart.nc based on HYCOM only, renamed with the '.hycom' suffix.
+        aviso.nc: sea surface height above geoid, in lon/lat
 
     You may select pre-defined city polygons to force the water level to be below ground;
     only specify the file basename, the script will copy these files to your wdir.
 
-    The "aviso_file" is the sea surface height above geoid, in lon/lat
+    Use scripts in ../AVISO/ to download aviso.nc
     '''
-
     griddir = wdir
     output_obs_dir = f'{wdir}/Obs/'  # observations will be downloaded to this directory
     my_hot_file = f'{wdir}/hotstart.nc'  # this is the final hotstart.nc file
@@ -120,7 +120,11 @@ def tweak_stofs3d_hotstart(
     my_hot.trnd_propogate()  # propogate trnd values to trnd0 and tr_el
 
     print('setting initial elevation: aviso values in the ocean, just below ground on higher grounds and in cities')
-    my_hot.eta2.val[:] = gen_elev_ic(hgrid=my_hot.grid.hgrid, h0=0.1, city_shape_fnames=[f'{wdir}/{x}' for x in city_shapefile_names], aviso_file=aviso_file)  # no shift based on R11, R24, R11a
+    my_hot.eta2.val[:] = gen_elev_ic(
+        hgrid=my_hot.grid.hgrid, h0=0.1,
+        city_shape_fnames=[f'{wdir}/{x}' for x in city_shapefile_names],
+        aviso_file=f'{wdir}/{aviso_file}'  # no shift based on R11, R24, R11a
+    )
 
     print('writing the final hotstart.nc')
     my_hot.writer(fname=my_hot_file)
@@ -128,9 +132,9 @@ def tweak_stofs3d_hotstart(
 if __name__ == "__main__":
     # Modify hycom-based hotstart.nc.hycom with coastal observation values of T and S, and a better initial elevation
     tweak_stofs3d_hotstart(
-        wdir='./',
-        hotstart_date_str='2024-05-21',
+        wdir='/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_2024_reforecast/',
+        hotstart_date_str='2023-12-01',
         city_shapefile_names = ["LA_urban_polys_lonlat.shp"],  # polygon shapefile specifying cities
-        aviso_file = 'aviso.nc'
+        aviso_file='aviso.nc'
     )
 

@@ -65,7 +65,7 @@ def main():
     working_dir = Path('/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I12z/Source_sink/relocated_source_sink/')
     cache_folder = Path('/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I12z/Source_sink/original_source_sink/20240305/')
     os.chdir(working_dir)
-    gen_sourcesink(datetime(2024, 3, 5), 5, cache_folder=cache_folder)
+    gen_sourcesink_nwm(datetime(2024, 3, 5), 5, cache_folder=cache_folder)
 
 
 if __name__ == '__main__':
