@@ -664,7 +664,7 @@
           call exchange_p2d(srad)
           call exchange_p2d(hradd)
 #ifdef PREC_EVAP
-          call exchange_p2d(precip_flux)
+          call exchange_p2d(fluxprc)
           call exchange_p2d(prec_snow)
 #endif 
 #else /*USE_ATMOS*/
