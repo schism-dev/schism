@@ -11,8 +11,8 @@
 !> @author Jan Kossack <jan.kossack@hereon.de>
 !> @author Wang Zhenggui
 
-!> @copyright Copyright 2021-2022 Virginia Institute of Marine Science
 !> @copyright Copyright 2021-2024 Helmholtz-Zentrum hereon GmbH
+!> @copyright Copyright 2021-2022 Virginia Institute of Marine Science
 !> @copyright Copyright 2017-2021 Helmholtz-Zentrum Geesthacht GmbH
 !
 ! @license dual-licensed under the Apache License, Version 2.0
@@ -249,7 +249,7 @@ subroutine fabm_schism_init_model(ntracers)
     call get_param('schism_fabm.in','background_extinction',2,tmp_int,fs%background_extinction,tmp_string)
     call get_param('schism_fabm.in','par_fraction',2,tmp_int,fs%par_fraction,tmp_string)
   else
-    call driver%log_message('skipped reading non-existent "'// &
+    call driver%log_message('skipped reading optional "'// &
       in_dir(1:len_in_dir)//'schism_fabm.in"')
   end if
 
