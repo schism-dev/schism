@@ -291,7 +291,7 @@
 ! than once, and the code will accumulate the volumes; for mass conc, 
 ! values are applied at _net_ source elem (no summation for conc).
 
-! If USE_NWM_BMI is on with if_source/=0, some parts of the reading and some b.c. will be bypassed (but the inputs
+! If USE_BMI is on with if_source/=0, some parts of the reading and some b.c. will be bypassed (but the inputs
 ! will still be needed).
 !-----------------------------------------------------------------------
   if_source = 0
