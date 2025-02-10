@@ -503,9 +503,9 @@
           wtime1=wtime2
           wtime2=wtime2+wtiminc
           if(myrank==0) read(22,*)tmp,wx2,wy2
-!$OMP     end single
           call mpi_bcast(wx2,1,rtype,0,comm,istat)
           call mpi_bcast(wy2,1,rtype,0,comm,istat)
+!$OMP     end single
 
 !$OMP     workshare
           windx1=windx2
