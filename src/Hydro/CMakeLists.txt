@@ -51,4 +51,8 @@ list( APPEND locallibs hydro)
 # 2. hydro is added last except for core, so that all the modules that were used got here.
 message(STATUS "Mod libraries: ${schismmodlibs}")
 add_dependencies(hydro core ${schismmodlibs})
-target_link_libraries(hydro core ${schismmodlibs})
+target_link_libraries(hydro core ${schismmodlibs} ${NetCDFLIBS} MPI::MPI_Fortran)
+
+if(NOT NO_PARMETIS)
+  target_link_libraries(hydro parmetis)
+endif()

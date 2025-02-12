@@ -640,7 +640,13 @@
         ninv=time/th_dt2(1)
         th_time2(1,1)=real(ninv,rkind)*th_dt2(1)
         th_time2(2,1)=th_time2(1,1)+th_dt2(1)
+      endif
 
+      if(nettype2>0) then
+#ifdef USE_BMI
+        ath2(1,1,:,1:2,1)=0.d0
+        ath2(1,1,:,3,1)=-9999.d0
+#else
         j=nf90_inq_varid(ncid_elev2D, "time_series",mm)
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev time_series')
         j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,1,1), &
@@ -649,7 +655,8 @@
         j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,2,1), &
     &(/1,1,1,ninv+2/),(/1,1,nnode_et,1/))
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev time_series2')
-      endif !nettype2
+#endif /*USE_BMI*/
+      endif
 
       if(nfltype2>0) then
         j=nf90_open(in_dir(1:len_in_dir)//'uv3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_uv3D)
@@ -722,18 +729,22 @@
       endif !myrank==0
 
 !...  Source/sinks: read by rank 0 first
-#ifdef USE_NWM_BMI
-      ninv=time/th_dt3(1)
-      th_time3(1,1)=ninv*th_dt3(1)
-      th_time3(2,1)=th_time3(1,1)+th_dt3(1)
+#ifdef USE_BMI
 
-      ninv=time/th_dt3(2)
-      th_time3(1,2)=ninv*th_dt3(2)
-      th_time3(2,2)=th_time3(1,2)+th_dt3(2)
+      if(nsources>0) then
+        ninv=time/th_dt3(1)
+        th_time3(1,1)=dble(ninv)*th_dt3(1)
+        th_time3(2,1)=th_time3(1,1)+th_dt3(1)
+        ninv=time/th_dt3(3)
+        th_time3(1,3)=dble(ninv)*th_dt3(3)
+        th_time3(2,3)=th_time3(1,3)+th_dt3(3)
+      endif
 
-      ninv=time/th_dt3(3)
-      th_time3(1,3)=ninv*th_dt3(3)
-      th_time3(2,3)=th_time3(1,3)+th_dt3(3)
+      if(nsinks>0) then
+        ninv=time/th_dt3(2)
+        th_time3(1,2)=dble(ninv)*th_dt3(2)
+        th_time3(2,2)=th_time3(1,2)+th_dt3(2)
+      endif
 
       ath3(:,1,1,1:2)=0.d0
       ath3(:,1,1,3)=-9999.d0
@@ -835,6 +846,8 @@
         endif !nsinks>0
       endif !if_source=-1
 
+#endif /*USE_BMI*/
+
 !     Bcast
       if(if_source/=0) then
         !First 2 vars are bcast from rank 0 of comm, which must be a member of myrank_node=0?
@@ -848,7 +861,6 @@
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
 #endif
       endif 
-#endif /*USE_NWM_BMI*/
 
 #ifdef USE_SED
 !...  Sediment model initialization
