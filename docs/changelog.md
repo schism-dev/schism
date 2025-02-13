@@ -90,7 +90,10 @@ To find all the changes between tag releases, search for 'Tag'.
 ## Changes in input and output format
 The info below can also be found in src/Readme.beta_notes. Most changes are made in param.in (now renamed as [param.nml](input-output/param.md)).
 
-
+- `95030324` (17 Sept 2024): added surface T,S restoration (for large-scale long-term runs);
+                             related parameters are iref_ts,ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,
+                             ref_ts_tscale,ref_ts_dt, and the input is surface_restore.nc;
+- `ab71be44` (26 Aug 2024): ptrack4 added biofouling option; new parameter ibiofoul and related values;
 - `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter; added an optional
                           parameter niter_hdif, and hdif.gr3 now specifies the filter strength (<=0.2);
 - `44c0c76` (2 Aug 2024): added an optional flag RADFLAG (for wave coupling)
