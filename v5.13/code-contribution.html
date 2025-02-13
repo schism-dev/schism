@@ -1,0 +1,2246 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-8.3.4">
+    
+    
+      
+        <title>Code structure - SCHISM</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.4a0965b7.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.cbb835fc.min.css">
+        
+      
+      
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="stylesheets/extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#general-info" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-component="outdated" hidden>
+        <aside class="md-banner md-banner--warning">
+          
+        </aside>
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="SCHISM" class="md-header__button md-logo" aria-label="SCHISM" data-md-component="logo">
+      
+  <img src="assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCHISM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Code structure
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/schism-dev/schism" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="SCHISM" class="md-nav__button md-logo" aria-label="SCHISM" data-md-component="logo">
+      
+  <img src="assets/logo.png" alt="logo">
+
+    </a>
+    SCHISM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/schism-dev/schism" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="changelog.html" class="md-nav__link">
+        Changelog
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          Getting started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Getting started" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Getting started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/getting-sourcecode.html" class="md-nav__link">
+        Getting the source code
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/compilation.html" class="md-nav__link">
+        Compilation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/test_suite.html" class="md-nav__link">
+        Test suite
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/typical-workflow.html" class="md-nav__link">
+        Typical workflow (a cheat sheet)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/grid-generation.html" class="md-nav__link">
+        Mesh generation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing.html" class="md-nav__link">
+        Preprocessing
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_8" type="checkbox" id="__nav_3_8" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3_8">
+          Preprocessing with pylib
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Preprocessing with pylib" data-md-level="2">
+        <label class="md-nav__title" for="__nav_3_8">
+          <span class="md-nav__icon md-icon"></span>
+          Preprocessing with pylib
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pylib/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pylib/installation.html" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pylib/schismcheck.html" class="md-nav__link">
+        schismCheck (input visualization)
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_9" type="checkbox" id="__nav_3_9" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3_9">
+          Preprocessing with PySCHISM
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Preprocessing with PySCHISM" data-md-level="2">
+        <label class="md-nav__title" for="__nav_3_9">
+          <span class="md-nav__icon md-icon"></span>
+          Preprocessing with PySCHISM
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pyschism/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pyschism/installation.html" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pyschism/bctides.html" class="md-nav__link">
+        Tides
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pyschism/boundary.html" class="md-nav__link">
+        B.C. from HYCOM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pyschism/atmos.html" class="md-nav__link">
+        Atmospheric forcing
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/pre-processing-with-pyschism/nwm.html" class="md-nav__link">
+        Souce and Sink
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/running-model.html" class="md-nav__link">
+        Running the model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/visualization.html" class="md-nav__link">
+        Visualization
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/post-processing.html" class="md-nav__link">
+        Postprocessing
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          Model formulation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Model formulation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          Model formulation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/physical-formulation.html" class="md-nav__link">
+        Physical formulation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_2" type="checkbox" id="__nav_4_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_2">
+          Numerical formulation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Numerical formulation" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_2">
+          <span class="md-nav__icon md-icon"></span>
+          Numerical formulation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/geometry-discretization.html" class="md-nav__link">
+        Geometry and discretization
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/barotropic-solver.html" class="md-nav__link">
+        Barotropic solver
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/eulerian-lagrangian-method.html" class="md-nav__link">
+        Eulerian-Lagrangian Method
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/momentum-equation.html" class="md-nav__link">
+        Momentum equation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/vertical-velocity.html" class="md-nav__link">
+        Vertical velocity
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/turbulence-closure.html" class="md-nav__link">
+        Turbulence closure
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/transport-equation.html" class="md-nav__link">
+        Transport equation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/updating-levels.html" class="md-nav__link">
+        Updating the levels/Inundation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schism/spherical-coordinates.html" class="md-nav__link">
+        Spherical coordinates
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_5">
+          Input/Output
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Input/Output" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          Input/Output
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/hgrid.html" class="md-nav__link">
+        Horizontal grid (hgrid.gr3)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/vgrid.html" class="md-nav__link">
+        Vertical grid (vgrid.in)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/param.html" class="md-nav__link">
+        Model parameters (param.nml)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/bctides.html" class="md-nav__link">
+        Boundary conditions (bctides.in)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/friction.html" class="md-nav__link">
+        Bottom friction
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/sflux.html" class="md-nav__link">
+        Atmospheric flux (/sflux)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/optional-inputs.html" class="md-nav__link">
+        Optional inputs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="input-output/outputs.html" class="md-nav__link">
+        Outputs
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6">
+          Mesh generation - advanced topics
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Mesh generation - advanced topics" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          Mesh generation - advanced topics
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mesh-generation/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mesh-generation/cross_regime.html" class="md-nav__link">
+        Meshing for cross-scale regimes
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_3" type="checkbox" id="__nav_6_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6_3">
+          Meshing for compound floods
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Meshing for compound floods" data-md-level="2">
+        <label class="md-nav__title" for="__nav_6_3">
+          <span class="md-nav__icon md-icon"></span>
+          Meshing for compound floods
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mesh-generation/meshing-for-compound-floods/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mesh-generation/meshing-for-compound-floods/extract-thalweg.html" class="md-nav__link">
+        Extract thalwegs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mesh-generation/meshing-for-compound-floods/generate-river-map.html" class="md-nav__link">
+        Generate river map
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mesh-generation/meshing-for-compound-floods/meshing-in-SMS.html" class="md-nav__link">
+        Meshing in SMS
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_7" type="checkbox" id="__nav_7" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_7">
+          Modules
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Modules" data-md-level="1">
+        <label class="md-nav__title" for="__nav_7">
+          <span class="md-nav__icon md-icon"></span>
+          Modules
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/generic-tracer.html" class="md-nav__link">
+        Generic tracer module
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/age.html" class="md-nav__link">
+        AGE
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/sed2d.html" class="md-nav__link">
+        2D Sediment model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/sed3d.html" class="md-nav__link">
+        3D Sediment model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/icm.html" class="md-nav__link">
+        ICM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/cosine.html" class="md-nav__link">
+        CoSiNe
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/dvd.html" class="md-nav__link">
+        DVD
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/marsh-migration.html" class="md-nav__link">
+        Marsh migration
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/analysis-mode.html" class="md-nav__link">
+        Analysis mode
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/hydraulics.html" class="md-nav__link">
+        Hydraulics
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/particle-tracking.html" class="md-nav__link">
+        Particle tracking
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/wwm.html" class="md-nav__link">
+        WWM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/fabm.html" class="md-nav__link">
+        FABM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/pahm.html" class="md-nav__link">
+        PaHM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="modules/single-class-ice.html" class="md-nav__link">
+        Single-class ice module
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Code structure
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="code-contribution.html" class="md-nav__link md-nav__link--active">
+        Code structure
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#general-info" class="md-nav__link">
+    General info
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#domain-partitioning" class="md-nav__link">
+    Domain partitioning
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arrays-and-constant" class="md-nav__link">
+    Arrays and constant
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#important-mpi-routines" class="md-nav__link">
+    Important MPI routines
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#io-channels-in-schism" class="md-nav__link">
+    I/O channels in SCHISM
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-code" class="md-nav__link">
+    Example code
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#general-code-guide" class="md-nav__link">
+    General code guide
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="case-study.html" class="md-nav__link">
+        Case studies
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_10" type="checkbox" id="__nav_10" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_10">
+          SCHISM external coupling
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="SCHISM external coupling" data-md-level="1">
+        <label class="md-nav__title" for="__nav_10">
+          <span class="md-nav__icon md-icon"></span>
+          SCHISM external coupling
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="coupling/esmf.html" class="md-nav__link">
+        Earth System Modeling Framework
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="coupling/nuopc.html" class="md-nav__link">
+        National Unified Operational Prediction Capability
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="coupling/coastalapp.html" class="md-nav__link">
+        NOAA's CoastalApp
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="coupling/mossco.html" class="md-nav__link">
+        Modular System for Shelves and Coasts
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="coupling/cesm.html" class="md-nav__link">
+        NCAR's Community Earth System Model
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="faq.html" class="md-nav__link">
+        Frequently Asked Questions
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="known_issues.html" class="md-nav__link">
+        Known issues
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="contribute-to-this-online-manual.html" class="md-nav__link">
+        Contribute to this online manual
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+  <a href="https://github.com/schism-dev/schism/edit/master/docs/code-contribution.md" title="Edit this page" class="md-content__button md-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
+
+
+  <h1>Code structure</h1>
+
+<p>The information presented in this chapter is mostly intended for developers or anyone who wishes to work on the code. To know more about how to contribute your code see <a href="https://github.com/schism-dev/schism/blob/master/CONTRIBUTING.md">CONTRIBUTING.md</a> on SCHISM github repo. </p>
+<h2 id="general-info">General info<a class="headerlink" href="#general-info" title="Permanent link">&para;</a></h2>
+<p>SCHISM was written in MPI FORTRAN 90. After svn revision 5225, we have migrated to <a href="https://github.com/schism-dev">github</a>. Figure <a href="#figure01">1</a> shows the directory structure of the SCHISM github repository schism. General public have access to all branches.</p>
+<figure id="figure01">
+<p><img alt="SCHISM github repository" src="assets/github-fs.png" /></p>
+<figcaption>SCHISM github repository.</figcaption>
+</figure>
+<p>Figure <a href="#figure02">2</a> shows its main work flow and major code blocks. Two files inside <code>src/</code> (<code>Hydro/schism_init.F90</code> and <code>Hydro/schism_step.F90</code>) represent bulk of the hydro code, and are driven by a master program (<code>Driver/schism_driver.F90</code>). The global variables are defined in <code>Core/schism_glbl.F90</code>, and the message passing routines are defined in <code>Core/schism_msgp.F90</code>.</p>
+<figure id="figure02">
+<p><img alt="SCHISM code work flow. The percentages are estimates from a test case with an earlier version and may not be up to date." src="assets/schism-loop.png" /></p>
+<figcaption>SCHISM code work flow. The percentages are estimates from a test case with an earlier version and may not be up to date.</figcaption>
+</figure>
+<p>The domain decomposition is done using ParMETIS graph partitioning library (included in the <code>src/</code>). Figure <a href="#figure03">3</a> shows an example of sub-domains generated by this lib.</p>
+<figure id="figure03">
+<p><img alt="Domain decomposition. Each color represents a sub-domain (‘resident domain’) taken by a MPI process and the thick black polygon represents the ‘augmented’ (=resident+ghost) domain of process 6." src="assets/domain-decomposition.png" /></p>
+<figcaption>Domain decomposition. Each color represents a sub-domain (‘resident domain’) taken by a MPI process and the thick black polygon represents the ‘augmented’ (=resident+ghost) domain of process 6.</figcaption>
+</figure>
+<p>The Utility dir has a lot of useful utility scripts for pre- and post-processing. The header of each program generally has info on its purpose and instructions on how to use it.</p>
+<ul>
+<li><code>ACE</code>: source code and install notes for ACE tools; the manual can be found on <a href="http://ccrm.vims.edu/w/index.php/Online_tutorials#ACE_tool_tutorial">Forum</a>.</li>
+<li><code>Combining_Scripts</code>: FORTRAN and perl scripts used to gather outputs from SCHISM (e.g., <code>outputs/schout_0*_[stack number].nc</code> etc) into one binary file (<code>schout_[stack_number].nc</code>).</li>
+<li><code>Grid_Scripts</code>: FORTRAN codes to interpolate depths from DEM files in either structured grid (raster) or unstructured grid format. While ACE/xmgredit5 can do similar things, these scripts are mostly for interpolating from very large DEM files.</li>
+<li><code>Gen_Hotstart</code>: scripts for preparing <code>hotstart.nc</code> from e.g., netcdf outputs from a structured-grid model.</li>
+<li><code>Pre-Processing</code>: various scripts for pre-processing (checking, viz etc)</li>
+<li><code>OneWayNestScripts</code>: scripts for 1-way nesting, by preparing <code>*[23]D.th.nc</code> (elevation, horizontal velocity, salinity and temperature boundary condition) that can be used for the 'small-domain' run.</li>
+<li><code>Particle_Tracking</code>: particle tracking code that uses SCHISM's outputs for 3D tracking.</li>
+<li><code>Post-Processing-Fortran</code>: FORTRAN codes for extracting time series at selected 3D points (including transects). You can modify these codes for your own purposes.</li>
+<li><code>Sflux_nc</code>: matlab scripts useful for preparing your own .nc files for <code>sflux/</code>. <code>NARR_util/</code> has scripts to prepare .nc files from NCEP's NARR products.</li>
+<li><code>SMS</code>: scripts to convert between <code>.2dm</code> of SMS and <code>.gr3</code>.</li>
+<li><code>Vis_Matlab</code>: matlab scripts for viz. At the moment, these scripts have not been updated to handle <span class="arithmatex">\(LSC^2\)</span> grid.</li>
+</ul>
+<h2 id="domain-partitioning">Domain partitioning<a class="headerlink" href="#domain-partitioning" title="Permanent link">&para;</a></h2>
+<p>The domain is first portioned into non-overlapping sub-domains (in element sense; see Figure <a href="#figure03">3</a>) using ParMETIS. Then each sub-domain is augmented with 1 layer of ghost elements. This is accomplished by the call <code>partition_hgrid()</code> early in the main program. After calling <code>aquire_hgrid(.true.)</code> immediately after that, the elements, nodes, sides in each augmented and non-augmented (i.e., without ghosts) domains are shown in Figure <a href="#figure03">3</a>. The corresponding variable denoting number of Elements, Nodes, and Sides are given in the following table. Intuition is typically followed although there are exceptions as will be described below.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Global</th>
+<th>Local non-augmented</th>
+<th>Ghost</th>
+<th>Augmented</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Elements</td>
+<td><code>ne_global</code></td>
+<td><code>ne</code></td>
+<td><code>neg</code></td>
+<td><code>nea=ne+neg</code></td>
+</tr>
+<tr>
+<td>Nodes</td>
+<td><code>np_global</code></td>
+<td><code>np</code></td>
+<td><code>npg</code></td>
+<td><code>npa=np+npg</code></td>
+</tr>
+<tr>
+<td>Sides</td>
+<td><code>ns_global</code></td>
+<td><code>ns</code></td>
+<td><code>nsg</code></td>
+<td><code>nsa=ns+nsg</code></td>
+</tr>
+</tbody>
+</table>
+<p>The call to ParMETIS routine is as follows - </p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">call </span><span class="n">ParMETIS_V3_PartGeomKway</span><span class="p">(</span><span class="n">vtxdist</span><span class="p">,</span><span class="n">xadj</span><span class="p">,</span><span class="n">adjncy</span><span class="p">,</span><span class="n">vwgt</span><span class="p">,</span><span class="n">adjwgt</span><span class="p">,</span><span class="n">wgtflag</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">numflag</span><span class="p">,</span><span class="n">ndims</span><span class="p">,</span><span class="n">xyz</span><span class="p">,</span><span class="n">ncon</span><span class="p">,</span><span class="n">nproc</span><span class="p">,</span><span class="n">tpwgts</span><span class="p">,</span><span class="n">ubvec</span><span class="p">,</span><span class="k">options</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="n">edgecut</span><span class="p">,</span><span class="n">part</span><span class="p">,</span><span class="n">comm</span><span class="p">)</span>
+</code></pre></div>
+<ul>
+<li><code>p</code> : # of processors;</li>
+<li><code>n</code> : total # of vertices (local) in graph sense;</li>
+<li><code>m</code> : total # of neighboring vertices ("edges"); double counted between neighboring vertice u and v.</li>
+<li><code>ncon</code>: # of weights for each vertex.</li>
+<li><code>int(in) vtxdist(p+1)</code> : Processor <code>j</code> stores vertices <code>vtxdist(j):vtxdist(j+1)-1</code></li>
+<li><code>int (in) xadj(n+1), adjncy(m)</code> : locally, vertex <code>j</code>'s neighboring vertices are <code>adjncy(xadj(j):xadj(j+1)-1)</code>. adjncy points to global index;</li>
+<li><code>int(in) vwgt(ncon*n), adjwgt(m)</code> : weights at vertices and "edges". Format of adjwgt follows adjncy;</li>
+<li><code>int(in) wgtflag</code> : <ul>
+<li><code>0</code>: none (<code>vwgt</code> and <code>adjwgt</code> are NULL); </li>
+<li><code>1</code>: edges (<code>vwgt</code> is <code>NULL</code>); </li>
+<li><code>2</code>:vertices (<code>adjwgt</code> is <code>NULL</code>); </li>
+<li><code>3</code>: both vertices &amp; edges;</li>
+</ul>
+</li>
+<li><code>int(in) numflag</code> : <ul>
+<li><code>0</code>: C-style numbering from 0; </li>
+<li><code>1</code>: FORTRAN style from 1;</li>
+</ul>
+</li>
+<li><code>int(in) ndims</code>: 2 or 3 (D);</li>
+<li><code>float(in) xyz(ndims*n)</code> : coordinate for vertex <code>j</code> is <code>xyz(j*ndims:(j+1)*ndims-1)</code> (C style); <code>ndims*(j-1)+1: ndims*j</code> (FORTRAN style);</li>
+<li><code>int(in) nparts</code>: # of desired sub-domains (usually <code>nproc</code>);</li>
+<li><code>float(in) tpwgts(ncon*nparts)</code> : <code>=1/nparts</code> if sub-domains are to be of same size for each vertex weight;</li>
+<li><code>float(in) ubvec(ncon)</code> : imbalance tolerance for each weight;</li>
+<li><code>int(in) options</code> : additonal parameters for the routine (see above);</li>
+<li><code>int(out) edgecut</code> : # of edges that are cut by the partitioning;</li>
+<li><code>int(out) part()</code> : array size = # of local vertices. It stores indices of local vertices.</li>
+</ul>
+<h2 id="arrays-and-constant">Arrays and constant<a class="headerlink" href="#arrays-and-constant" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>llist_type :: iegl(iegb)</code> : <code>iegb</code> is a global element #. If the element is resident (not ghost), <code>iegl(iegb)%rank=myrank</code>, and <code>iegl(iegb)%id = local element index</code>, and <code>iegl%next=null</code>. If <code>iegb</code> is a ghost, then <code>iegl</code> list has two entries: <code>myrank</code> and the rank where <code>iegb</code> is resident. All processors have this info, but the lists are different (1st entry is usually myrank etc).</li>
+<li><code>llist_type :: ipgl(ipgb)</code> : <code>ipgb</code> is a global node #. Use this list only when the node is resident (not ghost); it’s confusing when <code>ipgb</code> is ghost. If <code>ipgb</code> is resident, <code>ipgl(ipgb)%rank=myrank</code>, and <code>ipgl(ipgb)%id = local node index</code>. <code>ipgl%next%next%next....</code> is the linked list, with ranks in ascending order. Unless <code>ipgb</code> is an interface node (i.e., resident in more than 1 process), the list has only 1 entry. All processors have this info, but the lists are different (1st entry is usually myrank etc).</li>
+<li><code>llist_type :: isgl(isgb)</code> : <code>isgb</code> is a global side #. Similar to <code>ipgl</code>, if the side is resident (not ghost), <code>isgl(isgb)%rank=myrank</code>, and <code>isgl(isgb)%id = local side index</code>. <code>isgl%next%next...</code> is the list, with ranks in ascending order. All processors have this info, but the lists are different (1st entry is usually myrank etc).</li>
+<li><code>int :: ielg(ie), iplg(ip), islg(isd)</code> : The global element index of local element ie in the augmented domain. Similar for the other two (nodes/sides).</li>
+<li><code>int :: iegrpv(iegb)</code> : The rank # for global element <code>iegb</code> (before augmenting the domain). Used mainly in partitioning the grid.</li>
+<li>Arrays that have similar meaning between global and local aug. domains, i.e., they do not have problem of getting outside the aug. domain: <code>i34</code>, <code>elnode</code> (old name: <code>nm</code>), <code>elside</code> (<code>js</code>), <code>ssign</code>, <code>snx</code>, <code>sny</code>.</li>
+<li>Arrays that need special attention in the aug. domain - <ul>
+<li><code>int :: ic3(1:i34(), ie)</code> – <code>positive</code> if the neighbor element is inside the aug. domain as well (and in this case it is the local index of the neighbor element); <code>0</code> if (global) boundary; <code>negative</code> if the neighbor element is outside the aug. domain and in this case, the absolute value is the global element index.</li>
+<li><code>int :: nne(ip)</code> – total # of neighbor elements around local node <code>ip</code>, including those outside the aug. domain (i.e., same as <code>nnegb()</code>).</li>
+<li><code>int :: indel(1: nne(ip),ip)</code> – surrounding element indices. If inside aug. domain, this is the local element index; if outside, this is the negative of the global element index.</li>
+<li><code>int :: iself(1: nne(ip),ip)</code> – same as global <code>iselfgb</code>, i.e., the elemental local index for node <code>ip</code> in neighbor element <code>indel()</code> (even if it is outside).</li>
+<li><code>int :: nnp(ip)</code> – total # of surrounding nodes for node <code>ip</code>, excluding all nodes outside the aug. domain. For SCHISM, include all nodes outside.</li>
+<li><code>int :: indnd(1: nnp(ip),ip)</code> – list of surrounding nodes, excluding all nodes outside the aug. domain. For SCHISM, all nodes outside will have negative global index returned.</li>
+<li><code>int :: isdel(1:2,isd)</code> &amp; <code>isidenode(1:2,isd)</code> – order of the two adjacent elements follows global indices, and so the vector from node 1 to 2 in <code>isidenode(1:2,isd)</code> forms local y-axis while the vector from element 1 to 2 in isdel(1:2,isd) forms local x-axis. Therefore either of <code>isdel(1:2,isd)</code> can be negative. The element index is local (positive) if it is inside the aug. domain; otherwise the minus of global element index is returned. The local side <code>isd</code> is on the boundary if and only if <code>isdel(2,isd)=0</code>, and in this case, <code>isdel(1,isd)</code> must be inside the aug. domain (i.e., positive) (if <code>isd</code> is resident). If <code>isd</code> is resident and not ghost, <code>isdel()</code> has the same meaning as serial code, i.e., <code>is(1,isd)&gt;0</code> (inside the aug. domain), and <code>isdel(2,isd)&gt;=0</code>, and <code>isd</code> is on the boundary if and only if <code>isdel(2,isd)=0</code>.</li>
+<li><code>double :: delj(isd)</code> – meaningful only if isd is resident.</li>
+</ul>
+</li>
+<li>Boundary arrays : Most arrays point to global bnd segment #. Most B.C. arrays are global as well.<ul>
+<li><code>nope_global</code> – total # of open bnd segements in the global domain.</li>
+<li><code>nope</code> – total # of open bnd segements in the aug. domain.</li>
+<li><code>iopelg(1:nope)</code> – returns global open bnd segment # for a local open bnd segment.</li>
+<li><code>iopegl(0,k)</code> - # of local fragmentations of global open bnd segment k.</li>
+<li><code>iopegl(j,k)</code> - local segment # of jth (<code>1&lt;=j&lt;=iopegl(0,k)</code>) fragmentation of global open bnd segment k.</li>
+<li><code>nond(1:nope)</code> – total # of open bnd nodes on each segment. The corresponding global array is <code>nond_global()</code>.</li>
+<li><code>iond(nope,1: nond(1:nope))</code> – list of local node indices on each open bnd segment. The corresponding global array is <code>iond_global()</code>.</li>
+<li><code>nland</code> - total # of land bnd segements in the aug. domain. <code>nland_global</code> is global.</li>
+<li><code>nlnd(1:nland)</code> - total # of land bnd nodes on each segment.</li>
+<li><code>ilnd(nland,1: nlnd(1:nland))</code> – list of local node indices on each land bnd segment.</li>
+<li><code>nosd(nope)</code> (ELCIRC) - # of open bnd sides on each segment.</li>
+<li><code>iosd(nope, 1: nosd(nope))</code> (ELCIRC) – list of open bnd side on each segment.</li>
+<li><code>noe(nope)</code> (ELCIRC) - # of open bnd elements on each segment.</li>
+<li><code>ioe(nope, 1: noe(nope))</code> (ELCIRC) – list of open bnd elements on each segment.</li>
+<li><code>isbe(2,1:nea)</code> (ELCIRC) – if the element is on the local open bnd, this returns the local segment # and element #. 0 otherwise.</li>
+<li><code>isbs()</code> (ELCIRC) – similar to <code>isbe</code>.</li>
+<li><code>isbnd(-2:2,ip)</code> (SCHISM) - If <code>ip</code> is on 1 open bnd only, <code>isbnd(1,ip)</code> points to the global segment # of that open bnd and <code>isbnd(2,ip)=0</code>; if <code>ip</code> is on 2 open bnds, <code>isbnd(1:2,ip)</code> point to the global segment #s for the 2 open bnds. If <code>ip</code> is on land bnd only (i.e., not on open bnd), <code>isbnd(1,ip)= 1</code> and <code>isbnd(2,ip)=0</code>. If <code>ip</code> is an internal node, <code>isbnd(1:2,ip)=0</code>. Therefore, <code>ip</code> is on open bnd if <code>isbnd(1,ip)&gt;0</code> (and in this case <code>isbnd(2,ip)</code> may also be positive, even though <code>isbnd(2,ip)</code> may be outside the aug. domain), on land bnd (not on any open bnd) if <code>isbnd(1,ip)= 1</code>, and an internal node if <code>isbnd(1,ip)=0</code>. If on open bnd, <code>isbnd(-2:-1,ip)</code> are global index (i.e., <code>isbnd(-1,ip)</code>th node on the <code>isbnd(1,ip)</code>th open bnd);</li>
+<li><code>isbs(nsa)</code> - positive if a local side is on the global open bnd (in this case, <code>isbs()</code> is the global segment #); 1 if it is on land bnd; 0 if internal side.</li>
+<li><code>iettype</code>, <code>ifltype</code>, <code>itetype</code>, and <code>isatype</code> all take global bnd segment as argument; other b.c. arrays (<code>eth</code> etc) are also global.</li>
+<li><code>uth(nvrt,nsa)</code>,<code>vth(nvrt,nsa)</code> – local b.c. for <code>ifltype/=0</code> for a local side.</li>
+<li><code>uthnd(nvrt,mnond_global, nope_global)</code>, <code>vthnd()</code> – global arrays.</li>
+<li><code>elbc(ip)</code> – <code>ip</code> is a local node.</li>
+</ul>
+</li>
+<li>Arrays defined in <code>elfe_msgp.F90</code><ul>
+<li><code>nnbr</code> - # of neighbor processors (excluding <code>myrank</code>).</li>
+<li><code>nbrrank(nnbr)</code> – rank of each neighbor processor.</li>
+<li><code>int :: ranknbr(0:nproc-1)</code> – neighbor # for each processor (0 if not neighbor).</li>
+<li><code>nerecv(nnbr)</code> - # of elements to be received from each neighbor.</li>
+<li><code>ierecv(1: nerecv(nnbr),nnbr)</code> – list of element indices (ghost in <code>myrank</code>) to be received from each neighbor (where the elements are resident and not ghost).</li>
+<li><code>nesend(nnbr)</code> - # of elements to be sent to each neighbor.</li>
+<li><code>iesend(1: nesend(nnbr),nnbr)</code> – list of element indices (local resident in <code>myrank</code>) to be sent to each neighbor (where the elements are ghost). Similar for nodes/side (<code>nprecv</code>, <code>iprecv</code> etc).</li>
+</ul>
+</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">A note on ghost exchange</p>
+<p>Since the message exchanges between processors have to wait for each other in order to communicate collectively, it's not necessary to synchronize the processes.</p>
+</div>
+<h2 id="important-mpi-routines">Important MPI routines<a class="headerlink" href="#important-mpi-routines" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>MPI_Recv</code></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">int </span><span class="n">MPI_Recv</span><span class="p">(</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nb">int count</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">datatype</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nb">int </span><span class="n">source</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nb">int </span><span class="n">tag</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="n">MPI_Status</span><span class="w"> </span><span class="o">*</span><span class="n">status</span><span class="w"> </span><span class="p">)</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c">!Inputs:</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c">!  count - maximum number of elements in receive buffer (integer);</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c">!  datatype - datatype of each receive buffer element (handle);</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c">!  source - rank of source (integer);</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c">!  tag - message tag (integer);</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c">!  comm - communicator (handle).</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c">!Outputs:</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="c">!  buf - initial address of receive buffer (choice);</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="c">!  status - status object (Status).</span>
+</code></pre></div>
+<ul>
+<li><code>MPI_Irecv</code> : nonblock receive.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">int </span><span class="n">MPI_Irecv</span><span class="p">(</span><span class="w"> </span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nb">int count</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">datatype</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nb">int </span><span class="n">source</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nb">int </span><span class="n">tag</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="n">MPI_Request</span><span class="w"> </span><span class="o">*</span><span class="n">request</span><span class="w"> </span><span class="p">)</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c">!Inputs:</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c">!   buf - initial address of receive buffer (choice);</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="c">!   count - number of elements in receive buffer (integer);</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c">!   datatype - datatype of each receive buffer element (handle);</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c">!   source - rank of source (integer);</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="c">!   Tag - message tag (integer);</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="c">!   comm - communicator (handle).</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="c">!Output:</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="c">!   request - communication request (handle)</span>
+</code></pre></div>
+<ul>
+<li><code>MPI_Send</code></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">int </span><span class="n">MPI_Send</span><span class="p">(</span><span class="w"> </span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nb">int count</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">datatype</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nb">int </span><span class="n">dest</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nb">int </span><span class="n">tag</span><span class="p">,</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span><span class="w"> </span><span class="p">)</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c">!Inputs:</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c">!   buf - initial address of send buffer (choice);</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c">!   count - number of elements in send buffer (nonnegative integer);</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c">!   datatype - datatype of each send buffer element (handle);</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c">!   dest - rank of destination (integer);</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="c">!   tag - message tag (integer);</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="c">!   comm - communicator (handle).</span>
+</code></pre></div>
+<ul>
+<li><code>MPI_Isend</code> : non-block send</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">int </span><span class="n">MPI_Isend</span><span class="p">(</span><span class="w"> </span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nb">int count</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">datatype</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nb">int </span><span class="n">dest</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nb">int </span><span class="n">tag</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="n">MPI_Request</span><span class="w"> </span><span class="o">*</span><span class="n">request</span><span class="w"> </span><span class="p">)</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="c">! Inputs:</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="c">!   buf - initial address of send buffer (choice);</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c">!   count - number of elements in send buffer (integer);</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="c">!   datatype - datatype of each send buffer element (handle);</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="c">!   dest - rank of destination (integer);</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="c">!   tag - message tag (integer);</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="c">!   comm - communicator (handle).</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="c">!Output:</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="c">!   request - communication request (handle).</span>
+</code></pre></div>
+<ul>
+<li><code>MPI_Allreduce</code> : Combines values from all processes and distribute
+the result back to all processes</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">int </span><span class="n">MPI_Allreduce</span><span class="w"> </span><span class="p">(</span><span class="w"> </span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">sendbuf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">recvbuf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nb">int count</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">datatype</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="n">MPI_Op</span><span class="w"> </span><span class="n">op</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span><span class="w"> </span><span class="p">)</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="c">! Inputs:</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="c">!   sendbuf - starting address of send buffer (choice);</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="c">!   count - number of elements in send buffer (integer). Also the size of the output </span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="c">!           (i.e., ith elements from each processor are summed up and returned as ith element of output);</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="c">!   datatype - data type of elements of send buffer (handle);</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="c">!   op - operation (handle) (e.g., MPI_SUM, MPI_LOR);</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="c">!   comm - communicator (handle).</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="c">! Output:</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="c">!   recvbuf - starting address of receive buffer (choice).</span>
+</code></pre></div>
+<ul>
+<li><code>MPI_Reduce</code></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">int </span><span class="n">MPI_Reduce</span><span class="w"> </span><span class="p">(</span><span class="w"> </span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">sendbuf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">recvbuf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nb">int count</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">datatype</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="n">MPI_Op</span><span class="w"> </span><span class="n">op</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nb">int </span><span class="n">root</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span><span class="w"> </span><span class="p">)</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="c">! only difference from MPI_Allreduce is that the result is sent to rank &quot;root&quot;.</span>
+</code></pre></div>
+<ul>
+<li><code>MPI_Gather</code> : Gathers together values from a group of processes.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">int </span><span class="n">MPI_Gather</span><span class="w"> </span><span class="p">(</span><span class="w"> </span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">sendbuf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nb">int </span><span class="n">sendcnt</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">sendtype</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">recvbuf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nb">int </span><span class="n">recvcount</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">recvtype</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="nb">int </span><span class="n">root</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span><span class="w"> </span><span class="p">)</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="c">! Inputs:</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="c">!   sendbuf - starting address of send buffer (choice)</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="c">!   sendcount - number of elements in send buffer (integer)</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="c">!   sendtype - data type of send buffer elements (handle)</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="c">!   recvcount - number of elements for any single receive (integer, significant !  only at root)</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="c">!   recvtype - data type of recv buffer elements (significant only at root) (handle)</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="c">!   root - rank of receiving process (integer)</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="c">!   comm - communicator (handle)</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="c">! Output:</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="c">!   Recvbuf - address of receive buffer (choice, significant only at root). The received values</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="c">!   are stacked according to the rank number (i.e., first recvcount are from rank 0 etc).</span>
+</code></pre></div>
+<ul>
+<li><code>MPI_Allgatherv</code> : Gathers data from all tasks and deliver it to all.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">int </span><span class="n">MPI_Allgatherv</span><span class="w"> </span><span class="p">(</span><span class="w"> </span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">sendbuf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nb">int </span><span class="n">sendcount</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">sendtype</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">recvbuf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nb">int</span><span class="w"> </span><span class="o">*</span><span class="n">recvcounts</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nb">int</span><span class="w"> </span><span class="o">*</span><span class="n">displs</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">recvtype</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">    </span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span><span class="w"> </span><span class="p">)</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="c">!Inputs:</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="c">!   sendbuf - starting address of send buffer (choice);</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="c">!   sendcount - number of elements in send buffer (integer)</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="c">!   sendtype - data type of send buffer elements (handle);</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="c">!   recvcounts - integer array (of length group size) containing the number of elements </span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="c">!       that are received from each process;</span>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="c">!   displs - integer array (of length group size). Entry i specifies the displacement</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="c">!       (relative to recvbuf) at which to place the incoming data from process i;</span>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="c">!   recvtype - data type of receive buffer elements (handle);</span>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="c">!   comm. - communicator (handle).</span>
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="c">! Output:</span>
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a><span class="c">!   recvbuf - address of receive buffer (choice).</span>
+</code></pre></div>
+<ul>
+<li><code>MPI_Type_indexed</code> : Creates an indexed datatype; the corresponding routine in <code>MPI2 is mpi_type_create_indexed_block()</code>.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">int </span><span class="n">MPI_Type_indexed</span><span class="p">(</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="nb">int count</span><span class="p">,</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nb">int </span><span class="n">blocklens</span><span class="p">[],</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nb">int </span><span class="n">indices</span><span class="p">[],</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">old_type</span><span class="p">,</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="o">*</span><span class="n">newtype</span><span class="w"> </span><span class="p">)</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c">! Inputs:</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="c">!   count - number of blocks -- also number of entries in indices and blocklens;</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="c">!   blocklens - number of elements in each block (array of nonnegative integers);</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="c">!   indices - displacement of each block in multiples of old_type (array of integers);</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="c">!   old_type - old datatype (handle).</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="c">! Output:</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="c">!   newtype - new datatype (handle)</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The new MPI type treats multi-dimensional arrays in FORTRAN as 1D array, expanding with 1st index varying before 2nd etc. So this routine can be used to grab discontiguous data blocks from multi- dimensional arrays.
+So if a 2D array is a(nvrt,nea) the corresponding 1D array is illustrated below:</p>
+<div class="arithmatex">\[\begin{equation*}
+nea
+\stackrel{nvrt}{
+\begin{bmatrix}
+(1, 1) &amp; (2, 1) &amp; \cdots &amp; (nvrt, 1)\\
+(1, 2) &amp; (2, 2) &amp; \cdots &amp; (nvrt, 2)\\
+\vdots &amp; \vdots &amp; \vdots &amp; \vdots\\
+(1, nea) &amp; (2, nea) &amp; \cdots &amp; (nvrt, nea)
+\end{bmatrix}
+}
+\end{equation*}\]</div>
+<p>Now suppose we need to grab all ghost elements iesend(1:nesend), these will correspond to rows iesend(i) of the table. In this case the # of blocks is nesend, block length is nvrt, and displacement of ith block is (iesend(i)-1)*nvrt.</p>
+</div>
+<ul>
+<li><code>MPI_Barrier</code> : Blocks until all process have reached this routine.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">int </span><span class="n">MPI_Barrier</span><span class="w"> </span><span class="p">(</span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span><span class="w"> </span><span class="p">)</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c">! Input: comm. - communicator (handle)</span>
+</code></pre></div>
+<ul>
+<li><code>MPI_Type_struct</code> : Creates a struct datatype.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nb">int </span><span class="n">MPI_Type_struct</span><span class="p">(</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="nb">int count</span><span class="p">,</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nb">int </span><span class="n">blocklens</span><span class="p">[],</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="n">MPI_Aint</span><span class="w"> </span><span class="n">indices</span><span class="p">[],</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">old_types</span><span class="p">[],</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="o">*</span><span class="n">newtype</span><span class="w"> </span><span class="p">)</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="c">! Inputs:</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="c">!   count - number of blocks (integer)</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="c">!       also number of entries in arrays array_of_types, array_of_displacements and array_of_blocklengths;</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="c">!   blocklens - number of elements in each block (array);</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="c">!   indices – byte displacement of each block relative to the start of the type (array);</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="c">!   old_types - type of elements in each block (array of handles to datatype objects).</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="c">! Output:</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="c">!   newtype - new datatype (handle)</span>
+</code></pre></div>
+<ul>
+<li><code>MPI_Alltoall</code> : Sends data from all to all processes.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">int </span><span class="n">MPI_Alltoall</span><span class="p">(</span><span class="w"> </span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">sendbuf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nb">int </span><span class="n">sendcount</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">sendtype</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="n">void</span><span class="w"> </span><span class="o">*</span><span class="n">recvbuf</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="nb">int </span><span class="n">recvcnt</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="n">MPI_Datatype</span><span class="w"> </span><span class="n">recvtype</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span><span class="w"> </span><span class="p">)</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="c">! Inputs:</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="c">!   sendbuf - starting address of send buffer (choice);</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="c">!   sendcount - number of elements to send to each process (integer);</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="c">!   sendtype - data type of send buffer elements (handle);</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="c">!   recvcount- number of elements received from any process (integer);</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="c">!   recvtype - data type of receive buffer elements (handle);</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="c">!   comm. - communicator (handle).</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="c">! Outputs</span>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="c">!   recvbuf - address of receive buffer (choice)</span>
+</code></pre></div>
+<h2 id="io-channels-in-schism">I/O channels in SCHISM<a class="headerlink" href="#io-channels-in-schism" title="Permanent link">&para;</a></h2>
+<p>You need to exercise caution when dealing with parallel I/O especially for writing. For writing outputs, you’d generally let only 1 process do the job, e.g. </p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">if</span><span class="p">(</span><span class="n">myrank</span><span class="o">==</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">write</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="o">*</span><span class="p">)</span>
+</code></pre></div>
+<p>If you do need to have all processes write e.g. debug messages, you’d consider using channel <code>12</code> which has been pre-set to point to multiple files from each MPI process (see below).</p>
+<p>Here are all I/O channel numbers currently used in different sub-models of SCHISM (and so you’d avoid using them). A good way to find out if a channel is available is to issue the following cmd from <code>src/</code> -</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>grep<span class="w"> </span><span class="s2">&quot;(61&quot;</span><span class="w"> </span>*/*.F90<span class="w"> </span><span class="c1"># Looks for &#39;(61&#39;</span>
+</code></pre></div>
+<p>Please contact lead developer after you have selected a channel number to use in your module.</p>
+<ol>
+<li>
+<p><code>Hydro/</code> : Channels between 8 and 200 are used by various codes for I/O. In particular - </p>
+<ul>
+<li>101 to 100+noutputs (inclusive of both): reserved for global outputs (including from tracers like sediment, EcoSim, ICM, as well as WWM);</li>
+<li>201-250: non-standard outputs (e.g. at sidecenters, prism centers);</li>
+<li>251 to 259: reserved for station outputs;</li>
+<li>16: this channel points to mirror.out (on rank 0), the main message output about the run. You should use it with <code>if(myrank==0)</code>.</li>
+</ul>
+</li>
+<li>
+<p><code>WWM</code></p>
+<ul>
+<li>1100 to 1200: handles for inputs/outputs etc</li>
+</ul>
+</li>
+<li>
+<p><code>EcoSim</code></p>
+<ul>
+<li>600: outputting some messages</li>
+</ul>
+</li>
+<li>
+<p><code>ICM</code></p>
+<ul>
+<li>301 to 323: reading channels for non-point source inputs for ICM</li>
+</ul>
+</li>
+<li>
+<p><code>Sediment (SED and SED2D)</code></p>
+<ul>
+<li>26, 2626</li>
+</ul>
+</li>
+</ol>
+<p>Following are some generic channels - </p>
+<ol>
+<li><code>10, 31, 32</code>: used for one-off I/O – can be used by other sub-models as long as you close them immediately after use;</li>
+<li><code>12</code>: this channel is initialized by different processes to point to files <code>outputs/nonfatal_xxxx</code>, where “xxxx” are the process IDs. Therefore it’s very useful for debugging purpose; you can use it anywhere in your part of the code to dump messages to these files.</li>
+</ol>
+<h2 id="example-code">Example code<a class="headerlink" href="#example-code" title="Permanent link">&para;</a></h2>
+<p>If you are working on the code you may be confused about the exchanges inside SCHISM. When should you use these?</p>
+<p>The first thing you need to remember when writing MPI code with domain decomposition is that a rank (or MPI 'process') only has info in its 'augmented' (=resident + ghost) domain, and knows absolutely nothing outside this region.</p>
+<figure id="figure04">
+<p><img alt="Domain decomposition for code example" src="assets/domain-decomposition-example.png" width="500px" /></p>
+<figcaption> Domain decomposition for code example.</figcaption>
+</figure>
+<p>Consider Figure <a href="#figure04">4</a>. For example, you want to do averaging at each node of the sub-domain around its ball of elements.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">do </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">np</span><span class="w"> </span><span class="c">!not &#39;npa&#39;</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span><span class="n">sum1</span><span class="o">=</span><span class="mi">0</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="n">sum_a</span><span class="o">=</span><span class="mi">0</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">    </span><span class="k">do </span><span class="n">j</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">nne</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">        </span><span class="n">ie</span><span class="o">=</span><span class="n">indel</span><span class="p">(</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">)</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">        </span><span class="n">sum1</span><span class="o">=</span><span class="n">sum1</span><span class="o">+</span><span class="n">stokes</span><span class="p">(</span><span class="n">ie</span><span class="p">)</span><span class="o">*</span><span class="n">area</span><span class="p">(</span><span class="n">ie</span><span class="p">)</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">        </span><span class="n">sum_a</span><span class="o">=</span><span class="n">sum_a</span><span class="o">+</span><span class="n">area</span><span class="p">(</span><span class="n">ie</span><span class="p">)</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">    </span><span class="k">enddo</span><span class="w"> </span><span class="c">!j</span>
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="w">    </span><span class="n">stokes_nd</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">=</span><span class="n">sum1</span><span class="o">/</span><span class="n">sum_a</span>
+<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a><span class="k">enddo</span><span class="w"> </span><span class="c">!i</span>
+<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a>
+<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a><span class="k">call </span><span class="n">exchange_p2d</span><span class="p">(</span><span class="n">stokes_nd</span><span class="p">)</span>
+</code></pre></div>
+<p>Notice that you'd use <code>np</code> instead of <code>npa</code> (<code>=np+npg</code>; augmented domain) here. For any resident node <code>P</code>, <code>indel()</code> is well defined (because again, Rank 1 has info in its augmented domain including the ghost zone), and so the loops make sense. As long as all ranks have same info in each others' ghost zones (which is the purpose of exchange routines), <code>stokes_nd</code> at an interface
+node (e.g. <code>P</code>) will be same across ranks. However, for a ghost node <code>Q</code>, some surrounding elements are located outside the augmented domain (and in this case, <code>indel()</code> are actually negative!), and so if you use the same operation, erroneous values at ghost nodes would be generated. Therefore you cannot use npa in the outer loop.</p>
+<p>Now, after this loop is executed, what happens to the ghost nodes like <code>Q</code>? Since they are excluded on Rank 1, the <code>stokes_nd</code> will be wrong there. Fortunately, some neighboring ranks have the correct values for these nodes, which are resident nodes in those neighboring ranks; e.g., <code>Q</code> is a resident node of Rank 0. So now different ranks will have different values at some overlapping nodes, and this needs to be avoided. In order to make sure each rank has correct (and up-to-date) values in its augmented domain, you need to follow this loop with an exchange routine. Remember that for the exchange routines to work, you need to define the exchanged array in the augmented domain - </p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="k">allocate</span><span class="p">(</span><span class="n">stokes_nd</span><span class="p">(</span><span class="n">npa</span><span class="p">))</span><span class="w"> </span><span class="c">!not &#39;np&#39;</span>
+</code></pre></div>
+<p>in order to allow each rank to receive info in the ghost zone. Description of all exchange routines used in SCHISM can be found in <code>schism_msgp.F90</code>.</p>
+<p>The above is just one example of when exchanges are needed. Usually this involves some kind of queries into a neighborhood, but beware that there are other circumstances where exchanges are necessary. </p>
+<div class="admonition note">
+<p class="admonition-title">The most important thing to remember</p>
+<ul>
+<li><strong>A rank only has info in its 'augmented' domain, and knows absolutely nothing outside this region.</strong></li>
+<li><strong>In MPI code, it's crucial to make sure all ranks have identical values in overlapping zone.</strong></li>
+</ul>
+</div>
+<p>Now let's consider an example where no exchanges are needed. Say you want to simply go through all elements and update some arrays defined at elements:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="k">do </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">nea</span><span class="w"> </span><span class="c">!not &#39;ne&#39;</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">    </span><span class="n">qdl_e</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">=</span><span class="n">cde</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">*</span><span class="n">dte</span><span class="o">/</span><span class="n">area</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="k">enddo</span><span class="w"> </span><span class="c">!i</span>
+</code></pre></div>
+<p>Since all ranks have info of <code>cde</code> and <code>area</code> locally available, <code>qdl_e</code> will be correctly calculated even inside the ghost zones, and its values are the same cross ranks there (since <code>cde</code> and <code>area</code> are same cross ranks in the overlapping zones). So in this case you'd use <code>nea</code> instead of <code>ne</code> in the loop. Of course, there is nothing wrong with using <code>ne</code> in the loop followed by an exchange routine, but doing so would be less efficient and incur unnecessary communication cost.</p>
+<h2 id="general-code-guide">General code guide<a class="headerlink" href="#general-code-guide" title="Permanent link">&para;</a></h2>
+<p>Here are some house rules for preparing your own code - </p>
+<ol>
+<li>No spaces between <code>#</code> (pre-processor) and <code>if/else/end</code> for CPP flag;</li>
+<li>Try to use the I/O channel number directly, e.g., <code>read(61, etc)</code> instead of assigning a number to a variable (e.g. <code>read(ich,)</code>. This'd facilitate others searching for conflicts;</li>
+<li>Avoid using tabs in editor as they mess up with the appearance. Use space instead and strictly align code blocks for easy read.</li>
+<li>Do not use automatic arrays of ≥2 dimensions. It’s often tempting to grab dimensions directly from the module <code>schism_glbl</code> and use them to define arrays in a routine; e.g. <code>vel_sd(nvrt,nsa)</code>. This causes trouble with some compilers and may result in segfault. Use either of the following 2 approaches instead: <ol>
+<li>allocatable arrays (and always remember to deallocate them at the end of the routine);</li>
+<li>pass on the dimensions explicitly as dummy arguments (e.g. <code>subroutine routine1(nvrt2,nsa2, vel_sd..)</code>, where <code>nvrt2=nvrt</code> and <code>nsa2=nsa</code>, and then use these to define: <code>vel_sd (nvrt2,nsa2)</code>).</li>
+</ol>
+</li>
+</ol>
+
+              
+            </article>
+            
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
+      
+        
+        <a href="modules/single-class-ice.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Single-class ice module" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Single-class ice module
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="case-study.html" class="md-footer__link md-footer__link--next" aria-label="Next: Case studies" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              Case studies
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": ".", "features": ["toc.integrate", "toc.follow", "content.code.annotate"], "search": "assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "stable", "provider": "mike"}}</script>
+    
+    
+      <script src="assets/javascripts/bundle.f758a944.min.js"></script>
+      
+        <script src="javascripts/mathjax.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

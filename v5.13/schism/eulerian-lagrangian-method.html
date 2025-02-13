@@ -1,0 +1,1767 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-8.3.4">
+    
+    
+      
+        <title>Eulerian-Lagrangian Method - SCHISM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.4a0965b7.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cbb835fc.min.css">
+        
+      
+      
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-component="outdated" hidden>
+        <aside class="md-banner md-banner--warning">
+          
+        </aside>
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../index.html" title="SCHISM" class="md-header__button md-logo" aria-label="SCHISM" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCHISM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Eulerian-Lagrangian Method
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/schism-dev/schism" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../index.html" title="SCHISM" class="md-nav__button md-logo" aria-label="SCHISM" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    SCHISM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/schism-dev/schism" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../index.html" class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog.html" class="md-nav__link">
+        Changelog
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          Getting started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Getting started" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Getting started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/getting-sourcecode.html" class="md-nav__link">
+        Getting the source code
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/compilation.html" class="md-nav__link">
+        Compilation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/test_suite.html" class="md-nav__link">
+        Test suite
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/typical-workflow.html" class="md-nav__link">
+        Typical workflow (a cheat sheet)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/grid-generation.html" class="md-nav__link">
+        Mesh generation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing.html" class="md-nav__link">
+        Preprocessing
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_8" type="checkbox" id="__nav_3_8" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3_8">
+          Preprocessing with pylib
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Preprocessing with pylib" data-md-level="2">
+        <label class="md-nav__title" for="__nav_3_8">
+          <span class="md-nav__icon md-icon"></span>
+          Preprocessing with pylib
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pylib/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pylib/installation.html" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pylib/schismcheck.html" class="md-nav__link">
+        schismCheck (input visualization)
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_9" type="checkbox" id="__nav_3_9" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3_9">
+          Preprocessing with PySCHISM
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Preprocessing with PySCHISM" data-md-level="2">
+        <label class="md-nav__title" for="__nav_3_9">
+          <span class="md-nav__icon md-icon"></span>
+          Preprocessing with PySCHISM
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pyschism/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pyschism/installation.html" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pyschism/bctides.html" class="md-nav__link">
+        Tides
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pyschism/boundary.html" class="md-nav__link">
+        B.C. from HYCOM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pyschism/atmos.html" class="md-nav__link">
+        Atmospheric forcing
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pyschism/nwm.html" class="md-nav__link">
+        Souce and Sink
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/running-model.html" class="md-nav__link">
+        Running the model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/visualization.html" class="md-nav__link">
+        Visualization
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/post-processing.html" class="md-nav__link">
+        Postprocessing
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          Model formulation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Model formulation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          Model formulation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="physical-formulation.html" class="md-nav__link">
+        Physical formulation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_2" type="checkbox" id="__nav_4_2" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_2">
+          Numerical formulation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Numerical formulation" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_2">
+          <span class="md-nav__icon md-icon"></span>
+          Numerical formulation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="geometry-discretization.html" class="md-nav__link">
+        Geometry and discretization
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="barotropic-solver.html" class="md-nav__link">
+        Barotropic solver
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+      <a href="eulerian-lagrangian-method.html" class="md-nav__link md-nav__link--active">
+        Eulerian-Lagrangian Method
+      </a>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="momentum-equation.html" class="md-nav__link">
+        Momentum equation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="vertical-velocity.html" class="md-nav__link">
+        Vertical velocity
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="turbulence-closure.html" class="md-nav__link">
+        Turbulence closure
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="transport-equation.html" class="md-nav__link">
+        Transport equation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="updating-levels.html" class="md-nav__link">
+        Updating the levels/Inundation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="spherical-coordinates.html" class="md-nav__link">
+        Spherical coordinates
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_5">
+          Input/Output
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Input/Output" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          Input/Output
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/hgrid.html" class="md-nav__link">
+        Horizontal grid (hgrid.gr3)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/vgrid.html" class="md-nav__link">
+        Vertical grid (vgrid.in)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/param.html" class="md-nav__link">
+        Model parameters (param.nml)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/bctides.html" class="md-nav__link">
+        Boundary conditions (bctides.in)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/friction.html" class="md-nav__link">
+        Bottom friction
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/sflux.html" class="md-nav__link">
+        Atmospheric flux (/sflux)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/optional-inputs.html" class="md-nav__link">
+        Optional inputs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input-output/outputs.html" class="md-nav__link">
+        Outputs
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6">
+          Mesh generation - advanced topics
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Mesh generation - advanced topics" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          Mesh generation - advanced topics
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/cross_regime.html" class="md-nav__link">
+        Meshing for cross-scale regimes
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_3" type="checkbox" id="__nav_6_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6_3">
+          Meshing for compound floods
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Meshing for compound floods" data-md-level="2">
+        <label class="md-nav__title" for="__nav_6_3">
+          <span class="md-nav__icon md-icon"></span>
+          Meshing for compound floods
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/meshing-for-compound-floods/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/meshing-for-compound-floods/extract-thalweg.html" class="md-nav__link">
+        Extract thalwegs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/meshing-for-compound-floods/generate-river-map.html" class="md-nav__link">
+        Generate river map
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/meshing-for-compound-floods/meshing-in-SMS.html" class="md-nav__link">
+        Meshing in SMS
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_7" type="checkbox" id="__nav_7" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_7">
+          Modules
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Modules" data-md-level="1">
+        <label class="md-nav__title" for="__nav_7">
+          <span class="md-nav__icon md-icon"></span>
+          Modules
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/generic-tracer.html" class="md-nav__link">
+        Generic tracer module
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/age.html" class="md-nav__link">
+        AGE
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/sed2d.html" class="md-nav__link">
+        2D Sediment model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/sed3d.html" class="md-nav__link">
+        3D Sediment model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/icm.html" class="md-nav__link">
+        ICM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/cosine.html" class="md-nav__link">
+        CoSiNe
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/dvd.html" class="md-nav__link">
+        DVD
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/marsh-migration.html" class="md-nav__link">
+        Marsh migration
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/analysis-mode.html" class="md-nav__link">
+        Analysis mode
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/hydraulics.html" class="md-nav__link">
+        Hydraulics
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/particle-tracking.html" class="md-nav__link">
+        Particle tracking
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/wwm.html" class="md-nav__link">
+        WWM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/fabm.html" class="md-nav__link">
+        FABM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/pahm.html" class="md-nav__link">
+        PaHM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/single-class-ice.html" class="md-nav__link">
+        Single-class ice module
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../code-contribution.html" class="md-nav__link">
+        Code structure
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../case-study.html" class="md-nav__link">
+        Case studies
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_10" type="checkbox" id="__nav_10" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_10">
+          SCHISM external coupling
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="SCHISM external coupling" data-md-level="1">
+        <label class="md-nav__title" for="__nav_10">
+          <span class="md-nav__icon md-icon"></span>
+          SCHISM external coupling
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/esmf.html" class="md-nav__link">
+        Earth System Modeling Framework
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/nuopc.html" class="md-nav__link">
+        National Unified Operational Prediction Capability
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/coastalapp.html" class="md-nav__link">
+        NOAA's CoastalApp
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/mossco.html" class="md-nav__link">
+        Modular System for Shelves and Coasts
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/cesm.html" class="md-nav__link">
+        NCAR's Community Earth System Model
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq.html" class="md-nav__link">
+        Frequently Asked Questions
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../known_issues.html" class="md-nav__link">
+        Known issues
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contribute-to-this-online-manual.html" class="md-nav__link">
+        Contribute to this online manual
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+  <a href="https://github.com/schism-dev/schism/edit/master/docs/schism/eulerian-lagrangian-method.md" title="Edit this page" class="md-content__button md-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
+
+
+  <h1>Eulerian-Lagrangian Method</h1>
+
+<p>The default option for the momentum advection in SCHISM is ELM, which is one of few explicit methods that are unconditionally stable. Under this method, the momentum advection is approximated as -</p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq01}
+\frac{D\pmb{u}}{Dt}\cong\frac{\pmb{u}(\pmb{x}, t^{n+1}) - \pmb{u}(\pmb{x}^*, t^n)}{\Delta t}
+\end{equation}\]</div>
+<p>where <span class="arithmatex">\(\pmb{x}\)</span> is a shorthand for <span class="arithmatex">\((x, y, z)\)</span>, and <span class="arithmatex">\(\pmb{x}^*\)</span> is the location of the foot of characteristic line (FOCL), calculated from the characteristic equation - </p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq02}
+\frac{D\pmb{x}}{Dt} = \pmb{u}
+\end{equation}\]</div>
+<p>The location <span class="arithmatex">\(\pmb{x}^*\)</span> is found via a backtracking step, standard in an ELM, via backward integration of Eq. <span class="arithmatex">\(\ref{eq02}\)</span> starting from a given location (<span class="arithmatex">\(\pmb{x}\)</span>), which is in our case a side center at whole level where the horizontal velocity <span class="arithmatex">\(\pmb{u}\)</span> is defined. The fixed starting location (Eulerian framework) followed by a Lagrangian tracking step gives the name Eulerian-Lagrangian method. Therefore the ELM consists of two major steps: a backtracking step (Figure <a href="#figure01">1</a>a) and an interpolation step at FOCL (Figure <a href="#figure01">1</a>b). We further sub-divide the tracking step into smaller intervals (based on local flow gradients), and use a 2nd-order Runge-Kutta method (mid-point method) within each interval, in order to accurately track the trajectory. Although exact integration methods have been proposed (<a href="#ham2006">Ham et al. 2006</a>), their implementation is complicated for a 3D (triangular and quadrangular) prism and in the exceptional cases of wetting and drying interfaces. The interpolation step serves as an important control for numerical diffusion/dispersion in the ELM, and we therefore experimented with several options as shown below. However, before we get to this, we first explain how SCHISM converts the velocities at sides to the velocities at nodes, as the latter are required in the interpolation of the velocities along the characteristic line and at the FOCL (Figure <a href="#figure01">1</a>).</p>
+<figure id="figure01">
+<p><img alt="ELM" src="../assets/elm.png" width="800" /></p>
+<figcaption>Two steps in Eulerian–Lagrangian method. (a) The characteristic equation is integrated backward in space and time, starting from a side center (the green dot). The characteristic line is further subdivided into smaller intervals (bounded by the red dots), based on local flow gradients, and a 2nd-order Runge–Kutta method is used within each interval. The foot of characteristic line is marked as a yellow dot. Note that the vertical position of the trajectory is also changing and so the tracking is in 3D space. (b) Interpolation is carried out at FOCL (yellow dot), based on either the nodes of the containing elements (blue dots), or the 2-tier neighborhood (blue plus red dots; the latter are the neighbors of the blue dots) using a dual kriging method. Proper linear vertical interpolation has been carried out first to bring the values at each node onto a horizontal plane before the horizontal interpolation is done.</figcaption>
+</figure>
+<p>As explained by <a href="#danilov2013">Danilov (2013)</a>, the conversion method used bears important ramifications: judicious averaging (e.g., from side to elements or to node etc.) may greatly reduce the need later on for filters to remove the inertial spurious modes while still keeping the inherent numerical dissipation low. In fact, one could have used the discontinuous velocity calculated within each element to carry out the backtracking, but this would introduce insufficient amount of dissipation to suppress the inertial modes.</p>
+<p>In the first approach (‘MA’ hereafter; <code>indvel=1</code>), we use inverse distance weights to interpolate from velocities at surrounding sides onto a node (Figure <a href="#figure02">2a</a>). This introduces diffusion which may be excessive in our experience, and therefore no further stabilization (via filters or viscosity) is required for this approach (see the discussion of stabilization in <a href="#danilov2013">Danilov 2013</a>). This approach works well in shallow waters especially for the inundation process, as numerical stability often trumps the order of accuracy there. </p>
+<figure id="figure02">
+<p><img alt="ELM" src="../assets/indvel.png" width="800" /></p>
+<figcaption>Two methods of converting side velocities to a node velocity. (a) Inverse distance interpolation from sides (blue dots) to node (yellow dot); (b) use of FEM shape function to find the node velocity within each element first (the red arrow), i.e. u1 = uII + uIII –uI , followed by a simple averaging method to calculate the final value from all of its surrounding elements (dashed arrows)</figcaption>
+</figure>
+<p>The 2nd approach (‘MB’ hereafter; <code>indvel=0</code>) is more elegant and utilizes the (linear) shape function in FEM within each element to calculate the node velocities. This is equivalent to using the <span class="arithmatex">\(P^{NC}\)</span> non-conformal shape function (<a href="#leroux2005">Le Roux et al. 2005</a>) as one essentially interpolates based on information at sides (Figure <a href="#figure02">2b</a>). Because each element produces a velocity vector at each of its nodes, the final node velocity is the simple average of the values calculated from all of the surrounding elements (Figure <a href="#figure02">2a</a>). This approach introduces much less dissipation, but does exhibit inertial spurious modes. As a result, further stabilization is required. To this end, SCHISM uses a 5-point Shapiro filter (<a href="#shapiro1970">Shapiro 1970</a>) as illustrated in Figure <a href="barotropic-solver.html#figure05">5ab</a>; the velocity at a side ‘0’ is filtered as -</p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq03}
+\tilde{\pmb{u}_0} = \pmb{u}_0 + \frac{\gamma}{4}\left( \pmb{u}_1 + \pmb{u}_2 + \pmb{u}_3 + \pmb{u}_4 -4\pmb{u}_0 \right)
+\end{equation}\]</div>
+<p>with the strength usually set as <span class="arithmatex">\(\gamma = 0.5\)</span>.  It’s obvious that the filter is analogous to the Laplacian viscosity implementation in the previous section. It proves to be very effective in removing the sub-grid scale inertial spurious modes; however, it tends introduces too much dissipation in the eddying regime, and therefore should be used only in the non-eddying regime, i.e. shallow waters. Since it’s equivalent to the Laplacian viscosity, we may remove this filter in the future options and ask users to use <code>ihorcon=1</code> instead.</p>
+<p>Once the node velocities are found via MA or MB, the interpolation at the FOCL is carried out in 3D space. A simple linear interpolation is used in the vertical dimension as the results from the cubic-spline interpolation turned out to be similar, due to more confined spatial scales and smaller grid sizes in the vertical. The horizontal interpolation can be done using either a simple linear shape function based on all of the nodes of the containing element (‘LI’ hereafter), or a higher-order dual kriging method (‘KR’ hereafter) suggested by <a href="#leroux1997">Le Roux et al. (1997)</a> Figure <a href="barotropic-solver.html#figure05">5b</a> The latter requires larger stencil around the FOCL, and for best parallel efficiency we use a 2-tier neighborhood as shown in Figure <a href="barotropic-solver.html#figure05">5b</a>. Given a total of N nodes available in the 2-tier neighborhood, the interpolation function is constructed as (<a href="#leroux1997">Le Roux 1997</a>) - </p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq04}
+f^h(x,y) = (\alpha_1 + \alpha_2 x + \alpha_3 y) + \sum_{i=1}^N \beta_i K(r_i)
+\end{equation}\]</div>
+<p>where the first 3 RHS terms inside the parentheses represent a mean drift (modeled as a linear function), and the 2nd term is the fluctuation part, <span class="arithmatex">\(\alpha_j\)</span>, <span class="arithmatex">\(\beta_i\)</span> are unknown coefficients, and <span class="arithmatex">\(r_i\)</span> is the distance between (<span class="arithmatex">\(x\)</span>,<span class="arithmatex">\(y\)</span>) and (<span class="arithmatex">\(x_i\)</span>,<span class="arithmatex">\(y_i\)</span>), with <span class="arithmatex">\(i\)</span> being a node. The following forms of the generalized covariance function are commonly used (<a href="#leroux1997">Le Roux et al. 1997</a>) - </p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq05}
+K(r) = -r, r^2\log(r), r^3, -r^5, r^7
+\end{equation}\]</div>
+<p>with increasing dispersion for the higher-degree functions; therefore in practice, the last two functions are seldom used. In the following we will refer to the first 3 functions as ‘KR1’, ‘KR2’ and ‘KR3’ respectively.</p>
+<p>The equations to solve for the unknown coefficients are - </p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq06}
+\begin{aligned}
+f^h(x_i, y_i) = d_i, 1 \leq i \leq N\\
+\sum_{i=1}^{N} \beta_i = 0\\
+\sum_{i=1}^{N} x_i\beta_i = 0\\
+\sum_{i=1}^{N} y_i\beta_i = 0
+\end{aligned}
+\end{equation}\]</div>
+<p>where <span class="arithmatex">\(d_i\)</span> are given data at each node. The 1st equation in Eqs. <span class="arithmatex">\(\ref{eq06}\)</span>  indicates that the dual kriging is an exact interpolator, and the other 3 equations are derived from minimization of the variance of estimation error (<a href="#leroux1997">Le Roux et al. 1997</a>). Note that the matrix of Eqs. <span class="arithmatex">\(\ref{eq06}\)</span> is dependent only on geometry and therefore can be inverted and stored before the time stepping loop to achieve greater efficiency. After the coefficients are found, the interpolation at FOCL is done via Eqs. <span class="arithmatex">\(\ref{eq04}\)</span>.</p>
+<p>The smaller stencil used here compared to that used by <a href="#leroux1997">Le Roux et al. (1997)</a> leads to larger numerical dispersion. Therefore an effective method must be found to control the dispersion, and we use the ELAD scheme of <a href="#shchepetkin1998">Shchepetkin and McWilliams (1998)</a> for this purpose. The essence of ELAD is to iteratively diffuse the <em>excess</em> field, instead of the original signal, using a diffusion operator/smoother. The viscosity scheme presented in the previous sub-section is used as the diffusion operator. The procedure is summarized as follows - </p>
+<ol>
+<li>
+<p>Find the local max/min at FOCL. Assuming that the prism at FOCL starting from a side <span class="arithmatex">\(j\)</span> and level <span class="arithmatex">\(k\)</span> is (<span class="arithmatex">\(kf\)</span>,<span class="arithmatex">\(nf\)</span>), where <span class="arithmatex">\(nf\)</span> is the element index and <span class="arithmatex">\(kf\)</span> is the vertical index, the max/min are found in the prism (<span class="arithmatex">\(kf\)</span>,<span class="arithmatex">\(nf\)</span>) as -</p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq07}
+\begin{aligned}
+u_{k, j}^{max} = \max_{l=1:i34, k=-1,0} u_{kf+k, im(l, nf)}\\
+u_{k, j}^{min} = \min_{l=1:i34, k=-1,0} u_{kf+k, im(l, nf)}
+\end{aligned}
+\end{equation}\]</div>
+<p>where <span class="arithmatex">\(im()\)</span> enumerates all nodes of an element.</p>
+</li>
+<li>
+<p>The excess field associated with (k,j) is - </p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq08}
+\varepsilon_{k, j}^{(1)} = \max\left[ 0, u_{k,j}^{n+1, 1} - u_{k,j}^{\max} \right] + \min\left[ 0, u_{k,j}^{n+1, 1} - u_{k,j}^{\min} \right]
+\end{equation}\]</div>
+<p>where <span class="arithmatex">\(u_{k,j}^{n+1, 1}\)</span> is the interpolated value at FOCL.</p>
+</li>
+<li>
+<p>Apply a global diffusion operator to <span class="arithmatex">\(\varepsilon\)</span> to obtain estimated velocity at the next iteration - </p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq09}
+u_{k,j}^{n+1, 2} = u_{k, j}^{n+1, 1} + \mu'\Delta t \nabla^2 \varepsilon_{k, j}^{(1)}, \forall j, k
+\end{equation}\]</div>
+<p>and we use 5-point filter with maximum strength - </p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq10}
+u_{k,j}^{n+1, 2} = u_{k, j}^{n+1, 1} + \frac{1}{8} \left[ \varepsilon_{k, 1}^{(1)} + \varepsilon_{k, 2}^{(1)} + \varepsilon_{k, 3}^{(1)} + \varepsilon_{k, 4}^{(1)} - 4 \varepsilon_{k, j}^{(1)} \right]
+\end{equation}\]</div>
+<p>where subscripts 1-4 are the 4 adjacent sides of <span class="arithmatex">\(j\)</span> (Figure <a href="barotropic-solver.html#figure05">5ab</a>);</p>
+</li>
+<li>
+<p>Calculate the new excess field using <span class="arithmatex">\(u_{k, j}^{n+1, 2}\)</span> in (2) and apply the filter (3) again to find the velocity at the next iteration <span class="arithmatex">\(u_{k,j}^{n+1, 3}\)</span>. Iterate until the excess field falls below a prescribed threshold. In practice, 10 iterations are usually sufficient to bring the excess field below an acceptable level (<span class="arithmatex">\(10^{-4} m/s\)</span>); the remaining excess field is then further smoothed with the viscosity.</p>
+</li>
+</ol>
+<p>The filter in Eqs. <span class="arithmatex">\(\ref{eq10}\)</span> is conservative in the sense that it only redistributes excess mass and does not introduce any additional mass. This is similar in spirit to the conservative scheme of <a href="#gravel1994">Gravel and Staniforth (1994)</a> but appears simpler in implementation. At a boundary side <span class="arithmatex">\(j\)</span>, Eqs. <span class="arithmatex">\(\ref{eq10}\)</span> is modified in order to maintain the conservation - </p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq11}
+u_{k,j}^{n+1, 2} = u_{k, j}^{n+1, 1} + \frac{1}{8} \left[ \varepsilon_{k, 1}^{(1)} + \varepsilon_{k, 2}^{(1)} - 2 \varepsilon_{k, j}^{(1)} \right]
+\end{equation}\]</div>
+<p>where subscripts '1' and '2' are the 2 adjacent sides of <span class="arithmatex">\(j\)</span> (Figure <a href="barotropic-solver.html#figure05">5d</a>). Note that since the linear interpolation scheme (LI) does not introduce local extrema, ELAD is not applied there.</p>
+<p>The various schemes presented above can be freely combined, resulting in schemes like ‘MA-LI’, ‘MB-KR2’ etc. Experiments indicate that overall the best scheme is MB-LI for both eddying and non-eddying regimes (<a href="#zhang2016">Zhang et al. 2016</a>).</p>
+<p><strong>References</strong></p>
+<p><span id="danilov2013">Danilov, D. (2013) Ocean modeling on unstructured meshes, Ocean Mod., 69, 195-210.</span></p>
+<p><span id="gravel1994">Gravel, S. and A. Staniforth (1994), A mass-conserving semi-Lagrangian scheme for the shallow-water equations, Mon. Wea. Rev., 122, 243-248.</span></p>
+<p><span id="ham2006">Ham, D.A., Pietrzak, J., and G.S. Stelling (2006), A streamline tracking algorithm for semi-Lagrangian advection schemes based on the analytic integration of the velocity field, Journal of Computational and Applied Mathematics 192, 168–174.</span></p>
+<p><span id="leroux1997">Le Roux, D.Y., Lin, C.A., Staniforth, A. (1997), An accurate interpolating scheme for semi-Lagrangian advection on an unstructured mesh for ocean modelling, Tellus, 49A, 119–138.</span></p>
+<p><span id="leroux2005">Le Roux, D.Y., Sène, A., Rostand, V., and E. Hanert (2005), On some spurious mode issues in shallow-water models using a linear algebra approach. Ocean Modelling 10, 83–94.</span></p>
+<p><span id="shapiro1970">Shapiro, R. (1970), Smoothing, filtering and boundary effects, Rev. Geophys. Space Phys. 8 (2), 359–387.</span></p>
+<p><span id="shchepetkin1998">Shchepetkin, A.F. and J.C. Mcwilliams (1998), Quasi-Monotone Advection Schemes Based on Explicit Locally Adaptive Dissipation , Monthly Weather Review, 126, 1541-80.</span></p>
+<p><span id="zhang2016">Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016). Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81. doi:10.1016/j.ocemod.2016.05.002</span></p>
+
+              
+            </article>
+            
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
+      
+        
+        <a href="barotropic-solver.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Barotropic solver" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Barotropic solver
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="momentum-equation.html" class="md-footer__link md-footer__link--next" aria-label="Next: Momentum equation" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              Momentum equation
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "..", "features": ["toc.integrate", "toc.follow", "content.code.annotate"], "search": "../assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "stable", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.f758a944.min.js"></script>
+      
+        <script src="../javascripts/mathjax.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
