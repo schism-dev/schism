@@ -652,7 +652,6 @@
             endif !ipgl
           enddo !i
 #endif /*USE_ATMOS*/
-        endif !time>wtime2
 
 #ifdef USE_ATMOS
           !ESMF may not extend to ghosts
@@ -667,7 +666,9 @@
           call exchange_p2d(fluxprc)
           call exchange_p2d(prec_snow)
 #endif 
-#else /*USE_ATMOS*/
+#endif /*USE_ATMOS*/
+        endif !time>wtime2
+
         wtratio=(time-wtime1)/wtiminc
 !$OMP parallel do default(shared) private(i)
         do i=1,npa
@@ -676,8 +677,6 @@
           pr(i)=pr1(i)+wtratio*(pr2(i)-pr1(i))
         enddo !i
 !$OMP end parallel do
-
-#endif /*USE_ATMOS*/
 
       endif !nws=4
 
