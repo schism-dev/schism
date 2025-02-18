@@ -119,7 +119,7 @@ module schism_glbl
                   &ihydraulics,irouse_test,iwbl_itmax,nettype,nfltype, &
                   &ntetype,nsatype,ntrtype1(natrm),nettype2,nnode_et,nfltype2,nnode_fl, &
                   &ntetype2,nsatype2,nnode_tr2(natrm),inu_tr(natrm),iref_ts, &
-                  &nvar_sta,nout_sta,ntip,nbfr,itr_met,if_source,mass_source,nsources,nsources_ngen,nsinks, &
+                  &nvar_sta,nout_sta,ntip,nbfr,itr_met,if_source,mass_source,nsources,nsources_bmi,nsinks, &
                   &max_flreg,irange_tr(2,natrm),nea_wwm,mnei_wwm,ne_wwm,neg_wwm, &
                   &max_iadjust_mass_consv,nsteps_from_cold
 
