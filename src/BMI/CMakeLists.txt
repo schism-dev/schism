@@ -1,7 +1,7 @@
 # Require 3.18 for CMAKE_Fortran_PREPROCESS support
 cmake_minimum_required (VERSION 3.18)
 
-set(CMAKE_Fortran_PREPROCESS)
+set(CMAKE_Fortran_PREPROCESS ON)
 
 add_subdirectory(iso_c_fortran_bmi ${CMAKE_BINARY_DIR}/iso_c_bmi)
 
