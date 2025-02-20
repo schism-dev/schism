@@ -731,7 +731,7 @@
 
       ath3(:,1,1,1:2)=0.d0
       ath3(:,1,1,3)=-9999.d0
-#else /*USE_NWM_BMI*/
+#else /*USE_BMI*/
 
 #ifdef SH_MEM_COMM
       if(if_source==1.and.myrank_node==0) then !ASCII
