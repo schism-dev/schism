@@ -9,7 +9,7 @@ set(NetCDF_FORTRAN_DIR "$ENV{TACC_NETCDF_LIB}" CACHE PATH "Path to NetCDF Fortra
 set(NetCDF_C_DIR "$ENV{TACC_NETCDF_LIB}" CACHE PATH "Path to NetCDF C library")
 set(NetCDF_INCLUDE_DIR "$ENV{TACC_NETCDF_INC}" CACHE PATH "Path to NetCDF include")
 
-set(CMAKE_Fortran_FLAGS_RELEASE "-xCORE-AVX512 -O3 -no-prec-sqrt -no-prec-div -align all -assume buffered_io -assume byterecl" CACHE STRING "Fortran flags" FORCE)
+set(CMAKE_Fortran_FLAGS_RELEASE "-xCORE-AVX512 -O3 -no-prec-div -align all -assume buffered_io -assume byterecl" CACHE STRING "Fortran flags" FORCE)
 
 #Hybrid (remember to add OMP in the name above)
 #set(CMAKE_Fortran_FLAGS_RELEASE "-xCORE-AVX512 -O3 -no-prec-sqrt -no-prec-div -align all -assume buffered_io -assume byterecl -qopenmp" CACHE STRING "Fortran flags" FORCE)

@@ -37,13 +37,13 @@
 #----------------------------------------------------
 
 #SBATCH -J 01a # Job name
-#SBATCH -o std.o%j       # Name of stdout output file
+#SBATCH -o err.o%j       # Name of stdout output file
 #SBATCH -e err.e%j       # Name of stderr error file
 #SBATCH -p spr             # Queue (partition) name
-#SBATCH -N 32               # Total # of nodes 
-## Max 112 cores/node with GB memory, so cannot use all usually 
-#SBATCH -n 2720            # Total # of mpi tasks (85 cores/nd *32 node)
-#SBATCH -t 01:00:00        # Run time (hh:mm:ss)
+#SBATCH -N 32               # Total # of nodes; max 32 nodes per job 
+## Max 112 cores/node with 128GB memory, so cannot use all usually 
+#SBATCH -n 2560            # Total # of mpi tasks (80 cores/nd to free up more memory)
+#SBATCH -t 01:00:00        # Run time (hh:mm:ss); max 48 hrs
 #SBATCH -A OCE24002
 #SBATCH --mail-user=yjzhang@vims.edu
 #SBATCH --mail-type=all    # Send email at begin and end of job
