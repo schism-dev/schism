@@ -2014,47 +2014,69 @@
       return
       end !get_dataset_info
 !-----------------------------------------------------------------------
-      character*4 function char_num (num)
-        implicit none
-        integer, intent(in) :: num
-        character(len=4) :: char
-        
-!10      format ('00', i1)
-!20      format ('0', i2)
-!30      format (i3)
+!      character*4 function char_num (num)
+!        implicit none
+!        integer, intent(in) :: num
+!        character(len=4) :: char
+!        
+!!10      format ('00', i1)
+!!20      format ('0', i2)
+!!30      format (i3)
+!!
+!!        if (num .le. 9) then
+!!          write(char,10) num
+!!        else if (num .le. 99) then
+!!          write(char,20) num
+!!        else if (num .le. 999) then
+!!          write(char,30) num
+!!        else
+!!          call halt_error ('get_char_num: num too large!')
+!!        endif
 !
-!        if (num .le. 9) then
-!          write(char,10) num
-!        else if (num .le. 99) then
-!          write(char,20) num
-!        else if (num .le. 999) then
-!          write(char,30) num
-!        else
-!          call halt_error ('get_char_num: num too large!')
-!        endif
-
-        if(num>9999) call halt_error ('get_char_num: num too large!')
-
-        char='0000'
-        write(char,'(i4.4)')num
-        
-        char_num = char
-
-      return
-      end
+!        if(num>9999) call halt_error ('get_char_num: num too large!')
+!
+!        char='0000'
+!        write(char,'(i4.4)')num
+!        
+!        char_num = char
+!
+!      return
+!      end
 !-----------------------------------------------------------------------
+!      character*50 function get_file_name (dataset_name, num)
+!        implicit none
+!        integer, intent(in) :: num
+!        character, intent(in) ::  dataset_name*50
+!
+!        character char_num*4
+!        character, parameter :: prefix*6 = 'sflux/'
+!        character, parameter :: suffix*3 = '.nc'
+!        
+!        get_file_name = prefix // trim(dataset_name) // '.' // &
+!     &                  char_num(num) // suffix
+!
+!      return
+!      end
+
       character*50 function get_file_name (dataset_name, num)
+        use schism_glbl,only : in_dir,len_in_dir
+        use schism_msgp, only : parallel_abort
         implicit none
         integer, intent(in) :: num
         character, intent(in) ::  dataset_name*50
 
-        character char_num*4
-        character, parameter :: prefix*6 = 'sflux/'
-        character, parameter :: suffix*3 = '.nc'
-        
-        get_file_name = prefix // trim(dataset_name) // '.' // &
-     &                  char_num(num) // suffix
+        integer :: i
+        character(len=6) :: char
+        logical :: lexist
 
+        char='000000'; lexist=.False.
+        write(char,'(i6.6)')num
+        do i=6,1,-1
+           get_file_name = 'sflux/'//trim(dataset_name)//'.'//char(i:6)//'.nc'
+           inquire(file=in_dir(1:len_in_dir)//trim(adjustl(get_file_name)),exist=lexist)
+           if(lexist) exit
+        enddo
+        !if(.not.lexist) call parallel_abort('sflux file missing: '//trim(adjustl(get_file_name)))
       return
       end
 !-----------------------------------------------------------------------
