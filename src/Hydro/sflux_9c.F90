@@ -1308,8 +1308,8 @@
        
         !max. total # of nc files. Need to update char_num() etc if this
         !is to be increased 
-        integer, parameter :: max_files = 9999
-        integer, parameter :: max_times = 100000 !max. # of time records from all files
+        integer, parameter :: max_files = 19999
+        integer, parameter :: max_times = 200000 !max. # of time records from all files
 
         type dataset_info
           character name*50
