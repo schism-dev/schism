@@ -7551,6 +7551,8 @@
                 rr=0.62d0; d_1=1.50d0; d_2=20.d0
               case(7)
                 rr=0.80d0; d_1=0.90d0; d_2=2.1d0
+              case(8)
+                rr=0.90d0; d_1=0.60d0; d_2=1.0d0
               case default
                 call parallel_abort('Unknown water type (3)')
             end select !itmp
