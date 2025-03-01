@@ -139,6 +139,9 @@ Harmonic analysis flag. If $iharind \neq 0$, an input `harm.in` is needed.
 ### ihconsv=0, isconsv=0 (int)
 Heat budget and salt conservation models flags. If `ihconsv=0`, the heat budget model is not used. If `ihconsv=1`, a heat budget model is invoked, and a number of netcdf files for radiation flux input are read in from `sflux/sflux_rad*.nc`. If `isconsv=1`, the evaporation and precipitation model is evoked but the user needs to turn on the pre-processing flag `PREC_EVAP` in makefile and recompile. In this case, `ihconsv` must be `1`, and additional netcdf inputs for precipitation (`sflux/sflux_prc*.nc`) are required. The user can also turn on `USE_BULK_FAIRALL` in the makefile to use COARE algorithm  instead of the default Zeng's bulk aerodynamic module.
 
+If `ihconsv=1`, 2 additional inputs are: `albedo.gr3` (for surface albedo; usually ~0.1) and `watertype.gr3` (that specifies the light attenuation coefficients for different water types following Jerlov: a dimensionles ratio `R`, and two characteristic depth (`D1` and `D2`).
+ See `schism_step` for those values for different types 1-7. If the type is '8', user needs to specify those 3 coefficients in `param.nml`: `watertype_rr, watertype_d1, watertype_d2`.
+
 ### i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)
 Option to locally turn off heat exchange.
 

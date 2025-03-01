@@ -9,6 +9,9 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `` (1 Mar 2025): added water type '8', which requires user to specify 'watertype_rr',
+    'watertype_d[1,2]' in param.nml;
+
 Tag v5.13.0: (12 Feb 2025)
 - `95030324` (17 Sept 2024): added surface T,S restoration (for large-scale long-term runs); 
                              related parameters are iref_ts,ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,

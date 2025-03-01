@@ -591,6 +591,10 @@
   i_hmin_salt_ex = 2 ! no effect if isconsv=0 
   hmin_salt_ex = 0.2 ![m], no effect if isconsv=0 
   iprecip_off_bnd = 0 !if /=0, precip will be turned off near land bnd
+  !watertype_* below are used for water type '8'
+  watertype_rr = 0.58
+  watertype_d1 = 0.35 
+  watertype_d2 = 23.
 
 !-----------------------------------------------------------------------
 ! Option to add a sediment layer for the buffer effect on temperature

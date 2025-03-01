@@ -214,7 +214,7 @@
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
-     &RADFLAG,niter_hdif
+     &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm, &
@@ -507,6 +507,7 @@
       stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
       RADFLAG='LON' !if WWM is used, this will be overwritten
       niter_hdif=1
+      watertype_rr=0.58d0; watertype_d1=0.35d0; watertype_d2=23.d0
       veg_vert_z=(/((i-1)*0.4d0,i=1,nbins_veg_vert+1)/) ![m]
       veg_vert_scale_cd=(/(1.0d0,i=1,nbins_veg_vert+1)/) !scaling [-]
       veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
@@ -3407,14 +3408,13 @@
               call parallel_abort(errmsg)
             endif
             buf3(i)=tmp
-!            if(ipgl(i)%rank==myrank) iwater_type(ipgl(i)%id)=tmp
           enddo !i
           close(32)
         endif !myrank
         call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
 
         do i=1,np_global
-          if(ipgl(i)%rank==myrank) iwater_type(ipgl(i)%id)=buf3(i) !tmp
+          if(ipgl(i)%rank==myrank) iwater_type(ipgl(i)%id)=buf3(i) 
         enddo !i
       endif !ihconsv/
    
