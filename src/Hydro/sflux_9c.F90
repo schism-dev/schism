@@ -2071,10 +2071,10 @@
 
         char='000000'; lexist=.False.
         write(char,'(i6.6)')num
-        do i=6,1,-1
+        do i=1,6
            get_file_name = 'sflux/'//trim(dataset_name)//'.'//char(i:6)//'.nc'
            inquire(file=in_dir(1:len_in_dir)//trim(adjustl(get_file_name)),exist=lexist)
-           if(lexist) exit
+           if(lexist.or.char(i)/='0') exit
         enddo
         !if(.not.lexist) call parallel_abort('sflux file missing: '//trim(adjustl(get_file_name)))
       return
