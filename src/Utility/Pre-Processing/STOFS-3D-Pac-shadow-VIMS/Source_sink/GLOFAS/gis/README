@@ -1,0 +1,10 @@
+**GIS/ files **
+used by process_GLOFAS_sourcesink_fcast_preprocess.py
+1) static files for GloFAS preprocessing
+  a) HydroRIVERS_v10_pacifiic_last200km_upland100km2_wEndorheic.shp: WWF HydroSHEDS dataset: https://www.hydrosheds.org/ v1, subset to last 200km from river ends and rivers larger than 100km^2 watershed along the Pacific model boundary, includes endorheic rivers
+  b) uparea_glofas_v4_0.nc: GloFAS static file: https://confluence.ecmwf.int/display/CEMS/Auxiliary+Data, upriver watershed area for each cell, used to determine river ends and cutoff values for inclusion
+2) region files
+  a) cowlitz_larger.reg, lewis_larger.reg : Two tributary rivers handled through open bounds and USGS observation data, excluded from GloFAS processing
+  b) no_alsea_wo_fix.reg : small river that enters along the Oregon coast where bathymetry in NEW23 has wetting and drying, excluding from the current version of model, will fix bathymetry in future grid version
+  c) test_ORWA.reg: purely for testing purposes, use this as an argument with -r to test commande line exclusion areas, replace with NWM exclusion area is combining GloFAS and NWM inputs
+3) hgrid.gr3 or hgrid.npz (can also be stored in a separate location (grid location is a separate argument to the python script

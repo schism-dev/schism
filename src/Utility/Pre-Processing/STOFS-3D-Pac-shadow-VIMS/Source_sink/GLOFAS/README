@@ -1,0 +1,47 @@
+cseaton 2025/03/01
+**python scripts**
+python scripts use argparse, so --help will show list of arguments
+
+1) process_GLOFAS_sourcesink_fcast_preprocess.py   run once for a grid/glofas version
+2) download_GLOFAS.py                              run daily to download data from Copernicus, uses cdsapi, requires CDS personal key in home directory (or as argument in code) 
+							wildly variable runtime (minutes to hours) depending on server responsiveness
+3) process_GLOFAS_sourcesink_fcast_daily.py        run daily to process downloaded data into source_sink.in, vsource.th, msource.th, outputs need to be run through redistribute_source.f90
+
+**slurm scripts**
+1) complete.sh                 runs all the .sub jobs in sequence
+2) glofasprep.sub              process hgrid, glofas and rivers to produce prep file used by daily processing (uses glofas conda environment)
+3) glofasdownload.sub          download current day glofas file  (uses glofasdownload conda environment)
+4) glofasdaily.sub             dynamic processing of download glofas file for current day (uses glofasdaily conda envirnoment)
+5) glofasdailyexamples.sub     examples of daily processing using (a) date and ndays argument (b) dynamic determination of current day 
+				(c) example of cutout region (d) sanity check image generation in conda environment with matplotlib (uses glofasdailyimages conda environment)
+
+**directories**
+images/    output images (only needed for testing, remove -i arguments from scripts turns off image generation
+gis/       GIS files and hgrid files (.gr3 and .npz), GIS files and hgrid can be in separate directories, used by preprocess script, see README for source and processing of GIS files
+prep/      glofas_prep file produced by glofasprep.sub
+download/  download file location
+tmp/       source/sink outputs
+envs/      conda environment yaml files
+logs/      slurm log files
+
+**conda environments**
+envs/ contains yaml manifests
+glofas:                rasterio v1.4, geopandas, shapely, scipy, numpy, matplotlib, pylibs-ocean, netCDF4
+glofasdownload:        cdsapi (installed with pip)
+glofasdaily:           numpy, netCDF4
+glofasdailyimages:     numpy, netCDF4, matplotlib
+
+**example/test files**
+
+GLOFAS-global-6day.nc   static glofas download file used by the static example in glofasdailyexamples.sub
+
+** output files ***
+prep/glofas_prep[tag].npz                                                                             static prep file generated  by preprocess script
+download/GLOFAS-global-today.nc                                                        daily download of glofas data
+tmp/
+      [tag]source_sink.in, [tag]vsource.th, [tag]msource.th      standard input files  
+              [tag]vsource.bp, [tag]vsource.prop                                             source mean fluxes at locations in .bp and .prop format for sanity checking/visualization
+images/                                                                                                                   various sanity checking images, from prep and daily scripts
+
+**shifting to a new directory**
+copy top-level files and gis/ directory to new directory, run complete.sh to run the four sbatch scripts in order
