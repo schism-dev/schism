@@ -1,0 +1,7 @@
+&test                                               ! BMI configuration specs
+  startdate          = 0                            ! Time start of simulation in seconds
+  enddate            = 86400                        ! Time end of simulation in seconds
+  num_time_steps     = 24                           ! Number of time steps to run BMI model for
+  time_step_size     = 3600.0                       ! timestep [seconds]
+  SCHISM_dir         = "../pathway_to_SCHISM_run"      ! SCHISM directory for configuration and forcing files
+/
