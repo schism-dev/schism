@@ -42,6 +42,11 @@ For the author, there are a few "todo" items in the script.
     The symlink is necessary because NWM data may be stored in subfolders of different years.
 
 2) hotstart.nc
+
+Temporary changes to be tested:
+1) admit more BlueTopo in DEM_loading, see bluetopo_region.shp
+2) adopted regional depth tweaks from SECOFS, added DEFAULT_REGIONAL_TWEAKS2 in regional_tweaks.py
+3) adopted drag tweaks from SECOFS, added a few regions in gen_drag()
 '''
 
 
@@ -59,12 +64,13 @@ import numpy as np
 from scipy.spatial import cKDTree
 import shapefile  # from pyshp
 import netCDF4
+import json
 
 # self-defined modules
 import pylib
 from pylib import inside_polygon, read_schism_reg, read_schism_vgrid
-from pylib_experimental.schism_file import source_sink
-if 'sciclone' in socket.gethostname():
+from pylib_experimental.schism_file import source_sink, TimeHistory
+if 'gulf' in socket.gethostname():
     from pylib_experimental.schism_file import cread_schism_hgrid as schism_read
     print('Using c++ function to accelerate hgrid reading')
 else:
@@ -347,6 +353,8 @@ def gen_nudge_stofs(
     '''
     Generate nudge coefficient,
     adapted from pyschism's sample script
+
+    Note: fixed rnu_day=1, rlmax=7.3
     '''
     if ocean_bnd_ids is None:
         raise ValueError("ocean_bnd_ids must be specified, e.g., [0, 1]")
@@ -378,15 +386,17 @@ def gen_nudge_stofs(
 def gen_drag(hgrid: pylib.schism_grid):
     '''generate drag coefficient based on the depth and regions'''
 
-    # 1) overall: depth based
+    # - overall: depth based
     grid_depths = [-3, -1]
+    # default [0.025, 0.0025]; [0.005, 0.0025] for STOFS-3D v8 R20e/f; [0.02, 0.001] for R13r_v7
     drag_coef = [0.025, 0.0025]
     # linear interpolation with constant extrapolation of nearest end values
     drag = np.interp(hgrid.dp, grid_depths, drag_coef, left=drag_coef[0], right=drag_coef[-1])
 
-    # 2) tweak: regions with constant drag
+    # - tweak: regions with constant drag
     region_files = [
         f'{script_path}/Gr3/Drag/Lake_Charles_0.reg',
+        f'{script_path}/Gr3/Drag/Mayport.reg',
     ]
     region_tweaks = [0.0]
     for region_tweak, region_file in zip(region_tweaks, region_files):
@@ -394,7 +404,7 @@ def gen_drag(hgrid: pylib.schism_grid):
         idx = inside_polygon(np.c_[hgrid.x, hgrid.y], reg.x, reg.y).astype(bool)
         drag[idx] = region_tweak
 
-    # 4) tweak: for nodes inside GoME and dp > -1 m, set drag between 0.01 and 0.02 based on depth
+    # - tweak: for nodes inside GoME and dp > -1 m, set drag between 0.01 and 0.02 based on depth
     grid_depths = [5, 20]
     drag_coef = [0.02, 0.01]
     reg = read_schism_reg(f'{script_path}/Gr3/Drag/GoME2.reg')
@@ -403,7 +413,7 @@ def gen_drag(hgrid: pylib.schism_grid):
         hgrid.dp[idx], grid_depths, drag_coef,
         left=drag_coef[0], right=drag_coef[-1])
 
-    # 5) tweak: limit some areas to be no more than 0.0025
+    # - tweak: limit some areas to be no more than 0.0025
     for region in [
         f'{script_path}/Gr3/Drag/Portland_max0.0025.reg',
         f'{script_path}/Gr3/Drag/Chatham_max0.0025.reg'
@@ -412,8 +422,16 @@ def gen_drag(hgrid: pylib.schism_grid):
         idx = inside_polygon(np.c_[hgrid.x, hgrid.y], bp.x, bp.y).astype(bool)
         drag[idx] = np.minimum(drag[idx], 0.0025)
 
-    # 3) tweak: regions with constant drag but only for river nodes
+    # - tweak: regions with constant drag but only for river nodes
     region_tweaks = {
+        'MayPort_to_Wacha_0.001': {
+            'drag': 0.001,
+            'region_file': f'{script_path}/Gr3/Drag/MayPort_to_Wacha_0.001.reg'
+        },
+        'NY.reg': {
+            'drag': 0.001,
+            'region_file': f'{script_path}/Gr3/Drag/NY.reg'
+        },
         'Mississippi_0': {  # all segments of the Mississippi River
             'drag': 1e-8,
             'region_file': f'{script_path}/Gr3/Drag/Mississippi_0.reg'
@@ -425,7 +443,91 @@ def gen_drag(hgrid: pylib.schism_grid):
         'Eastport_0': {
             'drag': 0.0,
             'region_file': f'{script_path}/Gr3/Drag/Eastport_0.reg'
-        }
+        },
+        'Upper_Delaware_Bay': {  # starting from STOFS-3D v8 R20e/f
+            'drag': 0.001,
+            'region_file': f'{script_path}/Gr3/Drag/Upper_Delaware_Bay.reg'
+        },
+        'Hudson': {  # starting from STOFS-3D v8 R20e/f
+            'drag': 0.001,
+            'region_file': f'{script_path}/Gr3/Drag/Hudson.reg'
+        },
+        'Dalhgren_0': {  # from SECOFS
+            'drag': 0.0005,
+            'region_file': f'{script_path}/Gr3/Drag/Dalhgren_0.reg'
+        },
+        'Wilmington_0': {  # from SECOFS
+            'drag': 0.000,
+            'region_file': f'{script_path}/Gr3/Drag/Wilmington_0.reg'
+        },
+        'Fernandina_0': {  # from SECOFS, increased drag
+            'drag': 0.00,
+            'region_file': f'{script_path}/Gr3/Drag/Fernandina_0.reg'
+        },
+        'Fort_Myers_0': {  # from SECOFS, slightly increased drag
+            'drag': 0.000,
+            'region_file': f'{script_path}/Gr3/Drag/Fort_Myers_0.reg'
+        },
+        'Tampa_Bay_0': {  # from SECOFS, increased drag
+            'drag': 0.002,
+            'region_file': f'{script_path}/Gr3/Drag/Tampa_Bay_0.reg'
+        },
+        'StJohns_0': {  # from SECOFS
+            'drag': 0.0,
+            'region_file': f'{script_path}/Gr3/Drag/StJohns_0.reg'
+        },
+        # 'Virginia_Key_0.0035': {
+        #     'drag': 0.01,
+        #     'region_file': f'{script_path}/Gr3/Drag/Virginia_Key_0.0035.reg'
+        # },
+        # 'GoMX_east_0.001': {
+        #     'drag': 0.001,
+        #     'region_file': f'{script_path}/Gr3/Drag/GoMX_east_0.001.reg'
+        # },
+        'Oyster_Landing_0.0': {
+            'drag': 0.0,
+            'region_file': f'{script_path}/Gr3/Drag/Oyster_Landing_0.reg'
+        },
+        'Wachapreague_0.0': {
+            'drag': 0.0,
+            'region_file': f'{script_path}/Gr3/Drag/Wachapreague_0.reg'
+        },
+        'Manchester_0.001': {
+            'drag': 0.00,
+            'region_file': f'{script_path}/Gr3/Drag/Manchester_0.001.reg'
+        },
+        'Sabine_Lake_0.001': {
+            'drag': 0.001,
+            'region_file': f'{script_path}/Gr3/Drag/Sabine_Lake_0.001.reg'
+        },
+        'High_Island_0': {
+            'drag': 0.0,
+            'region_file': f'{script_path}/Gr3/Drag/High_Island_0.reg'
+        },
+        'West_Fowl_River_0': {
+            'drag': 0.0,
+            'region_file': f'{script_path}/Gr3/Drag/West_Fowl_River_0.reg'
+        },
+        'Chickasaw_0': {
+            'drag': 0.0,
+            'region_file': f'{script_path}/Gr3/Drag/Chickasaw_0.reg'
+        },
+        'Panama_City_0.001.reg': {
+            'drag': 0.001,
+            'region_file': f'{script_path}/Gr3/Drag/Panama_City_0.001.reg'
+        },
+        'Money_Pt_0.reg': {
+            'drag': 0.0,
+            'region_file': f'{script_path}/Gr3/Drag/Money_Pt_0.reg'
+        },
+        'Nantucket_Island_0.reg': {
+            'drag': 0.0,
+            'region_file': f'{script_path}/Gr3/Drag/Nantucket_Island_0.reg'
+        },
+        'Atchafalaya_0.reg': {
+            'drag': 0.002,
+            'region_file': f'{script_path}/Gr3/Drag/Atchafalaya_0.reg'
+        },
     }
     for _, tweak in region_tweaks.items():
         print(f"Applying drag {tweak['drag']} in {tweak['region_file']}")
@@ -514,6 +616,56 @@ def gen_elev_ic(hgrid=None, h0=0.1, city_shape_fnames=None, base_elev_ic=None):
     return elev_ic
 
 
+def gen_relocated_source(original_source_sink_dir, relocated_source_sink_dir):
+    """
+    Generate relocated vsource.th for STOFS-3D-ATL
+    based on sources.json and sinks.json generated by relocate_sources2
+    """
+
+    original_ss = source_sink.from_files(source_dir=original_source_sink_dir)
+
+    original_ele_nwm_mapping = json.load(
+        open(f'{original_source_sink_dir}/sources.json', 'r')
+    )
+    # reverse the mapping
+    original_nwm_ele_mappping = {}
+    for ele, nwm_fids in original_ele_nwm_mapping.items():
+        for nwm_fid in nwm_fids:
+            original_nwm_ele_mappping[nwm_fid] = ele
+
+    relocated_ele_nwm_mapping = json.load(
+        open(f'{relocated_source_sink_dir}/sources.json', 'r')
+    )
+
+    relocated_ele_mapping = {}
+    for ele, nwm_fids in relocated_ele_nwm_mapping.items():
+        relocated_ele_mapping[ele] = [original_nwm_ele_mappping[nwm_fid] for nwm_fid in nwm_fids]
+        # remove duplicates
+        relocated_ele_mapping[ele] = list(set(relocated_ele_mapping[ele]))
+
+    vsource_data = np.zeros((original_ss.vsource.n_time, len(relocated_ele_mapping)), dtype=float)
+    for i, [relocated_ele, original_eles] in enumerate(relocated_ele_mapping.items()):
+        for original_ele in original_eles:
+            vsource_data[:, i] += original_ss.vsource.df[original_ele].values
+
+    relocated_vsource = TimeHistory(
+        data_array=np.c_[original_ss.vsource.time, vsource_data], columns=list(relocated_ele_mapping.keys()))
+    
+    relocated_msource_data = np.ones((original_ss.vsource.n_time, len(relocated_ele_mapping)), dtype=float)
+    relocated_msource_list = [
+        TimeHistory(
+            data_array=np.c_[original_ss.vsource.time, relocated_msource_data*-9999],
+            columns=list(relocated_ele_mapping.keys())
+        ),  # Temperature
+        TimeHistory(
+            data_array=np.c_[original_ss.vsource.time, relocated_msource_data*0],
+            columns=list(relocated_ele_mapping.keys())
+        )  # Salinity
+    ]
+
+    return relocated_vsource, relocated_msource_list
+
+
 # ---------------------------------------------------------------------
 #       Main function to generate inputs for STOFS-3D-ATL
 # ---------------------------------------------------------------------
@@ -529,13 +681,13 @@ def main():
 
     # -----------------input---------------------
     # hgrid generated by SMS, pre-processed, and converted to *.gr3
-    hgrid_path = '/sciclone/schism10/feiye/STOFS3D-v8/I09/hgrid.gr3'
+    hgrid_path = '/sciclone/schism10/feiye/STOFS3D-v8/I13r_v7/Bathy_edit/RiverArc_Dredge/hgrid_dredged.gr3'
 
     # get a configuration preset and make changes if necessary
     # alternatively, you can set the parameters directly on an
     # new instance of ConfigStofs3dAtlantic
-    config = ConfigStofs3dAtlantic.v8_louisianna()
-    config.rnday = 3
+    config = ConfigStofs3dAtlantic.v8()
+    config.rnday = 396
     config.startdate = datetime(2017, 12, 1)
     config.nwm_cache_folder = ('/sciclone/schism10/feiye/STOFS3D-v8/I13/'
                                'Source_sink/original_source_sink/20171201/')
@@ -549,7 +701,7 @@ def main():
     # R{runid}: run directory, where the run will be submitted to queue;
     # O{runid}: output directory for holding raw outputs and post-processing.
     # under project_dir
-    runid = '14'
+    runid = '13r1_v7'
 
     # swithes to generate different input files
     input_files = {
@@ -558,13 +710,13 @@ def main():
         'gr3': False,
         'nudge_gr3': False,
         'shapiro': False,
-        'drag': False,
+        'drag': True,
         'elev_ic': False,
         'source_sink': False,
         'hotstart.nc': False,
         '3D.th.nc': False,
         'elev2D.th.nc': False,
-        '*nu.nc': True,
+        '*nu.nc': False,
         '*.prop': False,
     }
     # -----------------end input---------------------
@@ -732,6 +884,7 @@ def main():
         sub_dir = 'Source_sink'
         print(f'{DRIVER_PRINT_PREFIX}Generating source_sink.in ...')
 
+        # '''
         mkcd_new_dir(f'{model_input_path}/{sub_dir}')
 
         # generate source_sink files by intersecting NWM river segments
@@ -741,9 +894,13 @@ def main():
         gen_sourcesink_nwm(
             startdate=config.startdate, rnday=config.rnday,
             cache_folder=config.nwm_cache_folder)
+        # '''
 
         # relocate source locations to resolved river channels, the result is the "base" source/sink
+        # set appropriate no_feeder option, mandatory_sources_coor, and
+        # feeder_info_file in stofs3d_atl_config.py
         if config.relocate_source:
+            # '''
             mkcd_new_dir(f'{model_input_path}/{sub_dir}/relocated_source_sink/')
             os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
             # this will generate relocated sources.json and sinks.json
@@ -753,22 +910,20 @@ def main():
                 hgrid_fname=f'{model_input_path}/hgrid.gr3',
                 outdir=f'{model_input_path}/{sub_dir}/relocated_source_sink/',
                 max_search_radius=2100, mandatory_sources_coor=config.mandatory_sources_coor,
-                allow_neglection=False
+                allow_neglection=False, no_feeder=True
             )
             # regenerate source/sink based on relocated sources.json and sinks.json
             os.symlink('../original_source_sink/sinks.json', 'sinks.json')  # dummy
             # todo: use existing sources/sinks instead of calling gen_sourcesink_nwm
             # to save time and avoid potential errors in the future when
             # some sources are adjusted before this step
-            gen_sourcesink_nwm(
-                startdate=config.startdate, rnday=config.rnday,
-                cache_folder=config.nwm_cache_folder)
-            relocated_ss = source_sink.from_files(
-                f'{model_input_path}/{sub_dir}/relocated_source_sink/')
-            # remove sinks
-            os.unlink('vsink.th')
+            # '''
+            relocated_vsource, relocated_msource_list = gen_relocated_source(
+                original_source_sink_dir=f'{model_input_path}/{sub_dir}/USGS_adjusted_sources/',
+                relocated_source_sink_dir=f'{model_input_path}/{sub_dir}/relocated_source_sink/',
+            )
             base_ss = source_sink(
-                vsource=relocated_ss.vsource, vsink=None, msource=relocated_ss.msource)
+                vsource=relocated_vsource, vsink=None, msource=relocated_msource_list)
             base_ss.writer(f'{model_input_path}/{sub_dir}/relocated_source_sink/')
         else:
             base_ss = source_sink.from_files(f'{model_input_path}/{sub_dir}/original_source_sink/')

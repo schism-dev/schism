@@ -84,6 +84,11 @@
         "Note": "https://docs.google.com/document/d/1NhGplKh7OyEXmo1EwN6pElrP-seZbWzKuzjvKJC9ew8/edit?usp=sharing",
         "File": "/sciclone/data10/feiye/data20/ChesBay/DEM_version3/bay_dem_v3.1.grd; /sciclone/data10/wangzg/DEM/ChesBay/bay_dem_v3.1.npz"
     },
+    "ncei19_n38x75_w075x75_2019v1": {
+        "Annotation": "Patch for Nanticoke River in ChesBay",
+        "Note": "Patch some very high elevation (~900 m)",
+        "File": "/sciclone/schism10/Hgrid_projects/DEMs/CuDEM/Lonlat/ncei19_n38x75_w075x75_2019v1.tif); /sciclone/schism10/Hgrid_projects/DEMs/CuDEM/Lonlat/ncei19_n38x75_w075x75_2019v1.tif)"
+    },
     "CuDEM_NCEI_pr": {
         "Annotation": "CuDEM (Continously updated DEM): Puerto Rico",
         "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
@@ -113,15 +118,5 @@
         "Annotation": "CuDEM (Continously updated DEM): Updated Florida",
         "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
         "File": "/sciclone/schism10/lcui01/schism20/DEM/CUDEM/FL/"
-    },
-    "CuDEM_NCEI19_FL": {
-        "Annotation": "CoNED in Northen Gulf of Mexico, 2022 version",
-        "Note": "",
-        "File": "/sciclone/schism10/Hgrid_projects/DEMs/CONED_2022/npz/"
-    },
-    "BlueTopo": {
-        "Annotation": "BlueTopo",
-        "Note": "",
-        "File": "/sciclone/schism10/Hgrid_projects/DEMs/BlueTopo/"
     }
 }

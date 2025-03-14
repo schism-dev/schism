@@ -210,9 +210,12 @@ class ConfigStofs3dAtlantic():
             shapiro_zone_width=11.5,  # default shapiro zone
             shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
             feeder_info_file=(
-                '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.3/Feeder/'
-                'feeder_heads_bases.xy'),
-            mandatory_sources_coor=rsf.v23p3_mandatory_sources_coor,
+                # '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.3/Feeder/'
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v27/Feeder/'
+                'feeder_heads_bases.xy'
+            ),
+            relocate_source=True,
+            mandatory_sources_coor=rsf.v24p4_mandatory_sources_coor, # v19p2_for_sms_v27_mandatory_sources_coor,    # v23p3_mandatory_sources_coor,
             nwm_cache_folder=None,
             bc_flags=[
                 [5, 5, 4, 4],  # Atlantic Ocean

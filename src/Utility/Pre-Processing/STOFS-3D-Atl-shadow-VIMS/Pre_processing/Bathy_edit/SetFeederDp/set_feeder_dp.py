@@ -1,14 +1,20 @@
-from email.mime import base
+import os
+import socket
 from schism_py_pre_post.Grid.SourceSinkIn import source_sink, SourceSinkIn
 from schism_py_pre_post.Grid.SMS import lonlat2cpp
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
-from schism_py_pre_post.Grid.Hgrid_extended import read_schism_hgrid_cached
-import os
 import numpy as np
 from scipy import spatial
 import pickle
 import copy
-from pylib_essentials.schism_file import sms2grd
+from pylib import sms2grd
+if 'gulf' in socket.gethostname():
+    from pylib_experimental.schism_file import cread_schism_hgrid as schism_read
+    print('Using c++ function to accelerate hgrid reading')
+else:
+    from pylib import schism_grid as schism_read
+    print('Using python function to read hgrid')
+
 
 
 def nearest_neighbour(points_a, points_b):
@@ -20,7 +26,18 @@ def dist(points_group_A, points_group_B):
     points_B = np.squeeze(points_group_B.view(np.complex128))
     return np.absolute(points_A-points_B)
 
+def transfer_grid_z(src_grd, target_grd):
+    '''
+    Transfer z values from gd0 to gd1 by nearest neighbour
+    '''
+    gd = copy.deepcopy(target_grd)
+    mapping, _ = nearest_neighbour(np.c_[gd.x, gd.y], np.c_[src_grd.x, src_grd.y])
+    gd.dp = src_grd.dp[mapping]
+    return gd.dp
+
+
 def set_feeder_dp(feeder_info_dir='', hgrid_obj=None, hgrid_obj_no_feeder=None):
+    hgrid_obj = copy.deepcopy(hgrid_obj)
     # Read feeder channel info
     with open(f'{feeder_info_dir}/feeder.pkl', 'rb') as file:
         [feeder_l2g, feeder_points, feeder_heads, feeder_bases] = pickle.load(file)
@@ -49,22 +66,24 @@ def set_feeder_dp(feeder_info_dir='', hgrid_obj=None, hgrid_obj_no_feeder=None):
 
 if __name__ == "__main__":
     # sample usage
-    wdir ='./'
-
-    # the current grid
-    gd0 = read_schism_hgrid_cached(f'{wdir}/hgrid.before_feeder_dp.ll', overwrite_cache=False)
-    # gd.save(f'{wdir}/hgrid.copy.ll', fmt=1)
+    wdir ='/sciclone/schism10/feiye/STOFS3D-v8/I15/FeederDp/'
 
     # a grid without feeder is needed to identify which feeder points are outside and should be deepened
     # Only the boundary matters, the interior of the grid doesn't matter,
     # so if you don't have a grid without feeders, you can just generate a simplified grid with the lbnd_ocean map
-    gd_no_feeder = sms2grd('/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v20.0/no_feeder.2dm')
-    gd_no_feeder.proj(prj0='esri:102008', prj1='epsg:4326')
+    gd_no_feeder = schism_read(f'{wdir}/13r_v7.gr3')  # in lon/lat
+    # gd_no_feeder = sms2grd('/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v29/Feeder/v29.2dm')
+    # gd_no_feeder.proj(prj0='esri:102008', prj1='epsg:4326')
+
+    # grid with feeders
+    gd0 = schism_read(f'{wdir}/hgrid.ll')
+    gd0.dp = transfer_grid_z(gd_no_feeder, gd0)
+    # gd.save(f'{wdir}/hgrid.copy.ll', fmt=1)
 
     gd = set_feeder_dp(
-        feeder_info_dir='/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v20.0/Feeder/',
+        feeder_info_dir='/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v29/Feeder/',
         hgrid_obj=gd0, hgrid_obj_no_feeder=gd_no_feeder
     )
     dp_diff = gd.dp - gd0.dp
     print(f'min deepening: {min(dp_diff)}; max deepening: {max(dp_diff)} \n')
-    gd.save(f'{wdir}/hgrid.ll', fmt=0)
+    gd.save(f'{wdir}/hgrid.feeder_dp.ll', fmt=0)

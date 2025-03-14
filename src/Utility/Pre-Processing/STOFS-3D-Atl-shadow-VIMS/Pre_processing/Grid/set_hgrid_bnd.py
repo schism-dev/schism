@@ -31,7 +31,7 @@ def convert_boundary_dict(boundary_dict):
     return boundary_list
 
 
-def make_stofsv8_boundary(hgrid_obj, output_dir='./', write_hgrid=True):
+def make_stofsv8_boundary(hgrid_obj, output_dir='./', write_hgrid=False):
     '''
     This function creates a boundary file for SCHISM.
 
@@ -57,6 +57,7 @@ def make_stofsv8_boundary(hgrid_obj, output_dir='./', write_hgrid=True):
 
 
 if __name__ == '__main__':
-    wdir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.1'
-    hg = schism_read(f'{wdir}/hgrid.gr3')
+    wdir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v30/Improve/'
+    hg = schism_read(f'{wdir}/hgrid.ll')
+    # hg.proj(prj0='esri:102008', prj1='epsg:4326')
     make_stofsv8_boundary(hg, output_dir=wdir)

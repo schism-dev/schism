@@ -44,7 +44,7 @@ IMPLEMENTED_TASKS = [  # order matters
     'Regional_tweaks',  # set minimum depth in regions specified in regional_tweaks
     'NCF',  # load NCF (National Channel Framework) maintained depth
     'Levee',  # set levees height based on National Levee Database
-    'xGEOID',  # convert from NAVD88 to xGEOID
+    'xGEOID',  # convert from NAVD88 to xGEOID, use viz (gulf has memory issues); deprecated, use Felicio's workflow
     'Chart',  # load chart depth, the chart has been converted to xGEOID
     'Dredge',  # dredge the channels made by RiverMapper, relative, datum doesn't matter
     'Feeder',  # set feeder channel depth, relative, datum doesn't matter
@@ -237,19 +237,19 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         print("Finished setting feeder dp.\n")
 
     # ------------------- save final product -------------------
-    hgrid_obj.save(f'{wdir}/hgrid.ll', fmt=1)
-    print(f"Finished saving the final product {wdir}/hgrid.ll\n")
+    hgrid_obj.save(f'{wdir}/hgrid_dem_edit.ll', fmt=1)
+    print(f"Finished saving the final product {wdir}/hgrid_dem_edit.ll\n")
 
 
 def sample_usage():
     '''
     Sample usage of the bathy_edit function.
     '''
-    WDIR = Path('/sciclone/schism10/feiye/STOFS3D-v8/I14/Bathy_edit/')
+    WDIR = Path('/sciclone/schism10/feiye/STOFS3D-v8/I13r_v7/Bathy_edit/')
     HGRID_FNAME = Path(  # Typically, this is the DEM-loaded hgrid
-        '/sciclone/schism10/feiye/STOFS3D-v8/I14/09b.gr3'
+        '/sciclone/schism10/feiye/STOFS3D-v8/I13r_v7/Bathy_edit/DEM_loading/hgrid.ll.dem_loaded.mpi.gr3'
     )
-    TASKS = ['xGEOID']
+    TASKS = DEFAULT_TASKS  # {'Regional_tweaks', 'NCF', 'Levee'}  # set the tasks to be performed
 
     bathy_edit(wdir=WDIR, hgrid_fname=HGRID_FNAME, tasks=TASKS)
 

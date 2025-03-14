@@ -38,6 +38,30 @@ DEFAULT_REGIONAL_TWEAKS = {
     'st_lawrence2': 10,
     'st_lawrence3': 10,
 }
+
+DEFAULT_REGIONAL_TWEAKS2 = {  # incoorporating SECOFS updates, for SMS v27 and after
+    'min_5m_ll_noPR': 5,
+    'SabinePass': 7,
+    'BergenPoint': 5,
+     # 'Washington_3': 15,  # deleted
+    'Elk_river': 2,
+    'Hudson_river': 16,
+    'James_river': 2,  # changed
+    'NorthEast_river': 5,
+    'Rappahannock_river': 6,
+    'Susquehanna_river': 10,
+    'York_river': 4,  # changed
+    'Androscoggin_Kennebec_rivers': 3,
+    'Merrimack_river': 3,
+    'Patuxent_river': 5,
+    'Penobscot_river': 5,
+    'Saco_river': 3,
+    'StCroix_river': 5,
+    'Oyster_landing': 1,
+    'st_lawrence1': 10,
+    'st_lawrence2': 10,
+    'st_lawrence3': 10,
+}
 DEFAULT_REGION_DIR = '/sciclone/schism10/Hgrid_projects/DEMs/regions/'
 
 
@@ -46,7 +70,7 @@ def tweak_hgrid_depth(hgrid, regional_tweaks=None, regions_dir=DEFAULT_REGION_DI
     Set the minimum depth in the regions specified in regional_tweaks.
     '''
     if regional_tweaks is None:
-        regional_tweaks = DEFAULT_REGIONAL_TWEAKS
+        regional_tweaks = DEFAULT_REGIONAL_TWEAKS2
 
     for region, depth in regional_tweaks.items():
         region_file = f'{regions_dir}/{region}.reg'
