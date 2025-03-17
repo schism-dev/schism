@@ -5,7 +5,7 @@ set(versionfile "${CMAKE_CURRENT_BINARY_DIR}/schism_version.F90")
 
 add_custom_target(
     sversion
-    COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/gen_version.py ${versionfile}
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/gen_version.bash ${versionfile}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
