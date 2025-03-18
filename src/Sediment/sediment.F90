@@ -725,8 +725,8 @@
 ! - Diffusive fluxes in flow direction (Fortunato et al., 2009; eq 2)
 !---------------------------------------------------------------------
 
-          FX_r(i) = FX_r(i)+bdldiffu*(1.0-bed(top,i,iporo))*DABS(FX_r(i))*dzdx
-          FY_r(i) = FY_r(i)+bdldiffu*(1.0-bed(top,i,iporo))*DABS(FY_r(i))*dzdy
+          FX_r(i) = FX_r(i)+bdldiffu*(1.0-bed(top,i,iporo))*ABS(FX_r(i))*dzdx
+          FY_r(i) = FY_r(i)+bdldiffu*(1.0-bed(top,i,iporo))*ABS(FY_r(i))*dzdy
 
 
 !---------------------------------------------------------------------
@@ -769,6 +769,7 @@
 
           ! Save the part of bedload fluxes caused by wave acceleration
           ! before the flux limitation linked to active layer
+          if(any(FX_r==0).or.any(FY_r==0)) CALL parallel_abort('SED3D: FX_r=0')
           r_accu(:) = Qaccu(:)/FX_r(:)
           r_accv(:) = Qaccv(:)/FY_r(:)
         END IF
@@ -947,69 +948,14 @@
 
             select case(ised_bc_bot)
               case(1) !Warner
-                !Depositional mass (kg/m/m) in a time step
-!                cff=ze(nvrt,i)-ze(kbe(i),i) !total depth
-!                cff1=ze(kbe(i)+1,i)-ze(kbe(i),i) !bottom cell thickness
-!
-!                if(cff1.LE.0.d0) then
-!                  WRITE(errmsg,*)'SED, wrong bottom layer0:',cff,ze(kbe(i)+1,i),ze(kbe(i),i)
-!                  CALL parallel_abort(errmsg)
-!                endif
-!
-!                !Limit ratio between reference depth and bottom depth
-!                !ta=min(0.5d0,relath*cff/cff1) !usually the relath is 0.01; for natural river, it should be even smaller
-!
-!                !aref=ta*we(kbe(i)+1,i) !w-vel. at ref. height                
-!                !Estimate the starting pt
-!                cff8=(ze(kbe(i)+1,i)+ze(kbe(i),i))/2 !bottom half cell -starting pt of ELM
-!                cff9=cff8+Wsed(ised)*dt !>cff8; foot of char.
-!                if(cff9<=cff8) call parallel_abort('SED: (9)')
-!                Ksed=nvrt+1 !init. for abnormal case
-!                do k=kbe(i)+2,nvrt
-!                  if(cff9<=(ze(k,i)+ze(k-1,i))/2) then
-!                    Ksed=k
-!                    exit
-!                  endif
-!                enddo !k
-!
-!                depo_mss=0 !(min(cff9,cff8)-ze(kbe(i),i))*tr_el(indx,kbe(i)+1,i)
-!                do k=kbe(i)+2,min(nvrt,Ksed)
-!                  cff7=(ze(k-2,i)+ze(k-1,i))/2
-!                  cff8=(ze(k,i)+ze(k-1,i))/2
-!                  if(cff9<cff7) then
-!                    WRITE(errmsg,*)'SED, wrong cff9:',cff9,cff7,ielg(i),ised,k
-!                    CALL parallel_abort(errmsg)
-!                  endif
-!
-!                  if(cff9<cff8) then
-!                    cff5=(cff9-cff7)/(cff8-cff7) !ratio
-!                    if(cff5<0.or.cff5>1) then
-!                      WRITE(errmsg,*)'SED, wrong ratio:',cff5,ielg(i),ised,k 
-!                      CALL parallel_abort(errmsg)
-!                    endif
-!                    cff6=(1-cff5)*tr_el(indx,k-1,i)+cff5*tr_el(indx,k,i) !conc @upper layer
-!                  else
-!                    cff6=tr_el(indx,k,i)
-!                  endif
-!
-!                  depo_mss=depo_mss+(cff6+tr_el(indx,k-1,i))/2*(min(cff9,cff8)-cff7) !>=0
-!                  !depo_mss=depo_mss+cff6*(min(cff9,cff8)-cff7) !>=0 (lower depos. flux)
-!                enddo !k
-!
-!                !Deal with above F.S. case
-!                if(Ksed==nvrt+1) then
-!                  cff7=(ze(nvrt,i)+ze(nvrt-1,i))/2
-!                  depo_mss=depo_mss+(min(ze(nvrt,i),cff9)-cff7)*tr_el(indx,nvrt,i)
-!                endif
-
                 !BM: Correction of depo_mss, otherwise conservation issues would occur 
                 depo_mss=dt*Wsed(ised)*tr_el(indx,kbe(i)+1,i) !s * m/s * kg/m3
 
                 !BM: output
                 depflxel(i,ised)=depo_mss/dt ! en kg/m2/s
 
-! - Compute erosion, eros_mss (kg/m/m) following 
-!  (original erosion flux is in kg/m/m/s; note dt below)
+                ! - Compute erosion, eros_mss (kg/m/m) following 
+                !  (original erosion flux is in kg/m/m/s; note dt below)
                 cff1=(1.0d0-bed(top,i,iporo))*bed_frac(top,i,ised)
                 if(ierosion==0) then 
                   !Ariathurai & Arulanandan (1978)
@@ -1041,8 +987,6 @@
                 !BM: output
                 eroflxel(i,ised)=flux_eros ! en kg/m2/s            
 
-
-
 !...            Update flx_bt for transport solver
                 flx_bt(indx,i)=-flux_eros ![kg/m/m/s]
 
@@ -1059,8 +1003,7 @@
                   hdep(i)=hdep(i)+(eros_mss-depo_mss)/Srho(ised)/(1.0d0-bed(top,i,iporo))
                 ENDIF !sed_morph
 
-! - If first time step of deposit, then store deposit material in
-! temporary array, dep_mass.
+! - Store deposit material in temporary array, dep_mass
                 IF (eros_mss<depo_mss) THEN
                   !IF(time>bed(top,i,iaged)+1.1d0*dt.and.bed(top,i,ithck)>newlayer_thick) THEN
                   IF(bed(top,i,ithck)>newlayer_thick) THEN !171027
@@ -1078,8 +1021,7 @@
                     WRITE(errmsg,*)'SED3D: bed_m<0',k,bed_mass(k,i,nnew,ised)
                     CALL parallel_abort(errmsg)
                   endif
-                ENDDO
-                !bed_mass(top,i,nnew,ised)=MAX(bed_mass(top,i,nnew,ised),0.0d0) 
+                ENDDO !k
 
               case(2) !Tsinghua Univ. group
                 !Xiaonan's addition here
@@ -1121,8 +1063,7 @@
                   hdep(i)=hdep(i)+(eros_mss-depo_mss)/Srho(ised)/(1.0d0-bed(top,i,iporo))
                 ENDIF !sed_morph
 
-                ! - If first time step of deposit, then store deposit material in
-                ! temporary array, dep_mass.
+                ! - Store deposit material in array dep_mass for each class
                 IF (eros_mss<depo_mss) THEN
                   IF(time>bed(top,i,iaged)+1.1d0*dt.and.bed(top,i,ithck)>newlayer_thick) THEN
                     dep_mass(i,ised)=depo_mss-eros_mss !>0 !kg/m/m
@@ -1386,7 +1327,7 @@
 ! - Update thickness of fractional layer Ksed
               bed(Ksed,i,ithck)=thck_avail-thck_to_add !>=0
 
-! - Upate bed fraction of top layer
+! - Update bed fraction of top layer
               cff3=0.0d0
               DO ised=1,ntr_l
                 cff3=cff3+bed_mass(top,i,nnew,ised)

@@ -228,7 +228,7 @@
        REAL(rkind), ALLOCATABLE :: Zob(:) !Roughness length effectively used [m]
 
        !Following 4 arrays are actively updated
-       REAL(rkind), ALLOCATABLE :: bed(:,:,:) !bed(Nbed,nea,MBEDP): properties
+       REAL(rkind), ALLOCATABLE :: bed(:,:,:) !bed(Nbed,nea,MBEDP): properties for each bed layer
        REAL(rkind), ALLOCATABLE :: bed_frac(:,:,:) !bed_frac(Nbed,nea,ntr_l) - sum over ntr_l should =1
        REAL(rkind), ALLOCATABLE :: bed_mass(:,:,:,:) !bed_mass(Nbed,nea,2,ntr_l)>=0; 
                                                      !'2' is used to store old and new time step alternately
