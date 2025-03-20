@@ -13,7 +13,7 @@ import os
 import geopandas as gpd
 
 # ------------------------- inputs ---------------------------
-WDIR = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v29/Clip/'
+WDIR = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v31/Clip/'
 CRS = 'esri:102008'
 
 # manual polygons defined in the coastal coverage,

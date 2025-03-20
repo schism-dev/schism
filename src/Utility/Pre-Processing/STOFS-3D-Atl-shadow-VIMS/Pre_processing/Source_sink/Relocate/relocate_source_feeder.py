@@ -14,7 +14,8 @@ import numpy as np
 from scipy import spatial
 
 from pylib import schism_grid
-from pylib_essentials.schism_file import source_sink, TimeHistory, schism_bpfile
+from pylib_experimental.schism_file import source_sink, TimeHistory
+from pylib_essentials.schism_file import schism_bpfile
 from pylib_essentials.utility_functions import inside_polygon
 
 # Global Var

@@ -66,7 +66,7 @@ def set_feeder_dp(feeder_info_dir='', hgrid_obj=None, hgrid_obj_no_feeder=None):
 
 if __name__ == "__main__":
     # sample usage
-    wdir ='/sciclone/schism10/feiye/STOFS3D-v8/I15/FeederDp/'
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I15a_v7/FeederDp/'
 
     # a grid without feeder is needed to identify which feeder points are outside and should be deepened
     # Only the boundary matters, the interior of the grid doesn't matter,
@@ -76,14 +76,15 @@ if __name__ == "__main__":
     # gd_no_feeder.proj(prj0='esri:102008', prj1='epsg:4326')
 
     # grid with feeders
-    gd0 = schism_read(f'{wdir}/hgrid.ll')
-    gd0.dp = transfer_grid_z(gd_no_feeder, gd0)
+    gd_with_feeders = schism_read(f'{wdir}/hgrid.ll')
+    # gd0.dp = transfer_grid_z(gd_no_feeder, gd0)
     # gd.save(f'{wdir}/hgrid.copy.ll', fmt=1)
 
     gd = set_feeder_dp(
-        feeder_info_dir='/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v29/Feeder/',
-        hgrid_obj=gd0, hgrid_obj_no_feeder=gd_no_feeder
+        feeder_info_dir='/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v31/Feeder/',
+        hgrid_obj=gd_with_feeders, hgrid_obj_no_feeder=gd_no_feeder
     )
-    dp_diff = gd.dp - gd0.dp
+    dp_diff = gd.dp - gd_with_feeders.dp
+
     print(f'min deepening: {min(dp_diff)}; max deepening: {max(dp_diff)} \n')
     gd.save(f'{wdir}/hgrid.feeder_dp.ll', fmt=0)

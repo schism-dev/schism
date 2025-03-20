@@ -458,7 +458,7 @@ def stofs3d_v8():
     And it takes the v6 value outside the region.
     """
     # ----------- inputs -------------------
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I13r_v7/Bathy_edit/DEM_loading/'
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I15a_v7/Bathy_edit/DEM_loading/'
     dem_dir = '/sciclone/schism10/Hgrid_projects/DEMs/npz2/'
     dem_json_list = [
         'DEM_info_original_patched.json',
@@ -466,7 +466,7 @@ def stofs3d_v8():
         'DEM_info_v3a.json',  # v3a has CoNED 2022 NGOM for LA
         'DEM_info_Statewide.json',  # , v4 added USGS 1M Statewide for CT and RI
     ]
-    max_dem_region_shpfile = 'bluetopo_regions2.shp'
+    max_dem_region_shpfile = 'bluetopo_regions4.shp'
     min_dem_region_shpfile = 'breakwaters_poly.shp'
     output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
     # ---------------------------------------
@@ -482,7 +482,7 @@ def stofs3d_v8():
     for dem_json in dem_json_list:
         # Load grids in parallel
         loaded_grids.append(
-            pload_dem(grd=f'{wdir}/hgrid.ll', grdout=None, dem_json=dem_json,
+            pload_dem(grd=f'{wdir}/hgrid.ll', grdout=None, dem_json=f'{wdir}/{dem_json}',
                       dem_dir=dem_dir, reverse_sign=True)  # returns None for non-root
         )  # On non-root processes, loaded_grids only contains None
         comm.Barrier()  # wait for all cores to finish populating loaded_grids
@@ -494,9 +494,11 @@ def stofs3d_v8():
         print(f'processing loaded grids: {loaded_grids}')
         hgrid_final = deepcopy(loaded_grids[0])
         hgrid_final.dp = max_dp_in_region(
-            loaded_grids[:-1], region_file=max_dem_region_shpfile)
+            loaded_grids[:-1], region_file=f'{wdir}/{max_dem_region_shpfile}')
         hgrid_final.dp = max_dp_in_region(
-            [hgrid_final, loaded_grids[-1]], region_file=min_dem_region_shpfile, reverse_sign=True)
+            [hgrid_final, loaded_grids[-1]],
+            region_file=f'{wdir}/{min_dem_region_shpfile}',
+            reverse_sign=True)
 
         hgrid_final.save(output_fname)
 
