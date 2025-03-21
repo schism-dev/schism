@@ -165,7 +165,7 @@
       INTEGER,save :: Ksed,i,indx,ised,j,k,ks,l
       INTEGER,save :: nm1,nm2,nm3 !bnew
 
-      REAL(rkind),save :: time,ta,tmp
+      REAL(rkind),save :: time,ta,tmp,rat
       REAL(rkind),save :: cff, cff1, cff2, cff3, cffL, cffR, dltL, dltR
       REAL(rkind),save :: cu, cff4, cff6, aref, cff7, cff8, cff9
       REAL(rkind),save :: thck_avail,thck_to_add,eros_mss,depo_mss,flux_eros,flux_depo
@@ -1222,7 +1222,7 @@
 
 !---------------------------------------------------------------------
 ! - Ensure top bed layer thickness is greater or equal than active 
-! layer thickness. If needed, entrain sed to top layer from 
+! layer thickness but less than user specified actv_max. If needed, entrain sed to top layer from 
 ! lower layers (if Nbed>1)
 !---------------------------------------------------------------------
 
@@ -1248,6 +1248,7 @@
 !    sediment classes ... morph_fac is now set as a parameter in
 !    sediment.in
 
+        !actv_max already scaled up by morph_fac
         IF(sed_morph>=1) bottom(i,iactv)=MAX(bottom(i,iactv)*morph_fac,bottom(i,iactv))
 
         !Adjust bed thickness (sum of classes) at top layer
@@ -1350,27 +1351,29 @@
                 ENDDO !ised
               ENDDO !k
             ENDIF !thck_avail
+          ENDIF !bed(top,i,ithck)<bottom(i,iactv)
 
-!          ELSE IF(bed(top,i,ithck)>bottom(i,iactv)) THEN !put extra mass into layer 2
-!            rat=bottom(i,iactv)/bed(top,i,ithck) !bed()>0; 1>rat>0
-!            bed_mass(top,i,nnew,:)=bed_mass(top,i,nnew,:)*rat
-!            bed(top,i,ithck)=bottom(i,iactv)
-!            bed_mass(2,i,nnew,:)=bed_mass(2,i,nnew,:)+bed_mass(top,i,nnew,:)*(1-rat)
-!            bed(2,i,ithck) = 0.0d0
-!            DO ised=1,ntr_l
-!              IF(bed(2,i,iporo)>=1) call parallel_abort('SED3D: div. by 0(8)')
-!              bed(2,i,ithck)=bed(2,i,ithck)+bed_mass(2,i,nnew,ised)/Srho(ised)/(1.0d0-bed(2,i,iporo)) !>=0
-!            ENDDO !ised
-!
-!            ! - Update bed fraction of layer 2
-!            cff3=sum(bed_mass(2,i,nnew,1:ntr_l))
-!            cff3=max(cff3,eps)
-!            DO ised=1,ntr_l
-!              bed_frac(2,i,ised)=bed_mass(2,i,nnew,ised)/cff3 !>=0
-!            ENDDO
-!
-!            !No adjustment of other properties for layer 2
-          ENDIF  !End test increase top bed layer
+          !Split top layer if too thick
+          IF(bed(top,i,ithck)>actv_max) THEN !put extra mass into layer 2
+            rat=actv_max/bed(top,i,ithck) !bed()>0; 1>rat>0
+            bed_mass(top,i,nnew,:)=bed_mass(top,i,nnew,:)*rat
+            bed(top,i,ithck)=actv_max
+            bed_mass(2,i,nnew,:)=bed_mass(2,i,nnew,:)+bed_mass(top,i,nnew,:)*(1-rat)
+            bed(2,i,ithck) = 0.0d0
+            DO ised=1,ntr_l
+              IF(bed(2,i,iporo)>=1) call parallel_abort('SED3D: div. by 0(8)')
+              bed(2,i,ithck)=bed(2,i,ithck)+bed_mass(2,i,nnew,ised)/Srho(ised)/(1.0d0-bed(2,i,iporo)) !>=0
+            ENDDO !ised
+
+            ! - Update bed fraction of layer 2
+            cff3=sum(bed_mass(2,i,nnew,1:ntr_l))
+            cff3=max(cff3,eps)
+            DO ised=1,ntr_l
+              bed_frac(2,i,ised)=bed_mass(2,i,nnew,ised)/cff3 !>=0
+            ENDDO
+
+            !No adjustment of other properties for layer 2
+          ENDIF !bed(top,i,ithck)>actv_max
         endif !Nbed>1
       ENDDO !i=1,nea
 
@@ -1607,7 +1610,7 @@
       do i=1,ne
         do k=1,Nbed
           do ised=1,ntr_l
-            cff=cff+bed_mass(k,i,2,ised)*area(i) !kg
+            cff=cff+bed_mass(k,i,nnew,ised)*area(i) !kg
           enddo !ised
         enddo !k
       enddo !i
