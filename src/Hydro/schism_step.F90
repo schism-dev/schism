@@ -6438,7 +6438,21 @@
 
 !$OMP workshare
       deta2_dx=0.d0; deta2_dy=0.d0; deta1_dx=0.d0; deta1_dy=0.d0; dpr_dx=0.d0; dpr_dy=0.d0; detp_dx=0.d0; detp_dy=0.d0
+      deta1_dxy_elem=0.d0
 !$OMP end workshare
+
+!     Pressure gradient at elem for CICE
+!$OMP do
+      do ie=1,nea
+        if(idry_e(ie)==0) then
+          do m=1,i34(ie)
+            nd=elnode(m,ie)
+            deta1_dxy_elem(ie,1)=deta1_dxy_elem(ie,1)+eta1(nd)*dldxy(m,1,ie) !eframe if ics=2
+            deta1_dxy_elem(ie,2)=deta1_dxy_elem(ie,2)+eta1(nd)*dldxy(m,2,ie) !eframe if ics=2
+          enddo !m
+        endif !idry_e
+      enddo !ie
+!$OMP end do
 
 !$OMP do 
       do j=1,ns !resident

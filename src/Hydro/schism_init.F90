@@ -1419,7 +1419,7 @@
          &  veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
          &  veg_h_unbent(npa),veg_nv_unbent(npa),veg_di_unbent(npa), &
          &  wwave_force(2,nvrt,nsa),btaun(npa), &
-         &  rsxx(npa), rsxy(npa), rsyy(npa), stat=istat)
+         &  rsxx(npa),rsxy(npa),rsyy(npa),deta1_dxy_elem(nea,2),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -1752,6 +1752,7 @@
       wind_rotate_angle=0.d0
       wwave_force=0.d0
       diffmin=1.d-6; diffmax=1.d0
+      deta1_dxy_elem=0.d0
 
 !Tsinghua group
 #ifdef USE_SED 

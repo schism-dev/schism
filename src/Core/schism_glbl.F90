@@ -498,6 +498,7 @@ module schism_glbl
   real(rkind),save,allocatable :: srad_o(:)
   logical,save,allocatable :: lhas_ice(:)
   logical,save :: lice_free_gb
+  real(rkind),save,allocatable :: deta1_dxy_elem(:,:)
 
   real(4),save,dimension(:,:,:),allocatable :: trnd_nu1,trnd_nu2,trnd_nu
   real(4),save,dimension(:,:),allocatable :: ref_ts1,ref_ts2,ref_ts
