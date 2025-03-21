@@ -564,15 +564,16 @@
      &                   nws) 
 
         use schism_glbl, only : rkind, npa, uu2, vv2, tr_nd, & 
-     &                     idry, nvrt, ivcor,ipgl,fdb,lfdb
+     &                     idry, nvrt, ivcor,ipgl,fdb,lfdb,albedo
         use schism_msgp, only : myrank,parallel_abort
         implicit none
 
 ! input/output variables
         real(rkind), intent(in) :: time 
-        real(rkind), dimension(npa), intent(in) :: u_air,v_air,p_air,t_air,q_air,shortwave_d,longwave_d
+        real(rkind), dimension(npa), intent(in) :: u_air,v_air,p_air,t_air,q_air,longwave_d
         real(rkind), dimension(npa), intent(out) :: sen_flux, lat_flux, longwave_u, tau_xz, tau_yz
         integer, intent(in) :: nws
+        real(rkind), dimension(npa), intent(inout) :: shortwave_d
 #ifdef PREC_EVAP
         real(rkind), dimension(npa), intent(in) :: precip_flux,prec_snow
         real(rkind), dimension(npa), intent(out) :: evap_flux
@@ -597,6 +598,11 @@
         write(38,*)
         write(38,*) 'enter surf_fluxes2'
 #endif
+
+!       Apply albedo
+        do i_node = 1, num_nodes
+          shortwave_d(i_node)=max((1.0d0-albedo(i_node))*shortwave_d(i_node),0.0_rkind)
+        enddo
 
 ! retrieve the downwelling radiative fluxes
 !        call get_rad (time, shortwave_d, longwave_d)
@@ -725,7 +731,7 @@
         first_call = .false.
 
       return
-      end !surf_fluxes
+      end !surf_fluxes2
 !-----------------------------------------------------------------------
 !
 ! Calculate bulk aerodynamic surface fluxes over water using method of
