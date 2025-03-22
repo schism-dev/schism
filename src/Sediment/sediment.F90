@@ -1258,7 +1258,9 @@
           bed(top,i,ithck)=bed(top,i,ithck)+bed_mass(top,i,nnew,ised)/Srho(ised)/(1.0d0-bed(top,i,iporo)) !>=0
         ENDDO !ised
 
-        if(Nbed>1) then
+        if(Nbed==1) then
+          IF(bed(top,i,ithck)<bottom(i,iactv)) bottom(i,iactv) = bed(top,i,ithck) !possibly 0
+        else !Nbed>1 
           IF(bed(top,i,ithck)<bottom(i,iactv)) THEN
             !Total bed mass for each class
             do ised=1,ntr_l
@@ -1353,28 +1355,29 @@
             ENDIF !thck_avail
           ENDIF !bed(top,i,ithck)<bottom(i,iactv)
 
-          !Split top layer if too thick
-          IF(bed(top,i,ithck)>actv_max) THEN !put extra mass into layer 2
-            rat=actv_max/bed(top,i,ithck) !bed()>0; 1>rat>0
-            bed_mass(top,i,nnew,:)=bed_mass(top,i,nnew,:)*rat
-            bed(top,i,ithck)=actv_max
-            bed_mass(2,i,nnew,:)=bed_mass(2,i,nnew,:)+bed_mass(top,i,nnew,:)*(1-rat)
-            bed(2,i,ithck) = 0.0d0
-            DO ised=1,ntr_l
-              IF(bed(2,i,iporo)>=1) call parallel_abort('SED3D: div. by 0(8)')
-              bed(2,i,ithck)=bed(2,i,ithck)+bed_mass(2,i,nnew,ised)/Srho(ised)/(1.0d0-bed(2,i,iporo)) !>=0
-            ENDDO !ised
-
-            ! - Update bed fraction of layer 2
-            cff3=sum(bed_mass(2,i,nnew,1:ntr_l))
-            cff3=max(cff3,eps)
-            DO ised=1,ntr_l
-              bed_frac(2,i,ised)=bed_mass(2,i,nnew,ised)/cff3 !>=0
-            ENDDO
-
-            !No adjustment of other properties for layer 2
-          ENDIF !bed(top,i,ithck)>actv_max
-        endif !Nbed>1
+          !Splitting top layer is the cause of noisy sorting 
+!          !Split top layer if too thick
+!          IF(bed(top,i,ithck)>actv_max) THEN !put extra mass into layer 2
+!            rat=actv_max/bed(top,i,ithck) !bed()>0; 1>rat>0
+!            bed_mass(top,i,nnew,:)=bed_mass(top,i,nnew,:)*rat
+!            bed(top,i,ithck)=actv_max
+!            bed_mass(2,i,nnew,:)=bed_mass(2,i,nnew,:)+bed_mass(top,i,nnew,:)*(1-rat)
+!            bed(2,i,ithck) = 0.0d0
+!            DO ised=1,ntr_l
+!              IF(bed(2,i,iporo)>=1) call parallel_abort('SED3D: div. by 0(8)')
+!              bed(2,i,ithck)=bed(2,i,ithck)+bed_mass(2,i,nnew,ised)/Srho(ised)/(1.0d0-bed(2,i,iporo)) !>=0
+!            ENDDO !ised
+!
+!            ! - Update bed fraction of layer 2
+!            cff3=sum(bed_mass(2,i,nnew,1:ntr_l))
+!            cff3=max(cff3,eps)
+!            DO ised=1,ntr_l
+!              bed_frac(2,i,ised)=bed_mass(2,i,nnew,ised)/cff3 !>=0
+!            ENDDO
+!
+!            !No adjustment of other properties for layer 2
+!          ENDIF !bed(top,i,ithck)>actv_max
+        endif !Nbed
       ENDDO !i=1,nea
 
 !---------------------------------------------------------------------
@@ -1511,9 +1514,9 @@
       IF(sed_morph==2.AND.Nbed==1)THEN
         DO i=1,nea
           tmp=sum(bedthick_overall(elnode(1:i34(i),i)))/i34(i)
-          bed(1,i,ithck)=tmp !bedthick_overall
+          bed(top,i,ithck)=tmp
           DO ised=1,ntr_l
-            bed_mass(1,i,nnew,ised)=tmp*Srho(ised)*(1.0d0-bed(1,i,iporo))*bed_frac(1,i,ised)
+            bed_mass(top,i,nnew,ised)=tmp*Srho(ised)*(1.0d0-bed(top,i,iporo))*bed_frac(top,i,ised)
             if(bed_mass(1,i,nnew,ised)<0.d0) then
               WRITE(errmsg,*)'SED3D: mass<0; ',bed_mass(1,i,nnew,ised),i,nnew,ised
               CALL parallel_abort(errmsg)
