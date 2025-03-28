@@ -238,7 +238,8 @@ class ConfigStofs3dAtlantic():
             tvd_regions=[
                 'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
                 'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg',
-                'upwind_east_Carribbean.rgn', 'upwind_west_Carribbean.rgn'
+                'upwind_east_Caribbean.rgn', 'upwind_west_Caribbean.rgn',
+                # 'upwind_Honduras.reg'
             ]
         )
 

@@ -704,7 +704,7 @@ def main():
     # R{runid}: run directory, where the run will be submitted to queue;
     # O{runid}: output directory for holding raw outputs and post-processing.
     # under project_dir
-    runid = '15a_v7'
+    runid = '15b_v7'
 
     # swithes to generate different input files
     input_files = {
@@ -719,8 +719,8 @@ def main():
         'hotstart.nc': False,
         '3D.th.nc': False,
         'elev2D.th.nc': False,
-        '*nu.nc': True,
-        '*.prop': False,
+        '*nu.nc': False,
+        '*.prop': True,
     }
     # -----------------end input---------------------
 
