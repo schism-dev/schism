@@ -94,7 +94,8 @@ module schism_glbl
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
                   &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm,iof_icm_ba,&
-                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif
+                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif,&                  
+                  &imec,nbins_mec_vert
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_cos,iof_fib, &
@@ -111,7 +112,7 @@ module schism_glbl
                       &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
                       &stemp_stc,stemp_dz(2),ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
                       &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2
-  real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:)
+  real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:),mec_vert_z(:),mec_vert_a(:)
 
   ! Misc. variables shared between routines
   integer,save :: nz_r,ieqstate,kr_co, &
@@ -128,6 +129,7 @@ module schism_glbl
                       &difnum_max_l2,wtime1,wtime2,cmiu0, &
                       &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,veg_di0,veg_h0,veg_nv0, &
                       &veg_cd0,dtb_min_transport,bounds_lon(2),time_ref_ts
+                      
 
 !  logical,save :: lm2d !2D or 3D model
   logical,save :: lhas_quad=.false. !existence of quads
@@ -675,6 +677,10 @@ module schism_glbl
 ! Vegetation
   real(rkind),save,allocatable     :: veg_alpha0(:),veg_h(:),veg_nv(:),veg_di(:),veg_cd(:), &
  &veg_h_unbent(:),veg_nv_unbent(:),veg_di_unbent(:)
+
+! Marine energy converter
+ real(rkind),save,allocatable     :: mec_alpha0(:),mec_ct(:),mec_a(:)
+
 !Tsinghua group:0825
   REAL(rkind),save :: Cbeta,beta0,c_miu,Cv_max,ecol,ecol1,sigf,sigepsf,Ceps1,Ceps2,Ceps3,Acol,sig_s,fi_c,ksi_c,kpz !1013+kpz
   REAL(rkind),save,ALLOCATABLE :: Dpzz(:,:)     !at nodes & whole levels 

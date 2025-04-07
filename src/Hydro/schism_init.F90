@@ -187,7 +187,7 @@
 !     Name list
       integer :: ntracer_gen,ntracer_age,sed_class,eco_class !,flag_fib
       namelist /CORE/ipre,ibc,ibtp,ntracer_gen,ntracer_age,sed_class,eco_class, &
-     &nspool,ihfskip,msc2,mdc2,dt,rnday,nbins_veg_vert
+     &nspool,ihfskip,msc2,mdc2,dt,rnday,nbins_veg_vert,nbins_mec_vert
 
       namelist /OPT/ gen_wsett,flag_fib,ics,rearth_pole,rearth_eq,indvel, &
      &imm,ibdef,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
@@ -214,6 +214,7 @@
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
+     &imec,mec_vert_z,mec_vert_a, &
      &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
@@ -322,7 +323,11 @@
       if(mod(ihfskip,nspool)/=0) call parallel_abort('ihfskip/nspool /= integer')
 !'
       if(nbins_veg_vert<=0) call parallel_abort('INIT: nbins_veg_vert<=0')
- 
+      if(nbins_mec_vert<=0) then
+        write(errmsg,*)'INIT: nbins_mec_vert error,',nbins_mec_vert, nbins_veg_vert; 
+        call parallel_abort(errmsg)
+      endif
+      
 !     m[sd]c2 are checked inside WWM
 
 !...  Count # of tracer models and tracers
@@ -448,7 +453,7 @@
      &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_mice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
-     &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1),stat=istat)
+     &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1),mec_vert_z(nbins_mec_vert+1),mec_vert_a(nbins_mec_vert+1),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
         srqst7(:)=MPI_REQUEST_NULL
         !Global output on/off flags
@@ -489,7 +494,7 @@
       fwvor_gradpress=1; fwvor_breaking=1; fwvor_streaming=1; fwvor_wveg=0; fwvor_wveg_NL=0; wafo_obcramp=0;
       fwvor_advxy_stokes=1; fwvor_advz_stokes=1; fwvor_gradpress=1; fwvor_breaking=1; wafo_obcramp=0;
       iwbl=0; cur_wwm=0; if_source=0; dramp_ss=2._rkind; ieos_type=0; ieos_pres=0; eos_a=-0.1_rkind; eos_b=1001._rkind;
-      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; iveg=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
+      slr_rate=120._rkind; rho0=1000._rkind; shw=4184._rkind; iveg=0; imec=0; nstep_ice=1; h1_bcc=50._rkind; h2_bcc=100._rkind
       hw_depth=1.d6; hw_ratio=0.5d0; iunder_deep=0; level_age=-999;
       !vclose_surf_frac \in [0,1]: correction factor for vertical vel & flux. 1: no correction
       vclose_surf_frac=1.0
@@ -513,6 +518,9 @@
       veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
       veg_vert_scale_D=(/(1.0d0,i=1,nbins_veg_vert+1)/)
       veg_lai=1.d0; veg_cw=1.5d0
+
+      mec_vert_z=(/((i-1)*0.4d0,i=1,nbins_mec_vert+1)/) ![m]
+      mec_vert_a=(/(1.0d0,i=1,nbins_mec_vert+1)/) ! turbine area [m^2]
 
       !Output elev, hvel by detault
       nc_out=1
@@ -1163,6 +1171,21 @@
       slr_rate=slr_rate*1.d-3/365.d0/86400.d0 !m/s
 #endif
 
+!     Marine energy converter
+      if(imec<0.or.imec>2) then
+        write(errmsg,*)'INIT: illegal imec,',imec
+        call parallel_abort(errmsg)
+      endif
+
+      if(imec==1) then !specify vertical variation for marine energy converter
+        do k=1,nbins_mec_vert
+          if(mec_vert_z(k)>=mec_vert_z(k+1)) then
+            write(errmsg,*)'INIT: mec_vert_z not ascending,',mec_vert_z
+            call parallel_abort(errmsg)
+          endif
+        enddo !k
+      endif
+
 !     Ice
 #ifdef USE_MICE
       if(nstep_ice<=0) call parallel_abort('INIT: nstep_ice<=0')
@@ -1418,6 +1441,7 @@
          &  surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),veg_alpha0(npa), &
          &  veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
          &  veg_h_unbent(npa),veg_nv_unbent(npa),veg_di_unbent(npa), &
+         &  mec_ct(npa),mec_a(npa),&
          &  wwave_force(2,nvrt,nsa),btaun(npa), &
          &  rsxx(npa),rsxy(npa),rsyy(npa),deta1_dxy_elem(nea,2),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
@@ -3835,6 +3859,36 @@
         j=nf90_open(in_dir(1:len_in_dir)//'surface_restore.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_ref_ts)
         if(j/=NF90_NOERR) call parallel_abort('init: surface_restore.nc not found')
       endif !iref_ts
+
+!     Energy converter inputs: mec_*.gr3
+      mec_ct=0.d0 !turbine thrust coefficient for the amount of thrust force exerted on the fluid
+      mec_a=0.d0 !turbine swept area [m^2]
+      if(imec/=0) then        
+        if(myrank==0) then
+          open(10,file=in_dir(1:len_in_dir)//'mec_ct.gr3',status='old')
+          read(10,*)
+          read(10,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
+     &call parallel_abort('INIT: Check mec_ct.gr3 (1)')
+          do i=1,np_global
+            read(10,*)j,xtmp,ytmp,tmp
+            if(tmp<0.d0.or.tmp1<0.d0) then
+              write(errmsg,*)'INIT: illegal mec_ct.gr3:',i,tmp,tmp1
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp
+          enddo !i
+          close(10)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) then
+            nd=ipgl(i)%id
+            mec_ct(nd)=buf3(i) !tmp
+          endif
+        enddo !i
+      endif !imec/=0
 
 !     Vegetation inputs: veg_*.gr3
       veg_alpha0=0.d0 !=D*Nv*Cdv/2; init; D is diameter or leaf width; Cdv is form drag (veg_cd)

@@ -234,6 +234,7 @@
       real(rkind),allocatable :: hp_int(:,:,:),buf1(:,:),buf2(:,:),buf3(:),msource(:,:)
       real(rkind),allocatable :: fluxes_tr(:,:),fluxes_tr_gb(:,:) !fluxes output between regions
       real(rkind),allocatable :: veg_alpha3D(:,:),veg_alpha_vert_mean(:)
+      real(rkind),allocatable :: mec_alpha3D(:,:),mec_alpha_vert_mean(:)
       logical :: ltmp,ltmp1(1),ltmp2(1)
 
       logical,save :: first_call=.true.
@@ -350,6 +351,12 @@
         if(istat/=0) call parallel_abort('STEP: fluxes_tr alloc')
       endif
 !     End alloc.
+
+!     Vertical variation of mec_alpha
+      if(imec/=0) then
+        allocate(mec_alpha3D(nvrt,npa),mec_alpha_vert_mean(npa),stat=istat)
+        if(istat/=0) call parallel_abort('STEP: mec_alpha3D alloc')
+      endif !imec
 
 !     Vertical variation of veg_alpha
       if(iveg/=0) then
@@ -2611,6 +2618,68 @@
       enddo !i
 !$OMP end do
 
+!     Add vertical variation to mec_alpha and compute vertical mean etc
+      if(imec/=0) then
+        if(imec==1) then !specify vertical variation
+!$OMP     do
+          do i=1,npa
+            if(idry(i)==1) then
+              mec_alpha3D(:,i)=mec_ct(i)
+            else !wet
+              do k=kbp(i),nvrt
+                rl10=znl(k,i)-znl(kbp(i),i) !>=0
+                if(rl10>=mec_vert_z(nbins_mec_vert+1)) then
+                  cff1=mec_vert_a(nbins_mec_vert+1)
+                else
+                  ifl=0
+                  do kk=1,nbins_mec_vert
+                    if(rl10>=mec_vert_z(kk).and.rl10<=mec_vert_z(kk+1)) then
+                      zrat=(rl10-mec_vert_z(kk))/(mec_vert_z(kk+1)-mec_vert_z(kk))
+                      ifl=kk
+                      exit
+                    endif !znl
+                  enddo !kk
+                  if(ifl==0) then
+                    write(errmsg,*)'STEP: mec vert failed,',mec_vert_z
+                    call parallel_abort(errmsg) 
+                  endif
+                  cff1=mec_vert_a(ifl)*(1.d0-zrat)+mec_vert_a(ifl+1)*zrat
+                endif !rl10
+  
+                mec_alpha3D(k,i)=mec_ct(i)*cff1
+              enddo !k
+            endif !idry
+          enddo !i=1,npa
+!$OMP     end do
+        else ! for velocity dependent coefficient - future work (imec=2)
+          
+        endif !imec
+        !Compute mean
+!$OMP   do
+        do i=1,npa
+          if(idry(i)==1) then
+            mec_alpha_vert_mean(i)=mec_ct(i)
+          else !wet
+            sum1=0.d0
+            sum2=0.d0
+            do k=kbp(i),nvrt-1
+              if(mec_alpha3D(k+1,i)/=0) then
+                sum1=sum1+(mec_alpha3D(k,i)+mec_alpha3D(k+1,i))*0.5d0*(znl(k+1,i)-znl(k,i))
+                sum2=sum2+znl(k+1,i)-znl(k,i)
+              else
+                exit
+              endif
+            enddo !k
+            if(sum2==0.d0) then
+              mec_alpha_vert_mean(i)=mec_alpha3D(kbp(i),i)
+            else
+              mec_alpha_vert_mean(i)=sum1/sum2
+            endif
+          endif !idry
+        enddo !i=1,npa
+!$OMP   end do
+      endif !imec/=0
+
 !     Add vertical variation to veg_alpha and compute vertical mean etc
       if(iveg/=0) then
         if(iveg==1) then !specify vertical variation
@@ -2669,7 +2738,7 @@
           enddo !i
 !$OMP     end do
         endif !iveg
-  
+
         !Compute mean
 !$OMP   do
         do i=1,npa
@@ -10826,6 +10895,9 @@
 
       if(allocated(veg_alpha3D)) deallocate(veg_alpha3D)
       if(allocated(veg_alpha_vert_mean)) deallocate(veg_alpha_vert_mean)
+
+      if(allocated(mec_alpha3D)) deallocate(mec_alpha3D)
+      if(allocated(mec_alpha_vert_mean)) deallocate(mec_alpha_vert_mean)
 
 #ifdef TIMER2
       tmp=mpi_wtime()
