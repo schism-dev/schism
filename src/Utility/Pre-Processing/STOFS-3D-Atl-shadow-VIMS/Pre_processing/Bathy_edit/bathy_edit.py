@@ -33,11 +33,8 @@ from typing import Optional, List
 
 import numpy as np
 
-from pylib import grd2sms, sms2grd
-try:  # c++ function to speed up the grid reading
-    from pylib_experimental.schism_file import xread_schism_hgrid as schism_read
-except ImportError:
-    from pylib import schism_grid as schism_read
+from pylib import grd2sms
+from pylib import schism_grid as schism_read
 
 
 IMPLEMENTED_TASKS = [  # order matters
@@ -191,7 +188,7 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
             wdir=f'{wdir}/xGEOID/', hgrid_obj=hgrid_obj,
             diag_output=f'{wdir}/{hgrid_base_name}.2dm')
         print("Finihsed converting the vdatum to xGEOID.\n")
-    
+
     if 'xGEOID_from_diff' in tasks:  # convert from NAVD88 to xGEOID based on dp difference
         hgrid_diff = schism_read(f'{wdir}/xGEOID_from_diff/hgrid_xGEOID20b_dp_minus_NAVD_dp.gr3')
         hgrid_obj.dp += hgrid_diff.dp
@@ -255,11 +252,11 @@ def sample_usage():
     '''
     Sample usage of the bathy_edit function.
     '''
-    WDIR = Path('/sciclone/schism10/feiye/STOFS3D-v8/I15a_v7/Bathy_edit2/')
+    WDIR = Path('/sciclone/schism10/feiye/STOFS3D-v8/I15g_v7/Bathy_edit/')
     HGRID_FNAME = Path(  # Typically, this is the DEM-loaded hgrid
-        '/sciclone/schism10/feiye/STOFS3D-v8/I15a_v7/Bathy_edit2/DEM_loading/hgrid.ll.dem_loaded.mpi.gr3'
+        '/sciclone/schism10/feiye/STOFS3D-v8/I15g_v7/Bathy_edit/DEM_loading/hgrid.ll.dem_loaded.mpi.gr3'
     )
-    TASKS = DEFAULT_TASKS  # {'Regional_tweaks', 'NCF', 'Levee', 'xGEOID_from_diff'}  # DEFAULT_TASKS
+    TASKS = {'Regional_tweaks', 'NCF', 'Levee', 'xGEOID_from_diff'}  # DEFAULT_TASKS
 
     bathy_edit(wdir=WDIR, hgrid_fname=HGRID_FNAME, tasks=TASKS)
 
