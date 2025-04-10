@@ -1668,7 +1668,7 @@ end subroutine inter_btrack
         enddo !k
         !todo: assert
         if(jlev==0) then
-          write(errmsg,*)'QUICKSEARCH: Cannot find a vert. level:',zt,etal,dep,(ztmp(k),k=kbpl,nvrt)
+          write(errmsg,*)'QUICKSEARCH: Cannot find a vert. level:',zt,(ztmp(k),k=kbpl,nvrt)
           call parallel_abort(errmsg)
         endif
         zrat=(ztmp(jlev)-zt)/(ztmp(jlev)-ztmp(jlev-1))

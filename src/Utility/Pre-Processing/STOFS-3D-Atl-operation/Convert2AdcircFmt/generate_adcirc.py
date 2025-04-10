@@ -159,8 +159,8 @@ def split_quads(elements=None):  # modified by FY
     triangles = deepcopy(elements)
     quad_idx = ~elements[:, -1].mask
     quads = elements[quad_idx]
-    upper_triangle = np.c_[quads[:, 0], quads[:, 1], quads[:, 2], -np.ones((quads.shape[0], 1))]  # last node is masked
-    lower_triangle = np.c_[quads[:, 0], quads[:, 1], quads[:, 2], -np.ones((quads.shape[0], 1))]  # last node is masked
+    upper_triangle = np.c_[quads[:, 0], quads[:, 1], quads[:, 3], -np.ones((quads.shape[0], 1))]  # last node is masked
+    lower_triangle = np.c_[quads[:, 1], quads[:, 2], quads[:, 3], -np.ones((quads.shape[0], 1))]  # fixed a bug where lower triangle is the same as upper triangle
 
     # replace quads with upper triangle
     triangles[quad_idx, :] = upper_triangle
@@ -213,7 +213,7 @@ if __name__ == '__main__':
         if not os.path.exists(input_city_identifier_file):
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), input_city_identifier_file)
 
-        if any(tested_host in myhost for tested_host in ["frontera", "viz", "femto", "vortex"]):
+        if any(tested_host in myhost for tested_host in ["frontera", "viz", "femto", "vortex", "kuro", "gulf"]):
             static_city_mask = False  # search for city mask within polygons of shapefile
             if Path(input_city_identifier_file).suffix != '.shp':
                 raise ValueError("When not using static_city_mask, input_city_identifier_file must be a shapefile containing city polygons")
@@ -248,9 +248,6 @@ if __name__ == '__main__':
     print(f'NE is {NE}')
     NV=3
 
-    #get wetdry nodes
-    #wd_nodes=ds['wetdry_node'][:,:]
-
     #get times
     times=ds['time'][:]
     #print(times)
@@ -258,21 +255,16 @@ if __name__ == '__main__':
 
     #get elev
     elev=ds['elevation'][:,:]
-    idxs=np.where(elev > 100000)
-    elev[idxs]=my_fillvalue
+    elev[elev > 100000] = my_fillvalue
+
     #mask dry node
-    #wd_node=ds['wetdry_node'][:,:]
-    #melev=ma.masked_array(elev, wd_node)
+    dryFlagNode=ds['dryFlagNode'][:,:]
+    elev[dryFlagNode == 1] = my_fillvalue
 
     #maxelevation
     maxelev=np.max(elev,axis=0)
     idxs=np.argmax(elev,axis=0)
     time_maxelev=times[idxs]
-
-    #disturbance
-    maxdist=copy.deepcopy(maxelev)
-    land_node_idx = depth < 0
-    maxdist[land_node_idx]=np.maximum(0, maxelev[land_node_idx]+depth[land_node_idx])
 
     #find city nodes
     if input_city_identifier_file is None:
@@ -285,11 +277,20 @@ if __name__ == '__main__':
             city_node_idx = find_points_in_polyshp(pt_xy=np.c_[x, y], shapefile_names=[input_city_identifier_file])
             np.savetxt(output_nodeId_fname, city_node_idx.astype(int), fmt='%i', encoding='utf-8')
 
-    #set mask for dry nodes
-    idry=np.zeros(NP)
-    idxs=np.where(maxelev+depth <= 1e-6)
-    print(idxs)
-    maxelev[idxs]=my_fillvalue
+    # disturbance
+    maxdist = copy.deepcopy(maxelev)
+    land_node_idx = depth < 0
+    idxs = np.logical_or(land_node_idx, city_node_idx)
+    # cut-off at 0 on normally dry area (depth<0 or city)
+    # for maxelev == -99999 (dry), it will also be cut off at 0
+    maxdist[idxs] = np.maximum(0, maxelev[idxs] + depth[idxs])
+
+    # set mask for dry nodes
+    # this is not necessary because dry nodes are already masked in elev
+    # idry=np.zeros(NP)
+    # idxs=np.where(maxelev+depth <= 1e-6)
+    # print(idxs)
+    # maxelev[idxs]=my_fillvalue
 
     #set mask for small max disturbance (<0.3 m) on land and cities
     small_dist_idx = maxdist < 0.3
@@ -349,7 +350,7 @@ if __name__ == '__main__':
         fout.createVariable('depth', 'f8', ('node',))
         fout['depth'].long_name=f"distance below {datum}"
         fout['depth'].standard_name=f"depth below {datum}"
-        fout['depth'].coordinates="time y x"
+        fout['depth'].coordinates="y x"  # fixed a bug "time y x"
         fout['depth'].location="node"
         fout['depth'].units="m"
         fout['depth'][:]=depth

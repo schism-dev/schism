@@ -76,6 +76,19 @@ MODULE PaHM_Utilities
     MODULE PROCEDURE SphericalDistance_1D
     MODULE PROCEDURE SphericalDistance_2D
   END INTERFACE SphericalDistance
+  
+  INTERFACE GetLocAndRatio
+    MODULE PROCEDURE GetLocAndRatioInteger
+    MODULE PROCEDURE GetLocAndRatioReal
+  END INTERFACE GetLocAndRatio
+
+  INTERFACE ReAllocate
+    MODULE PROCEDURE ReAllocateReal_1D
+    MODULE PROCEDURE ReAllocateInt_1D
+    MODULE PROCEDURE ReAllocateStr_1D
+  END INTERFACE ReAllocate
+
+
   !-----------------------------------------------------------------------
 
 
@@ -122,13 +135,13 @@ MODULE PaHM_Utilities
     tmpFileName = ADJUSTL(fileName)
 
     ! Check to see if file exists
-    WRITE(scratchMessage, '("Searching for file to open on unit ", i0, "...")') lun
-    CALL LogMessage(INFO, TRIM(scratchMessage))
+    WRITE(errmsg, '("Searching for file to open on unit ", i0, "...")') lun
+    CALL LogMessage(INFO, TRIM(errmsg))
 
     INQUIRE(FILE=TRIM(fileName), EXIST=fileFound)
     IF (.NOT. fileFound) THEN
-      WRITE(scratchMessage, '("The file : ", a, " was not found.")') TRIM(tmpFileName)
-      CALL AllMessage(INFO, scratchMessage)
+      WRITE(errmsg, '("The file : ", a, " was not found.")') TRIM(tmpFileName)
+      CALL AllMessage(INFO, errmsg)
 
       errorIO = 1
 
@@ -136,25 +149,25 @@ MODULE PaHM_Utilities
 
       RETURN  ! file not found
     ELSE
-      WRITE(scratchMessage, '("The file : ", a, " was found. The file will be opened.")') TRIM(tmpFileName)
+      WRITE(errmsg, '("The file : ", a, " was found. The file will be opened.")') TRIM(tmpFileName)
 
-      CALL LogMessage(INFO, TRIM(scratchMessage))
+      CALL LogMessage(INFO, TRIM(errmsg))
     END IF
 
     ! Open existing file
     OPEN(UNIT=lun, FILE=TRIM(tmpFileName), STATUS='OLD', ACTION='READ', IOSTAT=errorIO)
     IF (errorIO /= 0) THEN
-      WRITE(scratchMessage, '("Could not open the file: ", a, ".")') TRIM(tmpFileName)
+      WRITE(errmsg, '("Could not open the file: ", a, ".")') TRIM(tmpFileName)
 
-      CALL AllMessage(ERROR, TRIM(scratchMessage))
+      CALL AllMessage(ERROR, TRIM(errmsg))
 
       CALL UnsetMessageSource()
 
       RETURN  ! file found but could not be opened
     ELSE
-      WRITE(scratchMessage, '("The file ", a, " was opened successfully.")') TRIM(tmpFileName)
+      WRITE(errmsg, '("The file ", a, " was opened successfully.")') TRIM(tmpFileName)
 
-      CALL LogMessage(INFO, TRIM(scratchMessage))
+      CALL LogMessage(INFO, TRIM(errmsg))
     END IF
 
     CALL UnsetMessageSource()
@@ -376,8 +389,8 @@ MODULE PaHM_Utilities
 !         !----- CASE
 !         CASE ('BESTTRACKFILENAME')
 !           IF (.NOT. gotNBTRFILES) THEN
-!             WRITE(scratchMessage, fmtParNotFound) 'nBTrFiles', '(add the "nBTrFiles" keyword before "bestTrackFileName").'
-!             CALL AllMessage(ERROR, scratchMessage)
+!             WRITE(errmsg, fmtParNotFound) 'nBTrFiles', '(add the "nBTrFiles" keyword before "bestTrackFileName").'
+!             CALL AllMessage(ERROR, errmsg)
 !           ELSE
 !             IF (ALLOCATED(bestTrackFileName)) THEN
 !               tmpStr = ADJUSTL(charVal(nVal))
@@ -473,9 +486,9 @@ MODULE PaHM_Utilities
 !         CASE ('UNITTIME')
 !           IF (begDateSpecified .OR. begSimSpecified .OR. &
 !               endDateSpecified .OR. endSimSpecified) THEN
-!             scratchMessage = 'add the "unitTime" keyword before the ' // &
+!             errmsg = 'add the "unitTime" keyword before the ' // &
 !                              '"begDateTime"/"begTime" and "endDateTime"/"endTime" keywords'
-!             CALL AllMessage(ERROR, scratchMessage)
+!             CALL AllMessage(ERROR, errmsg)
 !             CALL Terminate()
 !           ELSE
 !             IF (nVal == 1) THEN
@@ -492,14 +505,14 @@ MODULE PaHM_Utilities
 !         !----- CASE
 !         CASE ('BEGDATETIME')
 !           IF (begDateSpecified .OR. begSimSpecified) THEN
-!             scratchMessage = 'Only one of "begDateTime" or "begSimTime" can be specified'
-!             CALL AllMessage(ERROR, scratchMessage)
+!             errmsg = 'Only one of "begDateTime" or "begSimTime" can be specified'
+!             CALL AllMessage(ERROR, errmsg)
 
 !             begDateSpecified = .FALSE.
 !           ELSE
 !             IF (.NOT. refDateSpecified) THEN
-!               scratchMessage = 'Add the "refDateTime" keyword before "begDateTime").'
-!               CALL AllMessage(ERROR, scratchMessage)
+!               errmsg = 'Add the "refDateTime" keyword before "begDateTime").'
+!               CALL AllMessage(ERROR, errmsg)
 !             ELSE
 !               IF (nVal == 1) THEN
 !                 begDateTime = TRIM(ADJUSTL(charVal(nVal)))
@@ -531,14 +544,14 @@ MODULE PaHM_Utilities
 !         !----- CASE
 !         CASE ('ENDDATETIME')
 !           IF (endDateSpecified .OR. endSimSpecified) THEN
-!             scratchMessage = 'Only one of "endDateTime" or "endSimTime" can be specified'
-!             CALL AllMessage(ERROR, scratchMessage)
+!             errmsg = 'Only one of "endDateTime" or "endSimTime" can be specified'
+!             CALL AllMessage(ERROR, errmsg)
 
 !             endDateSpecified = .FALSE.
 !           ELSE
 !             IF (.NOT. refDateSpecified) THEN
-!               scratchMessage = 'Add the "refDateTime" keyword before "endDateTime").'
-!               CALL AllMessage(ERROR, scratchMessage)
+!               errmsg = 'Add the "refDateTime" keyword before "endDateTime").'
+!               CALL AllMessage(ERROR, errmsg)
 !             ELSE
 !               IF (nVal == 1) THEN
 !                 endDateTime = TRIM(ADJUSTL(charVal(nVal)))
@@ -576,14 +589,14 @@ MODULE PaHM_Utilities
 !         !----- CASE
 !         CASE ('BEGSIMTIME')
 !           IF (begDateSpecified .OR. begSimSpecified) THEN
-!             scratchMessage = 'Only one of "begDateTime" or "begSimTime" can be specified'
-!             CALL AllMessage(ERROR, scratchMessage)
+!             errmsg = 'Only one of "begDateTime" or "begSimTime" can be specified'
+!             CALL AllMessage(ERROR, errmsg)
 
 !             begSimSpecified = .FALSE.
 !           ELSE
 !             IF (.NOT. refDateSpecified) THEN
-!               scratchMessage = 'Add the "refDateTime" keyword before "begSimTime").'
-!               CALL AllMessage(ERROR, scratchMessage)
+!               errmsg = 'Add the "refDateTime" keyword before "begSimTime").'
+!               CALL AllMessage(ERROR, errmsg)
 !             ELSE
 !               nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
 !               begSimTime = rValOut(1)
@@ -602,14 +615,14 @@ MODULE PaHM_Utilities
 !         !----- CASE
 !         CASE ('ENDSIMTIME')
 !           IF (endDateSpecified .OR. endSimSpecified) THEN
-!             scratchMessage = 'Only one of "endDateTime" and "endSimTime" can be specified'
-!             CALL AllMessage(ERROR, scratchMessage)
+!             errmsg = 'Only one of "endDateTime" and "endSimTime" can be specified'
+!             CALL AllMessage(ERROR, errmsg)
 
 !             endSimSpecified = .FALSE.
 !           ELSE
 !              IF (.NOT. refDateSpecified) THEN
-!               scratchMessage = 'Add the "refDateTime" keyword before "endSimTime").'
-!               CALL AllMessage(ERROR, scratchMessage)
+!               errmsg = 'Add the "refDateTime" keyword before "endSimTime").'
+!               CALL AllMessage(ERROR, errmsg)
 !             ELSE
 !               nPnts = LoadREALVar(nVal, realVal, 1, rValOut)
 !               endSimTime = rValOut(1)
@@ -709,9 +722,9 @@ MODULE PaHM_Utilities
 !    CALL InitLogging()
 
 !    IF (CheckControlFileInputs() /= 0) THEN
-!      WRITE(scratchMessage, '(a)') &
+!      WRITE(errmsg, '(a)') &
 !              'Errors found while processing the input variables. Check the log file for details.'
-!      CALL ScreenMessage(ERROR, scratchMessage)
+!      CALL ScreenMessage(ERROR, errmsg)
 !      CALL UnsetMessageSource()
 !      CALL Terminate()
 !    END IF
@@ -749,6 +762,7 @@ MODULE PaHM_Utilities
       WRITE(*, '(a)')    '---------- MODEL PARAMETERS ----------'
 
       WRITE(*, '(a, a)')    '   title                = ', TRIM(ADJUSTL(title))
+      WRITE(*, '(a, a)')    '   logfilename          = ', TRIM(ADJUSTL(logfilename))
 
       DO i = 1, nBTrFiles
         WRITE(*, '(a, "(", i1, ")", a)')  '   bestTrackFileName', i, " = " // TRIM(ADJUSTL(bestTrackFileName(i)))
@@ -1002,7 +1016,7 @@ MODULE PaHM_Utilities
     vString     = BLANK
     string      = BLANK
 
-    lenLine = GetLineRecord(inpLine, line, 1)
+    lenLine = GetLineRecord(inpLine, line, LASTCOMMFLAG = 1)
     outLine = line
 
     ! If not a blank or comment line [CHAR(33)=!], decode and extract input
@@ -1252,7 +1266,7 @@ MODULE PaHM_Utilities
     errIO          = 0
     errNum         = 0
     errStatus      = 0
-    scratchMessage = BLANK
+    errmsg = BLANK
 
 
     CALL SetMessageSource("CheckControlFileInputs")
@@ -1261,18 +1275,18 @@ MODULE PaHM_Utilities
     IF (nBTrFiles <= 0) THEN
       errNum = 1
 
-      WRITE(scratchMessage, '("errNum = ", i0, a, i0, a)') errNum, &
+      WRITE(errmsg, '("errNum = ", i0, a, i0, a)') errNum, &
                             '. Invalid value supplied for dimension parameter: nBTrFiles = ', &
                             nBTrFiles, ' (should be greater than zero).'
-      CALL LogMessage(ERROR, scratchMessage)
+      CALL LogMessage(ERROR, errmsg)
     ELSE IF (bestTrackFileNameSpecified) THEN
       IF (numBTFiles /= nBTrFiles) THEN
         errNum = 2
 
-        WRITE(scratchMessage, '("errNum = ", i0, a, i0, a)') errNum, &
+        WRITE(errmsg, '("errNum = ", i0, a, i0, a)') errNum, &
                               '. The number of files for <bestTrackFileName> should be equal to nBTrFiles: ', &
                               nBTrFiles, '.'
-        CALL LogMessage(ERROR, scratchMessage)
+        CALL LogMessage(ERROR, errmsg)
       END IF
 
       DO iCnt = 1, numBTFiles
@@ -1280,36 +1294,36 @@ MODULE PaHM_Utilities
         IF ((.NOT. fileFound) .OR. (errIO /= 0)) THEN
           errNum = 3
 
-          WRITE(scratchMessage, '("errNum = ", i0, a)') errNum, &
+          WRITE(errmsg, '("errNum = ", i0, a)') errNum, &
                                 '. Could not access the best track file for read: ' // &
                                 TRIM(ADJUSTL(bestTrackFileName(iCnt)))
-          CALL LogMessage(ERROR, scratchMessage)
+          CALL LogMessage(ERROR, errmsg)
         END IF
       END DO
     ELSE
       errNum = 4
 
-      WRITE(scratchMessage, '("errNum = ", i0, a)') errNum, &
+      WRITE(errmsg, '("errNum = ", i0, a)') errNum, &
                             '. bestTrackFileName(s) not specified. This is a mandatory variable. '
-      CALL LogMessage(ERROR, scratchMessage)
+      CALL LogMessage(ERROR, errmsg)
     END IF
 
     !----- 2) Mesh file (mandatory variables) -----
     IF (.NOT. meshFileNameSpecified) THEN
       errNum = 5
 
-      WRITE(scratchMessage, '("errNum = ", i0, a)') errNum, &
+      WRITE(errmsg, '("errNum = ", i0, a)') errNum, &
                          '. Parameter <meshFileName> is not specified (mandatory variable) '
-      CALL LogMessage(ERROR, scratchMessage)
+      CALL LogMessage(ERROR, errmsg)
     ELSE
       meshFileName = ADJUSTL(meshFileName)
       INQUIRE(FILE=TRIM(meshFileName), IOSTAT=errIO, EXIST=fileFound)
       IF ((.NOT. fileFound) .OR. (errIO /= 0)) THEN
         errNum = 6
 
-        WRITE(scratchMessage, '("errNum = ", i0, a)') errNum, &
+        WRITE(errmsg, '("errNum = ", i0, a)') errNum, &
                            '. Could not access the mesh file for read: ' // TRIM(meshFileName)
-        CALL LogMessage(ERROR, scratchMessage)
+        CALL LogMessage(ERROR, errmsg)
       END IF
     END IF
 
@@ -1321,13 +1335,13 @@ MODULE PaHM_Utilities
         ! These are the valid values
     
       CASE DEFAULT
-        WRITE(scratchMessage, '(a)') 'This file type is not supported: meshFileType = ' // TRIM(meshFileType)
-        CALL LogMessage(INFO, scratchMessage)
+        WRITE(errmsg, '(a)') 'This file type is not supported: meshFileType = ' // TRIM(meshFileType)
+        CALL LogMessage(INFO, errmsg)
 
         meshFileType = 'ADCIRC'
 
-        WRITE(scratchMessage, '(a)') 'This value of meshFileType is adjusted to: meshFileType = ' // TRIM(meshFileType)
-        CALL LogMessage(INFO, scratchMessage)
+        WRITE(errmsg, '(a)') 'This value of meshFileType is adjusted to: meshFileType = ' // TRIM(meshFileType)
+        CALL LogMessage(INFO, errmsg)
     END SELECT
 
     ! Check for meshFileForm
@@ -1338,13 +1352,13 @@ MODULE PaHM_Utilities
         ! These are valid values
     
       CASE DEFAULT
-        WRITE(scratchMessage, '(a)') 'This file format is not supported: meshFileForm = ' // TRIM(meshFileForm)
-        CALL LogMessage(INFO, scratchMessage)
+        WRITE(errmsg, '(a)') 'This file format is not supported: meshFileForm = ' // TRIM(meshFileForm)
+        CALL LogMessage(INFO, errmsg)
 
         meshFileForm = 'ASCII'
 
-        WRITE(scratchMessage, '(a)') 'This value of meshFileForm is adjusted to: meshFileForm = ' // TRIM(meshFileForm)
-        CALL LogMessage(INFO, scratchMessage)
+        WRITE(errmsg, '(a)') 'This value of meshFileForm is adjusted to: meshFileForm = ' // TRIM(meshFileForm)
+        CALL LogMessage(INFO, errmsg)
     END SELECT
 
     !----- 3) Reference date and time (mandatory variables) -----
@@ -1352,9 +1366,9 @@ MODULE PaHM_Utilities
     refJD  = GregToJulDay(refDate, refTime)
     IF (refJD < gregJD) THEN
       errNum = 7
-      WRITE(scratchMessage, '("errNum = ", i0, a)') errNum, &
+      WRITE(errmsg, '("errNum = ", i0, a)') errNum, &
                             '. Invalid DateTime string was supplied: refDateTime = ' // TRIM(refDateTime)
-      CALL LogMessage(ERROR, scratchMessage)
+      CALL LogMessage(ERROR, errmsg)
     END IF
 
     !----- 4) Stepping parameters (mandatory variables) -----
@@ -1363,16 +1377,16 @@ MODULE PaHM_Utilities
       IF (refJD + (mdBegSimTime * GetTimeConvSec('D', 1)) < gregJD) THEN
         errNum = 8
         WRITE(tmpStr, '(f20.5)') begSimTime
-        WRITE(scratchMessage, '("errNum = ", i0, a)') errNum, &
+        WRITE(errmsg, '("errNum = ", i0, a)') errNum, &
                               '. Invalid start time in reference to refDateTime was supplied: begSimTime = ' // &
                               TRIM(ADJUSTL(tmpStr))
-        CALL LogMessage(ERROR, scratchMessage)
+        CALL LogMessage(ERROR, errmsg)
       END IF
     ELSE
       errNum = 81
-      WRITE(scratchMessage, '("errNum = ", i0, a)') errNum, &
+      WRITE(errmsg, '("errNum = ", i0, a)') errNum, &
                             '. Neither "begDateTime" or "begSimTime" are defined properly'
-      CALL LogMessage(ERROR, scratchMessage)
+      CALL LogMessage(ERROR, errmsg)
     END IF
 
     ! check for valid stop time
@@ -1381,31 +1395,31 @@ MODULE PaHM_Utilities
         errNum = 9
         WRITE(tmpStr1, '(f20.5)') begSimTime
         WRITE(tmpStr2, '(f20.5)') endSimTime
-        WRITE(scratchMessage, '("errNum = ", i0, a)') errNum, &
+        WRITE(errmsg, '("errNum = ", i0, a)') errNum, &
                               '. Stop time should be greater than start time: begSimTime = ' // &
                               TRIM(ADJUSTL(tmpStr1)) // ', endSimTime = ' // TRIM(ADJUSTL(tmpStr2))
-        CALL LogMessage(ERROR, scratchMessage)
+        CALL LogMessage(ERROR, errmsg)
       END IF
     ELSE
       errNum = 91
-      WRITE(scratchMessage, '("errNum = ", i0, a)') errNum, &
+      WRITE(errmsg, '("errNum = ", i0, a)') errNum, &
                             '. Neither "endDateTime" or "endSimTime" are defined properly'
-      CALL LogMessage(ERROR, scratchMessage)
+      CALL LogMessage(ERROR, errmsg)
     END IF
 
     ! check for valid outDT; (endSimTime - begSimTime) should be an integral integral multiple of outDT
     IF (outDT <= 0) THEN
       WRITE(tmpStr, '(f20.5)') outDT
-      WRITE(scratchMessage, '(a)') 'Frequency of output data should be greater than zero: outDT = ' // &
+      WRITE(errmsg, '(a)') 'Frequency of output data should be greater than zero: outDT = ' // &
                                    TRIM(ADJUSTL(tmpStr))
-      CALL LogMessage(INFO, scratchMessage)
+      CALL LogMessage(INFO, errmsg)
 
       mdOutDT = 3600.0
       outDT = FixNearWholeReal(mdOutDT * GetTimeConvSec(unitTime, 1), closeTOL)
 
       WRITE(tmpStr, '(f20.5)') outDT
-      WRITE(scratchMessage, '(a)') 'The outDT value is adjusted to: outDT = ' // TRIM(ADJUSTL(tmpStr))
-      CALL LogMessage(INFO, scratchMessage)
+      WRITE(errmsg, '(a)') 'The outDT value is adjusted to: outDT = ' // TRIM(ADJUSTL(tmpStr))
+      CALL LogMessage(INFO, errmsg)
     END IF
 
     jd0 = refJD + (mdBegSimTime * GetTimeConvSec('D', 1))
@@ -1416,10 +1430,10 @@ MODULE PaHM_Utilities
 
       WRITE(tmpStr1, '(f20.5)') timeSec
       WRITE(tmpStr2, '(f20.5)') outDT
-      WRITE(scratchMessage, '("errNum = ", i0, a)') errNum, &
+      WRITE(errmsg, '("errNum = ", i0, a)') errNum, &
                             '. The value of (endSimTime - begSimTime) = ' // TRIM(ADJUSTL(tmpStr1)) // &
                             ' should be an integral multiple of outDT = ' // TRIM(ADJUSTL(tmpStr2))
-      CALL LogMessage(ERROR, scratchMessage)
+      CALL LogMessage(ERROR, errmsg)
     ELSE
       nOutDT = INT(timeSec / mdOutDT) + 1
     END IF
@@ -1429,9 +1443,9 @@ MODULE PaHM_Utilities
     IF (.NOT. outFileNameSpecified) THEN
       errNum = 11
 
-      WRITE(scratchMessage, '("errNum = ", i0, a)') errNum, &
+      WRITE(errmsg, '("errNum = ", i0, a)') errNum, &
                             '. Output filename is not specified: outFileName = ' // TRIM(outFileName)
-      CALL LogMessage(ERROR, scratchMessage)
+      CALL LogMessage(ERROR, errmsg)
     END IF
 
     !----- 5) NetCDF variables ncShuffle, ncDeflate, ncDLevel and others -----
@@ -1469,9 +1483,9 @@ MODULE PaHM_Utilities
       CASE DEFAULT
         errNum = 12
 
-        WRITE(scratchMessage, '("errNum = ", i0, a, i0)') errNum, &
+        WRITE(errmsg, '("errNum = ", i0, a, i0)') errNum, &
                               '. This model type is not supported: modelType = ', modelType
-        CALL LogMessage(ERROR, scratchMessage)
+        CALL LogMessage(ERROR, errmsg)
     END SELECT
 
     !----- 6) various physical parameters -----
@@ -1480,10 +1494,10 @@ MODULE PaHM_Utilities
         tmpStr1 = TRIM(tmpStr1) // ' m/s^2'
       WRITE(tmpStr2, '(f20.5, a)') DEFV_GRAVITY
         tmpStr2 = TRIM(tmpStr2) // ' m/s^2'
-      WRITE(scratchMessage, '(a)') 'The value of gravity = ' // TRIM(ADJUSTL(tmpStr1)) // &
+      WRITE(errmsg, '(a)') 'The value of gravity = ' // TRIM(ADJUSTL(tmpStr1)) // &
                                    ' is adjusted to: gravity = ' // TRIM(ADJUSTL(tmpStr2))
 
-      CALL LogMessage(INFO, scratchMessage)
+      CALL LogMessage(INFO, errmsg)
 
       gravity = DEFV_GRAVITY
     END IF
@@ -1493,10 +1507,10 @@ MODULE PaHM_Utilities
         tmpStr1 = TRIM(tmpStr1) // ' kg/m^3'
       WRITE(tmpStr2, '(f20.5, a)') DEFV_RHOWATER
         tmpStr2 = TRIM(tmpStr2) // ' kg/m^3'
-      WRITE(scratchMessage, '(a)') 'The value of rhoWater = ' // TRIM(ADJUSTL(tmpStr1)) // &
+      WRITE(errmsg, '(a)') 'The value of rhoWater = ' // TRIM(ADJUSTL(tmpStr1)) // &
                                    ' is adjusted to: rhoWater = ' // TRIM(ADJUSTL(tmpStr2))
 
-      CALL LogMessage(INFO, scratchMessage)
+      CALL LogMessage(INFO, errmsg)
 
       rhoWater = DEFV_RHOWATER
     END IF
@@ -1506,10 +1520,10 @@ MODULE PaHM_Utilities
         tmpStr1 = TRIM(tmpStr1) // ' kg/m^3'
       WRITE(tmpStr2, '(f20.5, a)') DEFV_RHOAIR
         tmpStr2 = TRIM(tmpStr2) // ' kg/m^3'
-      WRITE(scratchMessage, '(a)') 'The value of rhoAir = ' // TRIM(ADJUSTL(tmpStr1)) // &
+      WRITE(errmsg, '(a)') 'The value of rhoAir = ' // TRIM(ADJUSTL(tmpStr1)) // &
                                    ' is adjusted to: rhoAir = ' // TRIM(ADJUSTL(tmpStr2))
 
-      CALL LogMessage(INFO, scratchMessage)
+      CALL LogMessage(INFO, errmsg)
 
       rhoAir = DEFV_RHOAIR
     END IF
@@ -1519,21 +1533,21 @@ MODULE PaHM_Utilities
         tmpStr1 = TRIM(tmpStr1) // ' mb'
       WRITE(tmpStr2, '(f20.5, a)') DEFV_ATMPRESS
         tmpStr2 = TRIM(tmpStr2) // ' mb'
-      WRITE(scratchMessage, '(a)') 'The value of backgroundAtmPress = ' // TRIM(ADJUSTL(tmpStr1)) // &
+      WRITE(errmsg, '(a)') 'The value of backgroundAtmPress = ' // TRIM(ADJUSTL(tmpStr1)) // &
                                    ' is adjusted to: backgroundAtmPress = ' // TRIM(ADJUSTL(tmpStr2))
 
-      CALL LogMessage(INFO, scratchMessage)
+      CALL LogMessage(INFO, errmsg)
 
       backgroundAtmPress = DEFV_ATMPRESS
     END IF    
 
-    IF ((windReduction < 0.65) .OR. (windReduction > 1.0)) THEN
+    IF ((windReduction < 0.50) .OR. (windReduction > 1.0)) THEN
       WRITE(tmpStr1, '(f20.5)') windReduction
       WRITE(tmpStr2, '(f20.5)') DEFV_WINDREDUCTION
-      WRITE(scratchMessage, '(a)') 'The value of windReduction = ' // TRIM(ADJUSTL(tmpStr1)) // &
+      WRITE(errmsg, '(a)') 'The value of windReduction = ' // TRIM(ADJUSTL(tmpStr1)) // &
                                    ' is adjusted to: windReduction = ' // TRIM(ADJUSTL(tmpStr2))
 
-      CALL LogMessage(INFO, scratchMessage)
+      CALL LogMessage(INFO, errmsg)
 
       windReduction = DEFV_WINDREDUCTION
     END IF
@@ -1905,7 +1919,7 @@ MODULE PaHM_Utilities
     REAL(SZ), INTENT(OUT) :: y
 
     x = DEG2RAD * REARTH * (lon - lon0) * COS(DEG2RAD * lat0)
-    y = DEG2RAD * REARTH * lat
+    y = DEG2RAD * REARTH * (lat - lat0)
 
   END SUBROUTINE GeoToCPP_Scalar
 
@@ -1952,7 +1966,7 @@ MODULE PaHM_Utilities
     REAL(SZ), INTENT(OUT) :: y(:)
 
     x = DEG2RAD * REARTH * (lon - lon0) * COS(DEG2RAD * lat0)
-    y = DEG2RAD * REARTH * lat
+    y = DEG2RAD * REARTH * (lat - lat0)
 
   END SUBROUTINE GeoToCPP_1D
 
@@ -1997,8 +2011,8 @@ MODULE PaHM_Utilities
     REAL(SZ), INTENT(OUT)  :: lat
     REAL(SZ), INTENT(OUT)  :: lon
 
-    lat = y / (DEG2RAD * REARTH)
     lon = lon0 + x / (DEG2RAD * REARTH * COS(DEG2RAD * lat0))
+    lat = lat0 + y / (DEG2RAD * REARTH)
 
   END SUBROUTINE CPPToGeo_Scalar
 
@@ -2044,8 +2058,8 @@ MODULE PaHM_Utilities
     REAL(SZ), INTENT(OUT)  :: lat(:)
     REAL(SZ), INTENT(OUT)  :: lon(:)
 
-    lat = y / (DEG2RAD * REARTH)
     lon = lon0 + x / (DEG2RAD * REARTH * COS(DEG2RAD * lat0))
+    lat = lat0 + y / (DEG2RAD * REARTH)
 
   END SUBROUTINE CPPToGeo_1D
 
@@ -2109,10 +2123,10 @@ MODULE PaHM_Utilities
     dsigma = ATAN(SQRT((COS(phi2) * SIN(dlamda))**2 + &
                        (COS(phi1) * SIN(phi2) - SIN(phi1) * COS(phi2) * COS(dlamda))**2)) !>=0
     tmp4=SIN(phi1) * SIN(phi2) + COS(phi1) * COS(phi2) * COS(dlamda) !can be <0?
-    if(CompareReals(tmp4, 0.0_SZ) == 0) then
-      write(errmsg,*)'SphericalDistance_Scalar, div by 0:',tmp4
-      call parallel_abort(errmsg)
-    endif
+    IF(CompareReals(tmp4, 0.0_SZ) == 0) then
+      WRITE(errmsg,*)'SphericalDistance_Scalar, div by 0:',tmp4
+      CALL parallel_abort(errmsg)
+    END IF
     
     dsigma = dsigma /tmp4 !(SIN(phi1) * SIN(phi2) + COS(phi1) * COS(phi2) * COS(dlamda))
 
@@ -2173,18 +2187,14 @@ MODULE PaHM_Utilities
     REAL(SZ), DIMENSION(:), ALLOCATABLE :: myValOut
 
     ! Local variables
-    REAL(SZ), DIMENSION(:), ALLOCATABLE :: phis, lamdas, dphi, dlamda, dsigma,tmp5
+    REAL(SZ), DIMENSION(:), ALLOCATABLE :: phis, lamdas, dphi, dlamda, dsigma, tmp5
     REAL(SZ)                            :: phi0, lamda0
     INTEGER                             :: status, n1
 
 
-!    CALL SetMessageSource("SphericalDistance_1D")
-
     IF (SIZE(lats) /= SIZE(lons)) THEN
-      WRITE(errmsg, '(a)') 'The size of arrays "lats" and "lons" is not the same.'
-!      CALL AllMessage(ERROR, scratchMessage)    
-      call parallel_abort(errmsg)
-!      CALL Terminate()
+      WRITE(errmsg, '(a)') 'The size of arrays "lats" and "lons" is not the same.' 
+      CALL parallel_abort(errmsg)
     END IF
 
     n1 = SIZE(lats, 1)
@@ -2193,9 +2203,7 @@ MODULE PaHM_Utilities
 
     IF (status /= 0) THEN
       WRITE(errmsg, '(a)') 'Could no allocate memory for the internal arrays.'
-      call parallel_abort(errmsg)
-!      CALL AllMessage(ERROR, scratchMessage)    
-!      CALL Terminate()
+      CALL parallel_abort(errmsg)
     END IF
 
     phis   = DEG2RAD * lats
@@ -2210,20 +2218,17 @@ MODULE PaHM_Utilities
     dsigma = ATAN(SQRT((COS(phi0) * SIN(dlamda))**2 + &
                        (COS(phis) * SIN(phi0) - SIN(phis) * COS(phi0) * COS(dlamda))**2))
     tmp5=SIN(phis) * SIN(phi0) + COS(phis) * COS(phi0) * COS(dlamda)
-!PV    if(any(CompareReals(tmp5, 0.0_SZ) == 0)) then
-    if(any(tmp5==0.d0)) then
-      write(errmsg,*)'SphericalDistance_1D, div by 0:',tmp5
-      call parallel_abort(errmsg)
-    endif
-    dsigma = dsigma /tmp5 !(SIN(phis) * SIN(phi0) + COS(phis) * COS(phi0) * COS(dlamda))
+    IF(ANY(ABS(tmp5) <= 2.0_SZ * EPSILON(tmp5))) THEN
+      WRITE(errmsg,*)'SphericalDistance_1D, div by 0:', tmp5
+      CALL parallel_abort(errmsg)
+    END IF
+    dsigma = dsigma /tmp5
 
     ! This is the great-circle distance; REARTH in meters
     myValOut = REARTH * dsigma
 
     DEALLOCATE(phis, lamdas, dphi, dlamda, dsigma)
 
-!    CALL UnsetMessageSource()
-   
     RETURN
 
   END FUNCTION SphericalDistance_1D
@@ -2278,19 +2283,13 @@ MODULE PaHM_Utilities
     REAL(SZ), DIMENSION(:, :), ALLOCATABLE :: myValOut
 
     ! Local variables
-    REAL(SZ), DIMENSION(:, :), ALLOCATABLE :: phis, lamdas, dphi, dlamda, dsigma
+    REAL(SZ), DIMENSION(:, :), ALLOCATABLE :: phis, lamdas, dphi, dlamda, dsigma, tmp5
     REAL(SZ)                               :: phi0, lamda0
     INTEGER                                :: status, n1, n2
 
-
-    CALL SetMessageSource("SphericalDistance_2D")
-
     IF (SIZE(lats) /= SIZE(lons)) THEN
       WRITE(errmsg, '(a)') 'The size of arrays "lats" and "lons" is not the same.'
-!      CALL AllMessage(ERROR, scratchMessage)    
-!      CALL UnsetMessageSource()
-      call parallel_abort(errmsg)
-!      CALL Terminate()
+      CALL parallel_abort(errmsg)
     END IF
 
     n1 = SIZE(lats, 1)
@@ -2300,10 +2299,7 @@ MODULE PaHM_Utilities
 
     IF (status /= 0) THEN
       WRITE(errmsg, '(a)') 'Could no allocate memory for the internal arrays.'
-      call parallel_abort(errmsg)
-!      CALL AllMessage(ERROR, scratchMessage)    
-!      CALL UnsetMessageSource()
-!      CALL Terminate()
+      CALL parallel_abort(errmsg)
     END IF
 
     phis   = DEG2RAD * lats
@@ -2317,14 +2313,17 @@ MODULE PaHM_Utilities
     ! Vincenty formula to calculate a distance along a sphere
     dsigma = ATAN(SQRT((COS(phi0) * SIN(dlamda))**2 + &
                        (COS(phis) * SIN(phi0) - SIN(phis) * COS(phi0) * COS(dlamda))**2))
-    dsigma = dsigma / (SIN(phis) * SIN(phi0) + COS(phis) * COS(phi0) * COS(dlamda))
+    tmp5 = SIN(phis) * SIN(phi0) + COS(phis) * COS(phi0) * COS(dlamda)
+    IF(ANY(ABS(tmp5) <= 2.0_SZ * EPSILON(tmp5))) THEN
+      WRITE(errmsg,*)'SphericalDistance_2D, div by 0:', tmp5
+      CALL parallel_abort(errmsg)
+    END IF
+    dsigma = dsigma / tmp5
 
     ! This is the great-circle distance; REARTH in meters
     myValOut = REARTH * dsigma
 
     DEALLOCATE(phis, lamdas, dphi, dlamda, dsigma)
-
-    CALL UnsetMessageSource()
    
     RETURN
 
@@ -2531,18 +2530,18 @@ MODULE PaHM_Utilities
   !>            where VAR is the variable to be interpolated
   !>
   !----------------------------------------------------------------
-  SUBROUTINE GetLocAndRatio(val, arrVal, idx1, idx2, wtRatio)
+  SUBROUTINE GetLocAndRatioReal(val, arrVal, idx1, idx2, wtRatio)
 
     IMPLICIT NONE
 
     ! Global variables
-    REAL(SZ), INTENT(IN)  :: val         ! value to search for
-    REAL(SZ), INTENT(IN)  :: arrVal(:)   ! search array (1D)
-    INTEGER, INTENT(OUT)  :: idx1        ! the index of the lowest bound
-    INTEGER, INTENT(OUT)  :: idx2        ! the index of the highest bound
-    REAL(SZ), INTENT(OUT) :: wtRatio     ! the ratio factor that used in the linear interpolation
-                                         ! calculations: F = F(idx1) + wtRatio * (F(idx2) - F(idx1))
-                                         ! 0 <= wtRatio <= 1.0
+    REAL(SZ), INTENT(IN)            :: val         ! value to search for
+    REAL(SZ), INTENT(IN)            :: arrVal(:)   ! search array (1D)
+    INTEGER, INTENT(OUT)            :: idx1        ! the index of the lowest bound
+    INTEGER, INTENT(OUT)            :: idx2        ! the index of the highest bound
+    REAL(SZ), INTENT(OUT), OPTIONAL :: wtRatio ! the ratio factor that used in the linear interpolation
+                                               ! calculations: F = F(idx1) + wtRatio * (F(idx2) - F(idx1))
+                                               ! 0 <= wtRatio <= 1.0
 
     ! Local variables
     INTEGER               :: nn, jl, jl1, jl2
@@ -2551,16 +2550,33 @@ MODULE PaHM_Utilities
 
     idx1 = -1
     idx2 = -1
-    wtRatio = 0.0_SZ
+    IF (PRESENT(wtRatio)) wtRatio = 0.0_SZ
 
     nn = SIZE(arrVal, 1)
     jl = MINLOC(ABS(val - arrVal), 1)
+
+    !---------- Check if we need to extrapolate (using nearest neighbor)
+    IF (CompareReals(val - arrVal(1), 0.0_SZ) == -1) THEN
+      idx1 = 1
+      idx2 = 1
+      IF (PRESENT(wtRatio)) wtRatio = 0.0_SZ
+
+      RETURN
+    ELSE
+      IF (CompareReals(val - arrVal(nn), 0.0_SZ) == 1) THEN
+        idx1 = nn
+        idx2 = nn
+        IF (PRESENT(wtRatio)) wtRatio = 0.0_SZ
+
+        RETURN
+      END IF
+    END IF
 
     !---------- Check if we got an exact bin value
     IF (CompareReals(val - arrVal(jl), 0.0_SZ) == 0) THEN
       idx1 = jl
       idx2 = jl
-      wtRatio = 0.0_SZ
+      IF (PRESENT(wtRatio)) wtRatio = 0.0_SZ
 
       RETURN
     END IF
@@ -2581,14 +2597,14 @@ MODULE PaHM_Utilities
       IF (CompareReals(diffVal, 0.0_SZ) == 0) THEN
         idx1 = jl1
         idx2 = jl1
-        wtRatio = 0.0_SZ
+        IF (PRESENT(wtRatio)) wtRatio = 0.0_SZ
 
       ELSE
         IF (CompareReals(val - arrVal(jl1), 0.0_SZ) * &
             CompareReals(val - arrVal(jl2), 0.0_SZ) < 0) THEN
           idx1 = jl1
           idx2 = jl2
-          wtRatio = (val - arrVal(jl1)) / diffVal
+          IF (PRESENT(wtRatio)) wtRatio = (val - arrVal(jl1)) / diffVal
 
         END IF
       END IF
@@ -2606,7 +2622,8 @@ MODULE PaHM_Utilities
 
       idx1 = jl1
       idx2 = jl2
-      wtRatio = (val - arrVal(jl1)) / diffVal
+      IF (PRESENT(wtRatio)) wtRatio = (val - arrVal(jl1)) / diffVal
+
     ELSE IF (CompareReals(val - arrVal(jl), 0.0_SZ) * &
              CompareReals(val - arrVal(jl + 1), 0.0_SZ) < 0) THEN
 
@@ -2617,12 +2634,120 @@ MODULE PaHM_Utilities
 
       idx1 = jl1
       idx2 = jl2
-      wtRatio = (val - arrVal(jl1)) / diffVal
+      IF (PRESENT(wtRatio)) wtRatio = (val - arrVal(jl1)) / diffVal
+
     END IF
 
     RETURN
 
-  END SUBROUTINE GetLocAndRatio
+  END SUBROUTINE GetLocAndRatioReal
+
+
+  SUBROUTINE GetLocAndRatioInteger(val, arrVal, idx1, idx2, wtRatio)
+
+    IMPLICIT NONE
+
+    ! Global variables
+    INTEGER, INTENT(IN)             :: val         ! value to search for
+    INTEGER, INTENT(IN)             :: arrVal(:)   ! search array (1D)
+    INTEGER, INTENT(OUT)            :: idx1        ! the index of the lowest bound
+    INTEGER, INTENT(OUT)            :: idx2        ! the index of the highest bound
+    REAL(SZ), INTENT(OUT), OPTIONAL :: wtRatio ! the ratio factor that used in the linear interpolation
+                                               ! calculations: F = F(idx1) + wtRatio * (F(idx2) - F(idx1))
+                                               ! 0 <= wtRatio <= 1.0
+
+    ! Local variables
+    INTEGER              :: nn, jl, jl1, jl2
+    INTEGER              :: diffVal
+
+    idx1 = -1
+    idx2 = -1
+    IF (PRESENT(wtRatio)) wtRatio = 0.0_SZ
+
+    nn = SIZE(arrVal, 1)
+    jl = MINLOC(ABS(val - arrVal), 1)
+
+    !---------- Check if we need to extrapolate (using nearest neighbor)
+    IF (val - arrVal(1) < 0) THEN
+      idx1 = 1
+      idx2 = 1
+      IF (PRESENT(wtRatio)) wtRatio = 0.0_SZ
+
+      RETURN
+    ELSE
+      IF (val - arrVal(nn) > 0) THEN
+        idx1 = nn
+        idx2 = nn
+        IF (PRESENT(wtRatio)) wtRatio = 0.0_SZ
+
+        RETURN
+      END IF
+    END IF
+
+    !---------- Check if we got an exact bin value
+    IF ((val - arrVal(jl)) == 0) THEN
+      idx1 = jl
+      idx2 = jl
+      IF (PRESENT(wtRatio)) wtRatio = 0.0_SZ
+
+      RETURN
+    END IF
+    !---------- 
+
+    !---------- Checking the values at the two edges of the arrVal
+    IF ((jl == 1) .OR. (jl == nn)) THEN
+      IF (jl == 1) THEN
+        jl1 = jl
+        jl2 = jl + 1
+      ELSE
+        jl1 = jl - 1
+        jl2 = jl
+      END IF
+
+      diffVal = arrVal(jl2) - arrVal(jl1)
+
+      IF (diffVal == 0) THEN
+        idx1 = jl1
+        idx2 = jl1
+        IF (PRESENT(wtRatio)) wtRatio = 0.0_SZ
+
+      ELSE
+        IF ((val - arrVal(jl1)) * (val - arrVal(jl2)) < 0) THEN
+          idx1 = jl1
+          idx2 = jl2
+          IF (PRESENT(wtRatio)) wtRatio = REAL(val - arrVal(jl1), SZ) / diffVal
+
+        END IF
+      END IF
+
+      RETURN
+    END IF
+    !----------
+
+    IF ((val - arrVal(jl - 1)) * (val - arrVal(jl)) < 0) THEN
+      jl1 = jl - 1
+      jl2 = jl
+
+      diffVal = arrVal(jl2) - arrVal(jl1)
+
+      idx1 = jl1
+      idx2 = jl2
+      IF (PRESENT(wtRatio)) wtRatio = REAL(val - arrVal(jl1), SZ) / diffVal
+    ELSE IF ((val - arrVal(jl)) * (val - arrVal(jl + 1)) < 0) THEN
+
+      jl1 = jl
+      jl2 = jl + 1
+
+      diffVal = arrVal(jl2) - arrVal(jl1)
+
+      idx1 = jl1
+      idx2 = jl2
+      IF (PRESENT(wtRatio)) wtRatio = REAL(val - arrVal(jl1), SZ) / diffVal
+    END IF
+
+    RETURN
+
+  END SUBROUTINE GetLocAndRatioInteger
 
 !================================================================================
 
@@ -2650,43 +2775,40 @@ MODULE PaHM_Utilities
   !>      Weather and Climate Extremes, Volume 33, September 2021, 100366. https://doi.org/10.1016/j.wace.2021.100366.
   !>
   !> @param[in]
-  !>   rad34      34-knot wind radii in the 4 quadrants - real, vector(4), nautical miles (nm)
+  !>   quadRadii  34-knot wind radii in the 4 quadrants - integer, vector(4), nautical miles (nm)
   !> @param[in]
-  !>   lat        Latitude - real, scalar, (degrees)
+  !>   lat        Latitude of the TC storm's eye - real, scalar, (degrees north)
   !> @param[in]
-  !>   useMaxR34  Flag - integer, scalar. (>=1 means to use the max value of rad34, otherwise \n
-  !>                                        use the average value of rad34
+  !>   useMaxRad  Flag - integer, scalar. (>=1 means to use the max value of quadRadii, otherwise \n
+  !>                                        use the average value of quadRadii
   !>
   !> @return      myValOut: The estimated R0 (ROCI) in nautical miles (nm)
   !>
   !----------------------------------------------------------------
-  INTEGER FUNCTION EstimateROCI(rad34, lat, useMaxR34) RESULT(myValOut)
+  INTEGER FUNCTION EstimateROCI(quadRadii, lat, useMaxRad) RESULT(myValOut)
 
-    USE PaHM_Sizes, ONLY : FixNearWholeReal
     USE PaHM_Global, ONLY : OMEGA, KT2MS, NM2M, M2NM, DEG2RAD
 
     IMPLICIT NONE
 
-    INTEGER, DIMENSION(4), INTENT(IN) :: rad34  ! 34-knot radii in the four quadrants (nautical miles)
-    REAL(SZ), INTENT(IN) :: lat                 ! latitude (degrees)
-    INTEGER, OPTIONAL    :: useMaxR34           ! if <=0 use the average value of the R34 raddii
-                                                ! otherwise, use max(R34)
+    INTEGER, DIMENSION(4), INTENT(IN) :: quadRadii
+    REAL(SZ), INTENT(IN)              :: lat
+    INTEGER, OPTIONAL                 :: useMaxRad
 
-    REAL(SZ) :: V34, CD, cori, wrad, term
-    INTEGER  :: R34, numR34, commFlag, i
+    REAL(SZ) :: Rint, Vint, CD, cori, wrad, term
+    INTEGER  :: numRint, commFlag, i
 
-    ! Ro  = estimated radius of the outermost closed isobar
-    ! R34 = radii of the 34-knot winds
-    ! v34 = 34-knot wind speed converted to m/s
-    ! CD  = momentum drag coefficient taken wqual to 10^-3
+    ! Rint = radii of the 34-knot winds
+    ! Vint = 34-knot wind speed converted to m/s
+    ! CD   = momentum drag coefficient taken equal to 10^-3
     ! cori = coriolis parameter, cori = 2 * OMEGA * sin(lat)
     ! lat  = latitude in degrees
     ! wrad = equilibrium subsidence valocity taken to be constant (0.016 m/s)
 
     commFlag = 0
-    IF (PRESENT(useMaxR34)) THEN
-      IF (useMaxR34 <= 0) commFlag = 0
-      IF (useMaxR34 > 0)  commFlag = 1
+    IF (PRESENT(useMaxRad)) THEN
+      IF (useMaxRad <= 0) commFlag = 0
+      IF (useMaxRad > 0)  commFlag = 1
     END IF
 
     ! Compute coriolis.
@@ -2694,30 +2816,30 @@ MODULE PaHM_Utilities
     cori = ABS(2.0_SZ * OMEGA * SIN(lat * DEG2RAD))
 
     ! Set the values of the constant variables
-    V34  = 34.0_SZ * KT2MS
+    Vint = 34.0_SZ * KT2MS ! convert to m/s
     CD   = 0.001_SZ
     wrad = 0.016_SZ
 
-    ! Here we need only values of rad34 > 0. rad34 = 0 means that this radius is missing
-    ! from the data and of course a rad34 < 0 does not have any physiacal meaning
+    ! Here we need only values of quadRadii > 0. quadRadii = 0 means that this radius is missing
+    ! from the data and of course a quadRadii < 0 does not have any physiacal meaning
     IF (commFlag <= 0) THEN
-      R34   = 0
-      numR34 = 0
+      Rint   = 0
+      numRint = 0
       DO i = 1, 4
-        IF (rad34(i) > 0) THEN
-          R34   = R34 + rad34(i)
-          numR34 = numR34 + 1
+        IF (quadRadii(i) > 0) THEN
+          Rint   = Rint + quadRadii(i)
+          numRint = numRint + 1
         END IF
       END DO
-      IF (numR34 > 0) R34 = R34 / numR34
+      IF (numRint > 0) Rint = Rint / numRint
     ELSE
-      R34 = MAXVAL(rad34, MASK = rad34 >= 0)
+      Rint = MAXVAL(quadRadii, MASK = quadRadii >= 0)
     END IF
-    IF (R34 < 0)   R34 = 0
+    IF (Rint < 0)   Rint = 0
 
-    IF (R34 > 0) THEN
-      term = M2NM * (((2.0_SZ * CD) / (cori * wrad)) * V34 * V34) ! convert to nautical miles
-      myValOut = FixNearWholeReal(SQRT(R34 * R34 + term  * R34))
+    IF (Rint > 0) THEN
+      term = M2NM * ( (2.0_SZ * CD * Vint * Vint) / (cori * wrad) ) ! convert to nautical miles
+      myValOut = NINT( SQRT(Rint * Rint + term  * Rint) )
       IF (myValOut > 999) myValOut = 999
     ELSE
       myValOut = 0
@@ -2726,6 +2848,135 @@ MODULE PaHM_Utilities
     RETURN
 
   END FUNCTION EstimateROCI
+
+!================================================================================
+
+  ! ----------------------------------------------------------------
+  !  F U N C T I O N   E S T I M A T E  R M W
+  ! ----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Calculates the radius of max winds (RMW)
+  !>
+  !> @details
+  !>   Function to estimate the radius of radius of max winds (RMW) that describes
+  !>   how far the strongest winds are from the storm's center of a Tropical Storm (TC), using the 34, 50 or 60 knot radii.
+  !>
+  !> @see Arthur Avenas, Alexis Mouche, Pierre Tandeo, Jean-Francois Piolle, Dan Chavas, \n
+  !>      Ronan Fablet, John Knaff, and Bertrand Chapron (2023): \n
+  !>      "Reexamining the Estimation of Tropical Cyclone Radius of Maximum Wind from Outer Size \n
+  !>       with an Extensive Synthetic Aperture Radar Dataset", \n
+  !>       Monthly Weather Review, V.151, p. 3169-3189, 2023.
+  !> @see Daniel R. Chavas and John A. Knaff (2022): \n
+  !>      "A simple model for predicting the tropical cyclone radius of maximum wind from outer size", \n
+  !>      Weather and Forecasting, V.37, p. 563-579, 2022.
+  !>
+  !> @param[in]
+  !>   quadRadii  34, 50 or 64 knot wind radii in the 4 quadrants - integer, vector(4), nautical miles (nm)
+  !> @param[in]
+  !>   lat        Latitude of the TC storm's eye - real, scalar, (degrees north)
+  !> @param[in]
+  !>   Vmax       Maximum sustained wind speed - integer, scalar, (knots)
+  !> @param[in]
+  !>   whatRad    Radius to be used (R34, R50, R64) in the calculations - integer, scalar \n
+  !>              (accepted values are: 34, 50, 64)
+  !> @param[in]
+  !>   useMaxRad  Flag - integer, scalar (>=1 means to use the max value of quadRadii, otherwise \n
+  !>                                      use the average value of quadRadii)
+  !>
+  !> @return      myValOut: The estimated RMW in nautical miles (nm)
+  !>
+  !----------------------------------------------------------------
+  INTEGER FUNCTION EstimateRMW(quadRadii, lat, VMax, whatRad, useMaxRad) RESULT(myValOut)
+
+    USE PaHM_Global, ONLY : OMEGA, KT2MS, NM2M, M2NM, DEG2RAD
+
+    IMPLICIT NONE
+
+    INTEGER, DIMENSION(4), INTENT(IN) :: quadRadii
+    REAL(SZ), INTENT(IN)              :: lat
+    INTEGER, INTENT(IN)               :: Vmax, whatRad
+    INTEGER, INTENT(IN), OPTIONAL     :: useMaxRad
+
+    REAL(SZ) :: Rint, Vint, Vreg, myVmax, cori
+    REAL(SZ) :: Mmax, M, MmaxM
+    INTEGER  :: numRint, commFlag, i
+
+    ! myValOut = estimated radius of the maximum winds
+    ! Rint   = radius (average or max) of the 34,50 or 64 knot wind intensity radii (4 quadrants)
+    ! Vint   = 34,50 or 64 knot wind intensity converted to m/s
+    ! myVmax = Vmax converted to m/s
+    ! cori = coriolis parameter, cori = 2 * OMEGA * sin(lat)
+
+
+    ! Determine what radius to use (average or max)
+    commFlag = 0
+    IF (PRESENT(useMaxRad)) THEN
+      IF (useMaxRad <= 0) commFlag = 0
+      IF (useMaxRad > 0)  commFlag = 1
+    END IF
+
+    ! Here we need only values of quadRadii > 0. quadRadii = 0 means that this radius is missing
+    ! from the data and of course a quadRadii < 0 does not have any physiacal meaning
+    IF (commFlag <= 0) THEN
+      Rint   = 0.0_SZ
+      numRint = 0
+      DO i = 1, SIZE(quadRadii)
+        IF (quadRadii(i) > 0) THEN
+          Rint   = Rint + quadRadii(i)
+          numRint = numRint + 1
+        END IF
+      END DO
+      IF (numRint > 0) Rint = Rint / numRint
+    ELSE
+      Rint = MAXVAL(quadRadii, MASK = quadRadii >= 0)
+    END IF
+    IF (Rint < 0)   Rint = 0
+
+
+    ! Conversions of the input data
+    Rint = Rint * NM2M      ! convert from nm to m
+    myVmax = Vmax * KT2MS   ! convert from kt to m/s
+    Vreg = 0.6967_SZ * myVmax + 6.1992_SZ
+
+
+    ! Compute coriolis.
+    ! Using absolute value for coriolis for Southern Hemispher
+    cori = ABS(2.0_SZ * OMEGA * SIN(lat * DEG2RAD))
+
+
+    ! Calculate the intermediate variables
+    SELECT CASE(whatRad)
+      CASE(34)
+        Vint  = 34.0_SZ * KT2MS
+        M = Rint * Vint + 0.5 * cori * Rint * Rint
+        MmaxM = 0.531 * EXP((Vreg - Vint) * (-0.00214 - 0.00314 * 0.5 * cori * Rint))
+        Mmax = M * MmaxM
+      CASE(50)
+        Vint  = 50.0_SZ * KT2MS
+        M = Rint * Vint + 0.5 * cori * Rint * Rint
+        MmaxM = 0.626 * EXP((Vreg - Vint) * (0.00282 - 0.00724 * 0.5 * cori * Rint))
+        Mmax = M * MmaxM
+      CASE(64)
+        Vint  = 64.0_SZ * KT2MS
+        M = Rint * Vint + 0.5 * cori * Rint * Rint
+        MmaxM = 0.612 * EXP((Vreg - Vint) * (0.00946 - 0.01183 * 0.5 * cori * Rint))
+        Mmax = M * MmaxM
+      CASE DEFAULT
+        WRITE(errmsg,'(a,i0,a)') 'Wrong value for whatRad = ', whatRad, &
+                                 ' should be one of 34, 50, 64'
+        PRINT *, TRIM(ADJUSTL(errmsg))
+        myValOut = 0
+        RETURN 
+    END SELECT
+
+    myValOut = NINT( (myVmax / cori) * &
+                     (SQRT(1.0 + (2.0_SZ * cori * Mmax) / (myVmax * myVmax)) - 1.0) *  M2NM )
+    IF (myValOut > 999) myValOut = 999
+
+    RETURN
+
+  END FUNCTION EstimateRMW
 
 !================================================================================
 
@@ -2771,6 +3022,8 @@ MODULE PaHM_Utilities
 
 
     jCnt = 1
+    chkSTR = ''
+    chkINT = -1
     DO iCnt = 1, nEls
       IF (TRIM(inpVec(iCnt)) == '')    CYCLE
       IF (ANY(chkSTR == inpVec(iCnt))) CYCLE
@@ -3333,5 +3586,175 @@ MODULE PaHM_Utilities
 
 !================================================================================
 
-END MODULE PaHM_Utilities
+  ! ----------------------------------------------------------------
+  !  F U N C T I O N   R E A L L O C A T E  R E A L  _  1 D
+  ! ----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Reallocate a vector to a new size, preserving its previous contents.
+  !>
+  !> @details
+  !>   Function to get the great-circle distance along the surface of
+  !>   a sphere (the earth's surface in this case).
+  !>   Compute the great-circle distance using the Vincenty formula for
+  !>   distance along a sphere.
+  !>
+  !> @param[in]
+  !>   arrIN    Array of values - real, 1D array (array should be allocatable)
+  !> @param[in]
+  !>   N        Size of the reallocated array - integer, N <= SIZE(arrIN)
+  !>
+  !> @return   myValOut: The resized, 1D array
+  !>
+  !----------------------------------------------------------------
+  FUNCTION ReAllocateReal_1D(arrIN, N) RESULT(myValOut)
 
+    IMPLICIT NONE
+
+    ! Global variables
+    REAL(SZ), INTENT(IN) :: arrIN(:) ! 1D vector to resize
+    INTEGER, INTENT(IN)  :: N        ! the size of arrIN to resize to
+
+    REAL(SZ), DIMENSION(:), ALLOCATABLE :: myValOut
+
+    ! Local variables
+    INTEGER :: oldN, minN, status
+
+    IF (SIZE(SHAPE(arrIN)) /= 1) THEN
+      WRITE(errmsg, '(a)') 'arrIN should be a vector.'
+      CALL parallel_abort(errmsg)
+    END IF
+
+    oldN = SIZE(arrIN, 1)
+    minN = MIN(oldN, N)
+    
+    ALLOCATE(myValOut(minN), STAT = status)
+
+    IF (status /= 0) THEN
+      WRITE(errmsg, '(a)') 'Could no allocate memory for the internal arrays.'
+      CALL parallel_abort(errmsg)
+    END IF
+    
+    myValOut = arrIN(1:minN)
+   
+    RETURN
+
+  END FUNCTION ReAllocateReal_1D
+
+!================================================================================
+
+  ! ----------------------------------------------------------------
+  !  F U N C T I O N   R E A L L O C A T E  I N T  _  1 D
+  ! ----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Reallocate a vector to a new size, preserving its previous contents.
+  !>
+  !> @details
+  !>   Function to get the great-circle distance along the surface of
+  !>   a sphere (the earth's surface in this case).
+  !>   Compute the great-circle distance using the Vincenty formula for
+  !>   distance along a sphere.
+  !>
+  !> @param[in]
+  !>   arrIN    Array of values - integer, 1D array (array should be allocatable)
+  !> @param[in]
+  !>   N        Size of the reallocated array - integer, N <= SIZE(arrIN)
+  !>
+  !> @return   myValOut: The resized, 1D array
+  !>
+  !----------------------------------------------------------------
+  FUNCTION ReAllocateInt_1D(arrIN, N) RESULT(myValOut)
+
+    IMPLICIT NONE
+
+    ! Global variables
+    INTEGER, INTENT(IN) :: arrIN(:) ! 1D vector to resize
+    INTEGER, INTENT(IN) :: N        ! the size of arrIN to resize to
+
+    INTEGER, DIMENSION(:), ALLOCATABLE :: myValOut
+
+    ! Local variables
+    INTEGER :: oldN, minN, status
+
+    IF (SIZE(SHAPE(arrIN)) /= 1) THEN
+      WRITE(errmsg, '(a)') 'arrIN should be a vector.'
+      CALL parallel_abort(errmsg)
+    END IF
+
+    oldN = SIZE(arrIN, 1)
+    minN = MIN(oldN, N)
+    
+    ALLOCATE(myValOut(minN), STAT = status)
+
+    IF (status /= 0) THEN
+      WRITE(errmsg, '(a)') 'Could no allocate memory for the internal arrays.'
+      CALL parallel_abort(errmsg)
+    END IF
+    
+    myValOut = arrIN(1:minN)
+   
+    RETURN
+
+  END FUNCTION ReAllocateInt_1D
+
+!================================================================================
+
+  ! ----------------------------------------------------------------
+  !  F U N C T I O N   R E A L L O C A T E  I N T  _  1 D
+  ! ----------------------------------------------------------------
+  !>
+  !> @brief
+  !>   Reallocate a vector to a new size, preserving its previous contents.
+  !>
+  !> @details
+  !>   Function to get the great-circle distance along the surface of
+  !>   a sphere (the earth's surface in this case).
+  !>   Compute the great-circle distance using the Vincenty formula for
+  !>   distance along a sphere.
+  !>
+  !> @param[in]
+  !>   arrIN    Array of values - string, 1D array (array should be allocatable)
+  !> @param[in]
+  !>   N        Size of the reallocated array - integer, N <= SIZE(arrIN)
+  !>
+  !> @return   myValOut: The resized, 1D array
+  !>
+  !----------------------------------------------------------------
+  FUNCTION ReAllocateStr_1D(arrIN, N) RESULT(myValOut)
+
+    IMPLICIT NONE
+
+    ! Global variables
+    CHARACTER(LEN=*), INTENT(IN) :: arrIN(:) ! 1D vector to resize
+    INTEGER, INTENT(IN) :: N        ! the size of arrIN to resize to
+
+    CHARACTER(LEN=LEN(arrIN(1))), DIMENSION(:), ALLOCATABLE :: myValOut
+
+    ! Local variables
+    INTEGER :: oldN, minN, status
+
+    IF (SIZE(SHAPE(arrIN)) /= 1) THEN
+      WRITE(errmsg, '(a)') 'arrIN should be a vector.'
+      CALL parallel_abort(errmsg)
+    END IF
+
+    oldN = SIZE(arrIN, 1)
+    minN = MIN(oldN, N)
+    
+    ALLOCATE(myValOut(minN), STAT = status)
+
+    IF (status /= 0) THEN
+      WRITE(errmsg, '(a)') 'Could no allocate memory for the internal arrays.'
+      CALL parallel_abort(errmsg)
+    END IF
+    
+    myValOut = arrIN(1:minN)
+
+    RETURN
+
+  END FUNCTION ReAllocateStr_1D
+
+!================================================================================
+
+END MODULE PaHM_Utilities

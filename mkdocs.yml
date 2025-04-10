@@ -115,10 +115,12 @@ nav:
     - Analysis mode: modules/analysis-mode.md
     - Hydraulics: modules/hydraulics.md
     - Particle tracking: modules/particle-tracking.md
-    - WWM: modules/wwm.md
+    - WWM (waves): modules/wwm.md
     - FABM: modules/fabm.md
     - PaHM: modules/pahm.md
     - Single-class ice module: modules/single-class-ice.md
+    - Multi-class ice module: modules/multi-class-ice.md
+    - Data assimilation (PDAF): modules/pdaf.md
   - Code structure: code-contribution.md
   - Case studies: case-study.md
   - SCHISM external coupling:

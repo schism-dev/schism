@@ -12,9 +12,11 @@ import numpy as np
 import geopandas as gpd
 from scipy import spatial
 
-from pylib import schism_grid  # , grd2sms
-from pylib_experimental.schism_file import cread_schism_hgrid
-from schism_py_pre_post.Download.download_nld import nld2map
+from spp_core.Download.download_nld import nld2map
+try:
+    from pylib_experimental.schism_file import cread_schism_hgrid as schism_read
+except ImportError:
+    from pylib import schism_grid as schism_read
 
 
 def set_levee_profile(gd=None, wdir='./', centerline_shp_dict=None):
@@ -41,8 +43,7 @@ def set_levee_profile(gd=None, wdir='./', centerline_shp_dict=None):
 
     for _ in levee_names:
         # read levee heights as xyz
-        _, xyz = nld2map(nld_fname='/sciclone/schism10/Hgrid_projects/Levees/'
-                         'Levee_v3/FEMA_regions/FEMA_region_levees/System.geojson')
+        _, xyz = nld2map(nld_fname=f'{wdir}/System.geojson')
         levee_xyz = np.r_[levee_xyz, xyz]
     levee_x = levee_xyz[:, 0]
     levee_y = levee_xyz[:, 1]
@@ -53,7 +54,7 @@ def set_levee_profile(gd=None, wdir='./', centerline_shp_dict=None):
     # plt.show()
 
     if gd is None:
-        gd = schism_grid(f'{wdir}/hgrid.ll')  # ; gd.save(f'{wdir}/hgrid.pkl')
+        gd = schism_read(f'{wdir}/hgrid.ll')  # ; gd.save(f'{wdir}/hgrid.pkl')
 
     gd.lon = gd.x
     gd.lat = gd.y
@@ -265,6 +266,7 @@ def set_levees(hgrid_obj, wdir):
 
     print('loading levee heights from National Levee Database')
     # all top nodes of the levee will be attached to hgrid_obj as hgrid_obj.ilevee
+    # this also writes ilevee (levee top nodes) in {levee_name}.gr3 for diagnostic purposes
     hgrid_obj = set_levee_profile(gd=hgrid_obj, wdir=wdir, centerline_shp_dict=centerline_shp_dict)
 
     print('force minimum dp to be above -7 m for all levee top points')
@@ -276,13 +278,20 @@ def set_levees(hgrid_obj, wdir):
     print('loading local levee heights')
     hgrid_obj = set_local_levee_profile(
         gd_ll=hgrid_obj, local_levee_info=local_levee_info, i_levee_top_node=hgrid_obj.ilevee)
+    
+    hgrid_obj.save(f'{wdir}/levee_top.gr3', value=hgrid_obj.ilevee.astype(int))
 
     return hgrid_obj
 
 
-if __name__ == '__main__':
-    # sample usage
+def sample():
+    """ sample usage """
     WDIR = '/sciclone/schism10/feiye/STOFS3D-v8/I04a/'
-    hg = cread_schism_hgrid('{WDIR}/hgrid.gr3')
+    hg = schism_read('{WDIR}/hgrid.gr3')
     set_levees(hgrid_obj=hg, wdir=WDIR)
     hg.save(f'{WDIR}/hgrid_with_levees.gr3')
+
+
+if __name__ == '__main__':
+    sample()
+    print('Done')

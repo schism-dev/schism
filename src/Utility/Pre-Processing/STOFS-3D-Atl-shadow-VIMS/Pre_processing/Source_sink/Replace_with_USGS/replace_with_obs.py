@@ -132,6 +132,7 @@ def find_usgs_along_nwm(
     The order of the stream is also recorded,
     but not used as a stopping criterion at this moment.
     """
+    SEARCH_DIST = 30e3  # search distance limit
 
     if starting_seg_id is None:
         return  # some starting segs may not be in nwm_shp, which is subsetted
@@ -143,10 +144,10 @@ def find_usgs_along_nwm(
     if iupstream:
         vsource.upstream_path.forward_path(seg_id=starting_seg_id, seg_order=order)
     else:
-        vsource.upstream_path.forward_path(seg_id=starting_seg_id, seg_order=order)
+        vsource.downstream_path.forward_path(seg_id=starting_seg_id, seg_order=order)
 
     total_seg_length += nwm_shp.loc[starting_seg_id].Length
-    if total_seg_length > 30e3:  # stop search when the path exceeds 30 km
+    if total_seg_length > SEARCH_DIST:  # stop search when the path exceeds 30 km
         return
 
     if nwm_shp.loc[starting_seg_id].gages is not None and nwm_shp.loc[starting_seg_id].gages != '':  # gage found
@@ -330,6 +331,8 @@ def source_nwm2usgs(
     This is acceptable because the segment IDs are the same between NWM v1 and later versions.
     '''
 
+    os.makedirs(output_dir, exist_ok=True)
+
     usgs_stations, usgs_stations_coords = prepare_usgs_stations(diag_output=f'{output_dir}/usgs_stations.txt')
 
     nwm_shp = preprocess_nwm_shp(f_shapefile)
@@ -337,10 +340,20 @@ def source_nwm2usgs(
     # associate USGS stations with NWM segment fid
     nwm_shp = associate_poi_with_nwm(
         nwm_shp, poi=usgs_stations_coords, poi_names=usgs_stations.tolist(),
-        poi_label='gage', diag_output=f'{output_dir}/gage.txt')
+        poi_label='gages', diag_output=f'{output_dir}/auto_nearby_gages.txt')
+    
+    # manually associate some USGS stations with NWM segments,
+    # set the NWM segment to be the one associated with the vsource injection
+    manual_nwm2usgs = {
+        19406836: '07381490',  # Atchafalaya River at Simmesport, LA
+        15708755: '02489500',  # Pearl River at Bogalusa, LA
+        18928090: '07375175',  # Bogue Falaya River at Boston St, Covington, LA
+    }
+    for nwm_featureID, usgs_id in manual_nwm2usgs.items():
+        nwm_shp.loc[nwm_shp['featureID'] == nwm_featureID, 'gages'] = usgs_id
     
     # print diagnostic info
-    idx = nwm_shp['gage'].notnull()
+    idx = nwm_shp['gages'].notnull()
     print(f'{nwm_shp.loc[idx]}')
 
     # -----------------------------------------------------------------------------------
@@ -408,20 +421,15 @@ def source_nwm2usgs(
     # -----------------------------------------------------------------------------------
     t1 = time.time()
 
-    usgs_data_cache_fname = f'{output_dir}/usgs_data.pkl'
-
     # pad one day before and after the start and end time
     padded_start_time = pd.to_datetime(start_time_str) - pd.Timedelta('1 day')
     padded_end_time = pd.to_datetime(end_time_str) + pd.Timedelta('1 day')
-    if os.path.exists(usgs_data_cache_fname):
-        my_obs = ObsData(usgs_data_cache_fname, from_raw_data=False)
-    else:
-        usgs_data = download_stations(
-            param_id=usgs_var_dict['streamflow']['id'],
-            station_ids=usgs_stations,
-            datelist=pd.date_range(start=padded_start_time, end=padded_end_time),
-        )
-        my_obs = convert_to_ObsData(usgs_data, cache_fname=usgs_data_cache_fname)
+    usgs_data = download_stations(
+        param_id=usgs_var_dict['streamflow']['id'],
+        station_ids=usgs_stations,
+        datelist=pd.date_range(start=padded_start_time, end=padded_end_time),
+    )
+    my_obs = convert_to_ObsData(usgs_data)
 
     print(f'---------------collecting usgs data took: {time.time()-t1} s ---------------\n')
 
@@ -444,9 +452,14 @@ def source_nwm2usgs(
     )
     # build df
     nwm_df = pd.DataFrame({'datetime': my_date_range}).join(pd.DataFrame(stream_flow, columns=fid_subset))
+    # assign utc time zone
+    nwm_df['datetime'] = nwm_df['datetime'].dt.tz_localize('UTC')
     nwm_df = nwm_df.loc[:, ~nwm_df.columns.duplicated()]  # drop duplicate columns
     # nwm_df = nwm_df.set_index('datetime').resample("H").mean()
     # nwm_df = nwm_df.interpolate(method='time')  # fill in missing data
+
+    # set datetime as index
+    nwm_df = nwm_df.set_index('datetime')
 
     print(f'---------------reading nwm data took: {time.time()-t1} s ---------------\n')
 
@@ -499,9 +512,7 @@ def source_nwm2usgs(
             print(f'warning: source {i}_{my_source.hgrid_ie} does not have nearby usgs obs')
             continue
 
-        this_vsource_nwm_array = nwm_df[mysrc_nwm_fid].to_numpy()
-
-        # interpolate usgs to vsource/nwm time
+        # interpolate usgs to vsource time
         this_vs_usgs_array = np.zeros((nrec, len(mysrc_usgs_id)), dtype=float)
         for k, idx in enumerate(mysrc_usgs_idx):
             this_vs_usgs_array[:, k] = np.interp(
@@ -510,10 +521,21 @@ def source_nwm2usgs(
                 my_obs.stations[idx].df.iloc[:, 1].to_numpy()*0.028316847
             )
 
+        # this_vsource_nwm_array = nwm_df[mysrc_nwm_fid].to_numpy()
+        this_vsource_nwm_array = np.zeros((nrec, len(mysrc_nwm_fid)), dtype=float)
+        # interpolate nwm to vsource time
+        for k, idx in enumerate(mysrc_nwm_fid):
+            this_vsource_nwm_array[:, k] = np.interp(
+                (df.index - df.index[0]).total_seconds().to_numpy(),
+                (nwm_df.index - df.index[0]).total_seconds().to_numpy(),
+                nwm_df[idx].to_numpy().squeeze()
+            )
+            
+        plt.figure(figsize=(10, 6)) 
         plt.plot(df.index, df['Data'], '.k', label="original vsource")
         for k, usgs_id in enumerate(mysrc_usgs_id):
-            plt.plot(df.index, this_vs_usgs_array[:, k], linestyle1[k], label=f'usgs {usgs_id}')
-            plt.plot(df.index, this_vsource_nwm_array[:, k], linestyle2[k], label=f'NWM near usgs {usgs_id}')
+            plt.plot(df.index, this_vs_usgs_array[:, k], linestyle1[k], linewidth=0.5, label=f'usgs {usgs_id}')
+            plt.plot(df.index, this_vsource_nwm_array[:, k], linestyle2[k], linewidth=0.5, label=f'NWM near usgs {usgs_id}')
 
         # take the diff (including all relavant usgs-nwm pairs found)
         diff_usgs_nwm = this_vs_usgs_array - this_vsource_nwm_array
@@ -537,10 +559,26 @@ def source_nwm2usgs(
 
 if __name__ == "__main__":
     # sample usage (the final product is "adjusted_vsource.th" in the output_dir):
+    # source_nwm2usgs(
+    #     start_time_str="2024-03-05 00:00:00",
+    #     f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
+    #     original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/',
+    #     nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/20240305/',
+    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/USGS_adjusted_sources/',
+    # )
+
+    # source_nwm2usgs(
+    #     start_time_str="2017-12-01 00:00:00",
+    #     f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
+    #     original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I14/Source_sink/USGS_adjusted_sources/original/',
+    #     nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I13/Source_sink/original_source_sink/20171201/',
+    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I14/Source_sink/USGS_adjusted_sources/',
+    # )
+
     source_nwm2usgs(
-        start_time_str="2024-03-05 00:00:00",
-        f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
-        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I03/Source_sink/original_source_sink/',
-        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I03/Source_sink/original_source_sink/20240305/',
-        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I03c/Source_sink/USGS_adjusted_sources/',
+        start_time_str="2017-12-01 00:00:00",
+        f_shapefile="/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp",
+        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Source_sink/original_source_sink/',
+        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I13/Source_sink/original_source_sink/20171201/',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Source_sink/USGS_adjusted_sources/',
     )

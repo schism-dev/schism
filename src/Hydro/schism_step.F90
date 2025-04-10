@@ -297,9 +297,6 @@
      &dr_dxy(2,nvrt,nea),bcc(2,nvrt,nsa),stat=istat)
       if(istat/=0) call parallel_abort('STEP: other allocation failure')
 
-      allocate(swild9(nvrt,mnu_pts),stat=istat)
-      if(istat/=0) call parallel_abort('STEP: alloc failure (3)')
-
 !     Source
       if(if_source/=0) then
         allocate(msource(ntracers,nea),stat=istat)
@@ -344,7 +341,7 @@
       endif 
 
       if(nws==4) then
-        allocate(rwild6(7,np_global),stat=istat)
+        allocate(rwild6(9,np_global),stat=istat)
         if(istat/=0) call parallel_abort('MAIN: failed to alloc. (71)')
       endif !nws=4
 
@@ -506,9 +503,9 @@
           wtime1=wtime2
           wtime2=wtime2+wtiminc
           if(myrank==0) read(22,*)tmp,wx2,wy2
-!$OMP     end single
           call mpi_bcast(wx2,1,rtype,0,comm,istat)
           call mpi_bcast(wy2,1,rtype,0,comm,istat)
+!$OMP     end single
 
 !$OMP     workshare
           windx1=windx2
@@ -532,15 +529,67 @@
 
 !$OMP end parallel
 
-      if(nws==4) then
+      if(nws==4) then !include USE_ATMOS
         if(time>wtime2) then
+!...      Heat budget & wind stresses
+          if(ihconsv/=0) then
+            !Assume all vars in sflux*.nc are available from atmos model or read in from atmos.nc,
+            !and this routine compute other fluxes
+#ifdef USE_ATMOS
+            airt2=airt2-273.15d0 !Conv K to C, ESMF send with unit K
+#endif
+            call surf_fluxes2 (wtime2,windx2,windy2,pr2,airt2, &
+     &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
+#ifdef PREC_EVAP
+     &fluxprc,fluxevp,prec_snow, &
+#endif
+     &nws) 
+
+!$OMP parallel do default(shared) private(i)
+            do i=1,npa
+              sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
+#ifdef USE_MICE
+              srad_o(i) = srad(i)
+              prec_rain(i)=fluxprc(i)-prec_snow(i)
+              if(prec_rain(i)<0.d0) then
+                prec_rain(i)=0.d0
+                prec_snow(i)=fluxprc(i)
+              endif
+#endif
+            enddo !i
+!$OMP end parallel do
+
+            !Turn off precip near land bnd
+            if(iprecip_off_bnd/=0) then
+!$OMP parallel do default(shared) private(i,j)
+              loop_prc2: do i=1,np
+                if(isbnd(1,i)==-1) then
+                  fluxprc(i)=0.d0; cycle loop_prc2
+                endif
+
+                do j=1,nnp(i)
+                  if(isbnd(1,indnd(j,i))==-1) then
+                    fluxprc(i)=0.d0; cycle loop_prc2
+                  endif
+                enddo !j
+              end do loop_prc2 !i=1,np
+!$OMP end parallel do
+              call exchange_p2d(fluxprc)
+            endif !iprecip_off_bnd
+
+            if(myrank==0) write(16,*)'heat budge model completes...'
+          endif !ihconsv.ne.0
+
           wtime1=wtime2
           wtime2=wtime2+wtiminc
           windx1=windx2
           windy1=windy2
           pr1=pr2
+          airt1=airt2 
+          shum1=shum2
 
           !Read in next record
+#ifndef USE_ATMOS
           itmp2=wtime2/wtiminc+1
           if(myrank==0) then
             j=nf90_inq_varid(ncid_atmos, "uwind",mm)
@@ -555,28 +604,38 @@
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl')
             j=nf90_get_var(ncid_atmos,mm,rwild6(3,:),(/1,itmp2/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl(2)')
+            !air T in centigrade not Kelvin
+            j=nf90_inq_varid(ncid_atmos, "stmp_in_centigrade",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc stmp')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc stmp(2)')
+            j=nf90_inq_varid(ncid_atmos, "spfh",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc spfh')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc spfh(2)')
+
             if(ihconsv/=0) then
-              j=nf90_inq_varid(ncid_atmos, "downwardNetFlux",mm)
-              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux')
-              j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
-              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux(2)')
+              j=nf90_inq_varid(ncid_atmos, "downwardLongWaveFlux",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc long flux')
+              j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc longflux(2)')
               j=nf90_inq_varid(ncid_atmos, "solar",mm)
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar')
-              j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
+              j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar(2)')
             endif !ihconsv/
             if(isconsv/=0) then
               j=nf90_inq_varid(ncid_atmos, "prate",mm)
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate')
-              j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
+              j=nf90_get_var(ncid_atmos,mm,rwild6(8,:),(/1,itmp2/),(/np_global,1/))
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate(2)')
-              j=nf90_inq_varid(ncid_atmos, "evap",mm)
-              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap')
-              j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
-              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap(2)')
+              j=nf90_inq_varid(ncid_atmos, "snow_rate",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc srate')
+              j=nf90_get_var(ncid_atmos,mm,rwild6(9,:),(/1,itmp2/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc srate(2)')
             endif !isconsv/
           endif !myrank=0
-          call mpi_bcast(rwild6,7*np_global,MPI_REAL4,0,comm,istat)
+          call mpi_bcast(rwild6,9*np_global,MPI_REAL4,0,comm,istat)
 
           do i=1,np_global
             if(ipgl(i)%rank==myrank) then
@@ -584,18 +643,36 @@
               windx2(nd)=rwild6(1,i)
               windy2(nd)=rwild6(2,i)
               pr2(nd)=rwild6(3,i)
+              airt2(nd)=rwild6(4,i)
+              shum2(nd)=rwild6(5,i)
 
               if(ihconsv/=0) then
-                sflux(nd)=rwild6(4,i)
-                srad(nd)=rwild6(5,i)
+                hradd(nd)=rwild6(6,i)
+                srad(nd)=rwild6(7,i)
               endif !ihconsv/
               if(isconsv/=0) then
-                fluxprc(nd)=rwild6(6,i)
-                fluxevp(nd)=rwild6(7,i)
+                fluxprc(nd)=rwild6(8,i)
+                prec_snow(nd)=rwild6(9,i)
               endif !isconsv/
             endif !ipgl
           enddo !i
-        endif !time
+#endif /*USE_ATMOS*/
+
+#ifdef USE_ATMOS
+          !ESMF may not extend to ghosts
+          call exchange_p2d(windx2)
+          call exchange_p2d(windy2)
+          call exchange_p2d(pr2)
+          call exchange_p2d(airt2) !centigrade
+          call exchange_p2d(shum2)
+          call exchange_p2d(srad)
+          call exchange_p2d(hradd)
+#ifdef PREC_EVAP
+          call exchange_p2d(fluxprc)
+          call exchange_p2d(prec_snow)
+#endif 
+#endif /*USE_ATMOS*/
+        endif !time>wtime2
 
         wtratio=(time-wtime1)/wtiminc
 !$OMP parallel do default(shared) private(i)
@@ -605,6 +682,7 @@
           pr(i)=pr1(i)+wtratio*(pr2(i)-pr1(i))
         enddo !i
 !$OMP end parallel do
+
       endif !nws=4
 
 #ifdef USE_SIMPLE_WIND
@@ -639,14 +717,12 @@
         if(time>=wtime2) then
 !...      Heat budget & wind stresses
           if(ihconsv/=0) then
-#ifndef     USE_ATMOS
             call surf_fluxes(wtime2,windx2,windy2,pr2,airt2, &
      &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
-     &                       fluxprc,fluxevp,prec_snow, &
+     &fluxprc,fluxevp,prec_snow, &
 #endif
-     &                       nws ) 
-#endif /*USE_ATMOS*/
+     &nws) 
 
 !$OMP parallel do default(shared) private(i)
             do i=1,npa
@@ -659,11 +735,6 @@
                 prec_snow(i)=fluxprc(i)
               endif
 #endif
-
-!#ifdef IMPOSE_NET_FLUX
-!                sflux(i)=hradd(i) 
-!                !fluxprc is net P-E 
-!#endif
             enddo !i
 !$OMP end parallel do
 
@@ -700,14 +771,7 @@
           enddo
 !$OMP end parallel do
 
-#ifdef    USE_ATMOS
-          !ESMF may not extend to ghosts
-          call exchange_p2d(windx2)
-          call exchange_p2d(windy2)
-          call exchange_p2d(pr2)
-#else
           call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
-#endif
         endif !time>=wtime2
 
         wtratio=(time-wtime1)/wtiminc
@@ -799,40 +863,8 @@
 !         9) = ALPHA_CH(IP) ! Charnock Parameter gz0/ustar**2
 !        10) = CD(IP)       ! Drag Coefficient
 
-!       out_wwm(npa,35): output variables from WWM (all 2D); see names in NVARS() in the routine
-!                      BASIC_PARAMETER() in wwm_initio.F90 for details; below is a snapshot from there:
-         !OUTPAR(1)   = HS       ! Significant wave height
-         !OUTPAR(2)   = TM01     ! Mean average period
-         !OUTPAR(3)   = TM02     ! Zero down crossing period for comparison with buoy.
-         !OUTPAR(4)   = TM10     ! Average period of wave runup/overtopping ...
-         !OUTPAR(5)   = KLM      ! Mean wave number
-         !OUTPAR(6)   = WLM      ! Mean wave length
-         !OUTPAR(7)   = ETOTS    ! Etot energy in y-direction
-         !OUTPAR(8)   = ETOTC    ! Etot energy in x-direction
-         !OUTPAR(9)   = DM       ! Mean average energy transport direction
-         !OUTPAR(10)  = DSPR     ! Mean directional spreading
-         !OUTPAR(11)  = TPPD     ! Discrete peak period (sec)
-         !OUTPAR(12)  = TPP      ! Continuous peak period based on higher order moments (sec) 
-         !OUTPAR(13)  = CPP      ! Peak phase vel. (m/s)
-         !OUTPAR(14)  = WNPP     ! Peak n-factor
-         !OUTPAR(15)  = CGPP     ! Peak group vel.
-         !OUTPAR(16)  = KPP      ! Peak wave number
-         !OUTPAR(17)  = LPP      ! Peak wave length.
-         !OUTPAR(18)  = PEAKD    ! Peak (dominant) direction (degr)
-         !OUTPAR(19)  = PEAKDSPR ! Peak directional spreading
-         !OUTPAR(20)  = DPEAK    ! Discrete peak direction
-         !OUTPAR(21)  = UBOT     ! Orbital vel. (m/s)
-         !OUTPAR(22)  = ORBITAL  ! RMS Orbital vel. (m/s)
-         !OUTPAR(23)  = BOTEXPER ! Bottom excursion period.
-         !OUTPAR(24)  = TMBOT    ! Bottom wave period (sec)
-         !OUTPAR(25)  = URSELL   ! Uresell number based on peak period ...
-         !OUTPAR(26)  = USTAR    ! Friction velocity 
-         !OUTPAR(27)  = ALPHA_CH(IP) ! Charnock coefficient
-         !OUTPAR(28)  = Z0(IP)       ! Rougness length
-         !OUTPAR(29)  = WINDXY(IP,1) ! windx
-         !OUTPAR(30)  = WINDXY(IP,2) ! windy
-         !OUTPAR(31)  = CD(IP)       ! Drag coefficient
-         !...
+!       out_wwm(npa,35): output variables from WWM (all 2D); see OUTPAR(:) in routine INTPAR in wwm_output.F90, and
+!                        names in NVARS() in the routine BASIC_PARAMETER() in wwm_initio.F90
 
         if(myrank==0) write(16,*)'WWM-RS part took (sec) ',mpi_wtime()-wtmp1
 
@@ -882,7 +914,7 @@
         if(nws==0) then
           tau(1,i)=0.d0
           tau(2,i)=0.d0
-        else if(nws==2.and.ihconsv==1.and.iwind_form==0) then !tauxz and tauyz defined; USE_ATMOS not defined
+        else if(nws==2.and.ihconsv==1.and.iwind_form==0) then !tauxz and tauyz defined
           if(idry(i)==1) then
             tau(1,i)=0.d0
             tau(2,i)=0.d0
@@ -1049,6 +1081,9 @@
       if(myrank==0) write(16,*)'done adjusting wind stress ...'
 
 !...  Read in tracer nudging
+      allocate(swild9(nvrt,mnu_pts),stat=istat)
+      if(istat/=0) call parallel_abort('STEP: alloc failure (3)')
+
       if(time>time_nu_tr) then
         icount3=time/step_nu_tr+2 !time record #
         do k=1,natrm
@@ -1123,6 +1158,54 @@
 !$OMP end parallel workshare
         endif !inu_tr(k)
       enddo !k
+      deallocate(swild9)
+
+!...  Read in surface relax
+      if(iref_ts/=0) then
+        allocate(swild9(np_global,1),stat=istat)
+        if(istat/=0) call parallel_abort('STEP: alloc failure (3.0)')
+        if(time>time_ref_ts) then
+          icount3=time/ref_ts_dt/86400.d0+2 !next time record #
+          ref_ts1=ref_ts2
+          if(myrank==0) then
+            j=nf90_inq_varid(ncid_ref_ts,"reference_sst",nwild(1))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: surf relax (1)')
+            j=nf90_inq_varid(ncid_ref_ts,"reference_sss",nwild(2))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: surf relax (2)')
+          endif
+ 
+          do k=1,2 !T,S
+            swild9=-9999.
+            if(myrank==0) then
+              j=nf90_get_var(ncid_ref_ts,nwild(k),swild9(1:np_global,1), &
+     &(/1,icount3/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: surf relax(2.1)')
+            endif !myrank
+            call mpi_bcast(swild9,np_global,mpi_real,0,comm,istat)
+            do i=1,np_global
+              if(ipgl(i)%rank==myrank) then
+                ip=ipgl(i)%id
+                ref_ts2(ip,k)=swild9(i,1)
+                !Debug
+                !write(12,*)'Step nu:',i,nd,swild9(i,1)
+              endif
+            enddo !i
+          enddo !k
+          time_ref_ts=time_ref_ts+ref_ts_dt*86400.d0 ![sec]; shared among all tracers
+        endif !time>time_nu_tr
+
+!       Compute tracer
+        rat=(time_ref_ts-time)/ref_ts_dt/86400.d0
+        if(rat<0.d0.or.rat>1.d0) then
+          write(errmsg,*)'Impossible 82.2:',rat
+          call parallel_abort(errmsg)
+        endif
+!$OMP parallel workshare default(shared)
+        !may be junk (check later)
+        ref_ts=rat*ref_ts1+(1.d0-rat)*ref_ts2
+!$OMP end parallel workshare
+        deallocate(swild9)
+      endif !iref_ts/=0
 
 !...  Compute hydraulic transfer blocks together with reading in flux values
 !...  in case the blocks are taken out
@@ -1604,9 +1687,14 @@
           th_time3(2,2)=th_time3(2,2)+th_dt3(2)
         endif
 
-#else
+#else /*USE_NWM_BMI*/
+
         !Reading by rank 0
+#ifdef SH_MEM_COMM
+        if(nsources>0.and.myrank_node==0) then
+#else  
         if(nsources>0.and.myrank==0) then
+#endif
           if(time>th_time3(2,1)) then !not '>=' to avoid last step
             ath3(:,1,1,1)=ath3(:,1,2,1)
             th_time3(1,1)=th_time3(2,1)
@@ -1637,9 +1725,13 @@
               if(j/=NF90_NOERR) call parallel_abort('STEP: msource')
             endif !if_source
           endif !time
-        endif !nsources>0.and.myrank==0
+        endif !nsources>0.and.myrank*==0
  
+#ifdef SH_MEM_COMM
+        if(nsinks>0.and.myrank_node==0) then
+#else 
         if(nsinks>0.and.myrank==0) then
+#endif
           if(time>th_time3(2,2)) then !not '>=' to avoid last step
             ath3(:,1,1,2)=ath3(:,1,2,2)
             th_time3(1,2)=th_time3(2,2)
@@ -1655,9 +1747,17 @@
             endif !if_source
           endif !time
         endif !nsinks
-!       Finished reading; bcast
+
+!       Finished reading; bcast from rank 0 of comm (which must be a member of myrank_node=0)
         call mpi_bcast(th_time3,2*nthfiles3,rtype,0,comm,istat)
+#ifdef SH_MEM_COMM
+        ! ath3 data in shared buffer, no longer necessary to broadcast
+        !Sync (on each compute node) to ensure the buffer is filled
+        !The barrier may not be necessary
+        call mpi_barrier(comm_node, istat)
+#else
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
+#endif
 #endif /*USE_NWM_BMI*/
 
         if(nsources>0) then
@@ -1718,20 +1818,12 @@
       endif !if_source/=0
 
 !...  Volume sources from evap and precip
-!...  For USE_ATMOS, needs evap from atmos model 
       if(isconsv/=0) then
-!#ifdef  IMPOSE_NET_FLUX
-!          do i=1,nea
-!            precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
-!            vsource(i)=vsource(i)+precip/rho0*area(i) !m^3/s
-!          enddo !i 
-!#else
         do i=1,nea
           evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
           precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
           vsource(i)=vsource(i)+(precip-evap)/rho0*area(i) !m^3/s
         enddo !i
-!#endif /*IMPOSE_NET_FLUX*/
       endif !isconsv/=0
 
 !...  Zero out net sink @dry elem
@@ -2707,7 +2799,7 @@
 !        endif
 !cde=cmiu0**3
 !$OMP   master
-        if(myrank==0) write(16,*)'cde, cmiu0**3 = ',cde,cmiu0**3.d0
+        if(myrank==0) write(16,*)'starting GOTM; cde, cmiu0**3 = ',cde,cmiu0**3.d0
 !$OMP   end master
 
 !$OMP   do
@@ -6346,7 +6438,21 @@
 
 !$OMP workshare
       deta2_dx=0.d0; deta2_dy=0.d0; deta1_dx=0.d0; deta1_dy=0.d0; dpr_dx=0.d0; dpr_dy=0.d0; detp_dx=0.d0; detp_dy=0.d0
+      deta1_dxy_elem=0.d0
 !$OMP end workshare
+
+!     Pressure gradient at elem for CICE
+!$OMP do
+      do ie=1,nea
+        if(idry_e(ie)==0) then
+          do m=1,i34(ie)
+            nd=elnode(m,ie)
+            deta1_dxy_elem(ie,1)=deta1_dxy_elem(ie,1)+eta1(nd)*dldxy(m,1,ie) !eframe if ics=2
+            deta1_dxy_elem(ie,2)=deta1_dxy_elem(ie,2)+eta1(nd)*dldxy(m,2,ie) !eframe if ics=2
+          enddo !m
+        endif !idry_e
+      enddo !ie
+!$OMP end do
 
 !$OMP do 
       do j=1,ns !resident
@@ -7375,7 +7481,7 @@
 !...    Initialize S,T as flags
 !        tr_nd(1:2,:,:)=-99 !flags
 
-!$OMP parallel default(shared) private(i,evap,precip,sflux_e,itmp,rr,d_1,d_2,k,dp1,dp2,l,srad1,srad2,j)
+!$OMP parallel default(shared) private(i,evap,precip,sflux_e,itmp,rr,d_1,d_2,k,dp1,dp2,l,srad1,srad2,j,tmp,tmp2)
 
 !$OMP   workshare
         bdy_frc=0.d0; flx_sf=0.d0; flx_bt=0.d0
@@ -7393,15 +7499,19 @@
               if(ze(nvrt,i)-ze(kbe(i),i)<hmin_salt_ex) cycle
             endif
 
-!#ifdef      IMPOSE_NET_FLUX
-!              precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
-!              flx_sf(2,i)=tr_el(2,nvrt,i)*(-precip)/rho0
-!#else
             evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
             precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
             flx_sf(2,i)=tr_el(2,nvrt,i)*(evap-precip)/rho0
-!            endif !impose_net_flux
-!#endif
+
+            !Virtual flux (surface restoration)
+            if(iref_ts/=0) then
+              tmp=sum(ref_ts(elnode(1:i34(i),i),2))/real(i34(i),rkind)
+              if(tmp>0.d0) then
+                tmp2=max(0.d0,min(1.d0,(dpe(i)-ref_ts_h2)/(ref_ts_h1-ref_ts_h2)))
+                flx_sf(2,i)=flx_sf(2,i)+ref_ts_restore_depth/ref_ts_tscale/86400.d0*tmp2* &
+                        &(tmp-tr_el(2,nvrt,i))
+              endif !tmp>
+            endif !iref_ts/
           enddo !i
 !$OMP     end do
         endif !isconsv/=0
@@ -7422,6 +7532,16 @@
 !           Surface flux
             sflux_e=sum(sflux(elnode(1:i34(i),i)))/real(i34(i),rkind)
             flx_sf(1,i)=sflux_e/rho0/shw
+
+            !Virtual flux (surface restoration)
+            if(iref_ts/=0) then
+              tmp=sum(ref_ts(elnode(1:i34(i),i),1))/real(i34(i),rkind)
+              if(tmp>-99.d0) then
+                tmp2=max(0.d0,min(1.d0,(dpe(i)-ref_ts_h2)/(ref_ts_h1-ref_ts_h2)))
+                flx_sf(1,i)=flx_sf(1,i)+ref_ts_restore_depth/ref_ts_tscale/86400.d0*tmp2* &
+                        &(tmp-tr_el(1,nvrt,i))
+              endif !tmp>
+            endif !iref_ts/
 
 !           Solar
 !           Calculate water type
@@ -7450,6 +7570,8 @@
                 rr=0.62d0; d_1=1.50d0; d_2=20.d0
               case(7)
                 rr=0.80d0; d_1=0.90d0; d_2=2.1d0
+              case(8)
+                rr=watertype_rr; d_1=watertype_d1; d_2=watertype_d2
               case default
                 call parallel_abort('Unknown water type (3)')
             end select !itmp
@@ -7962,7 +8084,8 @@
           do i=1,np
             veg_h_unbent(i)=sum(sht(indel(1:nne(i),i)))/real(nne(i),rkind)
           enddo !i
-          call exchange_p2d(veg_h)
+          call exchange_p2d(veg_h_unbent)
+          veg_h=veg_h_unbent
 
           do i=1,npa
             !Do not allow SAV to grow out of init patch for the time being
@@ -9206,14 +9329,55 @@
 #endif
 
 #if defined USE_WW3
-        ! Eastward wave radiation stress
-        call writeout_nc(id_out_ww3(1),'rsxx',1,1,npa,rsxx)
+        if (RADFLAG == 'VOR') then
+           ! Significant wave height
+           call writeout_nc(id_out_ww3(1),'hs',1,1,npa,wave_hs)
 
-        ! Eastward northward wave radiation stress
-        call writeout_nc(id_out_ww3(2),'rsxy',1,1,npa,rsxy)
+           ! Mean wave direction
+           call writeout_nc(id_out_ww3(2),'dir',1,1,npa,wave_dir)
 
-        ! Northward wave radiation stress
-        call writeout_nc(id_out_ww3(3),'rsyy',1,1,npa,rsyy)
+           ! Mean wave period
+           call writeout_nc(id_out_ww3(3),'tm1',1,1,npa,wave_tm1)
+
+           ! Mean wave number
+           call writeout_nc(id_out_ww3(4),'wnm',1,1,npa,wave_wnm)
+
+           ! Wave-induced Bernoulli head pressure
+           call writeout_nc(id_out_ww3(5),'bhd',1,1,npa,wave_pres)
+
+           ! Stokes drift, x component
+           call writeout_nc(id_out_ww3(6),'ussx',1,1,npa,wave_stokes_x)
+
+           ! Stokes drift, y component
+           call writeout_nc(id_out_ww3(7),'ussy',1,1,npa,wave_stokes_y)
+
+           ! Wave-ocean mom flux, x component
+           call writeout_nc(id_out_ww3(8),'twox',1,1,npa,wave_ocean_flux_x)
+
+           ! Wave-ocean mom flux, y component
+           call writeout_nc(id_out_ww3(9),'twoy',1,1,npa,wave_ocean_flux_y)
+
+           ! Momentum flux due to bottom friction, x component
+           call writeout_nc(id_out_ww3(10),'tbbx',1,1,npa,wave_flux_friction_x)
+
+           ! Momentum flux due to bottom friction, x component
+           call writeout_nc(id_out_ww3(11),'tbby',1,1,npa,wave_flux_friction_y)
+
+           ! Near bed orbital vel, x component
+           call writeout_nc(id_out_ww3(12),'ubrx',1,1,npa,wave_orbu)
+
+           ! Near bed orbital vel, y component
+           call writeout_nc(id_out_ww3(13),'ubry',1,1,npa,wave_orbv)
+        else
+           ! Eastward wave radiation stress
+           call writeout_nc(id_out_ww3(1),'rsxx',1,1,npa,rsxx)
+
+           ! Eastward northward wave radiation stress
+           call writeout_nc(id_out_ww3(2),'rsxy',1,1,npa,rsxy)
+
+           ! Northward wave radiation stress
+           call writeout_nc(id_out_ww3(3),'rsyy',1,1,npa,rsyy)
+        end if
 #endif
 
 #ifdef USE_MARSH
@@ -9223,15 +9387,15 @@
 #endif
 
 #ifdef USE_MICE
-        if(iof_ice(1)==1) call writeout_nc(id_out_var(noutput+5), &
-     &'ICE_velocity',1,1,npa,u_ice,v_ice)
-        if(iof_ice(2)==1) call writeout_nc(id_out_var(noutput+6), &
+        if(iof_mice(1)==1) call writeout_nc(id_out_var(noutput+6), &
      &'ICE_strain_rate',4,1,nea,delta_ice)
-        if(iof_ice(3)==1) call writeout_nc(id_out_var(noutput+7), &
+        if(iof_mice(2)==1) call writeout_nc(id_out_var(noutput+5), &
+     &'ICE_velocity',1,1,npa,u_ice,v_ice)
+        if(iof_mice(3)==1) call writeout_nc(id_out_var(noutput+7), &
      &'ICE_net_heat_flux',1,1,npa,net_heat_flux)
-        if(iof_ice(4)==1) call writeout_nc(id_out_var(noutput+8), &
+        if(iof_mice(4)==1) call writeout_nc(id_out_var(noutput+8), &
      &'ICE_fresh_water_flux',1,1,npa,fresh_wa_flux)
-        if(iof_ice(5)==1) call writeout_nc(id_out_var(noutput+9), &
+        if(iof_mice(5)==1) call writeout_nc(id_out_var(noutput+9), &
      &'ICE_top_T',1,1,npa,t_oi)
         noutput=noutput+5
         icount=5 !offset
@@ -9239,12 +9403,12 @@
         do i=1,ntr_ice
           write(it_char,'(i72)')i
           it_char=adjustl(it_char); lit=len_trim(it_char)
-          if(iof_ice(icount+i)==1) call writeout_nc(id_out_var(noutput+i+4), &
+          if(iof_mice(icount+i)==1) call writeout_nc(id_out_var(noutput+i+4), &
      &'ICE_tracer_'//it_char(1:lit),1,1,npa,ice_tr(i,:))
         enddo !i
         noutput=noutput+ntr_ice
         call io_icepack(noutput)
-#endif
+#endif /*USE_MICE*/
 
 #ifdef USE_ICE
         if(iof_ice(1)==1) call writeout_nc(id_out_var(noutput+5), &
@@ -9267,7 +9431,7 @@
      &'ICE_tracer_'//it_char(1:lit),1,1,npa,ice_tr(i,:))
         enddo !i
         noutput=noutput+ntr_ice
-#endif
+#endif /*USE_ICE*/
 
 #ifdef USE_ANALYSIS
         if(iof_ana(1)==1) call writeout_nc(id_out_var(noutput+5), &
@@ -9524,6 +9688,32 @@
         enddo !i
 #endif /*USE_ICE*/
 
+#ifdef USE_MICE
+        if(iof_mice(2)==1) then
+          icount=icount+2
+          if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.31)')
+          varout_2dnode(icount-1,:)=u_ice(1:np)
+          varout_2dnode(icount,:)=v_ice(1:np)
+        endif
+
+        do i=3,5+ntr_ice
+          if(iof_mice(i)==1) then
+            icount=icount+1
+            if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.41)')
+            if(i==3) then
+              varout_2dnode(icount,:)=net_heat_flux(1:np)
+            else if(i==4) then
+              varout_2dnode(icount,:)=fresh_wa_flux(1:np)
+            else if(i==5) then
+              varout_2dnode(icount,:)=t_oi(1:np)
+            else
+              varout_2dnode(icount,:)=ice_tr(i-5,1:np)
+            endif
+          endif !iof
+        enddo !i
+        call io_icepack(noutput)
+#endif /*USE_MICE*/
+
         !Check total # of vars
         if(icount/=ncount_2dnode) then
           write(errmsg,*)'STEP: 2D count wrong:',icount,ncount_2dnode
@@ -9590,6 +9780,14 @@
         if(iof_ice(1)==1) then
           icount=icount+1
           if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.3)')
+          varout_2delem(icount,:)=delta_ice(1:ne)
+        endif
+#endif
+
+#ifdef USE_MICE
+        if(iof_mice(1)==1) then
+          icount=icount+1
+          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.31)')
           varout_2delem(icount,:)=delta_ice(1:ne)
         endif
 #endif
@@ -10609,8 +10807,6 @@
       deallocate(hp_int,uth,vth,d2uv,dr_dxy,bcc)
       if(allocated(rwild)) deallocate(rwild)
       if(allocated(rwild6)) deallocate(rwild6)
-      deallocate(swild9)
-      !if(allocated(ts_offline)) deallocate(ts_offline)
 
 #ifdef USE_NAPZD
       deallocate(Bio_bdefp)

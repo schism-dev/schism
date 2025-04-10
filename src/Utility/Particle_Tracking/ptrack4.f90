@@ -24,7 +24,7 @@
 !                 Assume the quads are not split in the nc outputs.
 !
 !       Behavior when particles hit horizontal bnd or dry interface:
-!       reflect off like LTRAN
+!       reflect off like LTRAN or slide
 !										
 !	Inputs: 
 !          a) hgrid.ll (if ics=2 in particle.bp) or hgrid.gr3 (if ics=1 in
@@ -39,8 +39,10 @@
 !	  (1) description;						
 !	  (2) nscreen;								
 !         (3) mod_part: model #. 0-passive; 1: oil spill (Dr. Jung)
+!         (4) ibiofoul: biofouling on(1) / off(0)
 !	  (4) ibf: forward (=1) or backward (=-1) tracking.			
 !         (5) istiff: stiff (fixed distance frm f.s.; 1) or not (0).		
+!         (6) ibnd_beh: reflect off (0) or slide (1)
 !	  (6) ics,slam0,sfea0: coordinate system and center for CPP projection
 !             (same as in param.in). If ics=2, inputs/outputs are in
 !             lon/lat;
@@ -53,11 +55,17 @@
 !	  (8) nparticle: # of particles;					
 !	  (9) idp(i),st_p(i),xpar(i),ypar(i),zpar0(i): particle id, start time (sec),
 !		starting x,y, and z relative to the instant f.s. (<=0).		
-!         (10) additional parameters for oil spill
+!         (10) (additional parameters for oil spill) comment line
+!         (11) ihdf  : turn on Smagorinsky algorithm - off(0), on(1)
+!         (12) ibuoy,iwind: turn on(1)/off(0) buoyancy of particle; wind effect on(1)/off(0)
+!         (13) pbeach: set minimum percentage of stranding on shore (particles may be stranded if the random # exceeds this threshold)
+!         (14) (optional for biofouling) comment line
+!         (15) bio_R0,bio_BT0,bio_BR,bio_den0,bio_den_biolayer: init plastic radius (m),init thickness of fouling layer (m), 
+!                 bio growth (m/day),init density of plastic particle (kg/m^3), density of biofoul layer (kg/m^3)
 !										
 !	Output: particle.pth, particle.pth.more (more info), fort.11 (fatal errors).		
 !										
-! ifort -mcmodel=medium -assume byterecl -O2 -o ptrack4.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack4.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifx -mcmodel=medium -assume byterecl -O2 -o ptrack4.exe ../UtilLib/compute_zcor.f90 ../UtilLib/schism_geometry.f90 ptrack4.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !...  Data type consts
       module kind_par
@@ -70,7 +78,7 @@
 
 !...  definition of variables
 !...
-      module global
+      module global_ptrack
         implicit none
         public
 
@@ -82,10 +90,12 @@
       	real(kind=dbl_kind), parameter :: zero=1.e-5 !small postive number in lieu of 0; usually used to check areas 
         real(kind=dbl_kind), parameter :: small1=1.e-6 !small non-negative number; must be identical to that in kind_par
         real(kind=dbl_kind), parameter :: pi=3.1415926d0 
+        real(kind=dbl_kind), parameter :: rho_w=1025.d0 !kg/m^3
+        real(kind=dbl_kind), parameter :: grav=9.8d0 !m/s/s
 
 !...  	Important variables
-        integer, save :: np,ne,ns,nvrt,mnei,mod_part,ibf,istiff,ivcor,kz,nsig
-      	real(kind=dbl_kind), save :: h0,rho0,dt
+        integer, save :: np,ne,ns,nvrt,mnei,mod_part,ibf,istiff,ivcor,kz,nsig,ibiofoul,ibnd_beh
+      	real(kind=dbl_kind), save :: h0,dt
         real(kind=dbl_kind), save :: h_c,theta_b,theta_f,h_s !s_con1
 
 !...    Output handles
@@ -111,12 +121,12 @@
         real(kind=dbl_kind),save, allocatable :: z(:,:)
         real(kind=dbl_kind),save, allocatable :: uu1(:,:),vv1(:,:),ww1(:,:),uu2(:,:),vv2(:,:),ww2(:,:)
         real*8,save, allocatable :: wnx1(:),wnx2(:),wny1(:),wny2(:),hf1(:,:),vf1(:,:),hf2(:,:),vf2(:,:)
-        real*8,save, allocatable :: hvis_e(:,:)
-      end module global
+        real*8,save, allocatable :: hvis_e(:,:),bio_wvel(:),bio_thick(:)
+      end module global_ptrack
 
 !...  Main program
       program ptrack
-      use global
+      use global_ptrack
       use netcdf
       use compute_zcor
       use schism_geometry_mod
@@ -174,18 +184,28 @@
 !     Model #: 0-passive; 1:oil spill
       read(95,*) mod_part
       if(mod_part<0.or.mod_part>1) stop 'Unknown model'
+      read(95,*) ibiofoul
+      if(ibiofoul<0.or.ibiofoul>1) stop 'Unknown biofouling option'
       read(95,*) ibf
       if(iabs(ibf)/=1) then
         write(*,*)'Wrong ibf',ibf
         stop
       endif
-      if(mod_part==1.and.ibf/=1) stop 'Oil spill must have ibf=1'
+      if((mod_part==1.or.ibiofoul==1).and.ibf/=1) stop 'Oil spill or biofouling must have ibf=1'
 
       read(95,*) istiff !1: fixed distance from F.S.
       if(istiff/=0.and.istiff/=1) then
         write(*,*)'Wrong istiff',istiff
         stop
       endif
+
+      !Option for behavior when particle hits boundary or wet/dry interface
+      read(95,*) ibnd_beh !0: reflect off; 1: slide tangentially
+      if(ibnd_beh/=0.and.ibnd_beh/=1) then
+        write(*,*)'Wrong boundary behavior flag:',ibnd_beh
+        stop
+      endif
+
       read(95,*) ics,slam0,sfea0
       slam0=slam0/180*pi
       sfea0=sfea0/180*pi
@@ -201,7 +221,8 @@
      &st_p(nparticle),idp(nparticle),ielpar(nparticle),levpar(nparticle),upar(nparticle), &
      &vpar(nparticle),wpar(nparticle),iabnorm(nparticle),ist(nparticle),inbr(nparticle), &
      &dhfx(nparticle),dhfy(nparticle),dhfz(nparticle),grdx(nparticle),grdy(nparticle), &
-     &grdz(nparticle),amas(nparticle),wndx(nparticle),wndy(nparticle),stat=istat)
+     &grdz(nparticle),amas(nparticle),wndx(nparticle),wndy(nparticle),bio_wvel(nparticle), &
+     &bio_thick(nparticle),stat=istat)
       if(istat/=0) stop 'Failed to alloc (1)'
 
       levpar=-99 !vertical level
@@ -231,11 +252,6 @@
       enddo !i
 
 !...  Additional parameters for oil spill
-! ... Description of parameters
-!     ihdf  : turn on Smagorinsky algorithm - off(0), on(1)
-!     ibuoy : turn buoyancy of particle  - off(0), on(1)
-!     iwind : turn wind effect - off(0), on(1)
-!     pbeach  : set percentage of stranding on shore
 ! ........................................................
       if(mod_part==1) then
         read(95,*) !comment line
@@ -243,6 +259,11 @@
         read(95,*) ibuoy,iwind
         read(95,*) pbeach
       endif !mod_part=1
+
+      if(ibiofoul/=0) then
+        read(95,*) !comment line
+        read(95,*)bio_R0,bio_BT0,bio_BR,bio_den0,bio_den_biolayer
+      endif !ibiofoul/
 
       close(95)
 
@@ -263,8 +284,8 @@
         if(ibuoy==1) then
           !compute the rising velocity(m/s) based on Proctor et al., 1994
           gr=9.8               ! m/s^2
-          rho_o=900.0d3        ! kg/m^3 (oil)
-          rho_w=1025.0d3       ! kg/m^3
+          rho_o=900.0d0        ! kg/m^3 (oil)
+          !rho_w=1025.0d0       ! kg/m^3
           di=500.0d-6          ! m
           smu=1.05d-6          ! m^2/s
 ! ... critical diameter, dc
@@ -707,6 +728,19 @@
       do it=iths,it2,ibf !it is total time record #
 !--------------------------------------------------------------------------
       time=it*dt
+
+!...  Calculate modifications to flow vel 
+      if(ibiofoul==1) then
+        do i=1,nparticle
+          bio_thick(i)=bio_BT0+dt/86400.d0*bio_BR !BT: thickness of biolayer [m]
+          rat=(bio_R0/(bio_R0+bio_thick(i)))**3.
+          bio_den_tot=bio_den0*rat+bio_den_biolayer*(1-rat) !\rho_p
+          s_tmp=(bio_den_tot-rho_w)/rho_w
+          diameter=2*(bio_R0+bio_thick(i))
+          bio_wvel(i)=-s_tmp*grav*diameter*diameter/(18*1.d-6+sqrt(0.3*abs(s_tmp)*grav*diameter**3.d0))
+!          write(99,*)time/86400,i,bio_wvel(i),bio_thick(i),rat,bio_den_tot,s_tmp,diameter
+        enddo !i  
+      endif !ibiofoul
       
 !...  Read in elevation and vel. info
       if((ibf==1.and.it>nrec*ifile).or.(ibf==-1.and.it<=nrec*(ifile-1))) then
@@ -767,6 +801,7 @@
       iret=nf90_get_var(ncid4,lw_id,real_ar(1:nvrt,1:np),(/1,1,irec1/),(/nvrt,np,1/))
       if(iret/=nf90_NoErr) stop 'ww2 not read'
       ww2(:,:)=transpose(real_ar(1:nvrt,1:np))
+
       if(mod_part==1) then
         iret=nf90_get_var(ncid,lwindx,wnx2(1:np),(/1,irec1/),(/np,1/))
         if(iret/=nf90_NoErr) stop 'windx not read'
@@ -884,7 +919,7 @@
         endif !mod_part
 
         pt=dt !tracking time step
-!...    Initialize starting level 
+!...    Initialize starting level and vel
         if(levpar(i)==-99) then !just started
           pt=(time-st_p(i))*ibf
           if(pt<=0) then
@@ -920,6 +955,7 @@
             levpar(i)=jlev
           
             upar(i)=0; vpar(i)=0; wpar(i)=0; wndx(i)=0; wndy(i)=0
+            if(ibiofoul==1) wpar(i)=bio_wvel(i)
             do j=1,3
               nd=elnode(nodel(j),iel)
               upar(i)=upar(i)+uu2(nd,jlev)*arco(j)
@@ -1061,6 +1097,7 @@
 !	  Interpolate in horizontal
           upar(i)=0; vpar(i)=0; wpar(i)=0
           wndx(i)=0;wndy(i)=0; dhfx(i)=0; dhfz(i)=0
+          if(ibiofoul==1) wpar(i)=bio_wvel(i)
           do j=1,3 !1st tri for quads
             id=nodel2(j)
             upar(i)=upar(i)+vxn(id)*arco(j)
@@ -1375,7 +1412,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       subroutine area_coord(nnel,xt,yt,arco)
-      use global, only : dbl_kind,elnode,area,x,y
+      use global_ptrack, only : dbl_kind,elnode,area,x,y
       implicit real(kind=dbl_kind)(a-h,o-z),integer(i-n)
       integer, intent(in) :: nnel
       real(kind=dbl_kind), intent(in) :: xt,yt
@@ -1408,7 +1445,7 @@
 !********************************************************************
 !
       subroutine levels
-      use global
+      use global_ptrack
       use compute_zcor
       implicit real(kind=dbl_kind)(a-h,o-z),integer(i-n)
 
@@ -1490,7 +1527,7 @@
       subroutine quicksearch(iloc,idt,ipar,nnel0,jlev0,time,x0,y0,z0,xt,yt,zt,nnel1,jlev1, &
      &nodel2,arco,zrat,nfl,etal,dp_p,ztmp,kbpl,ist2,inbr2,rnds,pbeach)
 
-      use global
+      use global_ptrack
       use compute_zcor
       implicit real(kind=dbl_kind)(a-h,o-z),integer(i-n)
 
@@ -1655,42 +1692,53 @@
           endif !ic3
         endif !mod_part
 
-!       Reflect off
-!        eps=1.e-2
-!        xin=(1-eps)*xin+eps*xctr(nel)
-!        yin=(1-eps)*yin+eps*yctr(nel)
-        xcg=xin
-        ycg=yin
+        if(ibnd_beh/=0) then !slide
+          eps=1.e-2
+          xin=(1-eps)*xin+eps*xctr(nel)
+          yin=(1-eps)*yin+eps*yctr(nel)
+          xcg=xin
+          ycg=yin
 
-        !Original vel
-        uvel0=(xt-xin)/trm
-        vvel0=(yt-yin)/trm
-        vnorm=uvel0*snx(isd)+vvel0*sny(isd)
-        vtan=-uvel0*sny(isd)+vvel0*snx(isd)
-        !vtan=-(uu2(md1,jlev0)+uu2(md2,jlev0))/2*sny(isd)+(vv2(md1,jlev0)+vv2(md2,jlev0))/2*snx(isd)
-        !Reverse normal vel
-        vnorm=-vnorm
+          !Tangential vel
+          vtan=-(uu2(md1,jlev0)+uu2(md2,jlev0))/2*sny(isd)+(vv2(md1,jlev0)+vv2(md2,jlev0))/2*snx(isd)
+          xvel=-vtan*sny(isd)
+          yvel=vtan*snx(isd)
+          zvel=(ww2(md1,jlev0)+ww2(md2,jlev0))/2
+          xt=xin+xvel*trm
+          yt=yin+yvel*trm
+          zt=zin+zvel*trm
 
-        !tmp=max(abs(vtan),1.d-2) !to prevent getting stuck
-        !vtan=tmp*sign(1.d0,tmp)
-        xvel=vnorm*snx(isd)-vtan*sny(isd)
-        yvel=vnorm*sny(isd)+vtan*snx(isd)
-        zvel=(ww2(md1,jlev0)+ww2(md2,jlev0))/2
-        xt=xin+xvel*trm
-        yt=yin+yvel*trm
-        zt=zin+zvel*trm
-!        hvel=dsqrt(xvel**2+yvel**2)
-!        if(hvel<1.e-4) then
-!          write(11,*)'Impossible (5):',hvel
-!          nfl=1
-!          xt=xin
-!          yt=yin
-!          zt=zin
-!          nnel1=nel
-!          exit loop4
-!        endif
-        !pathl unchanged since hvel is unchanged
-!        pathl=hvel*trm
+          hvel=sqrt(xvel**2+yvel**2)
+          if(hvel<1.e-4) then
+            nfl=1
+            xt=xin
+            yt=yin
+            zt=zin
+            nnel1=nel
+            exit loop4
+          endif
+          pathl=hvel*trm
+        else !reflect off
+          xcg=xin
+          ycg=yin
+
+          !Original vel
+          uvel0=(xt-xin)/trm
+          vvel0=(yt-yin)/trm
+          vnorm=uvel0*snx(isd)+vvel0*sny(isd)
+          vtan=-uvel0*sny(isd)+vvel0*snx(isd)
+          !Reverse normal vel
+          vnorm=-vnorm
+
+          !tmp=max(abs(vtan),1.d-2) !to prevent getting stuck
+          !vtan=tmp*sign(1.d0,tmp)
+          xvel=vnorm*snx(isd)-vtan*sny(isd)
+          yvel=vnorm*sny(isd)+vtan*snx(isd)
+          zvel=(ww2(md1,jlev0)+ww2(md2,jlev0))/2
+          xt=xin+xvel*trm
+          yt=yin+yvel*trm
+          zt=zin+zvel*trm
+        endif !ibnd_beh
       endif !abnormal cases
 
 !     Search for nel's neighbor with edge nel_j, or in abnormal cases, the same element
@@ -1779,10 +1827,11 @@
       endif
 
       do k=kbpl+1,nvrt
-        if(ztmp(k)-ztmp(k-1)<0) then !can be 0 for deg. case
+        if(ztmp(k)-ztmp(k-1)<-1.d-8) then !can be 0 or even small negative for degenerate case or interp error
           write(11,*)'Inverted z-level in quicksearch:',nnel1,etal,dep,k,ztmp(k)-ztmp(k-1),ztmp(kbpl:nvrt)
           stop
         endif
+        ztmp(k)=max(ztmp(k),ztmp(k-1))
       enddo !k
 
       if(zt<=ztmp(kbpl)) then
@@ -1833,7 +1882,7 @@
 !            xp,yp: point to be tested
 !     Outputs:
 !            inside: 1, inside
-      use global, only : small1
+      use global_ptrack, only : small1
       implicit real*8(a-h,o-z)
       integer, intent(in) :: i34
       real*8, intent(in) :: x(i34),y(i34),xp,yp

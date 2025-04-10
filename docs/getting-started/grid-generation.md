@@ -102,7 +102,8 @@ as the ratio between the max. side and the equivalent radius) >15 can be used wi
 for baroclinic applications, mesh quality may be important in critical regions. Also note that 
 quality quads are required; always use the pre-processing script `fix_bad_quads.f90` to split bad quads. 
 (You can check quad quality in xmgredit5 $\rightarrow$ Edit $\rightarrow$ Edit over region $\rightarrow$ 
- Quality check for quadrangles, and input 0.5 (which is the ratio between the min and max interior angles) for cutoff and ‘Accept’. All violating elements will be highlighted.)
+ Quality check for quadrangles, and input 0.5 (which is the ratio between the min and max interior angles) for cutoff and ‘Accept’. All violating elements will be highlighted).
+In addition, keep the quad aspect ratio (i.e., along-channel/cross-channel) reasonable (<=5).
 
 Unlike explicit models, you’ll find meshgen for SCHISM is more ‘intuitive’ and ‘freer’. 
 Implicit model allows you to focus on physics instead of numerics. You are freer to resolve important features
@@ -143,7 +144,7 @@ Channels serve as the main conduit for fresh and ocean water flow, and thus are 
 </figure>
 
 !!!notes "Patch method"
-   It is well known that channelized flow is better simulated using flow-aligned quads.  Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control on the cross-channel resolution which is important for 3D processes. Paving, on the other hand, can lead to either excessively large mesh size or inadequate cross-channel resolution.
+   It is well known that channelized flow is better simulated using flow-aligned quads.  Therefore we recommend using patch in SMS to mesh channels. This approach allows precise control on the cross-channel resolution which is important for 3D processes. Keep the aspect ratio of quads under 5. Paving, on the other hand, can lead to either excessively large mesh size or inadequate cross-channel resolution.
 
 ## Meshing near wetting and drying
 You may want to have an arc follow the initial shoreline (but there is no need to be exactly following the shoreline). 

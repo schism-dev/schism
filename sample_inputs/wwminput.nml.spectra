@@ -2,7 +2,8 @@
 ! Other mandatory inputs: wwmbnd.gr3 (boundary flag files; see below)
 ! Depending on the choices of parameters below you may need additional inputs
 
-!Notes on hotstart: (1) generate hotstart outputs from WWM; see &HOTFILE section. Turn on LHOTF and 
+!Notes on hotstart: see test case Test_WWM_limon_NODIF/Hot/ for an example.
+!(1) generate hotstart outputs from WWM; see &HOTFILE section. Turn on LHOTF and 
 ! match interval (see &HOTFILE) with SCHISM's so the 2 models can be hotstarted together. Use single nc output
 ! with last 2 records (default setting). Also need to make sure the start/end time info is correct 
 ! in &PROC, &HOTFILE; (2) to restart both models, copy the hot out to input (e.g. hotfile_in_WWM.nc),

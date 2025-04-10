@@ -1,15 +1,19 @@
 Input for ptrack*
 1 nscreen
 0 mod_part (0: passive; 1: oil spill)
-1 ibf
-0 istiff
-1 -122.6 37.38 ics slam0 sfea0
+0 ibiofoul (0: no biofouling; 1: with biofouling)
+1 ibf !(1: forward; -1: backward)
+0 istiff !1: fixed distance from surface
+0 ibnd_beh (behavior near bnd or wet/dry; 0: reflect off; 1: slide)
+1 -122.6 37.38 ics slam0 sfea0 (from param.nml)
 0.01 140. 120. 30 720 40 !h0,rnday,dtm,nspool,ihfskip,ndeltp
 2 !# of particles
 1   0.432000000E+05   0.334902000E+06   0.293906000E+06  0. !particle ID, starting time in sec, starting x,y,z (<=0, relative to the instantaneous surface)
 2   0.864000000E+05   0.334902000E+06   0.293906000E+06  0.
-!Oil spill parameters
-1  3.0  0.2           !ihdf,hdc,horcon
-1  0                  !ibuoy,iwind
-20.0                  !pbeach
+!Oil spill parameters needed only if mod_part=1
+1  3.0  0.2           !ihdf(0: constant diffusivity as hdc; 1: Smagorinsky),hdc,horcon (Smagorinsky coefficient)
+1  0                  !ibuoy (buoyancy off (0) or on (1)),iwind (wind effect off (0) or on (1))
+20.0                  !set minimum percentage of stranding on shore (particles may be stranded if the random # exceeds this threshold)
+!start of biofouling paramaters, needed only if ibiofoul=1
+2.5e-3 0. 6.e-6 0.83 1.38   !bio_R0,bio_BT0,bio_BR,bio_den0 (\rho_0),bio_den_biolayer (\rho_D)
 

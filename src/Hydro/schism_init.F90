@@ -30,6 +30,10 @@
       use netcdf
       use misc_modules
 
+#ifdef SH_MEM_COMM
+      use iso_c_binding, only: c_ptr, c_f_pointer
+#endif 
+
 #ifdef USE_PAHM
       use ParWind, only : ReadCsvBestTrackFile
       use PaHM_Utilities, only : ReadControlFile
@@ -195,7 +199,8 @@
      &ibcc_mean,flag_ic,start_year,start_month,start_day,start_hour,utc_start, &
      &itr_met,h_tvd,eps1_tvd_imp,eps2_tvd_imp,ip_weno, &
      &courant_weno,ntd_weno,nquad,epsilon1,i_epsilon2,epsilon2,epsilon3,ielad_weno,small_elad, &
-     &i_prtnftl_weno,inu_tr,step_nu_tr,vnh1,vnh2,vnf1,vnf2, &
+     &i_prtnftl_weno,inu_tr,step_nu_tr,vnh1,vnh2,vnf1,vnf2,iref_ts, &
+     &ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale,ref_ts_dt, &
      &moitn0,mxitn0,rtol0,iflux,inter_mom,h_bcc1,inu_elev,inu_uv, &
      &ihhat,kr_co,rmaxvel,velmin_btrack,btrack_nudge,ibtrack_test,irouse_test, &
      &inunfl,shorewafo,ic_elev,nramp_elev,inv_atm_bnd,prmsl_ref,s1_mxnbt,s2_mxnbt, &
@@ -209,11 +214,11 @@
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
-     &RADFLAG,niter_hdif
+     &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm, &
-     &iof_icm_ba,iof_icm_clam,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd, &
+     &iof_icm_ba,iof_icm_clam,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_mice,iof_ana,iof_marsh,iof_dvd, &
      &nhot,nhot_write,iout_sta,nspool_sta,iof_ugrid
 
 !-------------------------------------------------------------------------------
@@ -440,7 +445,7 @@
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), &
-     &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
+     &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_mice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
      &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1),stat=istat)
@@ -471,6 +476,8 @@
       courant_weno=0.5_rkind; ntd_weno=1; nquad=2; epsilon1=1.d-15; i_epsilon2=1; epsilon2=1.d-10; epsilon3=1.d-25; 
       ielad_weno=0; small_elad=1.d-4; i_prtnftl_weno=0;
       inu_tr(:)=0; step_nu_tr=86400._rkind; vnh1=400._rkind; vnh2=500._rkind; vnf1=0._rkind; vnf2=0._rkind;
+      iref_ts=0; ref_ts_h1=100.d0; ref_ts_h2=60.d0; ref_ts_restore_depth=50.d0 
+      ref_ts_tscale=100.d0; ref_ts_dt=30.d0
       moitn0=50; mxitn0=1500; rtol0=1.d-12; iflux=0; inter_mom=0; 
       h_bcc1=100._rkind; inu_elev=0; inu_uv=0; 
       ihhat=1; kr_co=1; rmaxvel=5._rkind; velmin_btrack=1.d-4; btrack_nudge=9.013d-3; 
@@ -500,6 +507,7 @@
       stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
       RADFLAG='LON' !if WWM is used, this will be overwritten
       niter_hdif=1
+      watertype_rr=0.58d0; watertype_d1=0.35d0; watertype_d2=23.d0
       veg_vert_z=(/((i-1)*0.4d0,i=1,nbins_veg_vert+1)/) ![m]
       veg_vert_scale_cd=(/(1.0d0,i=1,nbins_veg_vert+1)/) !scaling [-]
       veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
@@ -512,7 +520,7 @@
       iof_hydro(1)=1; iof_hydro(25:26)=1
       iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_srm=0; iof_icm_sav=0
       iof_icm_marsh=0; iof_icm_sfm=0; iof_icm_ba=0; iof_icm_clam=0; iof_cos=0; iof_fib=0; iof_sed2d=0
-      iof_ice=0; iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
+      iof_ice=0; iof_mice=0; iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
 
       read(15,nml=OPT)
       read(15,nml=SCHOUT)
@@ -537,9 +545,6 @@
         write(errmsg,*) 'Unknown ics',ics
         call parallel_abort(errmsg)
       endif
-
-!      if(itransport_only/=0.and.ielm_transport/=0) &
-!     &call parallel_abort('INIT: ielm_transport not available for itransport_only')
 
 !     Mass consv adjustment not working for SED
       if(iadjust_mass_consv0(5)>0) call parallel_abort('INIT: SED cannot use mass adjustment')
@@ -750,8 +755,8 @@
 #endif
 
 #ifdef USE_ATMOS
-      if(nws/=2) call parallel_abort('INIT: USE_ATMOS must use nws=2')
-      if(iwind_form==0) call parallel_abort('INIT: USE_ATMOS must not have iwind_form==0')
+      if(nws/=4) call parallel_abort('INIT: USE_ATMOS must use nws=4')
+!      if(iwind_form==0) call parallel_abort('INIT: USE_ATMOS must not have iwind_form==0')
 #endif
 
       if(ihconsv/=0) then
@@ -938,6 +943,20 @@
         call parallel_abort(errmsg)
       endif
 
+!...  Surface T,S relax for long-term simulations
+      if(iref_ts/=0.and.iref_ts/=1) then
+        write(errmsg,*)'Wrong iref_ts:',iref_ts
+        call parallel_abort(errmsg)
+      endif
+      if(iref_ts/=0.and.isconsv==0) then
+        write(errmsg,*)'Surface relax requires air-sea ex:',iref_ts,isconsv
+        call parallel_abort(errmsg)
+      endif
+
+      if(ref_ts_h1<=ref_ts_h2.or.ref_ts_restore_depth<=0.d0.or.ref_ts_tscale<=0.d0.or.ref_ts_dt<=0.d0) then
+        write(errmsg,*)'Wrong surface relax:',ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale,ref_ts_dt
+        call parallel_abort(errmsg)
+      endif
 
 !...  input information about hot start output
       if(nhot/=0.and.nhot/=1.or.nhot*mod(nhot_write,ihfskip)/=0) then
@@ -1400,7 +1419,7 @@
          &  veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
          &  veg_h_unbent(npa),veg_nv_unbent(npa),veg_di_unbent(npa), &
          &  wwave_force(2,nvrt,nsa),btaun(npa), &
-         &  rsxx(npa), rsxy(npa), rsyy(npa), stat=istat)
+         &  rsxx(npa),rsxy(npa),rsyy(npa),deta1_dxy_elem(nea,2),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -1416,6 +1435,11 @@
         allocate(sdbt(2+ntracers,nvrt,nsa),stat=istat)
       endif
       if(istat/=0) call parallel_abort('INIT: alloc sdbt failure')
+
+      if(iref_ts/=0) then
+        allocate(ref_ts1(npa,2),ref_ts2(npa,2),ref_ts(npa,2),stat=itmp)
+        if(itmp/=0) call parallel_abort('INIT: alloc failed (57)')
+      endif
 
 !     Offline transport
       if(itransport_only/=0) then
@@ -1728,6 +1752,7 @@
       wind_rotate_angle=0.d0
       wwave_force=0.d0
       diffmin=1.d-6; diffmax=1.d0
+      deta1_dxy_elem=0.d0
 
 !Tsinghua group
 #ifdef USE_SED 
@@ -2794,8 +2819,29 @@
         call mpi_bcast(nsinks,1,itype,0,comm,istat)
 
         if(iorder==0) then
+#ifdef SH_MEM_COMM
+          allocate(ieg_sink(max(1,nsinks)),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_sink failure(1)')
+
+          !On each node, rank 0 allocates the storage, other ranks allocate with size zero and get a pointer 
+          disp_unit = 4 ! size of real(4)
+          If (myrank_node==0) THEN
+            win_size = disp_unit * max(1,nsources,nsinks) * ntracers * 2 * nthfiles3
+            call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL, comm_node, c_window_ptr, h_win, istat)
+            if(istat/=0) call parallel_abort('INIT: MPI_Win_allocate failed, node rank 0')
+          ELSE
+            win_size = 0     
+            call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL, comm_node, c_window_ptr, h_win, istat) 
+            if(istat/=0) call parallel_abort('INIT: MPI_Win_allocate failed, node rank>0')
+            call MPI_Win_shared_query(h_win, 0, win_size, disp_unit, c_window_ptr, istat)
+            if(istat/=0) call parallel_abort('INIT: MPI_Win_shared_query failed, node rank>0')
+          ENDIF !myrank_node
+          ! point ath3 array at the shared buffer
+          call C_F_POINTER(c_window_ptr, ath3, SHAPE = [max(1,nsources,nsinks),ntracers,2,nthfiles3])
+#else  /*SH_MEM_COMM*/
           allocate(ieg_sink(max(1,nsinks)),ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
           if(istat/=0) call parallel_abort('INIT: ieg_sink failure')
+#endif /*SH_MEM_COMM*/
         endif
 
         if(myrank==0) then
@@ -2810,7 +2856,11 @@
       endif !if_source
 
       if(if_source==-1) then !nc
+#ifdef SH_MEM_COMM
+        if(myrank_node==0) then
+#else  /*SH_MEM_COMM*/
         if(myrank==0) then
+#endif /*SH_MEM_COMM*/
           j=nf90_open(in_dir(1:len_in_dir)//'source.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_source)
           if(j/=NF90_NOERR) call parallel_abort('init: source.nc')
           j=nf90_inq_dimid(ncid_source,'nsources',mm)
@@ -2843,18 +2893,43 @@
           if(j/=NF90_NOERR) call parallel_abort('init: time_step_vsink(2)')
           if(floatout<dt) call parallel_abort('INIT: dt_vsink wrong')
           th_dt3(2)=dble(floatout)
-        endif !myrank=0
+        endif !myrank*=0
+        !For share mem option, rank 0 also satisfied myrank_node=0
         call mpi_bcast(nsources,1,itype,0,comm,istat)
         call mpi_bcast(nsinks,1,itype,0,comm,istat)
         call mpi_bcast(th_dt3,nthfiles3,rtype,0,comm,istat)
 
         if(iorder==0) then
-          allocate(ieg_source(max(1,nsources)),ieg_sink(max(1,nsinks)), &
-     &ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
-          if(istat/=0) call parallel_abort('INIT: ieg_source failure(3)')
+#ifdef SH_MEM_COMM
+          allocate(ieg_source(max(1,nsources)),ieg_sink(max(1,nsinks)),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_sink failure(1)')
+
+          !On each node, rank 0 allocates the storage, other ranks allocate with size zero and get a pointer
+          disp_unit = 4 ! size of real(4)
+          If (myrank_node==0) THEN
+            win_size = disp_unit * max(1,nsources,nsinks) * ntracers * 2 * nthfiles3
+            call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL, comm_node, c_window_ptr, h_win, istat)
+            if(istat/=0) call parallel_abort('INIT: MPI_Win_allocate failed, node rank 0(1)')
+          ELSE
+            win_size = 0
+            call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL, comm_node, c_window_ptr, h_win, istat)
+            if(istat/=0) call parallel_abort('INIT: MPI_Win_allocate failed, node rank>0')
+            call MPI_Win_shared_query(h_win, 0, win_size, disp_unit, c_window_ptr, istat)
+            if(istat/=0) call parallel_abort('INIT: MPI_Win_shared_query failed, node rank>0 (1)')
+          ENDIF
+          !point ath3 array at the shared buffer
+          call C_F_POINTER(c_window_ptr, ath3, SHAPE = [max(1,nsources,nsinks),ntracers,2,nthfiles3])
+#else /*SH_MEM_COMM*/
+          allocate(ieg_source(max(1,nsources)),ieg_sink(max(1,nsinks)),ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_sink failure')
+#endif /*SH_MEM_COMM*/
         endif
 
+#ifdef SH_MEM_COMM
+        if(myrank_node==0) then
+#else
         if(myrank==0) then
+#endif
           if(nsources>0) then
             j=nf90_inq_varid(ncid_source, "source_elem",mm)
             if(j/=NF90_NOERR) call parallel_abort('init: source_elem')
@@ -2873,6 +2948,7 @@
      & call parallel_abort('init: check sink elem')
           endif !nsinks
         endif !myrank=0
+        !For share mem option, rank 0 also satisfied myrank_node=0
         call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
         call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source=-1
@@ -3333,14 +3409,13 @@
               call parallel_abort(errmsg)
             endif
             buf3(i)=tmp
-!            if(ipgl(i)%rank==myrank) iwater_type(ipgl(i)%id)=tmp
           enddo !i
           close(32)
         endif !myrank
         call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
 
         do i=1,np_global
-          if(ipgl(i)%rank==myrank) iwater_type(ipgl(i)%id)=buf3(i) !tmp
+          if(ipgl(i)%rank==myrank) iwater_type(ipgl(i)%id)=buf3(i) 
         enddo !i
       endif !ihconsv/
    
@@ -3754,6 +3829,12 @@
           call mpi_bcast(inu_pts_gb,mnu_pts*natrm,itype,0,comm,istat)
         endif
       enddo !k
+
+!     Surface T,S restoration: open nc handle
+      if(iref_ts/=0.and.myrank==0) then
+        j=nf90_open(in_dir(1:len_in_dir)//'surface_restore.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_ref_ts)
+        if(j/=NF90_NOERR) call parallel_abort('init: surface_restore.nc not found')
+      endif !iref_ts
 
 !     Vegetation inputs: veg_*.gr3
       veg_alpha0=0.d0 !=D*Nv*Cdv/2; init; D is diameter or leaf width; Cdv is form drag (veg_cd)
@@ -6315,6 +6396,33 @@
       enddo !i
 #endif /*USE_ICE*/
 
+#ifdef USE_MICE
+      if(iof_mice(2)==1) then
+        ncount_2dnode=ncount_2dnode+2
+        iout_23d(ncount_2dnode-1:ncount_2dnode)=1
+        out_name(ncount_2dnode-1)='iceVelocityX'
+        out_name(ncount_2dnode)='iceVelocityY'
+      endif
+
+      do i=3,5+ntr_ice
+        if(iof_mice(i)==1) then
+          ncount_2dnode=ncount_2dnode+1
+          iout_23d(ncount_2dnode)=1
+          if(i==3) then
+            out_name(ncount_2dnode)='iceNetHeatFlux'
+          else if(i==4) then
+            out_name(ncount_2dnode)='iceFreshwaterFlux'
+          else if(i==5) then
+            out_name(ncount_2dnode)='iceTopTemperature'
+          else 
+            write(ifile_char,'(i12)')i-5
+            ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)             
+            out_name(ncount_2dnode)='iceTracer_'//ifile_char(1:itmp2)
+          endif !i
+        endif !iof
+      enddo !i
+#endif /*USE_MICE*/
+
 !     Done with 2D node outputs; init counter_out_name to be used for other
 !     outputs
       counter_out_name=ncount_2dnode !index of out_name
@@ -6382,6 +6490,15 @@
 
 #ifdef USE_ICE
       if(iof_ice(1)==1) then
+        ncount_2delem=ncount_2delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)='iceStrainRate'
+        iout_23d(counter_out_name)=4
+      endif
+#endif
+
+#ifdef USE_MICE
+      if(iof_mice(1)==1) then
         ncount_2delem=ncount_2delem+1
         counter_out_name=counter_out_name+1
         out_name(counter_out_name)='iceStrainRate'

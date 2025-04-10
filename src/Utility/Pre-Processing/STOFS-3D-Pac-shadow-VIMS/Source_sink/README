@@ -20,3 +20,12 @@
                  sinks_{conus, alaska, hawaii}_global.json
                  cached/nwm_*_{conus, alaska, hawaii}.nc
 
+3. GLOFAS/
+   For newer version of the forecast, GLOFAS replaces Dai and Trenberth climatology.
+   If GLOFAS and NWM are being used in combination, then region files covering the NWM regions should be provided to process_GLOFAS_sourcesink_fcast_daily.py to exclude overlapping GLOFAS sources.
+   a. process_GLOFAS_sourcesink_fcast_preprocess.py: uses hgrid.gr3 and GLOFAS static file uparea_glofas_v4_0.nc to generate the indices from GLOFAS grid to use for extraction from data file, writes to 'preproc-glofas.npz', tested using shapely 2.0.7, rasterio 1.4, pylibs-ocean 1.2.2
+
+   b. process_GLOFAS_sourcesink_fcast_daily.py: uses 'preproc-glofas.npz' information plus a CDS API key to download daily GLOFAS forecasts from ECMWF, generates source_sink.in and vsource.th and msource.th, merges inputs where multiple rivers enter in the same element, doesn't apply flow/volume ratio cutoff for elements, so redistribute_source_new.f90 needs to be run after this step, uses pylibs-ocean only to read .reg files and inside_polygon function. Uses cdsapi 0.7.5., API key is expected in ~/.cdsapirc, but can be supplied as argument to cdsapi.Client() or as environment variable. data source url is specified in code.
+  
+   c. lewis_larger.reg: GLOFAS sources near river boundaries are automatically removed, but region files can be specified to exclude additional GLOFAS sources. In the NEW22 version of the Pacific model grid, the Lewis River (Columbia R. tributary) open boundary does not match the Lewis location in GLOFAS, so this region file is used to prevent double counting the Lewis River. 
+   

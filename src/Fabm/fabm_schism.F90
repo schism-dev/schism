@@ -11,8 +11,8 @@
 !> @author Jan Kossack <jan.kossack@hereon.de>
 !> @author Wang Zhenggui
 
-!> @copyright Copyright 2021-2022 Virginia Institute of Marine Science
 !> @copyright Copyright 2021-2024 Helmholtz-Zentrum hereon GmbH
+!> @copyright Copyright 2021-2022 Virginia Institute of Marine Science
 !> @copyright Copyright 2017-2021 Helmholtz-Zentrum Geesthacht GmbH
 !
 ! @license dual-licensed under the Apache License, Version 2.0
@@ -213,7 +213,6 @@ contains
 subroutine fabm_schism_init_model(ntracers)
 
   use misc_modules, only: get_param
-  use schism_glbl, only: start_day, start_year, start_month, start_hour
   
   implicit none
 
@@ -250,7 +249,7 @@ subroutine fabm_schism_init_model(ntracers)
     call get_param('schism_fabm.in','background_extinction',2,tmp_int,fs%background_extinction,tmp_string)
     call get_param('schism_fabm.in','par_fraction',2,tmp_int,fs%par_fraction,tmp_string)
   else
-    call driver%log_message('skipped reading non-existent "'// &
+    call driver%log_message('skipped reading optional "'// &
       in_dir(1:len_in_dir)//'schism_fabm.in"')
   end if
 
@@ -325,12 +324,6 @@ subroutine fabm_schism_init_model(ntracers)
 
   fs%tidx = 0
 
-  fs%day_of_year = 0.0_rk + start_day + month_offsets(start_month)
-  fs%seconds_of_day = start_hour * 3600.0_rk
-  !> @todo add leap year algorithm, what exactly is the calendric representation
-  !> of the SCHISM time stepping and how does that draw information for getting
-  !> the (calendric) sflux?
-
   if (present(ntracers)) ntracers = fs%nvar
 
   !read parameter from fabm.yaml (can put these parameters in other input files, e.g. schism_fabm.in)
@@ -352,6 +345,8 @@ end subroutine fabm_schism_init_model
 
 !> Initialize FABM internal fields
 subroutine fabm_schism_init_stage2
+
+  use schism_glbl, only: start_day, start_year, start_month, start_hour
 
   integer :: n, i
   integer, save, allocatable, target :: bottom_idx(:)
@@ -379,9 +374,9 @@ subroutine fabm_schism_init_stage2
 
   allocate(fs%mask_hz(ne))
   fs%mask_hz(:) = 0
-  where(kbe == nvrt) 
-    fs%mask_hz = 1
-  endwhere 
+  do i=1,ne
+    if (kbe(i) == nvrt) fs%mask_hz(i) = 1
+  enddo
 
 #ifndef _FABM_HORIZONTAL_MASK_
   allocate(fs%mask(nvrt,ne))
@@ -406,14 +401,21 @@ subroutine fabm_schism_init_stage2
 #endif
 
   allocate(bottom_idx(1:ne))
-  allocate(surface_idx(1:ne))
-  bottom_idx(:) = kbe(:)+1
-  surface_idx(:) = nvrt
+  do i=1,ne
+    bottom_idx(i) = kbe(i)+1
+  enddo
 
   call fs%model%set_bottom_index(bottom_idx)
 #if _FABM_API_VERSION_ < 1
   call fs%model%set_surface_index(nvrt)
 #endif
+
+  !> Initialize start time from input from SCHISM param.nml
+  fs%day_of_year = 0.0_rk + start_day + month_offsets(start_month)
+  fs%seconds_of_day = start_hour * 3600.0_rk                            
+  !> @todo add leap year algorithm, what exactly is the calendric representation
+  !> of the SCHISM time stepping and how does that draw information for getting
+  !> the (calendric) sflux?
 
   !> Allocate and initialize state variables.  All state variables have default
   !> initial values defined at registration.  These can be changed in fabm.yaml

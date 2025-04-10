@@ -1,5 +1,5 @@
 function [xnd,ynd,dp,i34,nm]=read_gr3(fname)
-%xnd,ynd,dp,i34,nm]=read_gr3(fname)
+%[xnd,ynd,dp,i34,nm]=read_gr3(fname)
 %e.g. read_gr3('hgrid.gr3')
 % fname: .gr3 name
 %Outputs: xnd(np),ynd(np),dp(np),i34(ne),nm(4,ne)

@@ -86,7 +86,7 @@ alpha  = 8.0   8.0  8.0  !init. slope of P-I curve (g[C]*m2/g[Chl]/E), (iLight=0
 !-----------------------------------------------------------------------
 !options of phytoplankton' predation term
 !-----------------------------------------------------------------------
-iPR = 1   !(0: linear formulation; 1: quadratic)
+iPR = 1    1      1    !(0: linear formulation; 1: quadratic)
 PRR = 0.1  0.2  0.05   !predation rate by higher trophic level (day-1, or day-1.g-1.m3)
 
 !-----------------------------------------------------------------------
@@ -170,7 +170,8 @@ nspool_icm = 24
 
 !-----------------------------------------------------------------------
 !ICM diagnostic outputs of sub-modules (0: OFF;  1: ON)
-!Note: it can output any model-related variables, but may need coding (developers)
+!Note: 1). it can output any model-related variables, but may need coding (developers)
+!      2). idbg=0/1/2 with different outputs
 !-----------------------------------------------------------------------
 !      Core  Silica  ZB   pH   SRM   SAV   Marsh  SFM  BA  Clam
 idbg =  0      0      0    0    0     0      0     0   0    0
@@ -261,7 +262,8 @@ an2c = 0.5                        !ratio of denit. rate to oxic DOC respiration 
 !misc
 KhDO =   0.5   0.5   0.5          !DO half saturation for PB's DOC excretion (mg/L)
 KPO4p=   0.0                      !coefficient relating PO4 sorption to TSS
-WRea =   0.0                      !baseline wind-induced reaeration coefficient for DO (day-1)
+WDOs=    1.0                      !coefficient for DO release under super-saturation (m2.day-1.L.mg-1)
+WRea =   0.0                      !baseline wind-induced reaeration coefficient for DO (m.day-1)
 PBmin=   0.01  0.01  0.01         !minimum PB concentration (mg[C]/L)
 dz_flux= 1.0   1.0                !surface/bottom thikness (m) within which sflux/bflux are redistributed
 /
@@ -446,6 +448,8 @@ inu_ph   = 0                  !nudge option for pH model
 !Submerged Aquatic Vegetation (SAV) parameters
 !-----------------------------------------------------------------------
 spatch0 = -999                     !region flag for SAV. (1: ON all elem.; -999: spatial)
+sFc     = 1.0                      !SAV bed fraction [0,1]
+iMTs    = 1                        !1:1st-order metabolism;  2: 2nd-order metabolism formulation
 sav0    = 100.0  50.0  10.0  20.0  !init. SAV leaf/stem/root/tuber conc. (g[C].m-2)
 
 !growth coefficients
@@ -478,6 +482,7 @@ s2ht   = 0.0036 0.0036 0.0  !coeffs. converting (leaf,stem,root) to canopy heigh
 sc2dw  = 0.38               !carbon to dry weight ratio of sav
 sn2c   = 0.09               !nitrogen to carbon ratio of sav
 sp2c   = 0.01               !phosphorus to carbon ratio
+savm   = 1.0  1.0  1.0  0.2   500.0  500.0  500.0  100  !minimum and maximum SAV leaf/stem/root/tuber conc (g[C].m-2)
 
 !----------------------
 !Epiphytes (activated when isav_icm=2)
@@ -555,6 +560,7 @@ vp2c   = 0.01   0.01   0.01   !phosphorus to carbon ratio [nmarsh]
 !vKPOM (order same as WSP): (PB1,PB2,PB3)   (RPOC,LPOC,DOC)   (RPON,LPON,DON,NH4,NO3)     (RPOP,LPOP,DOP,PO4)    (COD,DO)    (SRPOM, PIP)
 !----------------------
 vAw    =   0.1                !ratio between marsh area to adjacent water volume (m-1)
+vdz    =   2.0                !surface layer thickness that wetland effect is applied on (m)
 vKNO3  =   0.01               !mass-transfer coefficient for NO3 removal (m.day-1)
 vKTw   =   0.069              !temperature dependence for wetland effect (oC-1)
 vRTw   =   20                 !reference temperature for wetland effect (oC)
@@ -618,6 +624,10 @@ cDoyp   =  152 152 152 152 152    304 304 304 304 304 !date range for predation 
 cDoyh   =  122 122 122 122 122    274 274 274 274 274 !date range for predation (day of year)
 cn2c    =  0.167  0.167  0.167  0.167  0.167   !nitrogen to carbon ratio
 cp2c    =  0.011  0.011  0.011  0.011  0.011   !phosphorus to carbon ratio
+clamm   =  0.001  0.001  0.001  0.001  0.001    1.0  1.0  1.0  1.0  1.0   !minimum and maximum clam conc. [g[C].m-2)
+cFCM    =  0.0    0.5    0.5                   !partition of FPOC from clam to different G1-3 classes
+cFNM    =  0.0    0.5    0.5                   !partition of FPON from clam to different G1-3 classes
+cFPM    =  0.0    0.5    0.5                   !partition of FPOP from clam to different G1-3 classes
 /
 
 &ERO

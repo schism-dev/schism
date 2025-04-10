@@ -98,7 +98,7 @@ module schism_glbl
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_cos,iof_fib, &
-     &iof_sed2d,iof_ice,iof_ana,iof_marsh,iof_dvd,iadjust_mass_consv,lev_tr_source2(:)
+     &iof_sed2d,iof_ice,iof_mice,iof_ana,iof_marsh,iof_dvd,iadjust_mass_consv,lev_tr_source2(:)
 
   real(rkind),save :: dt,h0,drampbc,drampwind,drampwafo,dramp,dramp_ss,wtiminc,npstime,npstiminc, &
                       &surf_time1,surf_time2,time_nu,step_nu,time_nu_tr,step_nu_tr,dzb_min,vdmax_pp1, &
@@ -109,7 +109,8 @@ module schism_glbl
                       &xlsc0,rearth_pole,rearth_eq,hvis_coef0,disch_coef(10),hw_depth,hw_ratio, &
                       &slr_rate,rho0,shw,gen_wsett,turbinj,turbinjds,alphaw,h1_bcc,h2_bcc,vclose_surf_frac, &
                       &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
-                      &stemp_stc,stemp_dz(2)
+                      &stemp_stc,stemp_dz(2),ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
+                      &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2
   real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:)
 
   ! Misc. variables shared between routines
@@ -117,7 +118,7 @@ module schism_glbl
                   &ihconsv,isconsv,i_hmin_airsea_ex,i_hmin_salt_ex,ihdif,ntracers, & 
                   &ihydraulics,irouse_test,iwbl_itmax,nettype,nfltype, &
                   &ntetype,nsatype,ntrtype1(natrm),nettype2,nnode_et,nfltype2,nnode_fl, &
-                  &ntetype2,nsatype2,nnode_tr2(natrm),inu_tr(natrm), &
+                  &ntetype2,nsatype2,nnode_tr2(natrm),inu_tr(natrm),iref_ts, &
                   &nvar_sta,nout_sta,ntip,nbfr,itr_met,if_source,mass_source,nsources,nsinks, &
                   &max_flreg,irange_tr(2,natrm),nea_wwm,mnei_wwm,ne_wwm,neg_wwm, &
                   &max_iadjust_mass_consv,nsteps_from_cold
@@ -126,7 +127,7 @@ module schism_glbl
                       &vis_coe1,vis_coe2,h_bcc1,velmin_btrack,h_tvd,rmaxvel1,rmaxvel2, &
                       &difnum_max_l2,wtime1,wtime2,cmiu0, &
                       &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,veg_di0,veg_h0,veg_nv0, &
-                      &veg_cd0,dtb_min_transport,bounds_lon(2)
+                      &veg_cd0,dtb_min_transport,bounds_lon(2),time_ref_ts
 
 !  logical,save :: lm2d !2D or 3D model
   logical,save :: lhas_quad=.false. !existence of quads
@@ -164,7 +165,7 @@ module schism_glbl
   character(len= 4),save :: a_4
   integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D,irec0_schout, &
  &istack0_schout,ncid_source,ncid_schout(7),ncid_schout_2(7),nrec_schout,nstride_schout, &
- &ncid_atmos
+ &ncid_atmos,ncid_ref_ts
         
   ! ADT for global-to-local linked-lists
   type :: llist_type
@@ -387,7 +388,12 @@ module schism_glbl
                                   &ath(:,:,:,:),carea(:),clen(:),eta_mean(:),q_block(:),vnth_block(:,:), &
                                   &dir_block(:,:),q_block_lcl(:)
   real(4),save,allocatable :: ath2(:,:,:,:,:) !used to read *.nc for b.c. time series
+#ifdef SH_MEM_COMM
+  !Use more efficient share mem communicator for I/O
+  real(4),save,pointer :: ath3(:,:,:,:)
+#else
   real(4),save,allocatable :: ath3(:,:,:,:) !used to read source/sink inputs
+#endif
 
   ! Land boundary segment data
   integer,save :: nland_global                 ! Global number of land bndry segments
@@ -492,8 +498,10 @@ module schism_glbl
   real(rkind),save,allocatable :: srad_o(:)
   logical,save,allocatable :: lhas_ice(:)
   logical,save :: lice_free_gb
+  real(rkind),save,allocatable :: deta1_dxy_elem(:,:)
 
   real(4),save,dimension(:,:,:),allocatable :: trnd_nu1,trnd_nu2,trnd_nu
+  real(4),save,dimension(:,:),allocatable :: ref_ts1,ref_ts2,ref_ts
   integer,save,allocatable :: iadv(:),iwater_type(:) 
 
   !weno>

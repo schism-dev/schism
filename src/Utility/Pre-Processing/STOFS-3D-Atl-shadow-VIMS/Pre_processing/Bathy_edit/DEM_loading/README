@@ -1,12 +1,1 @@
-Temporary procedure:
-1. load depth using DEM_info_original.json
-  ln -s DEM_info_original.json DEM_info.json
-  run pload*py
-  save outputs to a sub dir Original
-  
-2. load depth with BlueTopo in a local region
-  ln -s DEM_info_with_bluetopo.json DEM_info.json
-  run pload
-  save outputs to a sub dir BlueTopo/
-
-3. use max*.py to get the maximum depth of the two hgrids (i.e., in the local region of Step 2) 
+See usage at the beginning of pload_dem2.py

@@ -1,22 +1,32 @@
-1. Download adt data
-  Install the tool "copernicusmarine" following https://help.marine.copernicus.eu/en/articles/7970514-copernicus-marine-toolbox-installation.
+Install the tool "copernicusmarine" following https://help.marine.copernicus.eu/en/articles/7970514-copernicus-marine-toolbox-installation.
 
-  Sample download command:
-  copernicusmarine subset --dataset-id cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.25deg_P1D -v adt -v sla -v err_sla -t 2024-04-01 -T 2024-04-10 -x -66.5 -X -52. -y 6.75 -Y 53.25 -f adt_test.nc --force-download --username xxx --password  XXXXXX
-  "cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.25deg_P1D" covers period from 31 Dec 2021 to now.
-  Change dataset-id to "c3s_obs-sl_glo_phy-ssh_my_twosat-l4-duacs-0.25deg_P1D" to download period from "31 Dec 1992 to 6 Jun 2023"
+Optional:
+  - Save login info using "copernicusmarine login"; otherwise you need to provide this info for every download.
+  
 
-  Sample script using python api:
-  see download_adt.py
-
-  Sample checking the availability of a variable:
+   - Sample checking the availability of a variable:
   copernicusmarine describe --include-datasets -c adt | less
 
 
+Download:
 
-Replace eta2 in hotstart.nc with ADT:
- replace_eta2_aviso.py 
+   - CLI: copernicusmarine subset --dataset-id cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.25deg_P1D -v adt -v sla -v err_sla -t 2024-04-01 -T 2024-04-10 -x -66.5 -X -52. -y 6.75 -Y 53.25 -f adt_test.nc --force-download --username xxx --password  XXXXXX
 
-Generate elev2D.th.nc with ADT:
-    gen_bnd_aviso.py (check file name in aviso2schism.py)
-    modify_elev.py (to apply adjustment in elev)
+
+   - Sample script using python api: download_adt.py, see more instructions at the beginning of the script.
+     The usage is straightforward.
+
+     For the STOFS-3D-Atlantic setup:
+	Use "minimum_longitude = -60, maximum_longitude = -53, minimum_latitude = 1, maximum_latitude = 55,"
+	This is a slice only covering the ocean boundary, mainly for elev2D.th.nc
+
+        Use "minimum_longitude = -105, maximum_longitude = -50, minimum_latitude = 1, maximum_latitude = 55,"
+	This covers the entire domain. This is mainly used for setting initial elevation, but you don't need to worry about this for now.
+
+
+
+Temporal coverage, change dataset-id:
+	31 Dec 2021 to present: "cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.25deg_P1D"
+	31 Dec 1992 to 6 Jun 2023: "c3s_obs-sl_glo_phy-ssh_my_twosat-l4-duacs-0.25deg_P1D" (discontinued on Nov 26, 2024; they probably will have a new id for it)
+
+

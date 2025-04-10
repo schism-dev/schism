@@ -20,19 +20,20 @@
 !       const. extrapolation is used, except if z=1.e10, in which case
 !       depth averaged value will be calculated (for 3D vars).
 !       Output time series for 3D variables (surface values for 2D variables), DEFINED AT NODES OR
-!       ELEMENTS.
+!       ELEMENTS. Can handle (overlapping) forecast (in this case, time origins of stacks are offset
+!       by a constant time)
 
 !       Inputs: 
 !              (1) screen; 
 !              (2) station.bp or station.sta
 !              (3) vgrid.in: in this dir or ../
-!              (4) out2d*.nc
-!              (4) nc outputs for that variable(tri-quad)
+!              (4) out2d*.nc 
+!              (5) nc outputs for that variable(tri-quad)
 
 !       Outputs: fort.1[89]; fort.21 (magnitude), fort.22 (dir in deg in math convention); fort.20 - local depth for each pt.
 !       For ics=2 (e.g. for lon/lat), use nearest node for output
 !											
-!   ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output10_xyz.exe ../UtilLib/extract_mod2.f90  ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output10_xyz.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!   ifx -mcmodel=medium -assume byterecl -CB -O2 -o read_output10_xyz.exe ../UtilLib/extract_mod2.f90  ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output10_xyz.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !****************************************************************************************
 !
       program read_out
@@ -83,6 +84,17 @@
       print*, 'Is the z-coord. in station.* relative to surface (1) or a fixed level (0)?'
       read(*,*) ifs
 !'
+
+      print*, 'Is this a hindcast (0) or forecast(1):'
+      read(*,*)iforecast
+      if(iforecast/=0) then
+        print*, 'Input start and end record # to extract frm each stack:'
+        read(*,*)ifct_rec1,ifct_rec2
+        if(ifct_rec1>ifct_rec2) stop 'ifct_rec1>ifct_rec2'
+        print*, 'Input offset in days between origins of consecutive stacks:'
+        read(*,*)offset_origin
+      endif
+
       if(ibp==1) then !.bp format
         open(10,file='station.bp',status='old')
         read(10,*) 
@@ -194,8 +206,10 @@
 
 !...  Time iteration
 !...
+      !Start time at the start of stack for forecast mode
       do iday=iday1,iday2
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      start_time0=offset_origin*86400*(iday-1) !start time of this stack (sec)
       write(it_char,'(i12)')iday
       it_char=adjustl(it_char)
       leng=len_trim(it_char)
@@ -287,11 +301,22 @@
               endif
             enddo !j
           enddo !i
-          write(18,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1,1),i=1,nxy)
-          if(ivs==2) then
-            write(19,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1,2),i=1,nxy)
-            write(21,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(sqrt(out2(i,1,1)**2+out2(i,1,2)**2),i=1,nxy)
-            write(22,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(atan2(out2(i,1,2),out2(i,1,1))/pi*180,i=1,nxy)
+
+          if(iforecast==0) then !hindcast
+            write(18,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1,1),i=1,nxy)
+            if(ivs==2) then
+              write(19,'(e16.8,20000(1x,e14.6))')timeout(irec)/86400,(out2(i,1,2),i=1,nxy)
+              write(21,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(sqrt(out2(i,1,1)**2+out2(i,1,2)**2),i=1,nxy)
+              write(22,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(atan2(out2(i,1,2),out2(i,1,1))/pi*180,i=1,nxy)
+            endif
+          else if(irec>=ifct_rec1.and.irec<=ifct_rec2) then !forecast
+            tout=start_time0+dtout*irec
+            write(18,'(e16.8,20000(1x,e14.6))')tout/86400,(out2(i,1,1),i=1,nxy)
+            if(ivs==2) then
+              write(19,'(e16.8,20000(1x,e14.6))')tout/86400,(out2(i,1,2),i=1,nxy)
+              write(21,'(e16.8,20000(1x,f14.6))')tout/86400,(sqrt(out2(i,1,1)**2+out2(i,1,2)**2),i=1,nxy)
+              write(22,'(e16.8,20000(1x,f14.6))')tout/86400,(atan2(out2(i,1,2),out2(i,1,1))/pi*180,i=1,nxy)
+            endif
           endif
         else !3D
 !         Do interpolation
@@ -396,11 +421,22 @@
               endif !depth average or not
             endif !dry/wet
           enddo !i=1,nxy
-          write(18,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i,1),i=1,nxy)
-          if(ivs==2) then
-            write(19,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i,2),i=1,nxy)
-            write(21,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(sqrt(out3(i,1)**2+out3(i,2)**2),i=1,nxy)
-            write(22,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(atan2(out3(i,2),out3(i,1))/pi*180,i=1,nxy)
+
+          if(iforecast==0) then !hindcast
+            write(18,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i,1),i=1,nxy)
+            if(ivs==2) then
+              write(19,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(out3(i,2),i=1,nxy)
+              write(21,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(sqrt(out3(i,1)**2+out3(i,2)**2),i=1,nxy)
+              write(22,'(e16.8,20000(1x,f14.6))')timeout(irec)/86400,(atan2(out3(i,2),out3(i,1))/pi*180,i=1,nxy)
+            endif
+          else if(irec>=ifct_rec1.and.irec<=ifct_rec2) then !forecast
+            tout=start_time0+dtout*irec
+            write(18,'(e16.8,20000(1x,f14.6))')tout/86400,(out3(i,1),i=1,nxy)
+            if(ivs==2) then
+              write(19,'(e16.8,20000(1x,f14.6))')tout/86400,(out3(i,2),i=1,nxy)
+              write(21,'(e16.8,20000(1x,f14.6))')tout/86400,(sqrt(out3(i,1)**2+out3(i,2)**2),i=1,nxy)
+              write(22,'(e16.8,20000(1x,f14.6))')tout/86400,(atan2(out3(i,2),out3(i,1))/pi*180,i=1,nxy)
+            endif
           endif
          
         endif !i23d
@@ -408,7 +444,6 @@
       iret=nf90_close(ncid)
       iret=nf90_close(ncid4)
       if(ivs==2) iret=nf90_close(ncid2)
-
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       enddo !iday
 

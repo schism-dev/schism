@@ -36,7 +36,7 @@ def gen_sourcesink_nwm(startdate: datetime, rnday: float, cache_folder: Path = N
     output_directory = Path.cwd()
 
     # input directory which saves nc files
-    if cache_folder is not None and cache_folder.exists():  # if cache folder exists, use it
+    if cache_folder is not None and os.path.exists(cache_folder):  # if cache folder exists, use it
         cache = cache_folder
     else:  # if cache folder does not exist, create it
         cache = Path(f'./{startdate.strftime("%Y%m%d")}')
@@ -65,7 +65,7 @@ def main():
     working_dir = Path('/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I12z/Source_sink/relocated_source_sink/')
     cache_folder = Path('/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I12z/Source_sink/original_source_sink/20240305/')
     os.chdir(working_dir)
-    gen_sourcesink(datetime(2024, 3, 5), 5, cache_folder=cache_folder)
+    gen_sourcesink_nwm(datetime(2024, 3, 5), 5, cache_folder=cache_folder)
 
 
 if __name__ == '__main__':
