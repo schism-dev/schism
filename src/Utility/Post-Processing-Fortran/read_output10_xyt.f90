@@ -35,7 +35,7 @@
 !       Outputs: fort.1[89]; fort.11 (fatal errors); fort.12: nonfatal errors.
 !                The total # of 'virtual' casts for each actual cast is 2*window/stride+2
 !									
-! ifort -mcmodel=medium -assume byterecl -CB -O2 -o read_output10_xyt.exe ../UtilLib/extract_mod2.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output10_xyt.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+! ifx -mcmodel=medium -assume byterecl -CB -O2 -o read_output10_xyt.exe ../UtilLib/extract_mod2.f90 ../UtilLib/compute_zcor.f90 ../UtilLib/pt_in_poly_test.f90 read_output10_xyt.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 !****************************************************************************************
 !
       program read_out
@@ -369,6 +369,7 @@
             out4(1,:)=out2(1,1,:)*(1-trat)+out2(2,1,:)*trat
           endif
           write(18,'(e16.8,4(1x,f12.3))')t00(i)/86400,out4(1,:)
+          write(18,*)'&' !for gr5
         else !3D
           if(iep(i)==0) then !no parents
             out4=rjunk
@@ -386,6 +387,8 @@
             write(18,'(i6,4(1x,f12.3))')i,out4(k,1),ztmp(k)-ztmp(nvrt),ztmp(k),t00(i)/86400
             if(ivs==2) write(19,'(i6,4(1x,f12.3))')i,out4(k,2),ztmp(k)-ztmp(nvrt),ztmp(k),t00(i)/86400
           enddo !k
+          write(18,*)'&'  !for gr5
+          if(ivs==2) write(19,*)'&'
         endif
       enddo !i=1,nxy
 
