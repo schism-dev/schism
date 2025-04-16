@@ -3040,7 +3040,7 @@
                   call parallel_abort(errmsg)
               end select
             endif
-          endif
+          endif !mid
 
 !         Wall proximity function      
           if(mid.eq.'MY'.or.mid.eq.'KL') then
