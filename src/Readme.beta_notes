@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-- `` (17 April 2025): added 3 optional parameters underitur=3,5: icompute_cpsi3, iscnd_coeff,ri_st 
+- `5ff6e6e6` (17 April 2025): added 3 optional parameters underitur=3,5: icompute_cpsi3, iscnd_coeff,ri_st (using steady-state Richardson # to compute c_psi3) 
 - `0c46ec84` (1 Mar 2025): added water type '8', which requires user to specify 'watertype_rr',
                            'watertype_d[1,2]' in param.nml;
 
