@@ -1,0 +1,40 @@
+cseaton 2025/04/04
+**python scripts**
+python scripts use argparse, so --help will show list of arguments
+
+1) download_GLOFAS.py                              run daily to download data from Copernicus, uses cdsapi, requires CDS personal key in home directory (or as argument in code) 
+							wildly variable runtime (seconds to hours) depending on server responsiveness
+2) process_GLOFAS_sourcesink_fcast_daily.py        run daily to process downloaded data into source_sink.in, vsource.th, msource.th, outputs need to be run through redistribute_source.f90
+
+**slurm scripts**
+1) forecast.sh                           runs all the .sub jobs in sequence
+2) glofasdownload.sub                    download current day glofas file  (uses glofasdownload conda environment)
+3) glofasdaily.sub                       dynamic processing of download glofas file for current day (uses glofasdaily conda envirnoment)
+4) source_sink/redist_source.sub       redistributes the sources if they exceed the discharge/volume ratio, creating source_sink.in, vsource.th and msource.th (with -999 values)
+
+
+**directories**
+prep/               contains glofas_prep.npz file needed for glofasdaily.sub (given as an argument to process_GLOFAS_sourcesink_fcast_daily.py)
+download/           download file location  (given as an argument to download_GLOFAS.py)
+source_sink/       contains source sink redistribution process  (specified in glofasdaily.sub as location to copy output files)
+
+**conda environments**
+envs/ contains yaml manifests
+glofasdownload:        cdsapi (installed with pip)
+glofasdaily:           numpy, netCDF4
+
+**fortran code**
+source_sink/redistribute_source.f90     standard version from  schism/src/Utility/Pre-Processing/
+
+**static files**
+prep/glofas_prep.npz                     specifies locations at which to extract from GloFAS, and mapping to grid elements 
+source_sink/redistribute_source.in      specifies the regions to exclude from redistributing sources based on discharge/volume ratios  (redistribute not applied in estuaries and rivers)
+hgrid.gr3                                (needed for redistribute code)
+
+**generated files**
+download/GLOFAS-global-today.nc            daily download of glofas data
+redistribute/
+      source_sink.in, vsource.th, msource.th      standard input files  
+      source_sink.in.0, vsource.th.0              standard input files before redistribution
+      vsource.bp.0                                source mean fluxes at locations in .bp format for sanity checking/visualization
+
