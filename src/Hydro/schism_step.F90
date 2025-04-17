@@ -3020,27 +3020,36 @@
           endif !iveg
 
 !         Compute c_psi_3
-          if(mid.eq.'MY') then
-            cpsi3(k)=0.9d0
-          else !GLS models
+          if(icompute_cpsi3==0) then !use constants
+            if(mid.eq.'MY') then
+              cpsi3(k)=0.9d0
+            else !GLS models
+              if(rzbt(k)>0) then !unstable
+                cpsi3(k)=1.d0
+              else !stable
+                select case(mid)
+                  case('KL')
+                    cpsi3(k)=2.53d0
+                  case('KE')
+                    cpsi3(k)=-0.52d0
+                  case('KW')
+                    cpsi3(k)=-0.58d0
+                  case('UB')
+                    cpsi3(k)=0.1d0
+                  case default
+                    write(errmsg,*)'Unknown closure model:',mid
+                    call parallel_abort(errmsg)
+                end select
+              endif
+            endif !mid
+          else !icompute_cpsi3/=0: compute cpsi3(minus)
             if(rzbt(k)>0) then !unstable
-              cpsi3(k)=1.d0
-            else !stable
-              select case(mid)
-                case('KL')
-                  cpsi3(k)=2.53d0
-                case('KE')
-                  cpsi3(k)=-0.52d0
-                case('KW')
-                  cpsi3(k)=-0.58d0
-                case('UB')
-                  cpsi3(k)=0.1d0
-                case default
-                  write(errmsg,*)'Unknown closure model:',mid
-                  call parallel_abort(errmsg)
-              end select
-            endif
-          endif !mid
+              !In turbulence.F90: cpsi3plus=(1.5-ce3plus)*gen_n+gen_m
+              cpsi3(k)=0.5d0*rnub+rmub
+            else
+              cpsi3(k)=cpsi3_comp
+            endif !rzbt
+          endif !icompute_cpsi3
 
 !         Wall proximity function      
           if(mid.eq.'MY'.or.mid.eq.'KL') then

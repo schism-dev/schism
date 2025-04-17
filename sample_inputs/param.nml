@@ -615,6 +615,9 @@
   stab = 'KC' !needed if itur=3 or 5. Use 'GA' if turb_met='MY'; otherwise use 'KC'. 
   xlsc0 = 0.1 !needed if itur=3 or 5. Scale for surface & bottom mixing length (>0)
   icompute_cpsi3 = 0 !needed if itur=3,5; optional to compute c_psi3
+  !2nd-order stability function coefficient options (1:7)
+  !5: Canuto A; 6: Canuto B (see misc_subs.F90 for other options)
+  iscnd_coeff = 5 
   ri_st = 0.25 !needed if itur=3,5 and icompute_cpsi3/=0
 
 !-----------------------------------------------------------------------

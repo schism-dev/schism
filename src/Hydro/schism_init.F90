@@ -194,7 +194,7 @@
      &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,drampbc, &
      &dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min, &
      &hmin_man,ncor,rlatitude,coricoef,nws,wtiminc,iwind_form, &
-     &drampwind,iwindoff,ihconsv,isconsv,itur,icompute_cpsi3,ri_st,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
+     &drampwind,iwindoff,ihconsv,isconsv,itur,icompute_cpsi3,iscnd_coeff,ri_st,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
      &vdmax_pp2,vdmin_pp1,vdmin_pp2,tdmin_pp1,tdmin_pp2,mid,stab,xlsc0, &
      &ibcc_mean,flag_ic,start_year,start_month,start_day,start_hour,utc_start, &
      &itr_met,h_tvd,eps1_tvd_imp,eps2_tvd_imp,ip_weno, &
@@ -468,7 +468,7 @@
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
       nws=0; wtiminc=dt; iwind_form=1; iwindoff=0;
       drampwind=1._rkind; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; i_hmin_salt_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
-      h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind; icompute_cpsi3=0; ri_st=0.25d0
+      h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind; icompute_cpsi3=0; ri_st=0.25d0; iscnd_coeff=5
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
       ibcc_mean=0; flag_ic(:)=1; start_year=2000; start_month=1; start_day=1; start_hour=0._rkind; utc_start=0._rkind;  
@@ -3538,7 +3538,7 @@
           !Compute cpsi3(minus) from steady-state Richardson # as option
           if(icompute_cpsi3/=0) then
             call compute_cpsi3
-            if(myrank==0) write(16,*)'cpsiminus=',cpsi3_comp
+            if(myrank==0) write(16,*)'cpsi3minus=',cpsi3_comp
           endif
 
 !0825...Tsinghua group

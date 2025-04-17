@@ -87,7 +87,7 @@ module schism_glbl
                   &ibc,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
                   &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
                   &fwvor_streaming,fwvor_wveg,fwvor_wveg_NL,cur_wwm,wafo_obcramp, &
-                  &iwind_form,irec_nu,itur,icompute_cpsi3,ihhat,inu_elev, &
+                  &iwind_form,irec_nu,itur,icompute_cpsi3,iscnd_coeff,ihhat,inu_elev, &
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,iveg, &

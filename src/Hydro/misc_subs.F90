@@ -3050,6 +3050,28 @@
 ! $c_{\psi 1}$ and $c_{\psi 2}$ according to \eq{Ri_st}.
 ! A Newton-iteration is used to solve the resulting
 ! implicit non-linear equation.
+!
+! \cite{Umlaufetal2003} showed that in the context of models considered
+! in GOTM, the steady-state Richardson number is determined by the
+! relation
+! \begin{equation}
+!   \label{Ri_st}
+!   Ri_{st}=\dfrac{c_\mu}{{c_\mu}'} \dfrac{c_{\psi 2} - c_{\psi 1}}{c_{\psi 2} - c_{\psi 3}}
+!   \point
+! \end{equation}
+! Since it is well-known that, with the equilibrium assumption $P+G=\epsilon$,
+! stability functions reduce to functions of $Ri$ only
+! (\cite{MellorYamada74}, \cite{Galperinetal88}), \eq{Ri_st} is a
+! non-linear equation for the model constant $c_{\psi 3}$ for given
+! $Ri_{st}$. Note, that the structure parameters, $m$ and $n$, do not
+! appear in \eq{Ri_st}. This implies that the type of the two-equation
+! model is irrelevant for the prediction of the mixed layer depth, as
+! long as \eq{Ri_st} is fulfilled for identical $Ri_{st}$. Numerical
+! examples with very different values of $m$ and $n$ confirmed indeed
+! that the mixed layer depth only depends on $Ri_{st}$.
+! The experiment of \cite{KatoPhillips69} could almost perfectly be
+! reproduced, provided the parameter $c_{\psi 3}$ was chosen to
+! correspond to $Ri_{st}\approx0.25$, see \cite{Umlaufetal2003}.
 !-----------------------------------------------------------------------
    subroutine compute_cpsi3
    !Inputs: cpsi1,cpsi2,ri_st
@@ -3098,10 +3120,10 @@
 !               call cmue_rf(2)
 !         end select
 !      else
-      call cmue_d(2,cmue1,cmue2)
+      call cmue_d(2,an,as,cmue1,cmue2)
 !      end if
       fc=cmue1*an(1)/ri_st-cmue2*an(1)-cmiu0**(-3)
-      an(1)=ann+e
+      an(1)=ann+e !perturb
       as(1)=an(1)/ri_st
 !      if (turb_method.eq.2) then
 !         select case(stab_method)
@@ -3116,13 +3138,14 @@
 !               call cmue_rf(2)
 !         end select
 !      else
-      call cmue_d(2,cmue1,cmue2)
+      call cmue_d(2,an,as,cmue1,cmue2)
 !      end if
       fp=cmue1*an(1)/ri_st-cmue2*an(1)-cmiu0**(-3)
+      if(fp==fc) call parallel_abort('MISC, compute_cpsi3: fp=fc')
       step=-fc/((fp-fc)/e)
       ann=ann+0.5*step
       if (abs(step)>100.d0) then
-        call parallel_abort('Method for calculating c3 does not converge maybe due to ri_st')
+        call parallel_abort('MISC, compute_cpsi3: Method for calculating c3 does not converge maybe due to ri_st')
       endif
       if (abs(step)<1.d-10) exit
    enddo !i
@@ -3143,9 +3166,10 @@
 !            call cmue_rf(2)
 !      end select
 !   else
-   call cmue_d(2,cmue1,cmue2)
+   call cmue_d(2,an,as,cmue1,cmue2)
 !   end if
 
+  if(cmue2==0.d0) call parallel_abort('MISC, compute_cpsi3: cmue2=0')
    cpsi3_comp = cpsi2+(cpsi1-cpsi2)/ri_st*cmue1/cmue2
 
 !-----------------------------------------------------------------------
@@ -3158,7 +3182,7 @@
 ! !ROUTINE: The quasi-equilibrium stability functions \label{sec:cmueD}
 !
 ! !INTERFACE:
-   subroutine cmue_d(nlev,cmue1,cmue2)
+   subroutine cmue_d(nlev,an,as,cmue1,cmue2)
 !
 ! !DESCRIPTION:
 !
@@ -3193,13 +3217,14 @@
 !   use turbulence, only: a1,a2,a3,a4,a5
 !   use turbulence, only: at1,at2,at3,at4,at5
 
-   use schism_glbl, only: rkind,cmiu0
+   use schism_glbl, only: rkind,cmiu0,iscnd_coeff
    use schism_msgp, only : parallel_abort
    IMPLICIT NONE
 
 ! !INPUT PARAMETERS:
 !  number of vertical layers (set as 2 for homogeneous case)
-   integer, intent(in)       :: nlev
+   integer, intent(in)       :: nlev !hard coded as 2
+   real(rkind), intent(inout) :: an(1),as(1)
    real(rkind), intent(out) :: cmue1,cmue2  
 
 ! !DEFINED PARAMETERS:
@@ -3216,7 +3241,7 @@
 !
      integer :: i
      real(rkind) :: N,Nt,d0,d1,d2,d3,d4,d5,n0,n1,n2,nt0,nt1,nt2,dCm,nCm,nCmp,cm3_inv, &
-     &tmp0,tmp1,tmp2,asMax,asMaxNum,asMaxDen,anMin,anMinNum,anMinDen,an(1),as(1)
+     &tmp0,tmp1,tmp2,tmp10,asMax,asMaxNum,asMaxDen,anMin,anMinNum,anMinDen
 !-----------------------------------------------------------------------
 !BOC
 
@@ -3313,14 +3338,15 @@
    real(rkind),  parameter                :: ct5CCH02    =  0.3333
    real(rkind),  parameter                :: cttCCH02    =  0.8200
 
-   integer, parameter                  :: LIST        = 0
-   integer, parameter                  :: GL78        = 1
-   integer, parameter                  :: MY82        = 2
-   integer, parameter                  :: KC94        = 3
-   integer, parameter                  :: LDOR96      = 4
-   integer, parameter                  :: CHCD01A     = 5
-   integer, parameter                  :: CHCD01B     = 6
-   integer, parameter                  :: CCH02       = 7
+   !Type of 2nd-order stability function options
+   integer, parameter                  :: LIST        = 0 
+   integer, parameter                  :: GL78        = 1 !Gibson & Launder 1978
+   integer, parameter                  :: MY82        = 2 !Mellor-Yamada 1982
+   integer, parameter                  :: KC94        = 3 !Kantha & Clayson 1994
+   integer, parameter                  :: LDOR96      = 4 !Luyen 1996
+   integer, parameter                  :: CHCD01A     = 5 !Canuto A
+   integer, parameter                  :: CHCD01B     = 6 !Canuto B
+   integer, parameter                  :: CCH02       = 7 !Cheng 2002
 
    real(rkind) :: cc1,cc2,cc3,cc4,cc5,cc6,ct1,ct2,ct3,ct4,ct5,ctt,a1,a2,a3,a4,a5,at1,at2,at3,at4,at5
 
@@ -3336,63 +3362,62 @@
 !-----------------------------------------------------------------------
 !BOC
 
-!YJZ: only kept Canuto A
-!  select case (scnd_coeff)
+  select case (iscnd_coeff)
 !  case (LIST)
-!     !  do nothing, parameters are read from namelist
-!  case (GL78)
-!     cc1     =    cc1GL78
-!     cc2     =    cc2GL78
-!     cc3     =    cc3GL78
-!     cc4     =    cc4GL78
-!     cc5     =    cc5GL78
-!     cc6     =    cc6GL78
-!     ct1     =    ct1GL78
-!     ct2     =    ct2GL78
-!     ct3     =    ct3GL78
-!     ct4     =    ct4GL78
-!     ct5     =    ct5GL78
-!     ctt     =    cttGL78
-!  case (MY82)
-!     cc1     =    cc1MY82
-!     cc2     =    cc2MY82
-!     cc3     =    cc3MY82
-!     cc4     =    cc4MY82
-!     cc5     =    cc5MY82
-!     cc6     =    cc6MY82
-!     ct1     =    ct1MY82
-!     ct2     =    ct2MY82
-!     ct3     =    ct3MY82
-!     ct4     =    ct4MY82
-!     ct5     =    ct5MY82
-!     ctt     =    cttMY82
-!  case (KC94)
-!     cc1     =    cc1KC94
-!     cc2     =    cc2KC94
-!     cc3     =    cc3KC94
-!     cc4     =    cc4KC94
-!     cc5     =    cc5KC94
-!     cc6     =    cc6KC94
-!     ct1     =    ct1KC94
-!     ct2     =    ct2KC94
-!     ct3     =    ct3KC94
-!     ct4     =    ct4KC94
-!     ct5     =    ct5KC94
-!     ctt     =    cttKC94
-!  case (LDOR96)
-!     cc1     =    cc1LDOR96
-!     cc2     =    cc2LDOR96
-!     cc3     =    cc3LDOR96
-!     cc4     =    cc4LDOR96
-!     cc5     =    cc5LDOR96
-!     cc6     =    cc6LDOR96
-!     ct1     =    ct1LDOR96
-!     ct2     =    ct2LDOR96
-!     ct3     =    ct3LDOR96
-!     ct4     =    ct4LDOR96
-!     ct5     =    ct5LDOR96
-!     ctt     =    cttLDOR96
-!  case (CHCD01A)
+!  do nothing, parameters are read from namelist
+  case (1) !GL78: Gibson & Launder 1978
+     cc1     =    cc1GL78
+     cc2     =    cc2GL78
+     cc3     =    cc3GL78
+     cc4     =    cc4GL78
+     cc5     =    cc5GL78
+     cc6     =    cc6GL78
+     ct1     =    ct1GL78
+     ct2     =    ct2GL78
+     ct3     =    ct3GL78
+     ct4     =    ct4GL78
+     ct5     =    ct5GL78
+     ctt     =    cttGL78
+  case (2) !MY82: Mellor-Yamada 1982
+     cc1     =    cc1MY82
+     cc2     =    cc2MY82
+     cc3     =    cc3MY82
+     cc4     =    cc4MY82
+     cc5     =    cc5MY82
+     cc6     =    cc6MY82
+     ct1     =    ct1MY82
+     ct2     =    ct2MY82
+     ct3     =    ct3MY82
+     ct4     =    ct4MY82
+     ct5     =    ct5MY82
+     ctt     =    cttMY82
+  case (3) !KC94: Kantha & Clayson 1994
+     cc1     =    cc1KC94
+     cc2     =    cc2KC94
+     cc3     =    cc3KC94
+     cc4     =    cc4KC94
+     cc5     =    cc5KC94
+     cc6     =    cc6KC94
+     ct1     =    ct1KC94
+     ct2     =    ct2KC94
+     ct3     =    ct3KC94
+     ct4     =    ct4KC94
+     ct5     =    ct5KC94
+     ctt     =    cttKC94
+  case (4) !LDOR96: Luyen 1996
+     cc1     =    cc1LDOR96
+     cc2     =    cc2LDOR96
+     cc3     =    cc3LDOR96
+     cc4     =    cc4LDOR96
+     cc5     =    cc5LDOR96
+     cc6     =    cc6LDOR96
+     ct1     =    ct1LDOR96
+     ct2     =    ct2LDOR96
+     ct3     =    ct3LDOR96
+     ct4     =    ct4LDOR96
+     ct5     =    ct5LDOR96
+     ctt     =    cttLDOR96
+  case (5) !CHCD01A: Canuto A
      cc1     =    cc1CHCD01A
      cc2     =    cc2CHCD01A
      cc3     =    cc3CHCD01A
@@ -3405,38 +3430,35 @@
      ct4     =    ct4CHCD01A
      ct5     =    ct5CHCD01A
      ctt     =    cttCHCD01A
-!  case (CHCD01B)
-!     cc1     =    cc1CHCD01B
-!     cc2     =    cc2CHCD01B
-!     cc3     =    cc3CHCD01B
-!     cc4     =    cc4CHCD01B
-!     cc5     =    cc5CHCD01B
-!     cc6     =    cc6CHCD01B
-!     ct1     =    ct1CHCD01B
-!     ct2     =    ct2CHCD01B
-!     ct3     =    ct3CHCD01B
-!     ct4     =    ct4CHCD01B
-!     ct5     =    ct5CHCD01B
-!     ctt     =    cttCHCD01B
-!  case (CCH02)
-!     cc1     =    cc1CCH02
-!     cc2     =    cc2CCH02
-!     cc3     =    cc3CCH02
-!     cc4     =    cc4CCH02
-!     cc5     =    cc5CCH02
-!     cc6     =    cc6CCH02
-!     ct1     =    ct1CCH02
-!     ct2     =    ct2CCH02
-!     ct3     =    ct3CCH02
-!     ct4     =    ct4CCH02
-!     ct5     =    ct5CCH02
-!     ctt     =    cttCCH02
-!  case default
-!     STDERR '... not a valid parameter set'
-!     STDERR 'Choose different value for scnd_coeff'
-!     STDERR 'Program execution stopped ...'
-!     stop 'turbulence.F90'
-!  end select
+  case (6) !CHCD01B: Canuto B
+     cc1     =    cc1CHCD01B
+     cc2     =    cc2CHCD01B
+     cc3     =    cc3CHCD01B
+     cc4     =    cc4CHCD01B
+     cc5     =    cc5CHCD01B
+     cc6     =    cc6CHCD01B
+     ct1     =    ct1CHCD01B
+     ct2     =    ct2CHCD01B
+     ct3     =    ct3CHCD01B
+     ct4     =    ct4CHCD01B
+     ct5     =    ct5CHCD01B
+     ctt     =    cttCHCD01B
+  case (7) !CCH02: Cheng 2002
+     cc1     =    cc1CCH02
+     cc2     =    cc2CCH02
+     cc3     =    cc3CCH02
+     cc4     =    cc4CCH02
+     cc5     =    cc5CCH02
+     cc6     =    cc6CCH02
+     ct1     =    ct1CCH02
+     ct2     =    ct2CCH02
+     ct3     =    ct3CCH02
+     ct4     =    ct4CCH02
+     ct5     =    ct5CCH02
+     ctt     =    cttCCH02
+  case default
+     call parallel_abort('MISC: cmue_d: unknown iscnd_coeff')
+  end select
 
    !  compute the a_i's for the Algebraic Stress Model
    a1   =  2./3. - cc2/2.
@@ -3476,10 +3498,12 @@
 
      cm3_inv = 1./cmiu0**3
 
-
  !   mininum value of "an" to insure that "as" > 0 in equilibrium
-     anMinNum  = -(d1 + nt0) + sqrt((d1+nt0)**2. - 4.*d0*(d4+nt1))
+     tmp2=(d1+nt0)**2. - 4.*d0*(d4+nt1)
+     if(tmp2<0.d0) call parallel_abort('MISC: cmue_d, tmp2<0')
+     anMinNum  = -(d1 + nt0) + sqrt(tmp2) !(d1+nt0)**2. - 4.*d0*(d4+nt1))
      anMinDen  = 2.*(d4+nt1)
+     if(anMinDen==0.d0) call parallel_abort('MISC: cmue_d, anMinDen=0')
      anMin     = anMinNum / anMinDen
 
      if (abs(n2-d5).lt.small) then
@@ -3490,11 +3514,13 @@
 !          compute the equilibrium value of as
            tmp0  = -d0 - (d1 + nt0)*an(i) - (d4 + nt1)*an(i)*an(i)
            tmp1  = -d2 + n0 +  (n1-d3-nt2)*an(i)
+           if(tmp1==0.d0) call parallel_abort('MISC: cmue_d, tmp1=0')
            as(i) =  - tmp0/tmp1
 !          compute stability function
            dCm  = d0  +  d1*an(i) +  d2*as(i) + d3*an(i)*as(i) + d4*an(i)*an(i) + d5*as(i)*as(i)
            nCm  = n0  +  n1*an(i) +  n2*as(i)
            nCmp = nt0 + nt1*an(i) + nt2*as(i)
+           if(dCm==0.d0) call parallel_abort('MISC: cmue_d, dCm=0')
            cmue1 =  cm3_inv*nCm /dCm
            cmue2 =  cm3_inv*nCmp/dCm
         enddo !i
@@ -3505,7 +3531,13 @@
            tmp0  = -d0 - (d1 + nt0)*an(i) - (d4 + nt1)*an(i)*an(i)
            tmp1  = -d2 + n0 + (n1-d3-nt2)*an(i)
            tmp2  =  n2-d5
-           as(i) =  (-tmp1 + sqrt(tmp1*tmp1-4.*tmp0*tmp2) ) / (2.*tmp2)
+           !abs(n2-d5) checked, but confirming here
+           if(tmp2==0.d0) call parallel_abort('MISC: cmue_d, tmp2=0')
+           tmp10=tmp1*tmp1-4.*tmp0*tmp2
+           if(tmp10<0.d0) call parallel_abort('MISC: cmue_d, tmp10<0')
+
+           !as(i) =  (-tmp1 + sqrt(tmp1*tmp1-4.*tmp0*tmp2) ) / (2.*tmp2)
+           as(i) =  (-tmp1 + sqrt(tmp10)) / (2.*tmp2)
 !          compute stability function
            dCm  = d0  +  d1*an(i) +  d2*as(i) + d3*an(i)*as(i) + d4*an(i)*an(i) + d5*as(i)*as(i)
            nCm  = n0  +  n1*an(i) +  n2*as(i)
