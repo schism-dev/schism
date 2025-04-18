@@ -34,7 +34,7 @@ class ConfigStofs3dAtlantic():
         relocate_source=True,
         feeder_info_file=None,  # file containing feeder info,
                                 # made by make_feeder_channel.py in RiverMapper
-        no_feeder_hgrid=None,
+        hgrid_without_feeders=None,
         mandatory_sources_coor=None,  # a dictionary of mandatory sources' coordinates
         gr3_values=None,
         tvd_regions=None
@@ -51,7 +51,7 @@ class ConfigStofs3dAtlantic():
         self.relocate_source = relocate_source
         self.nwm_cache_folder = nwm_cache_folder
         self.feeder_info_file = feeder_info_file
-        self.no_feeder_hgrid = no_feeder_hgrid
+        self.hgrid_without_feeders = hgrid_without_feeders
         self.mandatory_sources_coor = mandatory_sources_coor
 
         if bc_flags is None:
@@ -194,9 +194,14 @@ class ConfigStofs3dAtlantic():
             nudging_zone_width=0,  # default nudging zone
             shapiro_zone_width=0,  # default shapiro zone
             shapiro_tilt=0,  # default abrupt transition in the shapiro zone
-            feeder_info_file='',
-            relocate_source=False,
-            nwm_cache_folder=Path('/sciclone/schism10/whuang07/schism20/NWM_v2.1/'),
+            feeder_info_file=(
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v43s2_RiverMapper/'
+                'v44/Feeder/feeder_heads_bases.xy'
+            ),
+            hgrid_without_feeders=None,
+            mandatory_sources_coor=rsf.v45_s2_mandatory_sources_coor,
+            relocate_source=True,
+            nwm_cache_folder=None,
             bc_flags=[[5, 3, 0, 0]],
             bc_relax=[[None, None, None, None]],
             bc_const=[[None, None, None, None]],
@@ -216,7 +221,7 @@ class ConfigStofs3dAtlantic():
                 '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v31/Feeder/'
                 'feeder_heads_bases.xy'
             ),
-            no_feeder_hgrid='/sciclone/schism10/feiye/STOFS3D-v8/R13p_v7/hgrid.gr3',
+            hgrid_without_feeders='/sciclone/schism10/feiye/STOFS3D-v8/R13p_v7/hgrid.gr3',
             relocate_source=True,
             mandatory_sources_coor=rsf.v19p2_for_sms_v27_mandatory_sources_coor,
             nwm_cache_folder=None,
