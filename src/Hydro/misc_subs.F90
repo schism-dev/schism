@@ -2780,9 +2780,9 @@
       integer :: k,kout,l1,l2
       real(rkind) :: zrat
 
-      logical :: first_call
+!      logical :: first_call
 
-      first_call=.true.
+!      first_call=.true.
 
       if(k1>k2) then !.or.nc>10) then
         write(errmsg,*)'k1>k2 in vinter()'
@@ -2824,7 +2824,7 @@
         endif
       endif
 
-      first_call=.false.
+!      first_call=.false.
       end subroutine vinter
 
 !===============================================================================
@@ -3106,7 +3106,7 @@
    ann=5.d0
    do i=0,imax
       an(1)=ann
-      as(1)=an(1)/ri_st
+      as(1)=an(1)/ri_st !ri_st>0
 !      if (turb_method.eq.2) then
 !         select case(stab_method)
 !            case(Constant)
