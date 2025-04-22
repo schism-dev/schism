@@ -119,11 +119,11 @@ v19p2_mandatory_sources_coor = np.array([
 v19p2_for_sms_v27_mandatory_sources_coor = np.array([
     [-73.90869, 42.13509, np.nan, np.nan],  # Hudson River, NY
     [-74.94442, 40.34478, np.nan, np.nan],  # Delaware River, NJ
-    [-76.1079760188,39.5871749053, np.nan, np.nan],  # Susquehanna River, VA
+    [-76.1079760188, 39.5871749053, np.nan, np.nan],  # Susquehanna River, VA
     [-78.425288, 34.508177, np.nan, np.nan],  # Cape Fear River, NC
     [-91.72306, 31.04462, np.nan, np.nan],  # Red River (upstream of Atchafalaya River), LA
     [-80.10808, 33.50005, np.nan, np.nan],  # Santee River, SC
-    [-79.83866896,33.65649571, np.nan, np.nan],  # Black River, SC; note: channel not resolved
+    [-79.83866896, 33.65649571, np.nan, np.nan],  # Black River, SC; note: channel not resolved
     [-79.57210, 33.71223, np.nan, np.nan],  # Black Mingo Creek, SC
     [-79.49997, 33.84686, np.nan, np.nan],  # Lynches River, SC
     [-79.48467, 33.93939, np.nan, np.nan],  # Pee Dee River, SC
@@ -343,7 +343,7 @@ def relocate_sources2(
 
         :hgrid_fname: the file name of the main hgrid with feeders
 
-        :allow_neglection: 
+        :allow_neglection:
             True:
                 Allow neglecting NWM inflows that cannot be relocated to a
                 new source location (i.e., resolved channels) within a specified search radius.
@@ -439,7 +439,7 @@ def relocate_sources2(
         if not np.all(ingrid_mask.astype(bool)):
             print('Mandatory source target location outside the main hgrid:')
             print(mandatory_sources_coor[~ingrid_mask, :2])
-            with open(f'{outdir}/mandatory_sources_outside_hgrid.xy', 'w') as f:
+            with open(f'{outdir}/mandatory_sources_outside_hgrid.xy', 'w', encoding='utf-8') as f:
                 f.write('lon lat\n')
                 for row in mandatory_sources_coor[~ingrid_mask, :2]:
                     f.write(f'{row[0]} {row[1]}\n')
@@ -449,7 +449,9 @@ def relocate_sources2(
         if not np.all(ingrid_mask.astype(bool)):
             print('Mandatory source search starting points outside the main hgrid:')
             print(mandatory_sources_coor[~ingrid_mask])
-            with open(f'{outdir}/mandatory_sources_search_starting_points_outside_hgrid.xy', 'w') as f:
+            with open(
+                f'{outdir}/mandatory_sources_search_starting_points_outside_hgrid.xy', 'w', encoding='utf-8'
+            ) as f:
                 f.write('lon lat\n')
                 for row in mandatory_sources_coor[~ingrid_mask, 2:4]:
                     f.write(f'{row[0]} {row[1]}\n')
@@ -462,7 +464,7 @@ def relocate_sources2(
         if not np.all(ingrid_mask.astype(bool)):
             print('Feeder bases outside the main hgrid:')
             print(feeder_bases[~ingrid_mask])
-            with open(f'{outdir}/feeder_bases_outside_hgrid.xy', 'w') as f:
+            with open(f'{outdir}/feeder_bases_outside_hgrid.xy', 'w', encoding='utf-8') as f:
                 f.write('lon lat\n')
                 for row in feeder_bases[~ingrid_mask]:
                     f.write(f'{row[0]} {row[1]}\n')
@@ -481,27 +483,27 @@ def relocate_sources2(
 
     if len(new_sources_coor) == 0:
         raise ValueError('No new sources to relocate')
-    
-    with open(f'{outdir}/mandatory_sources.xy', 'w') as f:
+
+    with open(f'{outdir}/mandatory_sources.xy', 'w', encoding='utf-8') as f:
         f.write('lon lat\n')
         for row in mandatory_sources_coor[:, :2]:
             f.write(f'{row[0]} {row[1]}\n')
-    with open(f'{outdir}/feeder_bases.xy', 'w') as f:
+    with open(f'{outdir}/feeder_bases.xy', 'w', encoding='utf-8') as f:
         f.write('lon lat\n')
         for row in feeder_bases:
             f.write(f'{row[0]} {row[1]}\n')
-    
+
     # check if any mandatory sources are near feeder bases
     idx, dist = nearest_neighbour(mandatory_sources_coor[:, :2], feeder_bases)
     dist *= 1e5  # convert to meters
     if np.any(dist < max_search_radius):
         print('Warning: some mandatory sources are near feeder bases:')
-        with open(f'{outdir}/mandatory_sources_near_feeder_bases.xy', 'w') as f:
+        with open(f'{outdir}/mandatory_sources_near_feeder_bases.xy', 'w', encoding='utf-8') as f:
             f.write('lon lat\n')
             for row, d in zip(mandatory_sources_coor[dist < max_search_radius, :2], dist[dist < max_search_radius]):
                 print(f'{row[0]} {row[1]} {d}')
                 f.write(f'{row[0]} {row[1]} {d}\n')
-        
+
     # These are the starting points for the search of old sources
     # The search point may be different from the new source location.
     # For example, the new source location may be at the head of a feeder channel,
@@ -516,7 +518,7 @@ def relocate_sources2(
     new_sources_ele_idx, _ = nearest_neighbour(new_sources_coor, np.c_[new_gd.xctr, new_gd.yctr])
     n_dup = new_sources_ele_idx.shape[0] - np.unique(new_sources_ele_idx).shape[0]
     if n_dup > 50:
-        print(
+        raise ValueError(
             f'Too many ({n_dup}) duplicated new source target elements,'
             'check consistency between mesh and feeder'
         )
@@ -527,8 +529,8 @@ def relocate_sources2(
             'or mandatory source already in feeder channel'
         )
         # write the duplicated new source element ids to a file
-        with open(f'{outdir}/duplicated_new_source_elements.txt', 'w') as f:
-            f.write(f'lon lat\n')
+        with open(f'{outdir}/duplicated_new_source_elements.txt', 'w', encoding='utf-8') as f:
+            f.write('lon lat\n')
             for ele_idx in np.unique(new_sources_ele_idx):
                 if np.sum(new_sources_ele_idx == ele_idx) > 1:
                     f.write(f'{new_gd.xctr[ele_idx]} {new_gd.yctr[ele_idx]}\n')
@@ -565,14 +567,17 @@ def relocate_sources2(
                 )
 
     # -------------------------------------clean up odd cases-------------------------------------
-    # Previously, a new source is linked to at most one old source; but an old source can be linked to multiple new sources.
-    # check if multiple new sources are linked to the same old source, i.e., double-counting an old source
+    # Previously, a new source is linked to at most one old source;
+    # but an old source can be linked to multiple new sources.
+    # Check if multiple new sources are linked to the same old source,
+    # i.e., double-counting an old source
     new2old_sources_copy = new2old_sources.copy()
     for old_source in np.unique(new2old_sources_copy):
         if old_source == -1:
             continue  # new source not linked to any old source, skip
 
-        ids = np.argwhere(new2old_sources_copy == old_source).flatten()  # find all new sources mapped to the same old source
+        # find all new sources mapped to the same old source
+        ids = np.argwhere(new2old_sources_copy == old_source).flatten()
         if len(ids) == 0:  # impossible
             raise ValueError(f'Impossible: old source {old_source} in new2old mapping not mapped to any new source')
         if len(ids) > 1:  # multiple new sources mapped to the same old source, only retain the closest new source
@@ -585,12 +590,14 @@ def relocate_sources2(
     # 0-based index of the old source in sources.json, not element id
     valid_new2old_sources = new2old_sources[new2old_sources >= 0]
 
-    # sanity check 
+    # sanity check
     # each new source should be linked to at most one old source
     n_dup = valid_new_sources_eleids.shape[0] - np.unique(valid_new_sources_eleids).shape[0]
     if n_dup > 0:
-        duplicates = np.unique(valid_new_sources_eleids)[np.unique(valid_new_sources_eleids, return_counts=True)[1] > 1]
-        with open(f'{outdir}/duplicated_new_sources.txt', 'w') as f:
+        duplicates = np.unique(valid_new_sources_eleids)[
+            np.unique(valid_new_sources_eleids, return_counts=True)[1] > 1
+        ]
+        with open(f'{outdir}/duplicated_new_sources.txt', 'w', encoding='utf-8') as f:
             f.write('lon lat\n')
             for duplicate in duplicates:
                 f.write(f'{new_gd.xctr[int(duplicate)-1]} {new_gd.yctr[int(duplicate)-1]}\n')
@@ -603,7 +610,7 @@ def relocate_sources2(
     # Build a dict with valid new source element ids as keys,
     # other potential new sources will be added to the dict if any
     # remaining old sources can be linked
-    
+
     # There should not be any duplicates in valid_new_sources_eleids;
     # even if there are, the duplicates will be removed in the dict new2fid
     new2fid = {str(k): set() for k in valid_new_sources_eleids}  # unique keys
@@ -644,7 +651,8 @@ def relocate_sources2(
 
             if old_fids != []:
                 target_newele_id = new_sources_eles[candidate_new_idx]  # 1-based indexing
-                if str(target_newele_id) not in new2fid.keys():  # some new sources have not been linked to any old source
+                if str(target_newele_id) not in new2fid.keys():
+                    # some new sources have not been linked to any old source
                     new2fid[str(target_newele_id)] = set(old_fids)
                 else:
                     # This prevents duplicates in each new source's fids.
@@ -655,13 +663,13 @@ def relocate_sources2(
     tmp = [fid for fids in new2fid.values() for fid in fids]
     if len(tmp) != len(set(tmp)):
         raise ValueError('Duplicated fids in new2fid')
-    
+
     # -------------------------------------write -------------------------------------
     # convert set to list for json serialization
     new2fid = {k: list(v) for k, v in new2fid.items()}
     if not find_duplicate_dict_values(new2fid) == {}:  # not empty
         raise ValueError('Duplicated fids in new2fid')
-    
+
     json.dump(new2fid, open(f'{outdir}/sources.json', 'w', encoding='utf-8'), indent=4)
     # other diagnostic outputs
     with open(f'{outdir}/sources.txt', 'w', encoding='utf-8') as f:
