@@ -30,8 +30,13 @@ Figure [1](#figure_weno1) shows the result of disperion symptom from WENO, in th
 There are scripts in Utility/ that can be used to create appropriate `tvd.prop` for cross-scale applications.
 
 <figure markdown id='figure_weno1'>
-![WENO1](./assets/hi_SSS_CB_RUN13t3.png){width=800}
+![WENO1](./assets/hi_SSS_CB_RUN13t3.png){width=500}
 <figcaption>Numerical dispersion in WENO led to high surface salinity in Chesapeake Bay (circled area).</figcaption>
+</figure>
+
+<figure markdown id='figure_weno2'>
+![WENO1](./assets/hi_SSS_gone_CB_RUN13t4.png){width=500}
+<figcaption>Making upstream rivers upwind resolved the high surface salinity issue in Chesapeake Bay.</figcaption>
 </figure>
 
  <!--figure markdown id='figure_weno1'>
