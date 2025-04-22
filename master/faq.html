@@ -1651,13 +1651,13 @@ to get more accurate trajectory.</p>
 <p>In hydrostatic models, the incoming velocity should be specified at open boundary. Over-specification i.e. elevation+velocity B.C. there usually avoids the problem, but the two B.C.’s must be largely consistent with each other. The velocity B.C. can be generated using global circulation model (HYCOM etc) plus global tidal model (FES etc).</p>
 </details>
 <details class="faq">
+<summary>My 3D velocity has noise or weird patterns</summary>
+<p>This can be caused by a number of reasons, but a common one is that when user switches from 2D to 3D, they forgot to set itur=3 to use turbulence closure.</p>
+</details>
+<details class="faq">
 <summary>fatal.error indicates “Could not find suitable element in input”</summary>
 <p>This is likely because your <code>sflux*.nc</code> is not prepared properly: either the grid in <code>.nc</code> does not cover <code>hgrid.ll</code>, or the structured grid in <code>.nc</code> is not ordered counter-clockwise.</p>
 </details>
-<details class="faq">
-<summary>My 3D velocity has noise or weird patterns</summary>
-</details>
-<p>This can be caused by a number of reasons, but a common one is that when user switches from 2D to 3D, they forgot to set itur=3 to use turbulence closure.</p>
 
               
             </article>
