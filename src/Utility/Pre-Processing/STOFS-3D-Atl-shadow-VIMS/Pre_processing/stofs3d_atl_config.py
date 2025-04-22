@@ -249,6 +249,50 @@ class ConfigStofs3dAtlantic():
         )
 
     @classmethod
+    def v7p2_subset(cls):
+        '''
+        Factory method to create a configuration for STOFS3D-v7.2 3D setup
+        for a composite mesh: coarse region + fine region (subset of the v7.2 mesh)
+        '''
+        return cls(
+            ocean_bnd_ids=[0, 1],
+            elev2d_uniform_shift=-0.42,  # add a uniform shift to elev2D
+            nudging_zone_width=7.3,  # default nudging zone
+            shapiro_zone_width=11.5,  # default shapiro zone
+            shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
+            feeder_info_file=(
+                # '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.3/Feeder/'
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v31/Feeder/'
+                'feeder_heads_bases.xy'
+            ),
+            hgrid_without_feeders=None,
+            relocate_source=True,
+            mandatory_sources_coor=rsf.v19p2_for_sms_v27_mandatory_sources_coor,
+            nwm_cache_folder=None,
+            bc_flags=[
+                [5, 5, 4, 4],  # Atlantic Ocean
+                [5, 5, 4, 4],  # Gulf of St. Lawrence
+                [0, 1, 2, 2],  # St. Lawrence River
+            ],
+            bc_const=[
+                [None, None, None, None],  # Atlantic Ocean
+                [None, None, None, None],  # Gulf of St. Lawrence
+                [None, None, 10.0, 0.0],  # St. Lawrence River
+            ],
+            bc_relax=[  # relaxation timescale for each boundary variable
+                [None, None, 0.5, 0.5],  # Atlantic Ocean
+                [None, None, 0.5, 0.5],  # Gulf of St. Lawrence
+                [None, None, 0.01, 1.0],  # St. Lawrence River
+            ],
+            tvd_regions=[
+                'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
+                'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg',
+                'upwind_east_Caribbean.rgn', 'upwind_west_Caribbean.rgn',
+                # 'upwind_Honduras.reg'
+            ]
+        )
+
+    @classmethod
     def v8(cls):
         '''Factory method to create a configuration for STOFS3D-v8 3D setup'''
         return cls(
