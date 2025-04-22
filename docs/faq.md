@@ -40,8 +40,9 @@ Besides the following info, you may also search archived messages from the SCHIS
 ???faq "I have large velocity at open boundary"
     In hydrostatic models, the incoming velocity should be specified at open boundary. Over-specification i.e. elevation+velocity B.C. there usually avoids the problem, but the two B.C.’s must be largely consistent with each other. The velocity B.C. can be generated using global circulation model (HYCOM etc) plus global tidal model (FES etc).
 
+???faq "My 3D velocity has noise or weird patterns"
+    This can be caused by a number of reasons, but a common one is that when user switches from 2D to 3D, they forgot to set itur=3 to use turbulence closure.
+
 ???faq "fatal.error indicates “Could not find suitable element in input”"
     This is likely because your `sflux*.nc` is not prepared properly: either the grid in `.nc` does not cover `hgrid.ll`, or the structured grid in `.nc` is not ordered counter-clockwise.
 
-???faq "My 3D velocity has noise or weird patterns"
-   This can be caused by a number of reasons, but a common one is that when user switches from 2D to 3D, they forgot to set itur=3 to use turbulence closure.
