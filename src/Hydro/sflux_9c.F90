@@ -2249,10 +2249,8 @@
 
         if(myrank==0) then
 !   open file_name and enter read-only mode
-          !iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
-          iret = nf90_open(in_dir(1:len_in_dir)//file_name,OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          iret = nf90_open(in_dir(1:len_in_dir)//file_name,NF90_NOWRITE,ncid)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(1)')
-          !'call check_err(iret)
 
 !   get the variable id for the time variable
           data_name = 'time'
@@ -2372,10 +2370,8 @@
 
         if(myrank==0) then
 !   open file_name and enter read-only mode
-          !iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
-          iret = nf90_open(in_dir(1:len_in_dir)//file_name,OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          iret = nf90_open(in_dir(1:len_in_dir)//file_name,NF90_NOWRITE,ncid)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(1)')
-!          call check_err(iret)
 
 !   get the variable ID for the test variable
           !iret = nf_inq_varid(ncid, test_variable, test_var_id)
@@ -2444,9 +2440,8 @@
 
         if(myrank == 0)then
 ! open file_name and enter read-only mode
-          iret = nf90_open(in_dir(1:len_in_dir)//file_name,OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          iret = nf90_open(in_dir(1:len_in_dir)//file_name,NF90_NOWRITE,ncid)
           if(iret.ne.NF90_NOERR) call parallel_abort('read_coord(1)')
-          !call check_err(iret)
 
 ! get the variable id for this variable
           iret = nf90_inq_varid(ncid, data_name, var_id)
@@ -2506,21 +2501,16 @@
 
         if(myrank == 0)then
 ! open file_name and enter read-only mode
-          iret=nf90_open(in_dir(1:len_in_dir)//file_name,OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          iret=nf90_open(in_dir(1:len_in_dir)//file_name,NF90_NOWRITE,ncid)
           if(iret.ne.NF90_NOERR) call parallel_abort('read_data(1)')
-          !call check_err(iret)
 
 ! get the variable id for this variable
           iret = nf90_inq_varid(ncid,data_name,var_id)
           if(iret.ne.NF90_NOERR) call parallel_abort('read_data(2)')
-          !call check_err(iret)
 
 ! read the data
-!          iret = nf_get_vara_real(ncid, var_id, data_start, &
-!     &                          data_count, data_tmp)
           iret=nf90_get_var(ncid,var_id,data_tmp,data_start,data_count)
           if(iret.ne.NF90_NOERR) call parallel_abort('read_data(3)')
-          !call check_err(iret)
 
 ! close the netCDF file
           iret = nf90_close(ncid)

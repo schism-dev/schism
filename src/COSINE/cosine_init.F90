@@ -260,7 +260,7 @@ subroutine cosine_vars_init
 
         !read value on myrank=0, then bcast
         if(myrank==0) then
-          j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fname)),NF90_NOWRITE,ncid)
           if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(fname))//': open')
           j=nf90_inq_varid(ncid,trim(adjustl(p%varname)),varid)
           if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%varname))//': wrong varid' )
