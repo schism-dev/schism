@@ -236,14 +236,15 @@ def excludeNWMregfromGloFASClima(glofasdir = '/sciclone/home/cseaton/data10/paci
 
 if __name__ == '__main__':
     '''
-    Usage: python extract2asci.py "yyyy-mm-dd" or "yyyy-mm-dd hh:mm:ss"
+    Usage: python gen_sourcesink_GLOFAS.py "yyyy-mm-dd" or "yyyy-mm-dd hh:mm:ss" -N ./
     Run this script in oper_3D/NWM/Combined/ directory. Inputs are in the same directory:
         1. sources_{conus, alaska, hawaii}_global.json
-           sinks_{conus, alaska, hawaii}_global.json
-        2. climatology file "Dai_Trenberth_climatology_1990-2018_hourly.csv"
-        3. work direcotry "basepath"
-        4. cached/
-
+        2. glofas_json.npz file specifying elements and glofas locations to extract
+        3. glofas data file: glofas-today.nc
+        4. NWM data files: nwm.t00z.medium_range.channel_rt_1.f024.{layer}.nc for AK and conus, similar for HI
+    If no realtime GloFAS data available, add -C/--clima argument and provide
+        3. glofas climatology: vsource.th.clim.redis.noNWM, source_sink.in.clim.redis.noNWM
+    can also specify location for 1,2,3,and 4 as arguments.
     '''
 
     #input paramters 
