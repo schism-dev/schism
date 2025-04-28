@@ -40,7 +40,7 @@ def gen_sourcesink_nwm(hgrid_fname: str, startdate: datetime, rnday: float, cach
 
     # input directory which saves nc files
     if cache_folder is not None and os.path.exists(cache_folder):  # if cache folder exists, use it
-        cache = cache_folder
+        cache = Path(cache_folder)
     else:  # if cache folder does not exist, create it
         cache = Path(f'./{startdate.strftime("%Y%m%d")}')
         cache.mkdir(exist_ok=True, parents=True)
