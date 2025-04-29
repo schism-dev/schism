@@ -283,7 +283,6 @@
 !   get_precip_flux
 !   get_precsnow_flux
 !   get_dataset_info
-!   char_num (function): convert number to char
 !   get_file_name (fucntion):
 !   check_err
 !   julian_day (function): Julian day
@@ -1312,8 +1311,7 @@
         use schism_glbl, only : rkind,start_year,start_month,start_day,start_hour,utc_start
         implicit none
        
-        !max. total # of nc files. Need to update char_num() etc if this
-        !is to be increased 
+        !max. total # of nc files
         integer, parameter :: max_files = 9999
         integer, parameter :: max_times = 100000 !max. # of time records from all files
 
@@ -2020,46 +2018,35 @@
       return
       end !get_dataset_info
 !-----------------------------------------------------------------------
-      character*4 function char_num (num)
-        implicit none
-        integer, intent(in) :: num
-        character(len=4) :: char
-        
-!10      format ('00', i1)
-!20      format ('0', i2)
-!30      format (i3)
+!      character*4 function char_num (num)
+!        implicit none
+!        integer, intent(in) :: num
+!        character(len=4) :: char
+!        
+!        if(num>9999) call halt_error ('get_char_num: num too large!')
 !
-!        if (num .le. 9) then
-!          write(char,10) num
-!        else if (num .le. 99) then
-!          write(char,20) num
-!        else if (num .le. 999) then
-!          write(char,30) num
-!        else
-!          call halt_error ('get_char_num: num too large!')
-!        endif
-
-        if(num>9999) call halt_error ('get_char_num: num too large!')
-
-        char='0000'
-        write(char,'(i4.4)')num
-        
-        char_num = char
-
-      return
-      end
+!        char='0000'
+!        write(char,'(i4.4)')num
+!        
+!        char_num = char
+!
+!      return
+!      end
 !-----------------------------------------------------------------------
       character*50 function get_file_name (dataset_name, num)
         implicit none
         integer, intent(in) :: num
         character, intent(in) ::  dataset_name*50
 
-        character char_num*4
-        character, parameter :: prefix*6 = 'sflux/'
-        character, parameter :: suffix*3 = '.nc'
-        
-        get_file_name = prefix // trim(dataset_name) // '.' // &
-     &                  char_num(num) // suffix
+        character(len=50) :: char_num
+!        character char_num*4
+!        character, parameter :: prefix*6 = 'sflux/'
+!        character, parameter :: suffix*3 = '.nc'
+
+        !num cannot be 50 long, as it's 4-byte integer
+        write(char_num,'(i50)')num
+        get_file_name = 'sflux/'//trim(dataset_name) //'.'//trim(adjustl(char_num))//'.nc' !suffix
+        !get_file_name = 'sflux/'//trim(dataset_name) //'.'//char_num(num) //'.nc' !suffix
 
       return
       end
