@@ -3400,7 +3400,7 @@
      &call parallel_abort('Check watertype.gr3')
           do i=1,np_global
             read(32,*)j,xtmp,ytmp,tmp
-            if(int(tmp)<1.or.int(tmp)>7) then
+            if(int(tmp)<1.or.int(tmp)>8) then
               write(errmsg,*)'Unknown water type:',i,tmp
               call parallel_abort(errmsg)
             endif
