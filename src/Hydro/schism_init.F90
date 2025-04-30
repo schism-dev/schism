@@ -3392,6 +3392,7 @@
 !       5: 0.78 1.40 7.9 (Jerlov type III)
 !       6: 0.62 1.50 20 (Paulson and Simpson 1977; similar to type IA)
 !       7: 0.80 0.90 2.1 (Mike Z.'s choice for estuary)
+!       8: user defined (inputs from param.nml)
         if(myrank==0) then
           open(32,file=in_dir(1:len_in_dir)//'watertype.gr3',status='old')
           read(32,*)
