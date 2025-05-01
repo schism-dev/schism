@@ -536,7 +536,10 @@
             !Assume all vars in sflux*.nc are available from atmos model or read in from atmos.nc,
             !and this routine compute other fluxes
 #ifdef USE_ATMOS
-            airt2=airt2-273.15d0 !Conv K to C, ESMF send with unit K
+            do i=1,npa
+               !ESMF only update within range np NOT npa by ele-itp, therefore some airt2 are still init value (C)
+               if (airt2(i)>100.d0) airt2(i)=airt2(i)-273.15d0 !Conv K to C, ESMF send with unit K
+            end do
 #endif
             call surf_fluxes2 (wtime2,windx2,windy2,pr2,airt2, &
      &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
