@@ -1,10 +1,10 @@
 module bmischism
   
-#ifdef NGEN_ACTIVE
-  use bmif_2_0_iso
-#else
+!#ifdef NGEN_ACTIVE
+!  use bmif_2_0_iso
+!#else
   use bmif_2_0
-#endif
+!#endif
 
   use schism_glbl, only: pi, llist_type, elnode, i34, ipgl
   use schism_glbl, only: ns_global, isidenode, elside
@@ -22,6 +22,7 @@ module bmischism
   use schism_glbl, only: srad, fluxevp, fluxprc, tr_nd, uu2
   use schism_glbl, only: dt, rnday, vv2, nvrt,ifile,nc_out, eta2
   use schism_glbl, only: nout_sta, xsta_bmi, ysta_bmi, zsta_bmi, sta_out_gb
+  use schism_glbl, only: th_dt2, th_dt3, th_time2, th_time3
   use schism_msgp, only: parallel_init, task_id, parallel_finalize, nscribes
 
   use, intrinsic :: iso_c_binding, only: c_ptr, c_loc, c_f_pointer
@@ -115,8 +116,8 @@ module bmischism
        component_name = "SCHISM"
 
   ! Exchange items
-  integer, parameter :: input_item_count = 18
-  integer, parameter :: output_item_count = 7
+  integer, parameter :: input_item_count = 20
+  integer, parameter :: output_item_count = 5
   character (len=BMI_MAX_VAR_NAME), target, &
        dimension(input_item_count) :: input_items
   character (len=BMI_MAX_VAR_NAME), target, &
@@ -128,6 +129,9 @@ module bmischism
   integer, parameter :: SCHISM_BMI_GRID_SOURCE_ELEMENTS = 4
   integer, parameter :: SCHISM_BMI_GRID_SINK_ELEMENTS = 5
   integer, parameter :: SCHISM_BMI_GRID_STATION_POINTS = 6
+  integer, parameter :: SCHISM_BMI_ETA2_TIMESTEP = 7
+  integer, parameter :: SCHISM_BMI_Q_TIMESTEP = 8
+
 contains
 
 subroutine assert(condition, msg)
@@ -160,11 +164,12 @@ subroutine read_init_config(this, config_file, bmi_status)
   integer :: num_time_steps, time_step_size
   double precision :: model_start_time, model_end_time
   character(len=1000) :: SCHISM_dir
+  integer :: SCHISM_NSCRIBES
   !locals
   integer :: rc, fu
   character(len=1000) :: line
   !namelists
-  namelist /test/  model_start_time, model_end_time, num_time_steps, time_step_size,  SCHISM_dir
+  namelist /test/  model_start_time, model_end_time, num_time_steps, time_step_size, SCHISM_dir, SCHISM_NSCRIBES
 
   !init values
   model_start_time = -1
@@ -172,6 +177,7 @@ subroutine read_init_config(this, config_file, bmi_status)
   num_time_steps = 0
   time_step_size = 3600.0
   SCHISM_dir = ''
+  SCHISM_NSCRIBES = 0
 
   ! Check whether file exists.
   inquire (file=config_file, iostat=rc)
@@ -211,6 +217,7 @@ subroutine read_init_config(this, config_file, bmi_status)
   this%model%iths = 0
   this%model%ntime = 0
   this%model%SCHISM_dir = SCHISM_dir
+  this%model%SCHISM_NSCRIBES = SCHISM_NSCRIBES
 
   ! This global variable is a thorn in our side - PBM
   dt = time_step_size
@@ -275,7 +282,8 @@ end subroutine read_init_config
     input_items(16) = 'SPFH2m_t1'   ! Specific humidity at t1 (kg/kg)
     input_items(17) = 'RAINRATE_t0' ! Precipitation rate at t0 (kg/m^2s)
     input_items(18) = 'RAINRATE_t1' ! Precipitation rate at t1 (kg/m^2s)
-    
+    input_items(19) = 'ETA2_dt' ! Time step for updating water level boundaries (s)
+    input_items(20) = 'Q_dt' ! Time step for updating source/sink discharge sources (precipitation + inland discharges) (s)
 
     names => input_items
     bmi_status = BMI_SUCCESS
@@ -290,10 +298,8 @@ end subroutine read_init_config
     output_items(1) = 'ETA2'    ! Total water level (m)
     output_items(2) = 'VY'      ! current vector velocity in northward direction (m/s)
     output_items(3) = 'VX'      ! current vector velocity in eastward direction (m/s)
-    output_items(4) = 'Q_bnd_ind'   ! Source (discharge and rainfall) boundary condition indices (N/A)
-    output_items(5) = 'ETA2_bnd_ind'! Water level open boundary condition indices (N/A)
-    output_items(6) = 'TROUTE_ETA2'    ! Total water level T-Route boundaries at SCHISM pre-determined stations (m)
-    output_items(7) = 'BEDLEVEL' ! Bed elevation above datum - note that this is inverse of SCHISM's depth representation (m)
+    output_items(4) = 'TROUTE_ETA2'    ! Total water level T-Route boundaries at SCHISM pre-determined stations (m)
+    output_items(5) = 'BEDLEVEL' ! Bed elevation above datum - note that this is inverse of SCHISM's depth representation (m)
 
     names => output_items
     bmi_status = BMI_SUCCESS
@@ -333,8 +339,10 @@ function schism_initialize(this, config_file) result (bmi_status)
         this%model%num_time_steps = (this%model%model_end_time - this%model%current_model_time) / this%model%time_step_size
      end if
 
-     ! Indicate serial mode simulation for SCHISM
-     nscribes=0
+     ! Specify the number of I/O processes dedicated for SCHISM
+     ! based on user choice of serial/parallel execution as well
+     ! as turning the OLD I/O SCHISM compilation option on or off
+     nscribes=this%model%SCHISM_NSCRIBES
 
      ! Initalize SCHISM with MPI communicator provided 
      ! by the NextGen framework to the BMI wrapper
@@ -389,10 +397,10 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2','TROUTE_ETA2','VX','VY','Q_bnd_source_t0','Q_bnd_sink_t0','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','RAINRATE_t0','Q_bnd_source_t1','Q_bnd_sink_t1','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','RAINRATE_t1', 'BEDLEVEL')
+    case('ETA2','TROUTE_ETA2','VX','VY','Q_bnd_source_t0','Q_bnd_sink_t0','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','RAINRATE_t0','Q_bnd_source_t1','Q_bnd_sink_t1','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','RAINRATE_t1', 'BEDLEVEL', 'ETA2_dt', 'Q_dt')
        type = "double precision"
        bmi_status = BMI_SUCCESS
-    case('Q_bnd_ind','ETA2_bnd_ind','bmi_mpi_comm_handle')
+    case('bmi_mpi_comm_handle')
        type = "integer"
        bmi_status = BMI_SUCCESS
     case default
@@ -434,11 +442,8 @@ end function schism_finalizer
     case('Q_bnd_source_t0','Q_bnd_source_t1','Q_bnd_sink_t0','Q_bnd_sink_t1')
        units = "m3 s-1"
        bmi_status = BMI_SUCCESS
-    case('ETA2_bnd_ind')
-       units = ""
-       bmi_status = BMI_SUCCESS
-    case('Q_bnd_ind')
-       units = ""
+    case('ETA2_dt', 'Q_dt')
+       units = "s"
        bmi_status = BMI_SUCCESS
     case default
        units = "-"
@@ -455,10 +460,10 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2_bnd_ind','ETA2','TROUTE_ETA2','VX','VY','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','BEDLEVEL')
+    case('ETA2','TROUTE_ETA2','ETA2_dt','VX','VY','ETA2_bnd_t0','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','ETA2_bnd_t1','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','BEDLEVEL')
        location = "node"
        bmi_status = BMI_SUCCESS
-    case('Q_bnd_ind','RAINRATE_t0','RAINRATE_t1','Q_bnd_source_t0','Q_bnd_source_t1','Q_bnd_sink_t0','Q_bnd_sink_t1')
+    case('RAINRATE_t0','RAINRATE_t1','Q_bnd_source_t0','Q_bnd_source_t1','Q_bnd_sink_t0','Q_bnd_sink_t1','Q_dt')
        location = "face"
        bmi_status = BMI_SUCCESS
     case default
@@ -476,7 +481,7 @@ end function schism_finalizer
     integer :: bmi_status
 
     select case(name)
-    case('ETA2_bnd_ind','Q_bnd_ind','ETA2','VX','VY','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','BEDLEVEL')
+    case('ETA2','VX','VY','SFCPRS_t0','TMP2m_t0','UU10m_t0','VV10m_t0','SPFH2m_t0','SFCPRS_t1','TMP2m_t1','UU10m_t1','VV10m_t1','SPFH2m_t1','BEDLEVEL')
        grid = SCHISM_BMI_GRID_ALL_NODES
        bmi_status = BMI_SUCCESS
     case('RAINRATE_t0','RAINRATE_t1')
@@ -493,6 +498,12 @@ end function schism_finalizer
        bmi_status = BMI_SUCCESS
     case('TROUTE_ETA2')
        grid = SCHISM_BMI_GRID_STATION_POINTS
+       bmi_status = BMI_SUCCESS
+    case('ETA2_dt')
+       grid = SCHISM_BMI_ETA2_TIMESTEP
+       bmi_status = BMI_SUCCESS
+    case('Q_dt')
+       grid = SCHISM_BMI_Q_TIMESTEP
        bmi_status = BMI_SUCCESS
     case default
        grid = -1
@@ -516,7 +527,9 @@ end function schism_finalizer
        rank = 2
        bmi_status = BMI_SUCCESS
     case(SCHISM_BMI_GRID_SOURCE_ELEMENTS,&
-         SCHISM_BMI_GRID_SINK_ELEMENTS)
+         SCHISM_BMI_GRID_SINK_ELEMENTS,&
+         SCHISM_BMI_ETA2_TIMESTEP,&
+         SCHISM_BMI_Q_TIMESTEP)
        rank = 1
        bmi_status = BMI_SUCCESS
     case default
@@ -550,6 +563,12 @@ end function schism_finalizer
        bmi_status = BMI_SUCCESS
     case(SCHISM_BMI_GRID_STATION_POINTS)
        size = nout_sta
+       bmi_status = BMI_SUCCESS
+    case(SCHISM_BMI_ETA2_TIMESTEP)
+       size = 1
+       bmi_status = BMI_SUCCESS
+    case(SCHISM_BMI_Q_TIMESTEP)
+       size = 1
        bmi_status = BMI_SUCCESS
     case default
        size = -1
@@ -709,6 +728,12 @@ end function schism_finalizer
     case(SCHISM_BMI_GRID_STATION_POINTS)
         x(:) = xsta_bmi(:)
         bmi_status = BMI_SUCCESS
+    case(SCHISM_BMI_ETA2_TIMESTEP)
+        x(:) = -9999.d0
+        bmi_status = BMI_SUCCESS
+    case(SCHISM_BMI_Q_TIMESTEP)
+        x(:) = -9999.d0
+        bmi_status = BMI_SUCCESS
     case default
        x(:) = -1.d0
        bmi_status = BMI_FAILURE
@@ -805,6 +830,12 @@ end function schism_finalizer
     case(SCHISM_BMI_GRID_STATION_POINTS)
         y(:) = ysta_bmi(:)
         bmi_status = BMI_SUCCESS
+    case(SCHISM_BMI_ETA2_TIMESTEP)
+        y(:) = -9999.d0
+        bmi_status = BMI_SUCCESS
+    case(SCHISM_BMI_Q_TIMESTEP)
+        y(:) = -9999.d0
+        bmi_status = BMI_SUCCESS
     case default
        y(:) = -1.d0
        bmi_status = BMI_FAILURE
@@ -880,6 +911,12 @@ end function schism_finalizer
     endif
     case(SCHISM_BMI_GRID_STATION_POINTS)
         z(:) = zsta_bmi(:)
+        bmi_status = BMI_SUCCESS
+    case(SCHISM_BMI_ETA2_TIMESTEP)
+        z(:) = -9999.d0
+        bmi_status = BMI_SUCCESS
+    case(SCHISM_BMI_Q_TIMESTEP)
+        z(:) = -9999.d0
         bmi_status = BMI_SUCCESS
     case default
        z(:) = -1.d0
@@ -1064,7 +1101,7 @@ end function schism_finalizer
     case(SCHISM_BMI_GRID_ALL_NODES)
        type = "unstructured"
        bmi_status = BMI_SUCCESS
-    case(2,3,4,5,6)
+    case(2,3,4,5,6,7,8)
        type = "points"
        bmi_status = BMI_SUCCESS
     case default
@@ -1165,6 +1202,8 @@ end function schism_finalizer
     character (len=*), intent(in) :: name
     double precision, intent(in) :: src(:)
     integer :: bmi_status
+    integer :: ninv
+    double precision :: time
 
     select case(name)
     case("ETA2_bnd_t0")
@@ -1234,6 +1273,32 @@ end function schism_finalizer
         shum1(:) = shum2(:)
         shum2(:) = src(:)
         bmi_status=BMI_SUCCESS
+    case("ETA2_dt")
+        th_dt2(1) = src(1)
+        time = this%model%iths * dt
+        ninv=time/th_dt2(1)
+        th_time2(1,1)=real(ninv,rkind)*th_dt2(1)
+        th_time2(2,1)=th_time2(1,1)+th_dt2(1)
+        bmi_status=BMI_SUCCESS
+    case("Q_dt")
+        time = this%model%iths * dt
+        if(nsources>0) then
+            th_dt3(1) = src(1)
+            ninv=time/th_dt3(1)
+            th_time3(1,1)=dble(ninv)*th_dt3(1)
+            th_time3(2,1)=th_time3(1,1)+th_dt3(1)
+            th_dt3(3) = src(1)
+            ninv=time/th_dt3(3)
+            th_time3(1,3)=dble(ninv)*th_dt3(3)
+            th_time3(2,3)=th_time3(1,3)+th_dt3(3)
+        endif
+        if(nsinks>0) then
+            th_dt3(2) = src(1)
+            ninv=time/th_dt3(2)
+            th_time3(1,2)=dble(ninv)*th_dt3(2)
+            th_time3(2,2)=th_time3(1,2)+th_dt3(2)
+        endif
+        bmi_status=BMI_SUCCESS
     case default
        bmi_status = BMI_FAILURE
     end select
@@ -1279,6 +1344,9 @@ end function schism_finalizer
     double precision, intent(in) :: src(:)
     integer :: bmi_status
     integer :: i
+    integer :: ninv
+    double precision :: time
+
 
     select case(name)
     case("ETA2_bnd_t0")
@@ -1384,6 +1452,36 @@ end function schism_finalizer
             shum2(inds(i)) = src(i)
         enddo
         bmi_status=BMI_SUCCESS
+    case("ETA2_dt")
+        time = this%model%iths * dt
+        do i = 1, size(inds)
+            th_dt2(1) = src(i)
+            ninv=time/th_dt2(1)
+            th_time2(1,1)=real(ninv,rkind)*th_dt2(1)
+            th_time2(2,1)=th_time2(1,1)+th_dt2(1)
+        enddo
+        bmi_status=BMI_SUCCESS
+    case("Q_dt")
+        time = this%model%iths * dt
+        do i = 1, size(inds)
+            if(nsources>0) then
+                th_dt3(1) = src(i)
+                ninv=time/th_dt3(1)
+                th_time3(1,1)=dble(ninv)*th_dt3(1)
+                th_time3(2,1)=th_time3(1,1)+th_dt3(1)
+                th_dt3(3) = src(i)
+                ninv=time/th_dt3(3)
+                th_time3(1,3)=dble(ninv)*th_dt3(3)
+                th_time3(2,3)=th_time3(1,3)+th_dt3(3)
+            endif
+            if(nsinks>0) then
+                th_dt3(2) = src(i)
+                ninv=time/th_dt3(2)
+                th_time3(1,2)=dble(ninv)*th_dt3(2)
+                th_time3(2,2)=th_time3(1,2)+th_dt3(2)
+            endif
+        enddo
+        bmi_status=BMI_SUCCESS
     case default
        bmi_status = BMI_FAILURE
     end select
@@ -1399,40 +1497,7 @@ end function schism_finalizer
     integer :: bmi_status, i, j, ind_count
 
     select case(name)
-    case("ETA2_bnd_ind")
-      ! Since open water level boundaries
-      ! are constrained by user, we must
-      ! set a count loop to break once
-      ! we reach that threshold in ath2
-      ind_count = 1
-      ! Allocate bnd_ind array to ingest
-      ! global node indices for open boundaries
-      allocate(bnd_ind(size(ath2(1,1,:,1,1))))
-      ! loop over open boundary segment (2) and number
-      ! of nodes possible in each open boundary segment
-      outer : do i=1,nope_global
-        do j=1,nond_global(i)
-            ! If we've ingested all global indices possible
-            ! for the open boundary segments, then break out of loop
-            if(ind_count > size(bnd_ind)) exit outer
-
-            bnd_ind(ind_count) = iond_global(i,j) !global node indices
-            ind_count = ind_count + 1
-         enddo
-      enddo outer
-      dest = [bnd_ind]
-      bmi_status=BMI_SUCCESS
-
-    case("Q_bnd_ind")
-      ! Allocate bnd_ind array to ingest
-      ! global element indices for source boundaries
-      allocate(bnd_ind(size(ieg_source)))
-      ! loop over all user sources for mesh
-      do i = 1, nsources
-        bnd_ind(i) = ieg_source(i) ! global element indices
-      enddo
-      dest = [bnd_ind]
-      bmi_status=BMI_SUCCESS
+    !!!!!! No integer values currently advertised fo SCHISM !!!!!!
     case default
        dest(:) = -1
        bmi_status = BMI_FAILURE
@@ -1705,7 +1770,7 @@ end function schism_finalizer
     bmi_status = BMI_SUCCESS
   end function schism_update
 
-#ifdef NGEN_ACTIVE
+!#ifdef NGEN_ACTIVE
   function register_bmi(this) result(bmi_status) bind(C, name="register_bmi")
    use, intrinsic:: iso_c_binding, only: c_ptr, c_loc, c_int
    use iso_c_bmif_2_0
@@ -1733,5 +1798,5 @@ end function schism_finalizer
     bmi_status = BMI_SUCCESS
    endif
  end function register_bmi
-#endif
+!#endif
 end module bmischism

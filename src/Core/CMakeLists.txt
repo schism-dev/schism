@@ -33,7 +33,9 @@ if(${USE_PAHM})
   set (core_extra_src ${core_extra_src} PaHM/PaHM_Global.F90 PaHM/csv_module.F90 PaHM/csv_parameters.F90 PaHM/csv_utilities.F90 PaHM/PaHM_Sizes.F90 PaHM/PaHM_Messages.F90 PaHM/PaHM_Utilities.F90 PaHM/PaHM_Vortex.F90 PaHM/parwind.F90 PaHM/SortUtils.F90 PaHM/TimeDateUtils.F90)
 endif()
 
-add_library(core ${local_extra_code}
+if(${USE_BMI})
+
+add_library(core SHARED ${local_extra_code}
                  schism_glbl.F90
                  schism_msgp.F90
                  schism_assert.F90
@@ -44,7 +46,21 @@ add_library(core ${local_extra_code}
                  ${core_extra_src}
                  ${versionfile}
            )
+else()
 
+add_library(core ${local_extra_code}
+                 schism_glbl.F90
+                 schism_msgp.F90
+                 schism_assert.F90
+                 schism_io.F90
+                 scribe_io.F90
+                 misc_modules.F90
+                 hydraulic_structures.F90
+                 ${core_extra_src}
+                 ${versionfile}
+           )
+
+endif()
 add_dependencies(core sversion)
 
 list( APPEND locallibs core)

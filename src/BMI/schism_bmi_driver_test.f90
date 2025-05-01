@@ -74,20 +74,18 @@ program schism_driver_test
     integer :: mpi_rank, mpi_err
     real, pointer                                 :: var_value_get_ptr(:) ! value of a variable for get_value_ptr
 
-    integer, allocatable, target             :: get_var_Q_bnd_ind(:) ! get indices of source terms
-    integer, allocatable, target             :: get_var_ETA2_bnd_ind(:) ! get indices of source terms
     double precision, allocatable            :: Q_bnd_source_t0(:), Q_bnd_source_t1(:),  Q_bnd_sink_t0(:), Q_bnd_sink_t1(:) ! Source and sink boundary terms
     double precision, allocatable            :: ETA2_bnd_t0(:), ETA2_bnd_t1(:) ! Open water level Boundary condition terms
     double precision, allocatable            :: SFCPRS_t0(:), SFCPRS_t1(:), TMP2m_t0(:), TMP2m_t1(:)
     double precision, allocatable            :: UU10m_t0(:), UU10m_t1(:), VV10m_t0(:), VV10m_t1(:)
     double precision, allocatable            :: SPFH2m_t0(:), SPFH2m_t1(:), RAINRATE_t0(:), RAINRATE_t1(:), TROUTE_ETA2(:)
-
+    double precision, allocatable            :: ETA2_dt(:), Q_dt(:)
 
     integer, dimension(3)                             :: grid_indices       ! grid indices (change dims as needed)
   !---------------------------------------------------------------------
-  !  Initialize
+  !  SCHISM Initialize
   !---------------------------------------------------------------------
-    print*, "Initializing..."
+    print*, "SCHISM Initializing..."
     call MPI_Init(mpi_err)
     call MPI_Comm_rank(MPI_COMM_WORLD, mpi_rank, mpi_err)
     call get_command_argument(1, arg)
@@ -102,7 +100,7 @@ program schism_driver_test
     end if
 
   !---------------------------------------------------------------------
-  ! Get model information
+  ! Get SCHISM model BMI information
   ! component_name and input/output_var
   !---------------------------------------------------------------------
     status = m%get_component_name(component_name)
@@ -171,12 +169,34 @@ program schism_driver_test
     print*, "with a unit of ", ts_units
 
   !---------------------------------------------------------------------
-  ! Initalize Boundary conditions and forcings at start time (t0) 
+  ! Initalize SCHISM boundary conditions and forcings at start time (t0) 
   ! and the next model iteration (one hour, t1), which would mimic
-  ! the NextGen model engine workflow
+  ! the NextGen model engine workflow. Also set boundary forcing time steps.
   !---------------------------------------------------------------------
-  ! Grab array size information for bc indices
-  ! and allocate arrays
+
+  ! Go ahead and set the offshore water level boundary
+  ! condition time step for SCHISM. This will also be
+  ! set as first thing within the NextGen framework
+  allocate(ETA2_dt(1))
+  ! Default hourly forcing update for SCHISM that mimics
+  ! NWM operations for TWL capability
+  ETA2_dt(1) = 3600. 
+
+  status = m%set_value('ETA2_dt', ETA2_dt)
+  print*, 'ETA2_dt new data', th_dt2(1)
+
+
+  ! Go ahead and set the offshore source/sink 
+  ! forcing time step for SCHISM. This will also be
+  ! set as first thing within the NextGen framework
+  allocate(Q_dt(1))
+  ! Default hourly forcing update for SCHISM that mimics
+  ! NWM operations for TWL capability
+  Q_dt(1) = 3600.
+
+  status = m%set_value('Q_dt', Q_dt)
+  print*, 'Q_dt new data for source and sink terms are ', th_dt3
+
 
   ! Set water level boundaries with allocated 
   ! dummy data after model has been initialized
@@ -296,6 +316,7 @@ program schism_driver_test
   !---------------------------------------------------------------------
   ! Run some time steps with the update_until function
   !---------------------------------------------------------------------
+    ! Hourly iteration of SCHISM run 
     time_until = 3600.0
     status = m%update_until(time_until)
     
@@ -402,7 +423,8 @@ program schism_driver_test
     deallocate(ETA2_bnd_t1)
     deallocate(Q_bnd_source_t0)
     deallocate(Q_bnd_source_t1)
-
+    deallocate(ETA2_dt)
+    deallocate(Q_dt)
 
     !------------------------------------------
     ! Now we updated "t0" and "t1" for variables
