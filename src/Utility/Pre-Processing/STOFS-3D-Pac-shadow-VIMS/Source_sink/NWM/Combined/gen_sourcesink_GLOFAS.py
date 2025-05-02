@@ -445,7 +445,7 @@ if __name__ == '__main__':
     eid_sources2 = df_source_final.index.values
     nsource = eid_sources2.shape[0]
     temp = np.full(nsource, -9999.0)
-    salt = np.full(nsource, 30.0)
+    salt = np.full(nsource, 0.0)
     write_mth_file(temp, salt, f'msource{outtag}.th')
 
     nsink = 0
