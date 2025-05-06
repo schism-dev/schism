@@ -279,8 +279,6 @@ def set_levees(hgrid_obj, wdir):
     hgrid_obj = set_local_levee_profile(
         gd_ll=hgrid_obj, local_levee_info=local_levee_info, i_levee_top_node=hgrid_obj.ilevee)
     
-    hgrid_obj.save(f'{wdir}/levee_top.gr3', value=hgrid_obj.ilevee.astype(int))
-
     return hgrid_obj
 
 

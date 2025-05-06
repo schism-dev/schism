@@ -99,15 +99,16 @@ if glofasfiles is None:
 
 for fname in glofasfiles:
    ncid = nc.Dataset(fname)
-   p0 = np.searchsorted(lat, ncid.variables['latitude'][0], sorter=np.arange(len(lat)-1, -1, -1)) + 1 # lat is in decreasing order
-   p1 = np.searchsorted(lon, ncid.variables['longitude'][0]) -1
-   print(p0,p1,lon,lat,ncid.variables['latitude'][0], ncid.variables['longitude'][0] )
-   ind0N_sub = ind0N - (len(lat)-p0)
-   ind1N_sub = ind1N -p1
-   g = np.where(np.logical_and.reduce((ind0N_sub>=0, ind1N_sub>=0, ind0N_sub < ncid.variables['latitude'].shape[0], ind1N_sub < ncid.variables['longitude'].shape[0])))[0]
+   datalat = ncid.variables['latitude'][:]
+   datalon = ncid.variables['longitude'][:]
+   if np.min(datalon) < 0 and np.max(lonN) >=180: # mismatch between -180-180 data grid and 0-360 grid during prep
+       lonN[lonN >180] -=360
+   ilat = len(datalat)  -  np.searchsorted(datalat,latN+0.000001,sorter=np.arange(len(datalat)-1, -1, -1)) # lon grid is in descending order, adjust lat value slightly upward to handle potential low precision rounding error 
+   ilon = np.searchsorted(datalon,lonN+0.000001)-1
+   g = np.logical_and(np.isclose(datalon[ilon],lonN), np.isclose(datalat[ilat], latN))
    print(f'found {g.shape} locations in area, out of {ind0N.shape}')
-   Rlon = ncid.variables['longitude'][ind1N_sub[g]]
-   Rlat = ncid.variables['latitude'][ind0N_sub[g]]
+   Rlon = ncid.variables['longitude'][ilon[g]]
+   Rlat = ncid.variables['latitude'][ilat[g]]
    riverCoordsSubset[g,:] = np.c_[Rlon,Rlat]
    T = ncid.variables['valid_time'][:]
    time_units = ncid.variables['valid_time'].units
@@ -127,7 +128,7 @@ for fname in glofasfiles:
    discharge = np.zeros((timeind.shape[0],ind0N.shape[0])) * np.nan
    dis24 = ncid.variables['dis24'][timeind,0,:,:]
    for i in g:
-     discharge[:,i] = dis24[:,ind0N_sub[i],ind1N_sub[i]]
+     discharge[:,i] = dis24[:,ilat[i],ilon[i]]
 
 while T[0] > 0:
    T = np.r_[T[0]-86400,T]
