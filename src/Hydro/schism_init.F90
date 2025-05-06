@@ -2857,7 +2857,7 @@
 #else  /*SH_MEM_COMM*/
         if(myrank==0) then
 #endif /*SH_MEM_COMM*/
-          j=nf90_open(in_dir(1:len_in_dir)//'source.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_source)
+          j=nf90_open(in_dir(1:len_in_dir)//'source.nc',NF90_NOWRITE,ncid_source)
           if(j/=NF90_NOERR) call parallel_abort('init: source.nc')
           j=nf90_inq_dimid(ncid_source,'nsources',mm)
           j=nf90_inquire_dimension(ncid_source,mm,len=nsources)
@@ -3798,7 +3798,7 @@
 
         if(inu_tr(k)==2) then
           if(myrank==0) then
-            j=nf90_open(in_dir(1:len_in_dir)//tr_mname(k)//'_nu.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_nu(k))
+            j=nf90_open(in_dir(1:len_in_dir)//tr_mname(k)//'_nu.nc',NF90_NOWRITE,ncid_nu(k))
             if(j/=NF90_NOERR) call parallel_abort('init: nudging input not found:')
             !Static info
             j=nf90_inq_dimid(ncid_nu(k),'node',mm)
@@ -3835,7 +3835,7 @@
 
 !     Surface T,S restoration: open nc handle
       if(iref_ts/=0.and.myrank==0) then
-        j=nf90_open(in_dir(1:len_in_dir)//'surface_restore.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_ref_ts)
+        j=nf90_open(in_dir(1:len_in_dir)//'surface_restore.nc',NF90_NOWRITE,ncid_ref_ts)
         if(j/=NF90_NOERR) call parallel_abort('init: surface_restore.nc not found')
       endif !iref_ts
 
@@ -5354,7 +5354,7 @@
         if(istat/=0) call parallel_abort('Init: alloc(9.1)')
 
         !All ranks open .nc but rank 0 reads most of data 
-        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',NF90_NOWRITE,ncid2)
         if(j/=NF90_NOERR) call parallel_abort('init: hotstart.nc not found')
 
         if(myrank==0) then
