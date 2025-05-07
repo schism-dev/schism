@@ -1,10 +1,10 @@
 module bmischism
   
-!#ifdef NGEN_ACTIVE
-!  use bmif_2_0_iso
-!#else
+#ifdef NGEN_ACTIVE
+  use bmif_2_0_iso
+#else
   use bmif_2_0
-!#endif
+#endif
 
   use schism_glbl, only: pi, llist_type, elnode, i34, ipgl
   use schism_glbl, only: ns_global, isidenode, elside
@@ -1770,7 +1770,7 @@ end function schism_finalizer
     bmi_status = BMI_SUCCESS
   end function schism_update
 
-!#ifdef NGEN_ACTIVE
+#ifdef NGEN_ACTIVE
   function register_bmi(this) result(bmi_status) bind(C, name="register_bmi")
    use, intrinsic:: iso_c_binding, only: c_ptr, c_loc, c_int
    use iso_c_bmif_2_0
@@ -1798,5 +1798,5 @@ end function schism_finalizer
     bmi_status = BMI_SUCCESS
    endif
  end function register_bmi
-!#endif
+#endif
 end module bmischism
