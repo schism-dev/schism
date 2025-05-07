@@ -143,7 +143,7 @@ subroutine combine_hotstart7(istep)
   !print*, 'suffix is:',fgb(1:lfgb)
 
   !Query # of vars
-  iret=nf90_open('hotstart_000000_'//it_char(1:it_len)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+  iret=nf90_open('hotstart_000000_'//it_char(1:it_len)//'.nc',NF90_NOWRITE,ncid2)
   if(iret.ne.0) then
     write(*,*) 'Cannot find the hotstart file to read. Check the input information.'
     call exit(iret)
@@ -195,7 +195,7 @@ subroutine combine_hotstart7(istep)
       fgb2=fgb
       fgb2=adjustl(fgb2)
       write(fgb2(1:6),'(i6.6)') irank
-      iret=nf90_open('hotstart_'//fgb2(1:lfgb)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+      iret=nf90_open('hotstart_'//fgb2(1:lfgb)//'.nc',NF90_NOWRITE,ncid2)
       if(iret.ne.NF90_NOERR) then
         print*, 'Input hot not there;', nf90_strerror(iret)
         stop
