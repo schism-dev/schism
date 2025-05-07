@@ -30,22 +30,6 @@ if(USE_FABM)
   endif()
 endif()
 
-if(${USE_BMI})
-	add_library(hydro SHARED schism_init.F90
-                  schism_step.F90
-                  schism_finalize.F90
-                  bktrk_subs.F90
-                  grid_subs.F90
-                  lap.F90
-                  misc_subs.F90
-                  sflux_9c.F90
-                  solver_subs.F90
-                  transport_TVD_imp.F90
-                  ${hydro_extra_src}
-                  )
-
-else()
-
 add_library(hydro schism_init.F90
                   schism_step.F90
                   schism_finalize.F90
@@ -58,9 +42,6 @@ add_library(hydro schism_init.F90
                   transport_TVD_imp.F90
                   ${hydro_extra_src}
                   )
-
-endif()
-
 list( APPEND locallibs hydro)
 
 # The next line depends perhaps too much on the order of operations -- I'll try to fix it so that it is more intuitive.
