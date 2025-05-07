@@ -1497,7 +1497,7 @@ end function schism_finalizer
     integer :: bmi_status, i, j, ind_count
 
     select case(name)
-    !!!!!! No integer values currently advertised fo SCHISM !!!!!!
+    !!!!!! No integer values currently advertised for SCHISM !!!!!!
     case default
        dest(:) = -1
        bmi_status = BMI_FAILURE
