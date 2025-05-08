@@ -17,10 +17,9 @@ module schism_model_container
       double precision :: LatQ
       double precision :: SFCPRS
       double precision :: TMP2m
-      double precision :: SOLDN
       double precision :: LWDN
-      double precision :: UU10m
-      double precision :: VV10m
+      double precision :: U10m
+      double precision :: V10m
       double precision :: Q
       double precision :: UU2
       double precision :: VV2
