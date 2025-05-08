@@ -21,11 +21,12 @@ set(NO_PARMETIS OFF CACHE BOOLEAN "Turn off ParMETIS")
 #   Algorithm choices
 # TVD_LIM must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher.")
 set (TVD_LIM VL CACHE STRING "Flux limiter")
-#Turn OLDIO off to use the new scribe based I/O
-set (OLDIO OFF CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
 
+#Turn OLDIO off to use the new scribe based I/O for concurrent mode
+set (OLDIO OFF CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
 set (USE_ATMOS ON CACHE BOOLEAN "Coupling with atmospheric model via ESMF or BMI")
 set (USE_BMI ON CACHE BOOLEAN "Build a library that can be used from BMI, with sources and some b.c. provided by BMI")
+set (BUILD_SHARED_LIBS ON CACHE BOOLEAN "Build SCHISM shared libraries for BMI compliancy")
 set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
 ## GOTM5.2 is installed by default, and has been tested successfully, defined GOTM_BASE to use a non-standard GOTM source 
