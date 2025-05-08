@@ -62,8 +62,8 @@ define_opt(DEBUG "Enable diagnostics (slow and not suitable for production simul
 define_opt(USE_ANALYSIS "Triggers detailed calculations and output options" OFF)
 define_opt(INCLUDE_TIMING "Add timing profile instrumentation to simulation" OFF)
 define_opt(TIMER2 "Print timing information" OFF)
-define_opt(OLDIO "Old nc output option" NOT USE_BMI)
-define_opt(USE_ATMOS "Atmospheric model output option" NOT USE_BMI)
+define_opt(OLDIO "Old nc output option" OFF)
+define_opt(USE_ATMOS "Atmospheric model output option" OFF)
 define_opt(PREC_EVAP "Use  precipitation/evaporation option" OFF)
 define_opt(IMPOSE_NET_FLUX "Specify net heat and salt fluxes in sflux" OFF)
 define_opt(USE_BULK_FAIRALL "Enable Fairall scheme" OFF)
@@ -80,8 +80,7 @@ define_opt(USE_DVD "Enable DVD module" OFF)
 define_opt(BLD_STANDALONE "Standalone build mode" ON)
 define_opt(SH_MEM_COMM "Shared mem communicator" OFF)
 define_opt(BUILD_TOOLS "Build pschism and all the utilities" ON)
-
-define_opt(BUILD_SHARED_LIBS "Shared libraries" USE_BMI)
+define_opt(BUILD_SHARED_LIBS "Build SCHISM shared libraries" OFF)
 
 if(NOT DEFINED TVD_LIM)
   message(WARNING "TVD_LIM must be provided, either in the cache. It must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher. Default is VL")
@@ -94,7 +93,6 @@ string(REPLACE USE_ "" def_tag_rev ${all_def_tags})
 string(REPLACE INCLUDE_ "" def_tag_rev ${def_tag_rev})
 
 message(STATUS "Build definition tags set to ${def_tag_rev}")
-
 
 ########### MPI Library ########
 # The typical pattern with cmake is to use the mpi wrapper (e.g. mpif90)
@@ -124,8 +122,6 @@ if (CMAKE_C_FLAGS)
   set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} ${MPI_C_COMPILE_FLAGS})
 endif (CMAKE_C_FLAGS)
 include_directories(${MPI_C_INCLUDE_PATH})
-
-
 
 ########### NetCDF Dependency is handled here because so many libraries use it ##############
 if (BLD_STANDALONE)
