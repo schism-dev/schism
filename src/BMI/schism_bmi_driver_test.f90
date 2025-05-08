@@ -74,12 +74,13 @@ program schism_driver_test
     integer :: mpi_rank, mpi_err
     real, pointer                                 :: var_value_get_ptr(:) ! value of a variable for get_value_ptr
 
-    double precision, allocatable            :: Q_bnd_source_t0(:), Q_bnd_source_t1(:),  Q_bnd_sink_t0(:), Q_bnd_sink_t1(:) ! Source and sink boundary terms
-    double precision, allocatable            :: ETA2_bnd_t0(:), ETA2_bnd_t1(:) ! Open water level Boundary condition terms
-    double precision, allocatable            :: SFCPRS_t0(:), SFCPRS_t1(:), TMP2m_t0(:), TMP2m_t1(:)
-    double precision, allocatable            :: UU10m_t0(:), UU10m_t1(:), VV10m_t0(:), VV10m_t1(:)
-    double precision, allocatable            :: SPFH2m_t0(:), SPFH2m_t1(:), RAINRATE_t0(:), RAINRATE_t1(:), TROUTE_ETA2(:)
-    double precision, allocatable            :: ETA2_dt(:), Q_dt(:)
+    double precision, allocatable            :: Q_bnd_source(:), Q_bnd_sink(:) ! Source and sink boundary terms
+    double precision, allocatable            :: ETA2_bnd(:) ! Open water level Boundary condition terms
+    double precision, allocatable            :: SFCPRS(:), TMP2m(:) ! surface pressure and air temperature terms
+    double precision, allocatable            :: U10m(:), V10m(:) ! u and v wind component terms
+    double precision, allocatable            :: SPFH2m(:), RAINRATE(:) ! specific humidity and rainfall terms
+    double precision, allocatable            :: TROUTE_ETA2(:) ! T-Route station point locations to extract water levels for two way coupling
+    double precision, allocatable            :: ETA2_dt(:), Q_dt(:) ! Water level and discharge time step for input forcing terms
 
     integer, dimension(3)                             :: grid_indices       ! grid indices (change dims as needed)
   !---------------------------------------------------------------------
@@ -182,6 +183,7 @@ program schism_driver_test
   ! NWM operations for TWL capability
   ETA2_dt(1) = 3600. 
 
+  ! BMI call to set value and display result
   status = m%set_value('ETA2_dt', ETA2_dt)
   print*, 'ETA2_dt new data', th_dt2(1)
 
@@ -194,124 +196,205 @@ program schism_driver_test
   ! NWM operations for TWL capability
   Q_dt(1) = 3600.
 
+  ! BMI call to set value and display result
   status = m%set_value('Q_dt', Q_dt)
   print*, 'Q_dt new data for source and sink terms are ', th_dt3
 
 
   ! Set water level boundaries with allocated 
   ! dummy data after model has been initialized
-  allocate(ETA2_bnd_t0(size(ath2(1,1,:,1,1))))
-  allocate(ETA2_bnd_t1(size(ath2(1,1,:,1,1))))
+  allocate(ETA2_bnd(size(ath2(1,1,:,1,1))))
 
-  ETA2_bnd_t0(:) = 1.0
-  status = m%set_value('ETA2_bnd_t0', ETA2_bnd_t0)
-  ETA2_bnd_t1(:) = 2.0
-  status = m%set_value('ETA2_bnd_t1', ETA2_bnd_t1)
+  ! Lets assume we read in some fake hotstart conditions from the NextGen framework,
+  ! which we apply some initial condition to SCHISM t0 forcing fields.
+  ! SCHISM_BMI_set internal logic: (1) t0= t1; (2) t1= new t1 value from NextGen
 
-  print*, 'ETA2_bnd_t0 new data', ath2(1,1,1,1,1)
-  print*, 'ETA2_bnd_t1 new data', ath2(1,1,1,2,1)
 
-  ! Set discharge boundaries from "t-route data" with 
+  ! set the t0 initial condition using BMI call
+  ETA2_bnd(:) = 1.0
+  status = m%set_value('ETA2_bnd', ETA2_bnd)
+
+
+  ! Now once the NextGen framework has available model data t1
+  ! for SCHISM, we'll implement the BMI variable call again
+  ! to set the t1 inital condition, in which the function
+  ! will then assign the t0 initial condition simultaneously
+  ! from its previous value it was assigned before this call
+  ETA2_bnd(:) = 2.0
+  status = m%set_value('ETA2_bnd', ETA2_bnd)
+
+  ! Display t0 and t1 results to ensure user specified
+  ! dummy data was properly set
+  print*, 'ETA2_bnd t0 new data', ath2(1,1,1,1,1)
+  print*, 'ETA2_bnd t1 new data', ath2(1,1,1,2,1)
+
+  ! Set discharge boundaries from "T-Route data" with 
   ! allocated dummy data after model has been initialized
-  allocate(Q_bnd_source_t0(size(ieg_source_ngen)))
-  allocate(Q_bnd_source_t1(size(ieg_source_ngen)))
+  allocate(Q_bnd_source(size(ieg_source_ngen)))
   if(nsinks > 0) then
-    allocate(Q_bnd_sink_t0(size(ieg_sink)))
-    allocate(Q_bnd_sink_t1(size(ieg_sink)))
+    allocate(Q_bnd_sink(size(ieg_sink)))
   endif
+
   ! Set discharge boundaries from "precipitation data" with
   ! allocated dummy data after model has been initialized
   ! AND T-Route data has been first set to discharge t0
   ! source boundary arrays. This must be the workflow order
-  allocate(RAINRATE_t0(size(ieg_source)))
-  allocate(RAINRATE_t1(size(ieg_source)))
+  allocate(RAINRATE(size(ieg_source)))
 
-  Q_bnd_source_t0(:) = 0.25
-  status = m%set_value('Q_bnd_source_t0', Q_bnd_source_t0)
-  print*, 'Q_bnd_source_t0 new data', ath3(ieg_source_ngen(1),1,1,1)
+  ! SCHISM BMI source/sink terms MUST call discharge boundary
+  ! terms first, followed by the rainfall contribution so the 
+  ! BMI calls will properly add on those terms together before
+  ! partitioning data to t0 and t1 fields
+  
+  ! set the t0 initial condition using BMI call
+  Q_bnd_source(:) = 0.25
+  status = m%set_value('Q_bnd_source', Q_bnd_source)
 
-  RAINRATE_t0(:) = 0.1
-  status = m%set_value('RAINRATE_t0', RAINRATE_t0)
-  print*, 'Q_bnd_source_t0 new data after RAINFALL added', ath3(ieg_source_ngen(1),1,1,1)
-
-  Q_bnd_source_t1(:) = 0.5
-  status = m%set_value('Q_bnd_source_t1', Q_bnd_source_t1)
-  print*, 'Q_bnd_source_t1 new data', ath3(ieg_source_ngen(1),1,2,1)
-
-  RAINRATE_t1(:) = 0.2
-  status = m%set_value('RAINRATE_t1', RAINRATE_t1)
-  print*, 'Q_bnd_source_t1 new data after RAINFALL added', ath3(ieg_source_ngen(1),1,2,1)
+  RAINRATE(:) = 0.2
+  status = m%set_value('RAINRATE', RAINRATE)
 
 
+  ! Now once the NextGen framework has available model data t1
+  ! for SCHISM, we'll implement the BMI variable call again
+  ! to set the t1 inital condition, in which the function
+  ! will then assign the t0 initial condition simultaneously
+  ! from its previous value it was assigned before this call
+  Q_bnd_source(:) = 0.4
+  status = m%set_value('Q_bnd_source', Q_bnd_source)
+
+  RAINRATE(:) = 0.1
+  status = m%set_value('RAINRATE', RAINRATE)
+
+  ! Display t0 and t1 results to ensure user specified
+  ! dummy data was properly set
+  print*, 'Q_bnd_source t0 new data', ath3(ieg_source_ngen(1),1,1,1)
+  print*, 'Q_bnd_source t1 new data', ath3(ieg_source_ngen(1),1,2,1)
+
+
+  ! Flag to see whether or not any sink terms need to be accounted for
   if(nsinks > 0) then
-    Q_bnd_sink_t0(:) = 0.25
-    status = m%set_value('Q_bnd_sink_t0', Q_bnd_sink_t0)
-    print*, 'Q_bnd_sink_t0 new data', ath3(1,1,1,2)
-    Q_bnd_sink_t1(:) = 0.5
-    status = m%set_value('Q_bnd_sink_t1', Q_bnd_sink_t1)
-    print*, 'Q_bnd_sink_t1 new data', ath3(1,1,2,2)
+    ! set the t0 initial condition using BMI call
+    Q_bnd_sink(:) = 0.25
+    status = m%set_value('Q_bnd_sink', Q_bnd_sink)
+  
+    ! Now once the NextGen framework has available model data t1
+    ! for SCHISM, we'll implement the BMI variable call again
+    ! to set the t1 inital condition, in which the function
+    ! will then assign the t0 initial condition simultaneously
+    ! from its previous value it was assigned before this call
+    Q_bnd_sink(:) = 0.5
+    status = m%set_value('Q_bnd_sink', Q_bnd_sink)
+
+    ! Display t0 and t1 results to ensure user specified
+    ! dummy data was properly set
+    print*, 'Q_bnd_sink t0 new data', ath3(ieg_sink(1),1,1,2)
+    print*, 'Q_bnd_sink t1 new data', ath3(ieg_sink(1),1,2,2)
   endif
 
   ! Set u wind velocity component with allocated 
   ! dummy data after model has been initialized
-  allocate(UU10m_t0(npa))
-  allocate(UU10m_t1(npa))
+  allocate(U10m(npa))
 
+  ! set the t0 initial condition using BMI call
+  U10m(:) = 2.0
+  status = m%set_value('U10m', U10m)
 
+  ! Now once the NextGen framework has available model data t1
+  ! for SCHISM, we'll implement the BMI variable call again
+  ! to set the t1 inital condition, in which the function
+  ! will then assign the t0 initial condition simultaneously
+  ! from its previous value it was assigned before this call
+  U10m(:) = 3.0
+  status = m%set_value('U10m', U10m)
 
-  UU10m_t0(:) = 2.0
-  status = m%set_value('UU10m_t0', UU10m_t0)
-  UU10m_t1(:) = 3.0
-  status = m%set_value('UU10m_t1', UU10m_t1)
-
-  print*, 'UU10m_t0 new data', windx1(1)
-  print*, 'UU10m_t1 new data', windx2(1)
+  ! Display t0 and t1 results to ensure user specified
+  ! dummy data was properly set
+  print*, 'U10m t0 new data', windx1(1)
+  print*, 'U10m t1 new data', windx2(1)
 
   ! Set v wind velocity component with allocated 
   ! dummy data after model has been initialized
-  allocate(VV10m_t0(npa))
-  allocate(VV10m_t1(npa))
+  allocate(V10m(npa))
 
-  VV10m_t0(:) = 2.0
-  status = m%set_value('VV10m_t0', VV10m_t0)
-  VV10m_t1(:) = 3.0
-  status = m%set_Value('VV10m_t1', VV10m_t1)
+  ! set the t0 initial condition using BMI call
+  V10m(:) = 2.0
+  status = m%set_value('V10m', V10m)
+ 
+  ! Now once the NextGen framework has available model data t1
+  ! for SCHISM, we'll implement the BMI variable call again
+  ! to set the t1 inital condition, in which the function
+  ! will then assign the t0 initial condition simultaneously
+  ! from its previous value it was assigned before this call
+  V10m(:) = 3.0
+  status = m%set_Value('V10m', V10m)
 
-  print*, 'VV10m_t0 new data', windy1(1)
-  print*, 'VV10m_t1 new data', windy2(1)
+  ! Display t0 and t1 results to ensure user specified
+  ! dummy data was properly set
+  print*, 'V10m t0 new data', windy1(1)
+  print*, 'V10m t1 new data', windy2(1)
 
-  allocate(SFCPRS_t0(npa))
-  allocate(SFCPRS_t1(npa))
+  ! Set surface pressure fields with allocated
+  ! dummy data after model has been initialized
+  allocate(SFCPRS(npa))
 
-  SFCPRS_t0(:) = 101325.0
-  status = m%set_value('SFCPRS_t0', SFCPRS_t0)
-  SFCPRS_t1(:) = 101025.0
-  status = m%set_value('SFCPRS_t1', SFCPRS_t1)
+  ! set the t0 initial condition using BMI call
+  SFCPRS(:) = 101325.0
+  status = m%set_value('SFCPRS', SFCPRS)
+ 
+  ! Now once the NextGen framework has available model data t1
+  ! for SCHISM, we'll implement the BMI variable call again
+  ! to set the t1 inital condition, in which the function
+  ! will then assign the t0 initial condition simultaneously
+  ! from its previous value it was assigned before this call
+  SFCPRS(:) = 101025.0
+  status = m%set_value('SFCPRS', SFCPRS)
 
-  print*, 'SFCPRS_t0 new data', pr1(1)
-  print*, 'SFCPRS_t1 new data', pr2(1)
+  ! Display t0 and t1 results to ensure user specified
+  ! dummy data was properly set
+  print*, 'SFCPRS t0 new data', pr1(1)
+  print*, 'SFCPRS t1 new data', pr2(1)
 
-  allocate(TMP2m_t0(npa))
-  allocate(TMP2m_t1(npa))
+  ! Set air temperature fields with allocated
+  ! dummy data after model has been initialized
+  allocate(TMP2m(npa))
+ 
+  ! set the t0 initial condition using BMI call
+  TMP2m(:) = 348.0
+  status = m%set_value('TMP2m', TMP2m)
 
-  TMP2m_t0(:) = 348.0
-  status = m%set_value('TMP2m_t0', TMP2m_t0)
-  TMP2m_t1(:) = 350.0
-  status = m%set_value('TMP2m_t1', TMP2m_t1)
+  ! Now once the NextGen framework has available model data t1
+  ! for SCHISM, we'll implement the BMI variable call again
+  ! to set the t1 inital condition, in which the function
+  ! will then assign the t0 initial condition simultaneously
+  ! from its previous value it was assigned before this call
+  TMP2m(:) = 350.0
+  status = m%set_value('TMP2m', TMP2m)
 
-  print*, 'TMP2m_t0 new data', airt1(1)
-  print*, 'TMP2m_t1 new data', airt2(1)
+  ! Display t0 and t1 results to ensure user specified
+  ! dummy data was properly set
+  print*, 'TMP2m t0 new data', airt1(1)
+  print*, 'TMP2m t1 new data', airt2(1)
 
-  allocate(SPFH2m_t0(npa))
-  allocate(SPFH2m_t1(npa))
+  ! Set specific humidity fields with allocated
+  ! dummy data after model has been initialized
+  allocate(SPFH2m(npa))
 
-  SPFH2m_t0(:) = 0.0140
-  status = m%set_value('SPFH2m_t0', SPFH2m_t0)
-  SPFH2m_t1(:) = 0.0145
-  status = m%set_value('SPFH2m_t1', SPFH2m_t1)
+  ! set the t0 initial condition using BMI call
+  SPFH2m(:) = 0.0140
+  status = m%set_value('SPFH2m', SPFH2m)
 
-  print*, 'SPFH2m_t0 new data', shum1(1)
-  print*, 'SPFH2m_t1 new data', shum2(1)
+  ! Now once the NextGen framework has available model data t1
+  ! for SCHISM, we'll implement the BMI variable call again
+  ! to set the t1 inital condition, in which the function
+  ! will then assign the t0 initial condition simultaneously
+  ! from its previous value it was assigned before this call
+  SPFH2m(:) = 0.0145
+  status = m%set_value('SPFH2m', SPFH2m)
+
+  ! Display t0 and t1 results to ensure user specified
+  ! dummy data was properly set
+  print*, 'SPFH2m t0 new data', shum1(1)
+  print*, 'SPFH2m t1 new data', shum2(1)
 
   !---------------------------------------------------------------------
   ! Run some time steps with the update_until function
@@ -320,9 +403,6 @@ program schism_driver_test
     time_until = 3600.0
     status = m%update_until(time_until)
     
-  !---------------------------------------------------------------------
-  ! Run the rest of the time with update in a loop
-  !---------------------------------------------------------------------
     ! get the current and end time for running the execution loop
     status = m%get_current_time(current_time)
     status = m%get_end_time(end_time)
@@ -340,89 +420,119 @@ program schism_driver_test
     do iBMI = 1, n_outputs
       if(trim(names_outputs(iBMI)) .ne. "TROUTE_ETA2") then
           status = m%get_value(trim(names_outputs(iBMI)), var_value_get)
-          print*, trim(names_outputs(iBMI)), " from get_value = ", var_value_get
+          print*, trim(names_outputs(iBMI)), " from get_value (first 10 indices) = ", var_value_get(1:10)
       endif
     end do
  
     deallocate(var_value_get)
 
     ! Now quickly test the value get method for TROUTE ETA2
-    allocate(var_value_get(nout_sta))
-    status = m%get_value("TROUTE_ETA2", var_value_get)
-    print*, "TROUTE_ETA2 from get_value = ", var_value_get
-    deallocate(var_value_get)
-
-    ETA2_bnd_t1(:) = 2.5
-    status = m%set_value('ETA2_bnd_t1', ETA2_bnd_t1)
-
-    print*, 'ETA2_bnd_t0 new data', ath2(1,1,1,1,1)
-    print*, 'ETA2_bnd_t1 new data', ath2(1,1,1,2,1)
-
-    Q_bnd_source_t1(:) = 0.75
-    status = m%set_value('Q_bnd_source_t1', Q_bnd_source_t1)
-
-    print*, 'Q_bnd_source_t0 new data', ath3(1,1,1,1)
-    print*, 'Q_bnd_source_t1 new data', ath3(1,1,2,1) 
-
-    RAINRATE_t1(:) = 0.1
-    status = m%set_value('RAINRATE_t1', RAINRATE_t1)
-
-    print*, 'Q_bnd_t0 new data after RAINFALL added', ath3(1,1,1,1)
-    print*, 'Q_bnd_t1 new data after RAINFALL added', ath3(1,1,2,1)
-
-    if(nsinks > 0) then
-      Q_bnd_sink_t1(:) = 0.7
-      status = m%set_value('Q_bnd_sink_t1', Q_bnd_sink_t1)
-      print*, 'Q_bnd_sink_t0 new data', ath3(1,1,1,2)
-      print*, 'Q_bnd_sink_t1 new data', ath3(1,1,2,2)
+    ! fields based on station locations assigned to TROUTE
+    ! extraction of TWLs within the user input station.in
+    ! file if specified
+    if(nout_sta > 0) then
+      allocate(var_value_get(nout_sta))
+      status = m%get_value("TROUTE_ETA2", var_value_get)
+      print*, "TROUTE_ETA2 from get_value = ", var_value_get
+      deallocate(var_value_get)
     endif
 
-    UU10m_t1(:) = 3.5
-    status = m%set_value('UU10m_t1', UU10m_t1)
+    ! The following BMI calls here for the next hour of the simulation (t2 in this case)
+    ! Now once the NextGen framework has available model data t2
+    ! for SCHISM, we'll implement the BMI variable call again
+    ! to set the t1 inital condition, in which the function
+    ! will then assign the t0 initial condition simultaneously
+    ! from its previous value it was assigned before this call
+ 
+ 
+    ! set latest t0 and t1 initial conditions using BMI call  
+    ETA2_bnd(:) = 2.5
+    status = m%set_value('ETA2_bnd', ETA2_bnd)
 
-    print*, 'UU10m_t0 new data', windx1(1)
-    print*, 'UU10m_t1 new data', windx2(1)
+    ! Display latest t0 and t1 results to ensure user specified
+    ! dummy data was properly set
+    print*, 'ETA2_bnd t0 new data', ath2(1,1,1,1,1)
+    print*, 'ETA2_bnd t1 new data', ath2(1,1,1,2,1)
 
-    VV10m_t1(:) = 3.5
-    status = m%set_value('VV10m_t1', VV10m_t1)
+    ! set latest t0 and t1 initial conditions using BMI call
+    Q_bnd_source(:) = 0.75
+    status = m%set_value('Q_bnd_source', Q_bnd_source)
 
-    print*, 'VV10m_t0 new data', windy1(1)
-    print*, 'VV10m_t1 new data', windy2(1)
+    RAINRATE(:) = 0.1
+    status = m%set_value('RAINRATE', RAINRATE)
 
-    SFCPRS_t1(:) = 101010.0
-    status = m%set_value('SFCPRS_t1', SFCPRS_t1)
+    ! Display latest t0 and t1 results to ensure user specified
+    ! dummy data was properly set
+    print*, 'Q_bnd t0 new data', ath3(ieg_source_ngen(1),1,1,1)
+    print*, 'Q_bnd t1 new data', ath3(ieg_source_ngen(1),1,2,1)
 
-    print*, 'SFCPRS_t0 new data', pr1(1)
-    print*, 'SFCPRS_t1 new data', pr2(1)
+    ! Flag to see whether or not sink terms were initailized in model setup
+    ! to be displayed here
+    if(nsinks > 0) then
+      ! set latest t0 and t1 initial conditions using BMI call
+      Q_bnd_sink(:) = 0.7
+      status = m%set_value('Q_bnd_sink', Q_bnd_sink)
+      ! Display latest t0 and t1 results to ensure user specified
+      ! dummy data was properly set
+      print*, 'Q_bnd_sink t0 new data', ath3(ieg_sink(1),1,1,2)
+      print*, 'Q_bnd_sink t1 new data', ath3(ieg_sink(1),1,2,2)
+    endif
 
-    TMP2m_t1(:) = 355.0
-    status = m%set_value('TMP2m_t1', TMP2m_t1)
+    ! set latest t0 and t1 initial conditions uBMI call
+    U10m(:) = 3.5
+    status = m%set_value('U10m', U10m)
 
-    print*, 'TMP2m_t0 new data', airt1(1)
-    print*, 'TMP2m_t1 new data', airt2(1)
+    ! Display latest t0 and t1 results to ensure user specified
+    ! dummy data was properly set
+    print*, 'U10m t0 new data', windx1(1)
+    print*, 'U10m t1 new data', windx2(1)
 
-    SPFH2m_t1(:) = 0.0150
-    status = m%set_value('SPFH2m_t1', SPFH2m_t1)
+    ! set latest t0 and t1 initial conditions using BMI call
+    V10m(:) = 3.5
+    status = m%set_value('V10m', V10m)
 
-    print*, 'SPFH2m_t0 new data', shum1(1)
-    print*, 'SPFH2m_t1 new data', shum2(1)
+    ! Display latest t0 and t1 results to ensure user specified
+    ! dummy data was properly set
+    print*, 'V10m t0 new data', windy1(1)
+    print*, 'V10m t1 new data', windy2(1)
+
+    ! set latest t0 and t1 initial conditions using BMI call
+    SFCPRS(:) = 101010.0
+    status = m%set_value('SFCPRS', SFCPRS)
+
+    ! Display latest t0 and t1 results to ensure user specified
+    ! dummy data was properly set
+    print*, 'SFCPRS t0 new data', pr1(1)
+    print*, 'SFCPRS t1 new data', pr2(1)
+
+    ! set latest t0 and t1 initial conditions using BMI call
+    TMP2m(:) = 355.0
+    status = m%set_value('TMP2m', TMP2m)
+
+    ! Display latest t0 and t1 results to ensure user specified
+    ! dummy data was properly set
+    print*, 'TMP2m t0 new data', airt1(1)
+    print*, 'TMP2m t1 new data', airt2(1)
+
+    ! set latest t0 and t1 initial conditions using BMI call
+    SPFH2m(:) = 0.0150
+    status = m%set_value('SPFH2m', SPFH2m)
+
+    ! Display latest t0 and t1 results to ensure user specified
+    ! dummy data was properly set
+    print*, 'SPFH2m t0 new data', shum1(1)
+    print*, 'SPFH2m t1 new data', shum2(1)
 
 
-    ! Deallocate forcing field arrays for memory use
-    deallocate(RAINRATE_t0)
-    deallocate(RAINRATE_t1)
-    deallocate(SFCPRS_t0)
-    deallocate(SFCPRS_t1)
-    deallocate(SPFH2m_t0)
-    deallocate(SPFH2m_t1)
-    deallocate(UU10m_t0)
-    deallocate(UU10m_t1)
-    deallocate(VV10m_t0)
-    deallocate(VV10m_t1)
-    deallocate(ETA2_bnd_t0)
-    deallocate(ETA2_bnd_t1)
-    deallocate(Q_bnd_source_t0)
-    deallocate(Q_bnd_source_t1)
+    ! Deallocate forcing field arrays
+    ! to free up  memory use
+    deallocate(RAINRATE)
+    deallocate(SFCPRS)
+    deallocate(SPFH2m)
+    deallocate(U10m)
+    deallocate(V10m)
+    deallocate(ETA2_bnd)
+    deallocate(Q_bnd_source)
     deallocate(ETA2_dt)
     deallocate(Q_dt)
 
@@ -458,6 +568,8 @@ program schism_driver_test
     status = m%get_grid_rank(grid_int, grid_rank)
     print*, "The grid rank for ", trim(names_outputs(iBMI)), " is ", grid_rank
     
+    !!!! Not implemented for unstructured mesh !!!!
+
     ! get_grid_shape
     ! only scalars implemented thus far
     !status = m%get_grid_shape(grid_int, grid_shape)
@@ -469,6 +581,8 @@ program schism_driver_test
     status = m%get_grid_size(grid_int, grid_size)
     print*, "The grid size for ", trim(names_outputs(iBMI)), " is ", grid_size
     
+    !!!! Not implemented for unstructured mesh !!!!
+
     ! get_grid_spacing
     ! only scalars implemented thus far
     !status = m%get_grid_spacing(grid_int, grid_spacing)
@@ -476,6 +590,8 @@ program schism_driver_test
     !  print*, "No grid spacing for the grid type/rank"
     !end if
     
+    !!!! Not implemented for unstructured mesh !!!!
+
     ! get_grid_origin
     ! only scalars implemented thus far
     !status = m%get_grid_origin(grid_int, grid_origin)
@@ -551,7 +667,7 @@ program schism_driver_test
     deallocate(grid_z_mesh)
 
 
-    !!!!!!!!!!!!!!! Now Evaluate the TRoute station id point grid !!!!!!!!!!!!
+    !!!!!!!!!!!!!!! Now Evaluate the TRoute station id point grid based on station.in file !!!!!!!!!!!!
     if(nout_sta > 0) then
         status = m%get_var_grid('TROUTE_ETA2', grid_int)
         print*, "The integer value for the ", 'TROUTE_ETA2', " grid is ", grid_int
@@ -572,91 +688,78 @@ program schism_driver_test
         print*, "The X coord for grid ", grid_int, " is ", grid_x_station(:)
         print*, "The Y coord for grid ", grid_int, " is ", grid_y_station(:)
 
-        print*, "schism glbl arrays"
-        print*, xsta(:)
-        print*, ysta(:)
         deallocate(grid_x_station)
         deallocate(grid_y_station)
     endif
 
     !!!!!!!!!!!!!!!! Now Evalute the water level open boundary point grid !!!!!!!!!!
-    status = m%get_var_grid('ETA2_bnd_t1', grid_int)
-    print*, "The integer value for the ", 'ETA2_bnd1_t1', " grid is ", grid_int
+    status = m%get_var_grid('ETA2_bnd', grid_int)
+    print*, "The integer value for the ", 'ETA2_bnd', " grid is ", grid_int
 
     ! get_grid_type
     status = m%get_grid_type(grid_int, grid_type)
-    print*, "The grid type for ", 'ETA2_bnd1_t1', " is ", trim(grid_type)
+    print*, "The grid type for ", 'ETA2_bnd', " is ", trim(grid_type)
 
     ! get_grid_rank
     status = m%get_grid_rank(grid_int, grid_rank)
-    print*, "The grid rank for ", 'ETA2_bnd1_t1', " is ", grid_rank
+    print*, "The grid rank for ", 'ETA2_bnd', " is ", grid_rank
 
     ! allocate water level point coords arrays
     allocate(grid_x_wlbnd(size(ath2(1,1,:,1,1))))
     allocate(grid_y_wlbnd(size(ath2(1,1,:,1,1))))
-    allocate(grid_z_wlbnd(size(ath2(1,1,:,1,1))))
-    ! get_grid_x/y/z
-    ! should return 0 for a 1 node "grid" because not currently spatially
-    ! explicit
+    ! BMI call to get coordinates of the grid
     status = m%get_grid_x(grid_int, grid_x_wlbnd)
     status = m%get_grid_y(grid_int, grid_y_wlbnd)
     status = m%get_grid_z(grid_int, grid_z_wlbnd)
+
     print*, "The X coord for grid ", grid_int, " is ", grid_x_wlbnd(1:5)
     print*, "The Y coord for grid ", grid_int, " is ", grid_y_wlbnd(1:5)
-    print*, "The Z coord for grid ", grid_int, " is ", grid_z_wlbnd(1:5)
 
     deallocate(grid_x_wlbnd)
     deallocate(grid_y_wlbnd)
-    deallocate(grid_z_wlbnd)
     !!!!!!!!!!!!!!!! Now Evalute the total source boundary point grid !!!!!!!!!!
-    status = m%get_var_grid('RAINRATE_t1', grid_int)
-    print*, "The integer value for the ", 'RAINRATE_t1', " grid is ", grid_int
+    status = m%get_var_grid('RAINRATE', grid_int)
+    print*, "The integer value for the ", 'RAINRATE', " grid is ", grid_int
 
     ! get_grid_type
     status = m%get_grid_type(grid_int, grid_type)
-    print*, "The grid type for ", 'RAINRATE_t1', " is ", trim(grid_type)
+    print*, "The grid type for ", 'RAINRATE', " is ", trim(grid_type)
 
     ! get_grid_rank
     status = m%get_grid_rank(grid_int, grid_rank)
-    print*, "The grid rank for ", 'RAINRATE_t1', " is ", grid_rank
+    print*, "The grid rank for ", 'RAINRATE', " is ", grid_rank
     print*, nsources
     ! allocate source discharge point coords arrays
     allocate(grid_x_rain(nsources))
     allocate(grid_y_rain(nsources))
-    !allocate(grid_z_qbnd(size(ieg_source_ngen)))
-    ! get_grid_x/y/z
-    ! should return 0 for a 1 node "grid" because not currently spatially
-    ! explicit
+    ! BMI call to get coordinates of grid
     status = m%get_grid_x(grid_int, grid_x_rain)
     status = m%get_grid_y(grid_int, grid_y_rain)
-    !status = m%get_grid_z(grid_int, grid_z_qbnd)
+ 
     print*, "The X coord for grid ", grid_int, " is ", grid_x_rain(1:5)
     print*, "The Y coord for grid ", grid_int, " is ", grid_y_rain(1:5)
     !!!!!!!!!!!!!!!! Now Evalute the discharge boundary point grid !!!!!!!!!!
-    status = m%get_var_grid('Q_bnd_source_t1', grid_int)
-    print*, "The integer value for the ", 'Q_bnd_source_t1', " grid is ", grid_int
+    status = m%get_var_grid('Q_bnd_source', grid_int)
+    print*, "The integer value for the ", 'Q_bnd_source', " grid is ", grid_int
 
     ! get_grid_type
     status = m%get_grid_type(grid_int, grid_type)
-    print*, "The grid type for ", 'Q_bnd_source_t1', " is ", trim(grid_type)
+    print*, "The grid type for ", 'Q_bnd_source', " is ", trim(grid_type)
 
     ! get_grid_rank
     status = m%get_grid_rank(grid_int, grid_rank)
-    print*, "The grid rank for ", 'Q_bnd_source_t1', " is ", grid_rank
+    print*, "The grid rank for ", 'Q_bnd_source', " is ", grid_rank
 
     ! allocate source discharge point coords arrays
     allocate(grid_x_qbnd(nsources_bmi))
     allocate(grid_y_qbnd(nsources_bmi))
-    !allocate(grid_z_qbnd(size(ieg_source_ngen)))
-    ! get_grid_x/y/z
-    ! should return 0 for a 1 node "grid" because not currently spatially
-    ! explicit
+    ! BMI call to get coordinates of grid
     status = m%get_grid_x(grid_int, grid_x_qbnd)
     status = m%get_grid_y(grid_int, grid_y_qbnd)
-    !status = m%get_grid_z(grid_int, grid_z_qbnd)
+
     print*, "The X coord for grid ", grid_int, " is ", grid_x_qbnd(1:5)
     print*, "The Y coord for grid ", grid_int, " is ", grid_y_qbnd(1:5)
-    !print*, "The Z coord for grid ", grid_int, " is ", grid_z_qbnd(1:5)
+  
     deallocate(grid_x_qbnd)
     deallocate(grid_y_qbnd)
 
