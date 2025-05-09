@@ -8324,12 +8324,12 @@
               nd=elnode(j,i)
               do m=1,nne(nd)
                 ie=indel(m,nd)
-                if(nwild(ie)==1) then !not barrier
-                  ifl=1; exit loop16
+                if(nwild(ie)>0) then !not barrier
+                  ifl=nwild(ie); exit loop16
                 endif
               enddo !m
             end do loop16
-            if(ifl==1) imarsh(i)=1
+            if(ifl>0) imarsh(i)=ifl
           endif !smax
         endif !nwild
       enddo !i=1,ne
@@ -8347,12 +8347,16 @@
       do i=1,np
         do j=1,nne(i)
           ie=indel(j,i)
-          if(imarsh(ie)==1) then !iveg/=0
-            veg_di(i)=veg_di0
-            veg_h(i)=veg_h0
-            veg_nv(i)=veg_nv0
-            veg_cd(i)=veg_cd0
-            veg_alpha0(i)=veg_di0*veg_nv0*veg_cd0/2.d0
+          if(imarsh(ie)>0) then !iveg/=0
+            if(imarsh(i)>nmarsh_types) then
+              write(errmsg,*)'STEP: imarsh(i)>nmarsh_',iplg(i),imarsh(i)
+              call parallel_abort(errmsg)
+            endif
+            veg_di(i)=veg_di0(imarsh(i))
+            veg_h(i)=veg_h0(imarsh(i))
+            veg_nv(i)=veg_nv0(imarsh(i))
+            veg_cd(i)=veg_cd0(imarsh(i))
+            veg_alpha0(i)=veg_di0(imarsh(i))*veg_nv0(imarsh(i))*veg_cd0(imarsh(i))/2.d0
           endif !imarsh
 
           !drowned marsh: veg_di etc =0
