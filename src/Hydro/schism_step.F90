@@ -8310,15 +8310,15 @@
         !not barrier
         smax=maxval(dp(elnode(1:i34(i),i)))+slr_elev !max depth with SLR
         smin=minval(dp(elnode(1:i34(i),i)))+slr_elev !min depth
-        if(nwild(i)==1) then !marsh elem
-          if(smax>0.5d0) then !drowned
+        if(nwild(i)>0) then !marsh elem
+          if(smax>drown_marsh) then !drowned
             imarsh(i)=0
 !            Cdp(elnode(1:i34(i),i))=0.001d0
 !            Cd(elside(1:i34(i),i))=0.001d0
 !            rough_p(elnode(1:i34(i),i))=1.d-4
           endif !smax
         else !non-marsh elem @last step
-          if(smax<=0.d0.and.smin>=-1.d0) then !create marsh
+          if(smax<=create_marsh_max.and.smin>=create_marsh_min) then !create marsh
             ifl=0
             loop16: do j=1,i34(i)
               nd=elnode(j,i)
