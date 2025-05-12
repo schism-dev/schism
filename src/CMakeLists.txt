@@ -94,6 +94,7 @@ string(REPLACE INCLUDE_ "" def_tag_rev ${def_tag_rev})
 
 message(STATUS "Build definition tags set to ${def_tag_rev}")
 
+
 ########### MPI Library ########
 # The typical pattern with cmake is to use the mpi wrapper (e.g. mpif90)
 # to infer flags and locations for the compiler

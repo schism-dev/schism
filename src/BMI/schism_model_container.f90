@@ -6,7 +6,7 @@ module schism_model_container
       integer :: num_time_steps
       double precision :: current_model_time
       double precision :: time_step_size
-      
+
       character(len=1000) :: SCHISM_dir
       integer :: SCHISM_NSCRIBES
 
