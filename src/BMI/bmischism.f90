@@ -346,7 +346,7 @@ function schism_initialize(this, config_file) result (bmi_status)
      ! Call SCHISM init function to initalize the model
      ! configurations that is specified in the param.nml
      ! file in the SCHISM directory and bypass the scribe
-     ! I/O functionality, which is mainly suited for a 
+     ! I/O functionality, which is mainly suited for a
      ! serial SCHISM BMI approach only
      call schism_init(0, trim(this%model%SCHISM_dir), iths, ntime)
 #else

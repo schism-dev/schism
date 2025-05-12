@@ -28,7 +28,7 @@ set (USE_BMI ON CACHE BOOLEAN "Build a library that can be used from BMI, with s
 set (BUILD_SHARED_LIBS ON CACHE BOOLEAN "Build SCHISM shared libraries for BMI compliancy")
 set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
-## GOTM5.2 is installed by default, and has been tested successfully, defined GOTM_BASE to use a non-standard GOTM source 
+## GOTM5.2 is installed by default, and has been tested successfully, defined GOTM_BASE to use a non-standard GOTM source
 ## Note that source code of GOTM5.2 is from GOTM web so make sure to use recursive clone (to get the submodule)
 ##set( GOTM_BASE /work2/03473/seatonc/frontera/GOTM5.2/code CACHE STRING "Path to non-standard GOTM base directory")
 set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model. This just enables the build -- GOTM must still be selected in param.nml")
@@ -63,4 +63,3 @@ set( USE_DVD OFF CACHE BOOLEAN "DVD module interface")
 
 set (DEBUG OFF CACHE BOOLEAN "Enable diagnostic output")
 set (USE_ANALYSIS OFF CACHE BOOLEAN "Enable (somewhat costly) derviation of derived flow/stress quantities")
- 
