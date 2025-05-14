@@ -271,7 +271,11 @@ endif
 ifdef USE_FABM
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_FABM
   FABMINSTALLDIR = ./Fabm/build
-  FABMLIBS = -L$(FABMINSTALLDIR)/lib -lfabm
+  ifneq ($(wildcard $(FABMINSTALLDIR)/lib64),)
+    FABMLIBS = -L$(FABMINSTALLDIR)/lib64 -lfabm
+  else
+    FABMLIBS = -L$(FABMINSTALLDIR)/lib -lfabm
+  endif
   OBJS := $(OBJS) fabm_schism.o
   FCPFLAGS += -I$(FABMINSTALLDIR)/include
 endif

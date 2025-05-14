@@ -187,14 +187,14 @@
 !     Name list
       integer :: ntracer_gen,ntracer_age,sed_class,eco_class !,flag_fib
       namelist /CORE/ipre,ibc,ibtp,ntracer_gen,ntracer_age,sed_class,eco_class, &
-     &nspool,ihfskip,msc2,mdc2,dt,rnday,nbins_veg_vert
+     &nspool,ihfskip,msc2,mdc2,dt,rnday,nbins_veg_vert,nmarsh_types
 
       namelist /OPT/ gen_wsett,flag_fib,ics,rearth_pole,rearth_eq,indvel, &
      &imm,ibdef,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
      &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,drampbc, &
      &dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min, &
      &hmin_man,ncor,rlatitude,coricoef,nws,wtiminc,iwind_form, &
-     &drampwind,iwindoff,ihconsv,isconsv,itur,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
+     &drampwind,iwindoff,ihconsv,isconsv,itur,icompute_cpsi3,iscnd_coeff,ri_st,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
      &vdmax_pp2,vdmin_pp1,vdmin_pp2,tdmin_pp1,tdmin_pp2,mid,stab,xlsc0, &
      &ibcc_mean,flag_ic,start_year,start_month,start_day,start_hour,utc_start, &
      &itr_met,h_tvd,eps1_tvd_imp,eps2_tvd_imp,ip_weno, &
@@ -214,7 +214,8 @@
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
-     &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2
+     &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
+     &drown_marsh,create_marsh_min,create_marsh_max
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm, &
@@ -322,6 +323,7 @@
       if(mod(ihfskip,nspool)/=0) call parallel_abort('ihfskip/nspool /= integer')
 !'
       if(nbins_veg_vert<=0) call parallel_abort('INIT: nbins_veg_vert<=0')
+      if(nmarsh_types<=0) call parallel_abort('INIT: nmarsh_types<=0')
  
 !     m[sd]c2 are checked inside WWM
 
@@ -448,7 +450,8 @@
      &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_mice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
-     &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1),stat=istat)
+     &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1), &
+     &veg_di0(nmarsh_types),veg_h0(nmarsh_types),veg_nv0(nmarsh_types),veg_cd0(nmarsh_types),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
         srqst7(:)=MPI_REQUEST_NULL
         !Global output on/off flags
@@ -468,7 +471,7 @@
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
       nws=0; wtiminc=dt; iwind_form=1; iwindoff=0;
       drampwind=1._rkind; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; i_hmin_salt_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
-      h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind
+      h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind; icompute_cpsi3=0; ri_st=0.25d0; iscnd_coeff=5
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
       ibcc_mean=0; flag_ic(:)=1; start_year=2000; start_month=1; start_day=1; start_hour=0._rkind; utc_start=0._rkind;  
@@ -513,6 +516,13 @@
       veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
       veg_vert_scale_D=(/(1.0d0,i=1,nbins_veg_vert+1)/)
       veg_lai=1.d0; veg_cw=1.5d0
+      veg_di0=1.d-2 !m
+      veg_h0=0.3d0 !m
+      veg_nv0=10.d0 !/m^2
+      veg_cd0=1.d0 
+      drown_marsh=0.5d0
+      create_marsh_min = -1.d0 
+      create_marsh_max = 0.d0
 
       !Output elev, hvel by detault
       nc_out=1
@@ -800,11 +810,7 @@
           call parallel_abort(errmsg)
         endif
       else if(itur==3.or.itur==5) then !Tsinghua group:0822+itur==5
-!       Closure name and stability function
-!        call get_param('param.in','turb_met',0,itmp,tmp,mid)
-!        call get_param('param.in','turb_stab',0,itmp,tmp,stab)
-        !scale for surface & bottom mixing length (>0)
-!        call get_param('param.in','xlsc0',2,itmp,xlsc0,stringvalue)
+        if(ri_st<=0.d0) call parallel_abort('ri_st<=0.d0')
       endif !itur
 
 !     Mean T,S profile
@@ -1157,6 +1163,7 @@
 
 #ifdef USE_MARSH
       if(iveg==0) call parallel_abort('INIT: marsh needs vegetation option')
+      if(create_marsh_min>create_marsh_max) call parallel_abort('INIT: marsh_min>marsh_max')
       !SLR rate in mm/year
       !Convert to m/s
 !      if(slr_rate<0) call parallel_abort('INIT: slr_rate<0')
@@ -1419,7 +1426,7 @@
          &  veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
          &  veg_h_unbent(npa),veg_nv_unbent(npa),veg_di_unbent(npa), &
          &  wwave_force(2,nvrt,nsa),btaun(npa), &
-         &  rsxx(npa), rsxy(npa), rsyy(npa), stat=istat)
+         &  rsxx(npa),rsxy(npa),rsyy(npa),deta1_dxy_elem(nea,2),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -1752,6 +1759,7 @@
       wind_rotate_angle=0.d0
       wwave_force=0.d0
       diffmin=1.d-6; diffmax=1.d0
+      deta1_dxy_elem=0.d0
 
 !Tsinghua group
 #ifdef USE_SED 
@@ -2184,7 +2192,7 @@
           read(32,*)j,buf4(i) !tmp2
           itmp1=nint(buf3(i))
           itmp2=nint(buf4(i))
-          if(itmp1/=0.and.itmp1/=1.or.itmp2/=0.and.itmp2/=1) then
+          if(itmp1<0.or.itmp1>nmarsh_types.or.itmp2/=0.and.itmp2/=1) then
             write(errmsg,*)'Unknown marsh flag:',i,tmp1,tmp2
             call parallel_abort(errmsg)
           endif
@@ -2860,7 +2868,7 @@
 #else  /*SH_MEM_COMM*/
         if(myrank==0) then
 #endif /*SH_MEM_COMM*/
-          j=nf90_open(in_dir(1:len_in_dir)//'source.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_source)
+          j=nf90_open(in_dir(1:len_in_dir)//'source.nc',NF90_NOWRITE,ncid_source)
           if(j/=NF90_NOERR) call parallel_abort('init: source.nc')
           j=nf90_inq_dimid(ncid_source,'nsources',mm)
           j=nf90_inquire_dimension(ncid_source,mm,len=nsources)
@@ -3395,6 +3403,7 @@
 !       5: 0.78 1.40 7.9 (Jerlov type III)
 !       6: 0.62 1.50 20 (Paulson and Simpson 1977; similar to type IA)
 !       7: 0.80 0.90 2.1 (Mike Z.'s choice for estuary)
+!       8: user defined (inputs from param.nml)
         if(myrank==0) then
           open(32,file=in_dir(1:len_in_dir)//'watertype.gr3',status='old')
           read(32,*)
@@ -3403,7 +3412,7 @@
      &call parallel_abort('Check watertype.gr3')
           do i=1,np_global
             read(32,*)j,xtmp,ytmp,tmp
-            if(int(tmp)<1.or.int(tmp)>7) then
+            if(int(tmp)<1.or.int(tmp)>8) then
               write(errmsg,*)'Unknown water type:',i,tmp
               call parallel_abort(errmsg)
             endif
@@ -3536,6 +3545,12 @@
           if(stab.ne.'GA'.and.stab.ne.'KC') then
             write(errmsg,*)'Unknown turb_stab:',stab
             call parallel_abort(errmsg)
+          endif
+
+          !Compute cpsi3(minus) from steady-state Richardson # as option
+          if(icompute_cpsi3/=0) then
+            call compute_cpsi3
+            if(myrank==0) write(16,*)'cpsi3minus=',cpsi3_comp
           endif
 
 !0825...Tsinghua group
@@ -3794,7 +3809,7 @@
 
         if(inu_tr(k)==2) then
           if(myrank==0) then
-            j=nf90_open(in_dir(1:len_in_dir)//tr_mname(k)//'_nu.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_nu(k))
+            j=nf90_open(in_dir(1:len_in_dir)//tr_mname(k)//'_nu.nc',NF90_NOWRITE,ncid_nu(k))
             if(j/=NF90_NOERR) call parallel_abort('init: nudging input not found:')
             !Static info
             j=nf90_inq_dimid(ncid_nu(k),'node',mm)
@@ -3831,7 +3846,7 @@
 
 !     Surface T,S restoration: open nc handle
       if(iref_ts/=0.and.myrank==0) then
-        j=nf90_open(in_dir(1:len_in_dir)//'surface_restore.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_ref_ts)
+        j=nf90_open(in_dir(1:len_in_dir)//'surface_restore.nc',NF90_NOWRITE,ncid_ref_ts)
         if(j/=NF90_NOERR) call parallel_abort('init: surface_restore.nc not found')
       endif !iref_ts
 
@@ -3917,17 +3932,15 @@
         veg_di_unbent=veg_di
 
 #ifdef USE_MARSH
-        !Assume constant inputs from .gr3; save these values
-        veg_di0=veg_di(1); veg_h0=veg_h(1); veg_nv0=veg_nv(1); veg_cd0=veg_cd(1)
         !Reset
         veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha0=0.d0; veg_cd=0.d0
         do i=1,nea
-          if(imarsh(i)>0) then
-            veg_di(elnode(1:i34(i),i))=veg_di0 
-            veg_h(elnode(1:i34(i),i))=veg_h0 
-            veg_nv(elnode(1:i34(i),i))=veg_nv0
-            veg_cd(elnode(1:i34(i),i))=veg_cd0
-            veg_alpha0(elnode(1:i34(i),i))=veg_di0*veg_nv0*veg_cd0/2.d0
+          if(imarsh(i)>0) then !imarsh<=nmarsh_types
+            veg_di(elnode(1:i34(i),i))=veg_di0(imarsh(i)) 
+            veg_h(elnode(1:i34(i),i))=veg_h0(imarsh(i)) 
+            veg_nv(elnode(1:i34(i),i))=veg_nv0(imarsh(i))
+            veg_cd(elnode(1:i34(i),i))=veg_cd0(imarsh(i))
+            veg_alpha0(elnode(1:i34(i),i))=veg_di0(imarsh(i))*veg_nv0(imarsh(i))*veg_cd0(imarsh(i))/2.d0
           endif
         enddo !i
 #endif
@@ -5350,7 +5363,7 @@
         if(istat/=0) call parallel_abort('Init: alloc(9.1)')
 
         !All ranks open .nc but rank 0 reads most of data 
-        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',NF90_NOWRITE,ncid2)
         if(j/=NF90_NOERR) call parallel_abort('init: hotstart.nc not found')
 
         if(myrank==0) then

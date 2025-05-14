@@ -58,7 +58,8 @@ date
 # and exectuable should be in the $SCRATCH directory hierarchy.  
 # Change directories to your $SCRATCH directory where your executable is
 
-#cd $SCRATCH
+#Increasde timeout connection limit (default is 5s)
+export FI_PSM2_CONN_TIMEOUT=20
 
 # Launch MPI code... 
 

@@ -1307,7 +1307,7 @@
          
          allocate(swild2(ncat,npa),swild(npa,ncat)) 
 
-        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',NF90_NOWRITE,ncid2)
         if(j/=NF90_NOERR) call parallel_abort('mice_init: hotstart.nc not found')
 
 
@@ -1846,7 +1846,7 @@
          
          allocate(swild2(np_global),swild(np_global),aicetmp(npa),vicetmp(npa),hicetmp(npa)) 
 
-        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',NF90_NOWRITE,ncid2)
         if(j/=NF90_NOERR) call parallel_abort('mice_init: hotstart.nc not found')
 
 

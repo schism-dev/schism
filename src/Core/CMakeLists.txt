@@ -3,9 +3,15 @@
 
 set(versionfile "${CMAKE_CURRENT_BINARY_DIR}/schism_version.F90")
 
+if (NOT Python_FOUND)
+  find_package(Python COMPONENTS Interpreter)
+  message(INFO " Python_EXECUTABLE = ${Python_EXECUTABLE}")
+endif()
+
 add_custom_target(
     sversion
     COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/gen_version.bash ${versionfile}
+#    COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/gen_version.py ${versionfile}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

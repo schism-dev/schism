@@ -87,14 +87,14 @@ module schism_glbl
                   &ibc,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
                   &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
                   &fwvor_streaming,fwvor_wveg,fwvor_wveg_NL,cur_wwm,wafo_obcramp, &
-                  &iwind_form,irec_nu,itur,ihhat,inu_elev, &
+                  &iwind_form,irec_nu,itur,icompute_cpsi3,iscnd_coeff,ihhat,inu_elev, &
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,iveg, &
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
                   &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm,iof_icm_ba,&
-                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif
+                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif,nmarsh_types
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_cos,iof_fib, &
@@ -110,8 +110,10 @@ module schism_glbl
                       &slr_rate,rho0,shw,gen_wsett,turbinj,turbinjds,alphaw,h1_bcc,h2_bcc,vclose_surf_frac, &
                       &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
                       &stemp_stc,stemp_dz(2),ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
-                      &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2
-  real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:)
+                      &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2,ri_st,drown_marsh, &
+                      &create_marsh_min,create_marsh_max
+  real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:), &
+        &veg_di0(:),veg_h0(:),veg_nv0(:),veg_cd0(:)
 
   ! Misc. variables shared between routines
   integer,save :: nz_r,ieqstate,kr_co, &
@@ -126,8 +128,8 @@ module schism_glbl
   real(rkind),save :: q2min,tempmin,tempmax,saltmin,saltmax, &
                       &vis_coe1,vis_coe2,h_bcc1,velmin_btrack,h_tvd,rmaxvel1,rmaxvel2, &
                       &difnum_max_l2,wtime1,wtime2,cmiu0, &
-                      &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,veg_di0,veg_h0,veg_nv0, &
-                      &veg_cd0,dtb_min_transport,bounds_lon(2),time_ref_ts
+                      &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp, &
+                      &dtb_min_transport,bounds_lon(2),time_ref_ts,cpsi3_comp
 
 !  logical,save :: lm2d !2D or 3D model
   logical,save :: lhas_quad=.false. !existence of quads
@@ -498,6 +500,7 @@ module schism_glbl
   real(rkind),save,allocatable :: srad_o(:)
   logical,save,allocatable :: lhas_ice(:)
   logical,save :: lice_free_gb
+  real(rkind),save,allocatable :: deta1_dxy_elem(:,:)
 
   real(4),save,dimension(:,:,:),allocatable :: trnd_nu1,trnd_nu2,trnd_nu
   real(4),save,dimension(:,:),allocatable :: ref_ts1,ref_ts2,ref_ts

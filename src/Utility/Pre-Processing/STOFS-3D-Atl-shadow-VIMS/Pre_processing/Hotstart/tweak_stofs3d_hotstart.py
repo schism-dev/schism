@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from pathlib import Path
+import geopandas as gpd
 
 # pip install git+https://github.com/feiye-vims/schism_py_pre_post.git
 from schism_py_pre_post.Shared_modules.hotstart_proc import Hotstart
@@ -15,16 +16,35 @@ from pylib import schism_grid
 from replace_eta2_aviso import interp_to_points_2d, transform_ll_to_cpp
 
 
+def find_nodes_in_shapefile(hgrid, shapefile_fname, crs):
+    """
+    Find nodes in polygons defined in a shapefile
+    """
+    hg_points = gpd.GeoDataFrame(geometry=gpd.points_from_xy(hgrid.x, hgrid.y), crs=crs)
+    polygon_gdf = gpd.read_file(shapefile_fname)
+    if hg_points.crs != polygon_gdf.crs:
+        hg_points = hg_points.to_crs(polygon_gdf.crs)
+    ids = gpd.sjoin(hg_points, polygon_gdf, predicate='within', how='inner').index
+    idx_mask = np.zeros(hgrid.dp.shape, dtype=bool)
+    idx_mask[ids] = True
+
+    return ids, idx_mask
+
+
 def gen_elev_ic(hgrid=None, h0=0.1, city_shape_fnames=None, aviso_file=None):
     '''
     set initial elevation: 0 in the ocean, h0 below ground on higher grounds and in cities
     city_shape_fname: the shapefile must be in the same projection as the hgrid
     in this case lon/lat (because aviso data is in lon/lat)
     '''
-    if city_shape_fnames is None:
-        in_city = np.ones(hgrid.dp.shape, dtype=bool)
-    else:
-        in_city = find_points_in_polyshp(pt_xy=np.c_[hgrid.x, hgrid.y], shapefile_names=city_shape_fnames)
+    in_city = np.zeros_like(hgrid.dp, dtype=bool)
+    for shp in city_shape_fnames:
+        _, idx_mask = find_nodes_in_shapefile(hgrid, shp, crs='EPSG:4326')
+        in_city = np.logical_or(in_city, idx_mask)
+
+    # in_city = find_points_in_polyshp(pt_xy=np.c_[hgrid.x, hgrid.y], shapefile_names=city_shape_fnames)
+
+    hgrid.save('incity.gr3', value=in_city.copy().astype(int))
 
     high_ground = hgrid.dp < 0
 
@@ -123,7 +143,7 @@ def tweak_stofs3d_hotstart(
     my_hot.eta2.val[:] = gen_elev_ic(
         hgrid=my_hot.grid.hgrid, h0=0.1,
         city_shape_fnames=[f'{wdir}/{x}' for x in city_shapefile_names],
-        aviso_file=f'{wdir}/{aviso_file}'  # no shift based on R11, R24, R11a
+        aviso_file=f'{wdir}/{aviso_file}'
     )
 
     print('writing the final hotstart.nc')
@@ -132,9 +152,9 @@ def tweak_stofs3d_hotstart(
 if __name__ == "__main__":
     # Modify hycom-based hotstart.nc.hycom with coastal observation values of T and S, and a better initial elevation
     tweak_stofs3d_hotstart(
-        wdir='/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_2024_reforecast/',
-        hotstart_date_str='2023-12-01',
-        city_shapefile_names = ["LA_urban_polys_lonlat.shp"],  # polygon shapefile specifying cities
+        wdir='./',
+        hotstart_date_str='2025-03-01',
+        city_shapefile_names = ["LA_urban_polys_lonlat_v2.shp"],  # polygon shapefile specifying cities, use v3 for Bayou Lafourche if the area is refined
         aviso_file='aviso.nc'
     )
 

@@ -312,7 +312,7 @@
       write(ifile_char,'(i12)') ifile
       ifile_char=adjustl(ifile_char); len_char=len_trim(ifile_char)
       file63='schout_'//ifile_char(1:len_char)//'.nc'
-      iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+      iret=nf90_open(trim(adjustl(file63)),NF90_NOWRITE,ncid)
       if(iret/=nf90_NoErr) stop '1st stack not opened'
       iret=nf90_inq_varid(ncid,'elev',ielev_id)
       if(iret/=nf90_NoErr) stop 'elev not found'
@@ -694,7 +694,7 @@
         write(ifile_char,'(i12)') ifile
         ifile_char=adjustl(ifile_char); len_char=len_trim(ifile_char)
         file63='schout_'//ifile_char(1:len_char)//'.nc'
-        iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+        iret=nf90_open(trim(adjustl(file63)),NF90_NOWRITE,ncid)
         if(iret/=nf90_NoErr) stop 'schout not opened (2)'
         !time is double
         iret=nf90_inq_varid(ncid,'time',itime_id)

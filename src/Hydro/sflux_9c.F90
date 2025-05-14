@@ -283,7 +283,6 @@
 !   get_precip_flux
 !   get_precsnow_flux
 !   get_dataset_info
-!   char_num (function): convert number to char
 !   get_file_name (fucntion):
 !   check_err
 !   julian_day (function): Julian day
@@ -564,15 +563,16 @@
      &                   nws) 
 
         use schism_glbl, only : rkind, npa, uu2, vv2, tr_nd, & 
-     &                     idry, nvrt, ivcor,ipgl,fdb,lfdb
+     &                     idry, nvrt, ivcor,ipgl,fdb,lfdb,albedo
         use schism_msgp, only : myrank,parallel_abort
         implicit none
 
 ! input/output variables
         real(rkind), intent(in) :: time 
-        real(rkind), dimension(npa), intent(in) :: u_air,v_air,p_air,t_air,q_air,shortwave_d,longwave_d
+        real(rkind), dimension(npa), intent(in) :: u_air,v_air,p_air,t_air,q_air,longwave_d
         real(rkind), dimension(npa), intent(out) :: sen_flux, lat_flux, longwave_u, tau_xz, tau_yz
         integer, intent(in) :: nws
+        real(rkind), dimension(npa), intent(inout) :: shortwave_d
 #ifdef PREC_EVAP
         real(rkind), dimension(npa), intent(in) :: precip_flux,prec_snow
         real(rkind), dimension(npa), intent(out) :: evap_flux
@@ -597,6 +597,11 @@
         write(38,*)
         write(38,*) 'enter surf_fluxes2'
 #endif
+
+!       Apply albedo
+        do i_node = 1, num_nodes
+          shortwave_d(i_node)=max((1.0d0-albedo(i_node))*shortwave_d(i_node),0.0_rkind)
+        enddo
 
 ! retrieve the downwelling radiative fluxes
 !        call get_rad (time, shortwave_d, longwave_d)
@@ -725,7 +730,7 @@
         first_call = .false.
 
       return
-      end !surf_fluxes
+      end !surf_fluxes2
 !-----------------------------------------------------------------------
 !
 ! Calculate bulk aerodynamic surface fluxes over water using method of
@@ -1306,8 +1311,7 @@
         use schism_glbl, only : rkind,start_year,start_month,start_day,start_hour,utc_start
         implicit none
        
-        !max. total # of nc files. Need to update char_num() etc if this
-        !is to be increased 
+        !max. total # of nc files
         integer, parameter :: max_files = 9999
         integer, parameter :: max_times = 100000 !max. # of time records from all files
 
@@ -2014,46 +2018,35 @@
       return
       end !get_dataset_info
 !-----------------------------------------------------------------------
-      character*4 function char_num (num)
-        implicit none
-        integer, intent(in) :: num
-        character(len=4) :: char
-        
-!10      format ('00', i1)
-!20      format ('0', i2)
-!30      format (i3)
+!      character*4 function char_num (num)
+!        implicit none
+!        integer, intent(in) :: num
+!        character(len=4) :: char
+!        
+!        if(num>9999) call halt_error ('get_char_num: num too large!')
 !
-!        if (num .le. 9) then
-!          write(char,10) num
-!        else if (num .le. 99) then
-!          write(char,20) num
-!        else if (num .le. 999) then
-!          write(char,30) num
-!        else
-!          call halt_error ('get_char_num: num too large!')
-!        endif
-
-        if(num>9999) call halt_error ('get_char_num: num too large!')
-
-        char='0000'
-        write(char,'(i4.4)')num
-        
-        char_num = char
-
-      return
-      end
+!        char='0000'
+!        write(char,'(i4.4)')num
+!        
+!        char_num = char
+!
+!      return
+!      end
 !-----------------------------------------------------------------------
       character*50 function get_file_name (dataset_name, num)
         implicit none
         integer, intent(in) :: num
         character, intent(in) ::  dataset_name*50
 
-        character char_num*4
-        character, parameter :: prefix*6 = 'sflux/'
-        character, parameter :: suffix*3 = '.nc'
-        
-        get_file_name = prefix // trim(dataset_name) // '.' // &
-     &                  char_num(num) // suffix
+        character(len=50) :: char_num
+!        character char_num*4
+!        character, parameter :: prefix*6 = 'sflux/'
+!        character, parameter :: suffix*3 = '.nc'
+
+        !num cannot be 50 long, as it's 4-byte integer
+        write(char_num,'(i50)')num
+        get_file_name = 'sflux/'//trim(dataset_name) //'.'//trim(adjustl(char_num))//'.nc' !suffix
+        !get_file_name = 'sflux/'//trim(dataset_name) //'.'//char_num(num) //'.nc' !suffix
 
       return
       end
@@ -2243,10 +2236,8 @@
 
         if(myrank==0) then
 !   open file_name and enter read-only mode
-          !iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
-          iret = nf90_open(in_dir(1:len_in_dir)//file_name,OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          iret = nf90_open(in_dir(1:len_in_dir)//file_name,NF90_NOWRITE,ncid)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(1)')
-          !'call check_err(iret)
 
 !   get the variable id for the time variable
           data_name = 'time'
@@ -2366,10 +2357,8 @@
 
         if(myrank==0) then
 !   open file_name and enter read-only mode
-          !iret = nf_open(in_dir(1:len_in_dir)//file_name, NF_NOWRITE, ncid)
-          iret = nf90_open(in_dir(1:len_in_dir)//file_name,OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          iret = nf90_open(in_dir(1:len_in_dir)//file_name,NF90_NOWRITE,ncid)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(1)')
-!          call check_err(iret)
 
 !   get the variable ID for the test variable
           !iret = nf_inq_varid(ncid, test_variable, test_var_id)
@@ -2438,9 +2427,8 @@
 
         if(myrank == 0)then
 ! open file_name and enter read-only mode
-          iret = nf90_open(in_dir(1:len_in_dir)//file_name,OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          iret = nf90_open(in_dir(1:len_in_dir)//file_name,NF90_NOWRITE,ncid)
           if(iret.ne.NF90_NOERR) call parallel_abort('read_coord(1)')
-          !call check_err(iret)
 
 ! get the variable id for this variable
           iret = nf90_inq_varid(ncid, data_name, var_id)
@@ -2500,21 +2488,16 @@
 
         if(myrank == 0)then
 ! open file_name and enter read-only mode
-          iret=nf90_open(in_dir(1:len_in_dir)//file_name,OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          iret=nf90_open(in_dir(1:len_in_dir)//file_name,NF90_NOWRITE,ncid)
           if(iret.ne.NF90_NOERR) call parallel_abort('read_data(1)')
-          !call check_err(iret)
 
 ! get the variable id for this variable
           iret = nf90_inq_varid(ncid,data_name,var_id)
           if(iret.ne.NF90_NOERR) call parallel_abort('read_data(2)')
-          !call check_err(iret)
 
 ! read the data
-!          iret = nf_get_vara_real(ncid, var_id, data_start, &
-!     &                          data_count, data_tmp)
           iret=nf90_get_var(ncid,var_id,data_tmp,data_start,data_count)
           if(iret.ne.NF90_NOERR) call parallel_abort('read_data(3)')
-          !call check_err(iret)
 
 ! close the netCDF file
           iret = nf90_close(ncid)

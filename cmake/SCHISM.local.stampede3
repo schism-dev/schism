@@ -1,4 +1,4 @@
-###XSEDE Stampede3 (Sapphire Rapids HBM)
+###XSEDE Stampede3 (Sapphire Rapids HBM, Ice Lake etc)
 
 set (SCHISM_EXE_BASENAME pschism_STAM3 CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
 
@@ -9,6 +9,7 @@ set(NetCDF_FORTRAN_DIR "$ENV{TACC_NETCDF_LIB}" CACHE PATH "Path to NetCDF Fortra
 set(NetCDF_C_DIR "$ENV{TACC_NETCDF_LIB}" CACHE PATH "Path to NetCDF C library")
 set(NetCDF_INCLUDE_DIR "$ENV{TACC_NETCDF_INC}" CACHE PATH "Path to NetCDF include")
 
+#can also add node specific flags
 set(CMAKE_Fortran_FLAGS_RELEASE "-xCORE-AVX512 -O3 -no-prec-div -align all -assume buffered_io -assume byterecl" CACHE STRING "Fortran flags" FORCE)
 
 #Hybrid (remember to add OMP in the name above)

@@ -1,0 +1,28 @@
+#scripts for EPA's MBM workflow
+
+1. gen_grid.py
+   generating MBM grid from 2dm to SCHISM inputs
+
+2. pextract_hydro.py
+   parallel extracting hydro outputs for salt, temp, elev, sediment, wave 
+
+3. pextract_icm.py 
+   parallel extracting water quality (ICM) outputs
+
+4. plot_hydro.py
+   plotting MBM hydrodynamic outputs
+
+5. plot_icm.py
+   plotting MBM water quality results, and outputs statistics
+
+6: read_wsm.py 
+   parallel read and process watershed/shoreline erosion outputs
+
+7. setup_MTM.py
+   script for set up MTM models (work for hydro only so far)
+
+8. setup.py
+   script for set up MBM model
+
+9. write_MBM_init.py
+   generating MBM database

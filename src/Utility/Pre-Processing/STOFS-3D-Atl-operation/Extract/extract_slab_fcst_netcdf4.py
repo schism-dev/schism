@@ -200,6 +200,24 @@ interpolated_var_dict = {
 }
 
 
+def parse_date(date_str):
+    '''Parse date string based on the number of fields in date_str'''
+    parts = date_str.strip(",").split()
+
+    formats = {
+        3: "%Y %m %d",
+        4: "%Y %m %d %H",
+        5: "%Y %m %d %H %M",
+        6: "%Y %m %d %H %M %S"
+    }
+
+    fmt = formats[len(parts)]
+    if not fmt:
+        raise ValueError(f"Invalid date string: {date_str}")
+    
+    return datetime.strptime(date_str, fmt)
+
+
 def main():
     """
     Usage:
@@ -265,8 +283,7 @@ def main():
     # --------------------- basic info, should be same for all input files ---------------------
     # process time information from out2d_*.nc; the time info is the same for all files
     ds = Dataset(f"{fpath}/outputs/out2d_{sid}.nc")
-    base_date_str = ds['time'].base_date.split()
-    base_datetime = datetime(int(base_date_str[0]), int(base_date_str[1]), int(base_date_str[2]), 0, 0, 0)
+    base_datetime = parse_date(ds['time'].base_date)
     base_date_str = base_datetime.strftime('%Y-%m-%d %H:%M:%S UTC')
 
     time_units_str = ds['time'].units.split("since")[1]

@@ -1,7 +1,7 @@
 from pylib_experimental.schism_file import cread_schism_hgrid
 from pathlib import Path
 
-hgrid_fname = '/sciclone/schism10/feiye/STOFS3D-v8/I02/Bathy_edit/DEM_loading/hgrid_max_dp.gr3'
+hgrid_fname = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v27/Improve/hgrid.ll'
 
 hg = cread_schism_hgrid(hgrid_fname)
 

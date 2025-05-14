@@ -248,7 +248,7 @@
       leng=len_trim(it_char)
 
       file_char=trim(adjustl(file63))//'_'//it_char(1:leng)//'.nc'
-      iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+      iret=nf90_open(trim(adjustl(file_char)),NF90_NOWRITE,ncid)
       if(iret/=nf90_NoErr) stop 'Failed to open file63'
       iret=nf90_inq_varid(ncid,'time',itime_id)
       iret=nf90_get_var(ncid,itime_id,timeout,(/1/),(/nrec/))
