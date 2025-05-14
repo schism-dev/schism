@@ -3,8 +3,6 @@
 set(versionfile "${CMAKE_CURRENT_BINARY_DIR}/schism_version.F90")
 
 # Remove Python dependency and use native scripts instead
-cmake_host_system_information(RESULT HOSTNAME QUERY HOSTNAME)
-
 # Detect platform and choose appropriate script
 if(WIN32)
   # Windows - use PowerShell script
