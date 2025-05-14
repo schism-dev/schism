@@ -507,7 +507,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
     !Find and define variables
     file63='schout_000000_'//it_char(1:it_len)//'.nc'
     file63=adjustl(file63)
-    iret=nf90_open(trim(file63),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+    iret=nf90_open(trim(file63),NF90_NOWRITE,ncid2)
     if(iret/=NF90_NOERR) stop 'Failed to open(1)'
     !iret=nf_inq_nvars(ncid2,nvars)
     iret=nf90_inquire(ncid2,nVariables=nvars)
@@ -736,7 +736,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
         write(a_4,'(i6.6)') irank
         file63='schout_'//a_4//'_'//it_char(1:it_len)//'.nc'
         file63=adjustl(file63)
-        iret=nf90_open(trim(file63),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        iret=nf90_open(trim(file63),NF90_NOWRITE,ncid2)
         if(iret/=NF90_NOERR) then
           print*, 'Failed to open(2):',irank
           stop

@@ -33,18 +33,16 @@ from typing import Optional, List
 
 import numpy as np
 
-from pylib import grd2sms, sms2grd
-try:  # c++ function to speed up the grid reading
-    from pylib_experimental.schism_file import xread_schism_hgrid as schism_read
-except ImportError:
-    from pylib import schism_grid as schism_read
+from pylib import grd2sms
+from pylib import schism_grid as schism_read
 
 
 IMPLEMENTED_TASKS = [  # order matters
     'Regional_tweaks',  # set minimum depth in regions specified in regional_tweaks
     'NCF',  # load NCF (National Channel Framework) maintained depth
     'Levee',  # set levees height based on National Levee Database
-    'xGEOID',  # convert from NAVD88 to xGEOID
+    'xGEOID',  # convert from NAVD88 to xGEOID, use viz (gulf has memory issues); deprecated, use Felicio's workflow
+    'xGEOID_from_diff',  # convert from NAVD88 to xGEOID based on dp difference, must be the same (x, y)
     'Chart',  # load chart depth, the chart has been converted to xGEOID
     'Dredge',  # dredge the channels made by RiverMapper, relative, datum doesn't matter
     'Feeder',  # set feeder channel depth, relative, datum doesn't matter
@@ -55,8 +53,8 @@ DEFAULT_TASKS = {'Regional_tweaks', 'NCF', 'Levee', 'xGEOID'}
 # larger files not included in the Git repository, need to be copied to the working directory
 LARGE_FILES = {
     'NCF': [
-        Path('/sciclone/schism10/Hgrid_projects/NCF/'),
-        Path('/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/DATA/NCF/')
+        Path('/sciclone/schism10/Hgrid_projects/NCF_patched_James/'),
+        Path('/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/DATA/NCF_patched_James/')
     ],
     'Levee': [
         Path('/sciclone/schism10/Hgrid_projects/Levees/Levee_v3/FEMA_regions/'
@@ -162,6 +160,7 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         from Regional_tweaks.regional_tweaks import tweak_hgrid_depth
         hgrid_obj = tweak_hgrid_depth(
             hgrid=hgrid_obj, regions_dir=f'{wdir}/Regional_tweaks/regions/')
+        grd2sms(hgrid_obj, f'{wdir}/Regional_tweaks/{hgrid_base_name}_tweaks.2dm')
         initial_dp = hgrid_obj.dp.copy()  # treat the regional tweaks as the initial dp
         print("Finished setting regional tweaks and updating initial dp.\n")
 
@@ -171,6 +170,7 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         hgrid_obj = load_NCF(
             hgrid_obj=hgrid_obj, buf=20, NCF_shpfile=f'{wdir}/NCF/channel_quarter_NCF.shp')
         hgrid_obj.dp = np.maximum(initial_dp, hgrid_obj.dp)
+        grd2sms(hgrid_obj, f'{wdir}/NCF/{hgrid_base_name}.2dm')
         print("finished loading NCF.\n")
 
     if 'Levee' in tasks:  # set levees
@@ -188,6 +188,13 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
             wdir=f'{wdir}/xGEOID/', hgrid_obj=hgrid_obj,
             diag_output=f'{wdir}/{hgrid_base_name}.2dm')
         print("Finihsed converting the vdatum to xGEOID.\n")
+
+    if 'xGEOID_from_diff' in tasks:  # convert from NAVD88 to xGEOID based on dp difference
+        hgrid_diff = schism_read(f'{wdir}/xGEOID_from_diff/hgrid_xGEOID20b_dp_minus_NAVD_dp.gr3')
+        hgrid_obj.dp += hgrid_diff.dp
+        hgrid_base_name += '_xGEOID_from_diff'
+        hgrid_obj.write_hgrid(f'{wdir}/xGEOID_from_diff/{hgrid_base_name}.gr3')
+        print("Finished converting the vdatum to xGEOID based on dp difference.\n")
 
     if 'Chart' in tasks:  # load Chart, the Chart has been converted in xGEOID
         from Chart.load_chart import load_chart
@@ -223,11 +230,11 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         # A grid without feeder is needed to identify which feeder points are outside and should be deepened
         # Only the boundary matters, the interior of the grid doesn't matter,
         # so if you don't have a grid without feeders, you can just generate a simplified grid with the lbnd_ocean map
-        gd_no_feeder = sms2grd('/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.1/hgrid.2dm')
-        gd_no_feeder.proj(prj0='esri:102008', prj1='epsg:4326')
+        gd_no_feeder = schism_read('/sciclone/schism10/feiye/STOFS3D-v8/R13p_v7/hgrid.gr3')
+        # gd_no_feeder.proj(prj0='esri:102008', prj1='epsg:4326')
         initial_dp = hgrid_obj.dp.copy()
         hgrid_obj = set_feeder_dp(
-            feeder_info_dir='/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v23.3/Feeder/',
+            feeder_info_dir='/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v31/Feeder/',
             hgrid_obj=hgrid_obj, hgrid_obj_no_feeder=gd_no_feeder
         )
         dp_diff = initial_dp - hgrid_obj.dp
@@ -237,19 +244,19 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         print("Finished setting feeder dp.\n")
 
     # ------------------- save final product -------------------
-    hgrid_obj.save(f'{wdir}/hgrid.ll', fmt=1)
-    print(f"Finished saving the final product {wdir}/hgrid.ll\n")
+    hgrid_obj.save(f'{wdir}/hgrid_dem_edit.ll', fmt=1)
+    print(f"Finished saving the final product {wdir}/hgrid_dem_edit.ll\n")
 
 
 def sample_usage():
     '''
     Sample usage of the bathy_edit function.
     '''
-    WDIR = Path('/sciclone/schism10/feiye/STOFS3D-v8/I14/Bathy_edit/')
+    WDIR = Path('/sciclone/schism10/feiye/STOFS3D-v8/I15g_v7/Bathy_edit/')
     HGRID_FNAME = Path(  # Typically, this is the DEM-loaded hgrid
-        '/sciclone/schism10/feiye/STOFS3D-v8/I14/09b.gr3'
+        '/sciclone/schism10/feiye/STOFS3D-v8/I15g_v7/Bathy_edit/DEM_loading/hgrid.ll.dem_loaded.mpi.gr3'
     )
-    TASKS = ['xGEOID']
+    TASKS = {'Regional_tweaks', 'NCF', 'Levee', 'xGEOID_from_diff'}  # DEFAULT_TASKS
 
     bathy_edit(wdir=WDIR, hgrid_fname=HGRID_FNAME, tasks=TASKS)
 

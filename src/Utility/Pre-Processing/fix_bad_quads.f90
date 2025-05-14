@@ -2,14 +2,14 @@
 !     xmgredit5).
 !     Inputs: screen; hgrid.gr3 (projection or lon/lat; quads can be
 !     concave)
-!     Output: hgrid.gr3.new (node order not changed); split_loc.bp (location of quads that r
+!     Output: hgrid.gr3.new (node order not changed); split_loc.bp (location of quads that are
 !     split)
 
-!     ifort -O2 -CB -g -traceback -o fix_bad_quads fix_bad_quads.f90
+!     ifx -O2 -CB -g -traceback -o fix_bad_quads fix_bad_quads.f90
 
       implicit real*8(a-h,o-z)
       integer :: nwild(3),nwild2(4)
-      real*8 :: aspect_ratio(2,2)
+      real*8 :: skew(2,2)
       integer, allocatable :: i34(:),elnode(:,:),i34_new(:),elnode_new(:,:),isplit(:)
       real*8, allocatable :: xnd(:),ynd(:),dp(:),area(:),quad_loc(:,:), &
      &xctr(:),yctr(:)
@@ -19,6 +19,9 @@
       !angle of quads
       print*, 'Input threshold for angle ratio (e.g. 0.5):'
       read*, rat_angle
+
+      print*, 'Input threshold for quad aspect ratio (e.g. 5):'
+      read*, aspect_rat
 
       open(14,file='hgrid.gr3',status='old')
       read(14,*)
@@ -66,6 +69,22 @@
       do i=1,ne
         if(i34(i)/=4) cycle
 
+        !Quads: calc min/max side for aspect ratio later
+        sdmin=huge(1.d0); sdmax=-armin
+        do j=1,4
+          n1=elnode(j,i) 
+          j1=j+1
+          if(j1>4) j1=j1-4
+          n2=elnode(j1,i)
+          distl=sqrt((xnd(n1)-xnd(n2))**2+(ynd(n1)-ynd(n2))**2)
+          sdmin=min(sdmin,distl)
+          sdmax=max(sdmax,distl)
+        enddo !j
+        if(min(sdmax,sdmin)<=0.) then
+          write(*,*)'Wrong aspect ratio::',i,sdmax,sdmin
+          stop
+        endif
+
         !Quads; interior angles
         ang_max=-1; ang_min=pi*1.1
         do j=1,4
@@ -99,7 +118,7 @@
         if(isplit(i)==0) then !calc angle ratio for convex quad
           if(ang_max==0.or.ang_max<ang_min) stop 'failed to find max/min'
 !'
-          if(ang_min/ang_max<rat_angle) then
+          if(ang_min/ang_max<rat_angle.or.sdmax/sdmin>aspect_rat) then
             !Decide which node (1 or 2) to split from, based on best aspect ratios
             !calc 2 A.R.'s
             do j=1,2 !2 options of splitting
@@ -122,28 +141,28 @@
                 if(ar3<=0) then
 !                  print*, 'ar3<=0:',i,j,k,n1,n2,n3
 !                  stop
-                  aspect_ratio(k,j)=-1. !flag
+                  skew(k,j)=-1. !flag
                 else
                   rl1=sqrt((xnd(n1)-xnd(n2))**2+(ynd(n1)-ynd(n2))**2)
                   rl2=sqrt((xnd(n1)-xnd(n3))**2+(ynd(n1)-ynd(n3))**2)
                   rl3=sqrt((xnd(n2)-xnd(n3))**2+(ynd(n2)-ynd(n3))**2)
                   rlmax=max(rl1,rl2,rl3)
-                  aspect_ratio(k,j)=rlmax/sqrt(ar3/pi)
+                  skew(k,j)=rlmax/sqrt(ar3/pi) !skewness
                 endif
               enddo !k
             enddo !j=1,2
             
             !Change here if you want to use different criteria
-            if(minval(aspect_ratio(:,1))<0.and.minval(aspect_ratio(:,2))<0) then
+            if(minval(skew(:,1))<0.and.minval(skew(:,2))<0) then
               print*, 'Cannot find a split point at elem:',i
               stop
-            else if(minval(aspect_ratio(:,1))<0) then
+            else if(minval(skew(:,1))<0) then
               isplit(i)=2
-            else if(minval(aspect_ratio(:,2))<0) then
+            else if(minval(skew(:,2))<0) then
               isplit(i)=1
             else
-              arat1=sum(aspect_ratio(:,1))
-              arat2=sum(aspect_ratio(:,2))
+              arat1=sum(skew(:,1))
+              arat2=sum(skew(:,2))
               if(arat1<arat2) then
                 isplit(i)=1 !split at node 1
               else
@@ -153,6 +172,7 @@
           endif !ang_min/
         endif !isplit==0
 
+        !Do splitting of quad
         if(isplit(i)/=0) then !add extra tri to the end of conn table
           ne_extra=ne_extra+1
           if(ne_extra>ne) stop 'overflow(1)'

@@ -21,8 +21,8 @@ def gen_tvd_prop(hg: pylib.schism_grid, regions: list):
     hg : schism_grid
         SCHISM grid object
     regions : list
-        list of region files,
-        in the final output tvd.prop: 1 for inside region, 0 for outside region
+        list of region files, in which tvd is not applied
+        in the final output tvd.prop: 0 for inside region, 1 for outside region
 
     Returns
     -------
@@ -30,12 +30,12 @@ def gen_tvd_prop(hg: pylib.schism_grid, regions: list):
 
     '''
     hg.compute_ctr()
-    tvd = np.zeros(hg.ne)
+    tvd = np.ones(hg.ne)
 
     for region in regions:
         bp = read_schism_bpfile(region, fmt=1)
         idx = inside_polygon(np.c_[hg.xctr, hg.yctr], bp.x, bp.y)
-        tvd[idx == 1] = 1
+        tvd[idx == 1] = 0
 
     hg.write_prop('tvd.prop', value=tvd, fmt='{:d}')
 

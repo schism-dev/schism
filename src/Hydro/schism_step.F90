@@ -341,7 +341,7 @@
       endif 
 
       if(nws==4) then
-        allocate(rwild6(7,np_global),stat=istat)
+        allocate(rwild6(9,np_global),stat=istat)
         if(istat/=0) call parallel_abort('MAIN: failed to alloc. (71)')
       endif !nws=4
 
@@ -503,9 +503,9 @@
           wtime1=wtime2
           wtime2=wtime2+wtiminc
           if(myrank==0) read(22,*)tmp,wx2,wy2
-!$OMP     end single
           call mpi_bcast(wx2,1,rtype,0,comm,istat)
           call mpi_bcast(wy2,1,rtype,0,comm,istat)
+!$OMP     end single
 
 !$OMP     workshare
           windx1=windx2
@@ -529,15 +529,70 @@
 
 !$OMP end parallel
 
-      if(nws==4) then
+      if(nws==4) then !include USE_ATMOS
         if(time>wtime2) then
+!...      Heat budget & wind stresses
+          if(ihconsv/=0) then
+            !Assume all vars in sflux*.nc are available from atmos model or read in from atmos.nc,
+            !and this routine compute other fluxes
+#ifdef USE_ATMOS
+            do i=1,npa
+               !ESMF only update within range np NOT npa by ele-itp, therefore some airt2 are still init value (C)
+               if (airt2(i)>100.d0) airt2(i)=airt2(i)-273.15d0 !Conv K to C, ESMF send with unit K
+            end do
+#endif
+            call surf_fluxes2 (wtime2,windx2,windy2,pr2,airt2, &
+     &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
+#ifdef PREC_EVAP
+     &fluxprc,fluxevp,prec_snow, &
+#endif
+     &nws) 
+
+!$OMP parallel do default(shared) private(i)
+            do i=1,npa
+              sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
+#ifdef USE_MICE
+              srad_o(i) = srad(i)
+              prec_rain(i)=fluxprc(i)-prec_snow(i)
+              if(prec_rain(i)<0.d0) then
+                prec_rain(i)=0.d0
+                prec_snow(i)=fluxprc(i)
+              endif
+#endif
+            enddo !i
+!$OMP end parallel do
+
+            !Turn off precip near land bnd
+            if(iprecip_off_bnd/=0) then
+!$OMP parallel do default(shared) private(i,j)
+              loop_prc2: do i=1,np
+                if(isbnd(1,i)==-1) then
+                  fluxprc(i)=0.d0; cycle loop_prc2
+                endif
+
+                do j=1,nnp(i)
+                  if(isbnd(1,indnd(j,i))==-1) then
+                    fluxprc(i)=0.d0; cycle loop_prc2
+                  endif
+                enddo !j
+              end do loop_prc2 !i=1,np
+!$OMP end parallel do
+              call exchange_p2d(fluxprc)
+            endif !iprecip_off_bnd
+
+            if(myrank==0) write(16,*)'heat budge model completes...'
+          endif !ihconsv.ne.0
+
           wtime1=wtime2
           wtime2=wtime2+wtiminc
           windx1=windx2
           windy1=windy2
           pr1=pr2
+          airt1=airt2 
+          shum1=shum2
 
           !Read in next record
+#ifndef USE_ATMOS
           itmp2=wtime2/wtiminc+1
           if(myrank==0) then
             j=nf90_inq_varid(ncid_atmos, "uwind",mm)
@@ -552,28 +607,38 @@
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl')
             j=nf90_get_var(ncid_atmos,mm,rwild6(3,:),(/1,itmp2/),(/np_global,1/))
             if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prmsl(2)')
+            !air T in centigrade not Kelvin
+            j=nf90_inq_varid(ncid_atmos, "stmp_in_centigrade",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc stmp')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc stmp(2)')
+            j=nf90_inq_varid(ncid_atmos, "spfh",mm)
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc spfh')
+            j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
+            if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc spfh(2)')
+
             if(ihconsv/=0) then
-              j=nf90_inq_varid(ncid_atmos, "downwardNetFlux",mm)
-              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux')
-              j=nf90_get_var(ncid_atmos,mm,rwild6(4,:),(/1,itmp2/),(/np_global,1/))
-              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc netflux(2)')
+              j=nf90_inq_varid(ncid_atmos, "downwardLongWaveFlux",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc long flux')
+              j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc longflux(2)')
               j=nf90_inq_varid(ncid_atmos, "solar",mm)
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar')
-              j=nf90_get_var(ncid_atmos,mm,rwild6(5,:),(/1,itmp2/),(/np_global,1/))
+              j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc solar(2)')
             endif !ihconsv/
             if(isconsv/=0) then
               j=nf90_inq_varid(ncid_atmos, "prate",mm)
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate')
-              j=nf90_get_var(ncid_atmos,mm,rwild6(6,:),(/1,itmp2/),(/np_global,1/))
+              j=nf90_get_var(ncid_atmos,mm,rwild6(8,:),(/1,itmp2/),(/np_global,1/))
               if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc prate(2)')
-              j=nf90_inq_varid(ncid_atmos, "evap",mm)
-              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap')
-              j=nf90_get_var(ncid_atmos,mm,rwild6(7,:),(/1,itmp2/),(/np_global,1/))
-              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc evap(2)')
+              j=nf90_inq_varid(ncid_atmos, "snow_rate",mm)
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc srate')
+              j=nf90_get_var(ncid_atmos,mm,rwild6(9,:),(/1,itmp2/),(/np_global,1/))
+              if(j/=NF90_NOERR) call parallel_abort('STEP: atmos.nc srate(2)')
             endif !isconsv/
           endif !myrank=0
-          call mpi_bcast(rwild6,7*np_global,MPI_REAL4,0,comm,istat)
+          call mpi_bcast(rwild6,9*np_global,MPI_REAL4,0,comm,istat)
 
           do i=1,np_global
             if(ipgl(i)%rank==myrank) then
@@ -581,18 +646,36 @@
               windx2(nd)=rwild6(1,i)
               windy2(nd)=rwild6(2,i)
               pr2(nd)=rwild6(3,i)
+              airt2(nd)=rwild6(4,i)
+              shum2(nd)=rwild6(5,i)
 
               if(ihconsv/=0) then
-                sflux(nd)=rwild6(4,i)
-                srad(nd)=rwild6(5,i)
+                hradd(nd)=rwild6(6,i)
+                srad(nd)=rwild6(7,i)
               endif !ihconsv/
               if(isconsv/=0) then
-                fluxprc(nd)=rwild6(6,i)
-                fluxevp(nd)=rwild6(7,i)
+                fluxprc(nd)=rwild6(8,i)
+                prec_snow(nd)=rwild6(9,i)
               endif !isconsv/
             endif !ipgl
           enddo !i
-        endif !time
+#endif /*USE_ATMOS*/
+
+#ifdef USE_ATMOS
+          !ESMF may not extend to ghosts
+          call exchange_p2d(windx2)
+          call exchange_p2d(windy2)
+          call exchange_p2d(pr2)
+          call exchange_p2d(airt2) !centigrade
+          call exchange_p2d(shum2)
+          call exchange_p2d(srad)
+          call exchange_p2d(hradd)
+#ifdef PREC_EVAP
+          call exchange_p2d(fluxprc)
+          call exchange_p2d(prec_snow)
+#endif 
+#endif /*USE_ATMOS*/
+        endif !time>wtime2
 
         wtratio=(time-wtime1)/wtiminc
 !$OMP parallel do default(shared) private(i)
@@ -602,6 +685,7 @@
           pr(i)=pr1(i)+wtratio*(pr2(i)-pr1(i))
         enddo !i
 !$OMP end parallel do
+
       endif !nws=4
 
 #ifdef USE_SIMPLE_WIND
@@ -636,14 +720,12 @@
         if(time>=wtime2) then
 !...      Heat budget & wind stresses
           if(ihconsv/=0) then
-#ifndef     USE_ATMOS
             call surf_fluxes(wtime2,windx2,windy2,pr2,airt2, &
      &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
-     &                       fluxprc,fluxevp,prec_snow, &
+     &fluxprc,fluxevp,prec_snow, &
 #endif
-     &                       nws ) 
-#endif /*USE_ATMOS*/
+     &nws) 
 
 !$OMP parallel do default(shared) private(i)
             do i=1,npa
@@ -656,11 +738,6 @@
                 prec_snow(i)=fluxprc(i)
               endif
 #endif
-
-!#ifdef IMPOSE_NET_FLUX
-!                sflux(i)=hradd(i) 
-!                !fluxprc is net P-E 
-!#endif
             enddo !i
 !$OMP end parallel do
 
@@ -700,14 +777,7 @@
 !$OMP end parallel do
 #endif /*USE_BMI*/
 
-#ifdef    USE_ATMOS
-          !ESMF may not extend to ghosts
-          call exchange_p2d(windx2)
-          call exchange_p2d(windy2)
-          call exchange_p2d(pr2)
-#else
           call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
-#endif
         endif !time>=wtime2
 
         wtratio=(time-wtime1)/wtiminc
@@ -850,7 +920,7 @@
         if(nws==0) then
           tau(1,i)=0.d0
           tau(2,i)=0.d0
-        else if(nws==2.and.ihconsv==1.and.iwind_form==0) then !tauxz and tauyz defined; USE_ATMOS not defined
+        else if(nws==2.and.ihconsv==1.and.iwind_form==0) then !tauxz and tauyz defined
           if(idry(i)==1) then
             tau(1,i)=0.d0
             tau(2,i)=0.d0
@@ -1761,20 +1831,12 @@
       endif !if_source/=0
 
 !...  Volume sources from evap and precip
-!...  For USE_ATMOS, needs evap from atmos model 
       if(isconsv/=0) then
-!#ifdef  IMPOSE_NET_FLUX
-!          do i=1,nea
-!            precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind) !P-E
-!            vsource(i)=vsource(i)+precip/rho0*area(i) !m^3/s
-!          enddo !i 
-!#else
         do i=1,nea
           evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
           precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
           vsource(i)=vsource(i)+(precip-evap)/rho0*area(i) !m^3/s
         enddo !i
-!#endif /*IMPOSE_NET_FLUX*/
       endif !isconsv/=0
 
 !...  Zero out net sink @dry elem
@@ -2021,10 +2083,10 @@
       if(it==iths_main+1.and.myrank==0) then
         !Outputs (nstride_schout,nrec_schout) and time origin info are only used by rank 0
 #ifdef OLDIO
-        j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_1.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(1))
+        j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_1.nc',NF90_NOWRITE,ncid_schout(1))
 #else 
 !       Scribe I/O
-        j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/out2d_1.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(1))
+        j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/out2d_1.nc',NF90_NOWRITE,ncid_schout(1))
 #endif /*OLDIO*/
         if(j/=NF90_NOERR) call parallel_abort('STEP: schout_1.nc not found')
         j= nf90_inquire(ncid_schout(1), unlimitedDimId=mm)
@@ -2084,25 +2146,25 @@
           write(it_char,'(i72)')istack
           it_char=adjustl(it_char); lit=len_trim(it_char)
 #ifdef OLDIO
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(1))
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout(1))
           if(j/=NF90_NOERR) call parallel_abort('STEP: schout*.nc not found')
 #else
           do i=2,6; j=nf90_close(ncid_schout(i)); enddo
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/out2d_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(1))
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/out2d_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout(1))
           if(j/=NF90_NOERR) call parallel_abort('STEP: out2d*.nc not found')
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/diffusivity_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(2))
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/diffusivity_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout(2))
           if(j/=NF90_NOERR) call parallel_abort('STEP: dffusivity*.nc not found')
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelX_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(3))
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelX_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout(3))
           if(j/=NF90_NOERR) call parallel_abort('STEP: horizontalSideVelX*.nc not found')
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelY_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(4))
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelY_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout(4))
           if(j/=NF90_NOERR) call parallel_abort('STEP: horizontalSideVelY*.nc not found')
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/temperatureAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(5))
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/temperatureAtElement_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout(5))
           if(j/=NF90_NOERR) call parallel_abort('STEP: temperatureAtElement*.nc not found')
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/salinityAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(6))
+          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/salinityAtElement_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout(6))
           if(j/=NF90_NOERR) call parallel_abort('STEP: salinityAtElement*.nc not found')
           if(itransport_only==2) then !read additional variables
             j=nf90_close(ncid_schout(7))
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/totalSuspendedLoad_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(7))
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/totalSuspendedLoad_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout(7))
             if(j/=NF90_NOERR) call parallel_abort('STEP: totalSuspendedLoad*.nc not found')
           endif !itransport_only==2
 #endif
@@ -2126,23 +2188,23 @@
           else !stack exists
 
 #ifdef OLDIO
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(1))
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout_2(1))
             if(j/=NF90_NOERR) call parallel_abort('STEP: schout*.nc not found(2)')
 #else
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/out2d_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(1))
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/out2d_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout_2(1))
             if(j/=NF90_NOERR) call parallel_abort('STEP: out2d*.nc not found(2)')
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/diffusivity_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(2))
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/diffusivity_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout_2(2))
             if(j/=NF90_NOERR) call parallel_abort('STEP: dffusivity*.nc not found(2)')
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelX_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(3))
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelX_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout_2(3))
             if(j/=NF90_NOERR) call parallel_abort('STEP: horizontalSideVelX*.nc not found(2)')
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelY_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(4))
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelY_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout_2(4))
             if(j/=NF90_NOERR) call parallel_abort('STEP: horizontalSideVelY*.nc not found(2)')
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/temperatureAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(5))
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/temperatureAtElement_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout_2(5))
             if(j/=NF90_NOERR) call parallel_abort('STEP: temperatureAtElement*.nc not found(2)')
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/salinityAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(6))
+            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/salinityAtElement_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout_2(6))
             if(j/=NF90_NOERR) call parallel_abort('STEP: salinityAtElement*.nc not found(2)')
             if(itransport_only==2) then !read additional variables
-              j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/totalSuspendedLoad_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(7))
+              j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/totalSuspendedLoad_'//it_char(1:lit)//'.nc',NF90_NOWRITE,ncid_schout_2(7))
               if(j/=NF90_NOERR) call parallel_abort('STEP: totalSuspendedLoad*.nc not found')
             endif !itransport_only==2
 #endif
@@ -2971,27 +3033,36 @@
           endif !iveg
 
 !         Compute c_psi_3
-          if(mid.eq.'MY') then
-            cpsi3(k)=0.9d0
-          else !GLS models
+          if(icompute_cpsi3==0) then !use constants
+            if(mid.eq.'MY') then
+              cpsi3(k)=0.9d0
+            else !GLS models
+              if(rzbt(k)>0) then !unstable
+                cpsi3(k)=1.d0
+              else !stable
+                select case(mid)
+                  case('KL')
+                    cpsi3(k)=2.53d0
+                  case('KE')
+                    cpsi3(k)=-0.52d0
+                  case('KW')
+                    cpsi3(k)=-0.58d0
+                  case('UB')
+                    cpsi3(k)=0.1d0
+                  case default
+                    write(errmsg,*)'Unknown closure model:',mid
+                    call parallel_abort(errmsg)
+                end select
+              endif
+            endif !mid
+          else !icompute_cpsi3/=0: compute cpsi3(minus)
             if(rzbt(k)>0) then !unstable
-              cpsi3(k)=1.d0
-            else !stable
-              select case(mid)
-                case('KL')
-                  cpsi3(k)=2.53d0
-                case('KE')
-                  cpsi3(k)=-0.52d0
-                case('KW')
-                  cpsi3(k)=-0.58d0
-                case('UB')
-                  cpsi3(k)=0.1d0
-                case default
-                  write(errmsg,*)'Unknown closure model:',mid
-                  call parallel_abort(errmsg)
-              end select
-            endif
-          endif
+              !In turbulence.F90: cpsi3plus=(1.5-ce3plus)*gen_n+gen_m
+              cpsi3(k)=0.5d0*rnub+rmub
+            else
+              cpsi3(k)=cpsi3_comp
+            endif !rzbt
+          endif !icompute_cpsi3
 
 !         Wall proximity function      
           if(mid.eq.'MY'.or.mid.eq.'KL') then
@@ -6389,7 +6460,21 @@
 
 !$OMP workshare
       deta2_dx=0.d0; deta2_dy=0.d0; deta1_dx=0.d0; deta1_dy=0.d0; dpr_dx=0.d0; dpr_dy=0.d0; detp_dx=0.d0; detp_dy=0.d0
+      deta1_dxy_elem=0.d0
 !$OMP end workshare
+
+!     Pressure gradient at elem for CICE
+!$OMP do
+      do ie=1,nea
+        if(idry_e(ie)==0) then
+          do m=1,i34(ie)
+            nd=elnode(m,ie)
+            deta1_dxy_elem(ie,1)=deta1_dxy_elem(ie,1)+eta1(nd)*dldxy(m,1,ie) !eframe if ics=2
+            deta1_dxy_elem(ie,2)=deta1_dxy_elem(ie,2)+eta1(nd)*dldxy(m,2,ie) !eframe if ics=2
+          enddo !m
+        endif !idry_e
+      enddo !ie
+!$OMP end do
 
 !$OMP do 
       do j=1,ns !resident
@@ -7507,6 +7592,8 @@
                 rr=0.62d0; d_1=1.50d0; d_2=20.d0
               case(7)
                 rr=0.80d0; d_1=0.90d0; d_2=2.1d0
+              case(8)
+                rr=watertype_rr; d_1=watertype_d1; d_2=watertype_d2
               case default
                 call parallel_abort('Unknown water type (3)')
             end select !itmp
@@ -8233,26 +8320,26 @@
         !not barrier
         smax=maxval(dp(elnode(1:i34(i),i)))+slr_elev !max depth with SLR
         smin=minval(dp(elnode(1:i34(i),i)))+slr_elev !min depth
-        if(nwild(i)==1) then !marsh elem
-          if(smax>0.5d0) then !drowned
+        if(nwild(i)>0) then !marsh elem
+          if(smax>drown_marsh) then !drowned
             imarsh(i)=0
 !            Cdp(elnode(1:i34(i),i))=0.001d0
 !            Cd(elside(1:i34(i),i))=0.001d0
 !            rough_p(elnode(1:i34(i),i))=1.d-4
           endif !smax
         else !non-marsh elem @last step
-          if(smax<=0.d0.and.smin>=-1.d0) then !create marsh
+          if(smax<=create_marsh_max.and.smin>=create_marsh_min) then !create marsh
             ifl=0
             loop16: do j=1,i34(i)
               nd=elnode(j,i)
               do m=1,nne(nd)
                 ie=indel(m,nd)
-                if(nwild(ie)==1) then !not barrier
-                  ifl=1; exit loop16
+                if(nwild(ie)>0) then !not barrier
+                  ifl=nwild(ie); exit loop16
                 endif
               enddo !m
             end do loop16
-            if(ifl==1) imarsh(i)=1
+            if(ifl>0) imarsh(i)=ifl
           endif !smax
         endif !nwild
       enddo !i=1,ne
@@ -8270,12 +8357,16 @@
       do i=1,np
         do j=1,nne(i)
           ie=indel(j,i)
-          if(imarsh(ie)==1) then !iveg/=0
-            veg_di(i)=veg_di0
-            veg_h(i)=veg_h0
-            veg_nv(i)=veg_nv0
-            veg_cd(i)=veg_cd0
-            veg_alpha0(i)=veg_di0*veg_nv0*veg_cd0/2.d0
+          if(imarsh(ie)>0) then !iveg/=0
+            if(imarsh(i)>nmarsh_types) then
+              write(errmsg,*)'STEP: imarsh(i)>nmarsh_',iplg(i),imarsh(i)
+              call parallel_abort(errmsg)
+            endif
+            veg_di(i)=veg_di0(imarsh(i))
+            veg_h(i)=veg_h0(imarsh(i))
+            veg_nv(i)=veg_nv0(imarsh(i))
+            veg_cd(i)=veg_cd0(imarsh(i))
+            veg_alpha0(i)=veg_di0(imarsh(i))*veg_nv0(imarsh(i))*veg_cd0(imarsh(i))/2.d0
           endif !imarsh
 
           !drowned marsh: veg_di etc =0
@@ -9264,14 +9355,55 @@
 #endif
 
 #if defined USE_WW3
-        ! Eastward wave radiation stress
-        call writeout_nc(id_out_ww3(1),'rsxx',1,1,npa,rsxx)
+        if (RADFLAG == 'VOR') then
+           ! Significant wave height
+           call writeout_nc(id_out_ww3(1),'hs',1,1,npa,wave_hs)
 
-        ! Eastward northward wave radiation stress
-        call writeout_nc(id_out_ww3(2),'rsxy',1,1,npa,rsxy)
+           ! Mean wave direction
+           call writeout_nc(id_out_ww3(2),'dir',1,1,npa,wave_dir)
 
-        ! Northward wave radiation stress
-        call writeout_nc(id_out_ww3(3),'rsyy',1,1,npa,rsyy)
+           ! Mean wave period
+           call writeout_nc(id_out_ww3(3),'tm1',1,1,npa,wave_tm1)
+
+           ! Mean wave number
+           call writeout_nc(id_out_ww3(4),'wnm',1,1,npa,wave_wnm)
+
+           ! Wave-induced Bernoulli head pressure
+           call writeout_nc(id_out_ww3(5),'bhd',1,1,npa,wave_pres)
+
+           ! Stokes drift, x component
+           call writeout_nc(id_out_ww3(6),'ussx',1,1,npa,wave_stokes_x)
+
+           ! Stokes drift, y component
+           call writeout_nc(id_out_ww3(7),'ussy',1,1,npa,wave_stokes_y)
+
+           ! Wave-ocean mom flux, x component
+           call writeout_nc(id_out_ww3(8),'twox',1,1,npa,wave_ocean_flux_x)
+
+           ! Wave-ocean mom flux, y component
+           call writeout_nc(id_out_ww3(9),'twoy',1,1,npa,wave_ocean_flux_y)
+
+           ! Momentum flux due to bottom friction, x component
+           call writeout_nc(id_out_ww3(10),'tbbx',1,1,npa,wave_flux_friction_x)
+
+           ! Momentum flux due to bottom friction, x component
+           call writeout_nc(id_out_ww3(11),'tbby',1,1,npa,wave_flux_friction_y)
+
+           ! Near bed orbital vel, x component
+           call writeout_nc(id_out_ww3(12),'ubrx',1,1,npa,wave_orbu)
+
+           ! Near bed orbital vel, y component
+           call writeout_nc(id_out_ww3(13),'ubry',1,1,npa,wave_orbv)
+        else
+           ! Eastward wave radiation stress
+           call writeout_nc(id_out_ww3(1),'rsxx',1,1,npa,rsxx)
+
+           ! Eastward northward wave radiation stress
+           call writeout_nc(id_out_ww3(2),'rsxy',1,1,npa,rsxy)
+
+           ! Northward wave radiation stress
+           call writeout_nc(id_out_ww3(3),'rsyy',1,1,npa,rsyy)
+        end if
 #endif
 
 #ifdef USE_MARSH

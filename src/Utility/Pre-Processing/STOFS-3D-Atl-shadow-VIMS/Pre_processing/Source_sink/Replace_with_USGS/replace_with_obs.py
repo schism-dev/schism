@@ -331,6 +331,8 @@ def source_nwm2usgs(
     This is acceptable because the segment IDs are the same between NWM v1 and later versions.
     '''
 
+    os.makedirs(output_dir, exist_ok=True)
+
     usgs_stations, usgs_stations_coords = prepare_usgs_stations(diag_output=f'{output_dir}/usgs_stations.txt')
 
     nwm_shp = preprocess_nwm_shp(f_shapefile)
@@ -343,9 +345,9 @@ def source_nwm2usgs(
     # manually associate some USGS stations with NWM segments,
     # set the NWM segment to be the one associated with the vsource injection
     manual_nwm2usgs = {
-        19406836: '07381490',
-        15708755: '02489500',
-        18928090: '07375175',
+        19406836: '07381490',  # Atchafalaya River at Simmesport, LA
+        15708755: '02489500',  # Pearl River at Bogalusa, LA
+        18928090: '07375175',  # Bogue Falaya River at Boston St, Covington, LA
     }
     for nwm_featureID, usgs_id in manual_nwm2usgs.items():
         nwm_shp.loc[nwm_shp['featureID'] == nwm_featureID, 'gages'] = usgs_id
@@ -526,7 +528,7 @@ def source_nwm2usgs(
             this_vsource_nwm_array[:, k] = np.interp(
                 (df.index - df.index[0]).total_seconds().to_numpy(),
                 (nwm_df.index - df.index[0]).total_seconds().to_numpy(),
-                nwm_df[mysrc_nwm_fid].to_numpy().squeeze()
+                nwm_df[idx].to_numpy().squeeze()
             )
             
         plt.figure(figsize=(10, 6)) 
@@ -566,9 +568,27 @@ if __name__ == "__main__":
     # )
 
     source_nwm2usgs(
-        start_time_str="2017-12-01 00:00:00",
+        start_time_str="2021-08-01 00:00:00",
         f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
-        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I14/Source_sink/USGS_adjusted_sources/original/',
-        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I13/Source_sink/original_source_sink/20171201/',
-        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I14/Source_sink/USGS_adjusted_sources/',
+        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09g/Source_sink/original_source_sink/',
+        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09g/Source_sink/original_source_sink/20210801/',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09j/Source_sink/USGS_adjusted_sources/',
     )
+
+    # source_nwm2usgs(
+    #     start_time_str="2017-12-01 00:00:00",
+    #     f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
+    #     original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I14/Source_sink/USGS_adjusted_sources/original/',
+    #     nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I13/Source_sink/original_source_sink/20171201/',
+    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I14/Source_sink/USGS_adjusted_sources/',
+    # )
+
+    # source_nwm2usgs(
+    #     start_time_str="2017-12-01 00:00:00",
+    #     f_shapefile="/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp",
+    #     original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Source_sink/original_source_sink/',
+    #     nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I13/Source_sink/original_source_sink/20171201/',
+    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Source_sink/USGS_adjusted_sources/',
+    # )
+
+    print('done')

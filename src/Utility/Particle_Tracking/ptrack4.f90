@@ -78,7 +78,7 @@
 
 !...  definition of variables
 !...
-      module global
+      module global_ptrack
         implicit none
         public
 
@@ -122,11 +122,11 @@
         real(kind=dbl_kind),save, allocatable :: uu1(:,:),vv1(:,:),ww1(:,:),uu2(:,:),vv2(:,:),ww2(:,:)
         real*8,save, allocatable :: wnx1(:),wnx2(:),wny1(:),wny2(:),hf1(:,:),vf1(:,:),hf2(:,:),vf2(:,:)
         real*8,save, allocatable :: hvis_e(:,:),bio_wvel(:),bio_thick(:)
-      end module global
+      end module global_ptrack
 
 !...  Main program
       program ptrack
-      use global
+      use global_ptrack
       use netcdf
       use compute_zcor
       use schism_geometry_mod
@@ -326,25 +326,25 @@
       write(ifile_char,'(i12)') ifile
       ifile_char=adjustl(ifile_char); len_char=len_trim(ifile_char)
       file63='out2d_'//ifile_char(1:len_char)//'.nc'
-      iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+      iret=nf90_open(trim(adjustl(file63)),NF90_NOWRITE,ncid)
       if(iret/=nf90_NoErr) stop '1st stack not opened'
       iret=nf90_inq_varid(ncid,'elevation',ielev_id)
       if(iret/=nf90_NoErr) stop 'elev not found'
 
       file64='horizontalVelX_'//ifile_char(1:len_char)//'.nc'
-      iret=nf90_open(trim(adjustl(file64)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+      iret=nf90_open(trim(adjustl(file64)),NF90_NOWRITE,ncid2)
       if(iret/=nf90_NoErr) stop '1st stack not opened(2)'
       iret=nf90_inq_varid(ncid2,'horizontalVelX',lu_id)
       if(iret/=nf90_NoErr) stop 'uvel not found'
 
       file65='horizontalVelY_'//ifile_char(1:len_char)//'.nc'
-      iret=nf90_open(trim(adjustl(file65)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid3)
+      iret=nf90_open(trim(adjustl(file65)),NF90_NOWRITE,ncid3)
       if(iret/=nf90_NoErr) stop '1st stack not opened(3)'
       iret=nf90_inq_varid(ncid3,'horizontalVelY',lv_id)
       if(iret/=nf90_NoErr) stop 'vvel not found'
 
       file66='verticalVelocity_'//ifile_char(1:len_char)//'.nc'
-      iret=nf90_open(trim(adjustl(file66)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid4)
+      iret=nf90_open(trim(adjustl(file66)),NF90_NOWRITE,ncid4)
       if(iret/=nf90_NoErr) stop '1st stack not opened(4)'
       iret=nf90_inq_varid(ncid4,'verticalVelocity',lw_id)
       if(iret/=nf90_NoErr) stop 'wvel not found'
@@ -361,7 +361,7 @@
         if(iret/=nf90_NoErr) stop 'windy not found'
 
         file67='diffusivity_'//ifile_char(1:len_char)//'.nc'
-        iret=nf90_open(trim(adjustl(file67)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid5)
+        iret=nf90_open(trim(adjustl(file67)),NF90_NOWRITE,ncid5)
         if(iret/=nf90_NoErr) stop '1st stack not opened(5)'
         iret=nf90_inq_varid(ncid5,'diffusivity',ltdff)
         if(iret/=nf90_NoErr) stop 'diffusivity not found'
@@ -754,21 +754,21 @@
         write(ifile_char,'(i12)') ifile
         ifile_char=adjustl(ifile_char); len_char=len_trim(ifile_char)
         file63='out2d_'//ifile_char(1:len_char)//'.nc'
-        iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+        iret=nf90_open(trim(adjustl(file63)),NF90_NOWRITE,ncid)
         if(iret/=nf90_NoErr) stop 'out2d not opened (2)'
         file64='horizontalVelX_'//ifile_char(1:len_char)//'.nc'
-        iret=nf90_open(trim(adjustl(file64)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        iret=nf90_open(trim(adjustl(file64)),NF90_NOWRITE,ncid2)
         if(iret/=nf90_NoErr) stop 'uvel not opened(2)'
         file65='horizontalVelY_'//ifile_char(1:len_char)//'.nc'
-        iret=nf90_open(trim(adjustl(file65)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid3)
+        iret=nf90_open(trim(adjustl(file65)),NF90_NOWRITE,ncid3)
         if(iret/=nf90_NoErr) stop 'vvel not opened(2)'
         file66='verticalVelocity_'//ifile_char(1:len_char)//'.nc'
-        iret=nf90_open(trim(adjustl(file66)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid4)
+        iret=nf90_open(trim(adjustl(file66)),NF90_NOWRITE,ncid4)
         if(iret/=nf90_NoErr) stop 'wvel not opened(2)'
         if(mod_part==1) then
           iret=nf90_close(ncid5)
           file67='diffusivity_'//ifile_char(1:len_char)//'.nc'
-          iret=nf90_open(trim(adjustl(file67)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid5)
+          iret=nf90_open(trim(adjustl(file67)),NF90_NOWRITE,ncid5)
           if(iret/=nf90_NoErr) stop 'diff not opened(5)'
         endif
 
@@ -1412,7 +1412,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       subroutine area_coord(nnel,xt,yt,arco)
-      use global, only : dbl_kind,elnode,area,x,y
+      use global_ptrack, only : dbl_kind,elnode,area,x,y
       implicit real(kind=dbl_kind)(a-h,o-z),integer(i-n)
       integer, intent(in) :: nnel
       real(kind=dbl_kind), intent(in) :: xt,yt
@@ -1445,7 +1445,7 @@
 !********************************************************************
 !
       subroutine levels
-      use global
+      use global_ptrack
       use compute_zcor
       implicit real(kind=dbl_kind)(a-h,o-z),integer(i-n)
 
@@ -1527,7 +1527,7 @@
       subroutine quicksearch(iloc,idt,ipar,nnel0,jlev0,time,x0,y0,z0,xt,yt,zt,nnel1,jlev1, &
      &nodel2,arco,zrat,nfl,etal,dp_p,ztmp,kbpl,ist2,inbr2,rnds,pbeach)
 
-      use global
+      use global_ptrack
       use compute_zcor
       implicit real(kind=dbl_kind)(a-h,o-z),integer(i-n)
 
@@ -1882,7 +1882,7 @@
 !            xp,yp: point to be tested
 !     Outputs:
 !            inside: 1, inside
-      use global, only : small1
+      use global_ptrack, only : small1
       implicit real*8(a-h,o-z)
       integer, intent(in) :: i34
       real*8, intent(in) :: x(i34),y(i34),xp,yp

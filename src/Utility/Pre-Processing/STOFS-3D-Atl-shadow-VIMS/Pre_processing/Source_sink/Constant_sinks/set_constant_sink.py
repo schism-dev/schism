@@ -87,6 +87,17 @@ def set_constant_sink(wdir='./', shapefile_name='levee_4_pump_polys.shp', hgrid_
     return const_source_sink
 
 if __name__ == "__main__":
-    pass
+    my_ss = source_sink.from_files('/sciclone/schism10/feiye/STOFS3D-v8/I202503/Source_sink/')
+    eles = np.array(my_ss.source_eles.astype(str))
+    # read a json file
+    import json
+    json_file = Path('/sciclone/schism10/feiye/STOFS3D-v8/I202503/Source_sink/sources.json')
+    with open(json_file, 'r') as f:
+        ele2fid = json.load(f)
+    eles1 = np.array(list(ele2fid.keys()))
+
+    np.all(np.equal(eles, eles1))
+
+    print('Done')
 
 

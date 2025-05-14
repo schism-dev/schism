@@ -38,21 +38,52 @@ DEFAULT_REGIONAL_TWEAKS = {
     'st_lawrence2': 10,
     'st_lawrence3': 10,
 }
+
+DEFAULT_REGIONAL_TWEAKS_v7p2 = {  # incoorporating SECOFS updates, for SMS v27 and after
+    'min_5m_ll_noPR': 5,
+    'SabinePass': 7,
+    'BergenPoint': 5,
+     # 'Washington_3': 15,  # deleted
+    'Elk_river': 2,
+    'Hudson_river': 16,
+    'James_river': 2,  # changed
+    'NorthEast_river': 5,
+    'Rappahannock_river': 6,
+    'Susquehanna_river': 10,
+    'York_river': 4,  # changed
+    'Androscoggin_Kennebec_rivers': 3,
+    'Merrimack_river': 3,
+    'Patuxent_river': 5,
+    'Penobscot_river': 5,
+    'Saco_river': 3,
+    'StCroix_river': 5,
+    'Oyster_landing': 1,
+    'st_lawrence1': 10,
+    'st_lawrence2': 10,
+    'st_lawrence3': 10,
+}
 DEFAULT_REGION_DIR = '/sciclone/schism10/Hgrid_projects/DEMs/regions/'
 
 
-def tweak_hgrid_depth(hgrid, regional_tweaks=None, regions_dir=DEFAULT_REGION_DIR):
+def tweak_hgrid_depth(hgrid, regional_tweaks=None, regions_dir=DEFAULT_REGION_DIR, min_max='min'):
     '''
-    Set the minimum depth in the regions specified in regional_tweaks.
+    Set the minimum/maximum depth in the regions specified in regional_tweaks.
     '''
     if regional_tweaks is None:
-        regional_tweaks = DEFAULT_REGIONAL_TWEAKS
+        regional_tweaks = DEFAULT_REGIONAL_TWEAKS_v7p2
 
     for region, depth in regional_tweaks.items():
         region_file = f'{regions_dir}/{region}.reg'
         bp = read_schism_bpfile(region_file, fmt=1)
         in_region = inside_polygon(np.c_[hgrid.x, hgrid.y], bp.x, bp.y).astype(bool)
-        tweak_idx = in_region * (hgrid.dp < depth)
+
+        if min_max == 'min':
+            tweak_idx = in_region * (hgrid.dp < depth)
+        elif min_max == 'max':
+            tweak_idx = in_region * (hgrid.dp > depth)
+        else:
+            raise ValueError(f'Invalid min_max value: {min_max}')
+
         hgrid.dp[tweak_idx] = depth
         print(f'Applied min depth {depth} in region {region}')
     return hgrid

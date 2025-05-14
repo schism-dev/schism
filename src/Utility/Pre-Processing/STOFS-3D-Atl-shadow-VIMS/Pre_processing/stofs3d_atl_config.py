@@ -34,6 +34,7 @@ class ConfigStofs3dAtlantic():
         relocate_source=True,
         feeder_info_file=None,  # file containing feeder info,
                                 # made by make_feeder_channel.py in RiverMapper
+        hgrid_without_feeders=None,
         mandatory_sources_coor=None,  # a dictionary of mandatory sources' coordinates
         gr3_values=None,
         tvd_regions=None
@@ -50,6 +51,7 @@ class ConfigStofs3dAtlantic():
         self.relocate_source = relocate_source
         self.nwm_cache_folder = nwm_cache_folder
         self.feeder_info_file = feeder_info_file
+        self.hgrid_without_feeders = hgrid_without_feeders
         self.mandatory_sources_coor = mandatory_sources_coor
 
         if bc_flags is None:
@@ -192,12 +194,102 @@ class ConfigStofs3dAtlantic():
             nudging_zone_width=0,  # default nudging zone
             shapiro_zone_width=0,  # default shapiro zone
             shapiro_tilt=0,  # default abrupt transition in the shapiro zone
-            feeder_info_file='',
-            relocate_source=False,
-            nwm_cache_folder=Path('/sciclone/schism10/whuang07/schism20/NWM_v2.1/'),
+            feeder_info_file=(
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v43s2_RiverMapper/'
+                'v44/Feeder/feeder_heads_bases.xy'
+            ),
+            hgrid_without_feeders=None,
+            mandatory_sources_coor=rsf.v45_s2_mandatory_sources_coor,
+            relocate_source=True,
+            nwm_cache_folder=None,
             bc_flags=[[5, 3, 0, 0]],
             bc_relax=[[None, None, None, None]],
             bc_const=[[None, None, None, None]],
+        )
+
+    @classmethod
+    def v7p2(cls):
+        '''Factory method to create a configuration for STOFS3D-v7.2 3D setup'''
+        return cls(
+            ocean_bnd_ids=[0, 1],
+            elev2d_uniform_shift=-0.42,  # add a uniform shift to elev2D
+            nudging_zone_width=7.3,  # default nudging zone
+            shapiro_zone_width=11.5,  # default shapiro zone
+            shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
+            feeder_info_file=(
+                # '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.3/Feeder/'
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v31/Feeder/'
+                'feeder_heads_bases.xy'
+            ),
+            hgrid_without_feeders='/sciclone/schism10/feiye/STOFS3D-v8/R13p_v7/hgrid.gr3',
+            relocate_source=True,
+            mandatory_sources_coor=rsf.v19p2_for_sms_v27_mandatory_sources_coor,
+            nwm_cache_folder=None,
+            bc_flags=[
+                [5, 5, 4, 4],  # Atlantic Ocean
+                [5, 5, 4, 4],  # Gulf of St. Lawrence
+                [0, 1, 2, 2],  # St. Lawrence River
+            ],
+            bc_const=[
+                [None, None, None, None],  # Atlantic Ocean
+                [None, None, None, None],  # Gulf of St. Lawrence
+                [None, None, 10.0, 0.0],  # St. Lawrence River
+            ],
+            bc_relax=[  # relaxation timescale for each boundary variable
+                [None, None, 0.5, 0.5],  # Atlantic Ocean
+                [None, None, 0.5, 0.5],  # Gulf of St. Lawrence
+                [None, None, 0.01, 1.0],  # St. Lawrence River
+            ],
+            tvd_regions=[
+                'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
+                'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg',
+                'upwind_east_Caribbean.rgn', 'upwind_west_Caribbean.rgn',
+                # 'upwind_Honduras.reg'
+            ]
+        )
+
+    @classmethod
+    def v7p2_subset(cls):
+        '''
+        Factory method to create a configuration for STOFS3D-v7.2 3D setup
+        for a composite mesh: coarse region + fine region (subset of the v7.2 mesh)
+        '''
+        return cls(
+            ocean_bnd_ids=[0, 1],
+            elev2d_uniform_shift=-0.42,  # add a uniform shift to elev2D
+            nudging_zone_width=7.3,  # default nudging zone
+            shapiro_zone_width=11.5,  # default shapiro zone
+            shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
+            feeder_info_file=(
+                # '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.3/Feeder/'
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v31/Feeder/'
+                'feeder_heads_bases.xy'
+            ),
+            hgrid_without_feeders=None,
+            relocate_source=True,
+            mandatory_sources_coor=rsf.v19p2_for_sms_v27_mandatory_sources_coor,
+            nwm_cache_folder=None,
+            bc_flags=[
+                [5, 5, 4, 4],  # Atlantic Ocean
+                [5, 5, 4, 4],  # Gulf of St. Lawrence
+                [0, 1, 2, 2],  # St. Lawrence River
+            ],
+            bc_const=[
+                [None, None, None, None],  # Atlantic Ocean
+                [None, None, None, None],  # Gulf of St. Lawrence
+                [None, None, 10.0, 0.0],  # St. Lawrence River
+            ],
+            bc_relax=[  # relaxation timescale for each boundary variable
+                [None, None, 0.5, 0.5],  # Atlantic Ocean
+                [None, None, 0.5, 0.5],  # Gulf of St. Lawrence
+                [None, None, 0.01, 1.0],  # St. Lawrence River
+            ],
+            tvd_regions=[
+                'tvd0_1.reg', 'tvd0_2.reg', 'tvd0_3.reg', 'tvd0_4.reg',
+                'tvd0_5.reg', 'tvd0_6.reg', 'tvd0_7.reg',
+                'upwind_east_Caribbean.rgn', 'upwind_west_Caribbean.rgn',
+                # 'upwind_Honduras.reg'
+            ]
         )
 
     @classmethod
@@ -210,9 +302,12 @@ class ConfigStofs3dAtlantic():
             shapiro_zone_width=11.5,  # default shapiro zone
             shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
             feeder_info_file=(
-                '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.3/Feeder/'
-                'feeder_heads_bases.xy'),
-            mandatory_sources_coor=rsf.v23p3_mandatory_sources_coor,
+                # '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23.3/Feeder/'
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v31/Feeder/'
+                'feeder_heads_bases.xy'
+            ),
+            relocate_source=True,
+            mandatory_sources_coor=rsf.v24p4_mandatory_sources_coor,  # v23p3_mandatory_sources_coor,
             nwm_cache_folder=None,
             bc_flags=[
                 [5, 5, 4, 4],  # Atlantic Ocean

@@ -35,6 +35,9 @@
 
 ! # of vertical bins in vegetation module (used only if iveg/=0)
   nbins_veg_vert = 2
+  
+! # of marsh types (used only if USE_MARSH)
+  nmarsh_types = 2
 
 ! Global output controls
   nspool = 36 !output step spool
@@ -542,18 +545,18 @@
   small_elad = 1.e-4  !small (inactive at the moment)
 
 !-----------------------------------------------------------------------
-! Atmos. option. Use nws=2 and USE_ATMOS for coupling with atmospheric model.
+! Atmos. option. Use nws=4 and USE_ATMOS for coupling with atmospheric model.
 ! If nws=0, no atmos. forcing is applied. If nws=1, atmos.
 ! variables are read in from wind.th. If nws=2, atmos. variables are
 ! read in from sflux_ files.
-! If nws=4, ascii format is used for wind and atmos. pressure at each node (see source code).
+! If nws=4, atmos.nc (interpolated onto hgrid.gr3) is used for forcing.
 ! If nws=-1 (requires USE_PAHM), use Holland parametric wind model (barotropic only with wind and atmos. pressure).
 !  In this case, the Holland model is called every step so wtiminc is not used. An extra 
 !  input file is needed: hurricane-track.dat, in addition to a few parameters below.
 !
 ! Stress calculation:
 ! If nws=2, ihconsv=1 and iwind_form=0, the stress is calculated from heat exchange
-! routine; in this case USE_ATMOS cannot be on.
+! routine.
 ! Otherwise if iwind_form=-1, the stress is calculated from Pond & Pichard formulation;
 ! if iwind_form=1, Hwang (2018) formulation (Cd tapers off at high wind).
 ! If WWM is enabled and icou_elfe_wwm>0 and iwind_form=-2 or -3, stress is overwritten by WWM:
@@ -591,6 +594,10 @@
   i_hmin_salt_ex = 2 ! no effect if isconsv=0 
   hmin_salt_ex = 0.2 ![m], no effect if isconsv=0 
   iprecip_off_bnd = 0 !if /=0, precip will be turned off near land bnd
+  !watertype_* below are used for water type '8'
+  watertype_rr = 0.58
+  watertype_d1 = 0.35 
+  watertype_d2 = 23.
 
 !-----------------------------------------------------------------------
 ! Option to add a sediment layer for the buffer effect on temperature
@@ -610,6 +617,11 @@
   mid = 'KL' !needed if itur=3,5. Use KE if itur=5 
   stab = 'KC' !needed if itur=3 or 5. Use 'GA' if turb_met='MY'; otherwise use 'KC'. 
   xlsc0 = 0.1 !needed if itur=3 or 5. Scale for surface & bottom mixing length (>0)
+  icompute_cpsi3 = 0 !needed if itur=3,5; optional to compute c_psi3
+  !2nd-order stability function coefficient options (options 1 to 7); needed if icompute_cpsi3!=0
+  !5: Canuto A; 6: Canuto B (see misc_subs.F90 for other options)
+  iscnd_coeff = 5 
+  ri_st = 0.25 !needed if icompute_cpsi3/=0. Try [0.1,0.25]
 
 !-----------------------------------------------------------------------
 ! Sponge layer for elevation and vel.
@@ -731,6 +743,14 @@
 ! Marsh model parameters (only if USE_MARSH is on)
 !----------------------------------------------------------------------
   slr_rate = 120. !sea-level rise rate in mm/yr, times morphological acceleration if used
+  veg_di0 = 0.1,0.1 !(1:nmarsh_types) [m]; diamters for each marsh type
+  veg_h0 = 0.1,0.1 ![m] heights for each marsh type
+  veg_nv0 = 0.1,0.1 ![m^-2] density for each marsh type
+  veg_cd0 = 1.,1. ![-] form drag coefficients for each marsh type
+  drown_marsh = 0.5d0 ![m] depth at which marsh will be drowned
+  !min/max depth interval favorable for marsh creation/migration
+  create_marsh_min = -1. ![m]
+  create_marsh_max = 0. ![m] 
 
 !----------------------------------------------------------------------
 ! Vegetation model

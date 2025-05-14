@@ -18,6 +18,8 @@ def load_NCF(hgrid_obj: schism_grid, NCF_shpfile: Path, buf: float = 4.0):
     Load the maintained depth from National Channel Framework data into the hgrid.
     The original NCF polygons are enlarged to accommodate the mismatch between the hgrid and the NCF data.
     The maintained depth is converted from feet to meters.
+
+    Note that there 
     '''
 
     print('Loading NCF data...\n')
