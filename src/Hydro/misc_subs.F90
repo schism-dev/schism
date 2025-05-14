@@ -712,25 +712,11 @@
 
 !...  Source/sinks: read by rank 0 first
 #ifdef USE_BMI
-
-      if(nsources>0) then
-        ninv=time/th_dt3(1)
-        th_time3(1,1)=dble(ninv)*th_dt3(1)
-        th_time3(2,1)=th_time3(1,1)+th_dt3(1)
-        ninv=time/th_dt3(3)
-        th_time3(1,3)=dble(ninv)*th_dt3(3)
-        th_time3(2,3)=th_time3(1,3)+th_dt3(3)
-      endif
-
-      if(nsinks>0) then
-        ninv=time/th_dt3(2)
-        th_time3(1,2)=dble(ninv)*th_dt3(2)
-        th_time3(2,2)=th_time3(1,2)+th_dt3(2)
-      endif
-
-      ath3(:,1,1,1:2)=0.d0
-      ath3(:,1,1,3)=-9999.d0
-#else /*USE_BMI*/
+        ! SCHISM NWM BMI will bypass the .th or .nc
+        ! source/sinks forcing file dependency and instead
+        ! will fill the ath3, th_dt3, and th_time3 variables
+        ! through the NextGen framework coupled formulations
+#else
 
 #ifdef SH_MEM_COMM
       if(if_source==1.and.myrank_node==0) then !ASCII
