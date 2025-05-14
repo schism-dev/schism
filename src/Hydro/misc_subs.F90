@@ -615,7 +615,7 @@
         ! the ath2, th_dt2, and th_time2 variables through
         ! the NextGen framework coupled formulations
 #else
-        j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_elev2D)
+        j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',NF90_NOWRITE,ncid_elev2D)
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev2D.th.nc')
         j=nf90_inq_dimid(ncid_elev2D,'nOpenBndNodes',mm)
         j=nf90_inquire_dimension(ncid_elev2D,mm,len=itmp)
