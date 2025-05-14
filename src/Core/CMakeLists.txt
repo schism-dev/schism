@@ -1,31 +1,43 @@
-
 ## Algorithm options. Everything done using make_define_options will be applied globally.
 
 set(versionfile "${CMAKE_CURRENT_BINARY_DIR}/schism_version.F90")
 
+# Remove Python dependency and use native scripts instead
 cmake_host_system_information(RESULT HOSTNAME QUERY HOSTNAME)
 
-if (NOT Python_FOUND)
-  find_package(Python COMPONENTS Interpreter)
-  message(INFO " Python_EXECUTABLE = ${Python_EXECUTABLE}")
-endif()
-
-# On levante, the python detection of git version is not working, we thus
-# use the bash version instead only on this system until we find a better solution
-if(HOSTNAME MATCHES "^levante")
-  add_custom_target(
-    sversion
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/gen_version.bash ${versionfile}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+# Detect platform and choose appropriate script
+if(WIN32)
+  # Windows - use PowerShell script
+  find_program(POWERSHELL_EXECUTABLE
+    NAMES powershell pwsh
+    DOC "PowerShell executable"
   )
-  message(INFO " SCHISM version will be generated via a bash script on this platform only.")
+  
+  if(POWERSHELL_EXECUTABLE)
+    add_custom_target(
+      sversion
+      COMMAND ${POWERSHELL_EXECUTABLE} -ExecutionPolicy Bypass -File ${CMAKE_CURRENT_SOURCE_DIR}/gen_version.ps1 -OutputPath ${versionfile}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    message(STATUS " SCHISM version will be generated via PowerShell script")
+  else()
+    message(FATAL_ERROR "PowerShell not found. Please install PowerShell or WSL with bash.")
+  endif()
 else()
-  add_custom_target(
-    sversion
-    COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/gen_version.py ${versionfile}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  )
-endif() 
+  # Unix-like systems (Linux, macOS, etc.) - use Bash script
+  find_program(BASH_EXECUTABLE bash)
+  
+  if(BASH_EXECUTABLE)
+    add_custom_target(
+      sversion
+      COMMAND ${BASH_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/gen_version.bash ${versionfile}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    message(STATUS " SCHISM version will be generated via bash script")
+  else()
+    message(FATAL_ERROR "Bash not found. Please install bash or ensure it's in your PATH.")
+  endif()
+endif()
 
 set_source_files_properties(${versionfile} PROPERTIES GENERATED TRUE)
 
@@ -67,7 +79,3 @@ add_dependencies(core sversion)
 
 list( APPEND locallibs core)
 set(schismmodlibs ${locallibs} ${schismmodlibs} PARENT_SCOPE)
-
-
-
-
