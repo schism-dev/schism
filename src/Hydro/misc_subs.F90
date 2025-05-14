@@ -609,6 +609,12 @@
       th_time2=0.d0
 
       if(nettype2>0) then
+#ifdef USE_BMI
+        ! SCHISM NWM BMI will bypass the elev2D.th.nc
+        ! forcing file dependency and instead will fill
+        ! the ath2, th_dt2, and th_time2 variables through
+        ! the NextGen framework coupled formulations
+#else
         j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_elev2D)
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev2D.th.nc')
         j=nf90_inq_dimid(ncid_elev2D,'nOpenBndNodes',mm)
@@ -623,13 +629,6 @@
         ninv=time/th_dt2(1)
         th_time2(1,1)=real(ninv,rkind)*th_dt2(1)
         th_time2(2,1)=th_time2(1,1)+th_dt2(1)
-      endif
-
-      if(nettype2>0) then
-#ifdef USE_BMI
-        ath2(1,1,:,1:2,1)=0.d0
-        ath2(1,1,:,3,1)=-9999.d0
-#else
         j=nf90_inq_varid(ncid_elev2D, "time_series",mm)
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev time_series')
         j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,1,1), &
