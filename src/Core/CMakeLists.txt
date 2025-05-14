@@ -18,6 +18,7 @@ if(HOSTNAME MATCHES "^levante")
     COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/gen_version.bash ${versionfile}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   )
+  message(INFO " SCHISM version will be generated via a bash script on this platform only.")
 else()
   add_custom_target(
     sversion
