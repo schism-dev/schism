@@ -609,6 +609,10 @@
       th_time2=0.d0
 
       if(nettype2>0) then
+! SCHISM BMI will bypass the elev2D.th.nc
+! forcing file dependency and instead will fill
+! the ath2, th_dt2, and th_time2 variables through
+! the NextGen framework coupled formulation
 #ifndef USE_BMI
         j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',NF90_NOWRITE,ncid_elev2D)
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev2D.th.nc')
@@ -707,7 +711,7 @@
 
 !...  Source/sinks: read by rank 0 first
 #ifdef USE_BMI
-        ! SCHISM NWM BMI will bypass the .th or .nc
+        ! SCHISM BMI will bypass the .th or .nc
         ! source/sinks forcing file dependency and instead
         ! will fill the ath3, th_dt3, and th_time3 variables
         ! through the NextGen framework coupled formulations
