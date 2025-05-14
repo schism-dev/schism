@@ -2,10 +2,10 @@
 
 set(versionfile "${CMAKE_CURRENT_BINARY_DIR}/schism_version.F90")
 
-# Remove Python dependency and use native scripts instead
+# Use native scripts (PowerShell/Bash) with Python as fallback
 # Detect platform and choose appropriate script
 if(WIN32)
-  # Windows - use PowerShell script
+  # Windows - try PowerShell first
   find_program(POWERSHELL_EXECUTABLE
     NAMES powershell pwsh
     DOC "PowerShell executable"
@@ -18,11 +18,10 @@ if(WIN32)
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
     message(STATUS " SCHISM version will be generated via PowerShell script")
-  else()
-    message(FATAL_ERROR "PowerShell not found. Please install PowerShell or WSL with bash.")
+    set(VERSION_SCRIPT_FOUND TRUE)
   endif()
 else()
-  # Unix-like systems (Linux, macOS, etc.) - use Bash script
+  # Unix-like systems (Linux, macOS, etc.) - try Bash first
   find_program(BASH_EXECUTABLE bash)
 
   if(BASH_EXECUTABLE)
@@ -32,8 +31,23 @@ else()
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
     message(STATUS " SCHISM version will be generated via bash script")
+    set(VERSION_SCRIPT_FOUND TRUE)
+  endif()
+endif()
+
+# Fallback to Python if native scripts are not available
+if(NOT VERSION_SCRIPT_FOUND)
+  find_package(Python COMPONENTS Interpreter)
+
+  if(Python_FOUND)
+    add_custom_target(
+      sversion
+      COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/gen_version.py ${versionfile}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    message(STATUS " SCHISM version will be generated via Python script (fallback)")
   else()
-    message(FATAL_ERROR "Bash not found. Please install bash or ensure it's in your PATH.")
+    message(FATAL_ERROR "No suitable script interpreter found. Please install PowerShell (Windows), Bash (Unix), or Python.")
   endif()
 endif()
 
