@@ -1,10 +1,6 @@
 module bmischism
   
-#ifdef NGEN_ACTIVE
-  use bmif_2_0_iso
-#else
   use bmif_2_0
-#endif
 
   use schism_glbl, only: pi, llist_type, elnode, i34, ipgl
   use schism_glbl, only: ns_global, isidenode, elside
@@ -109,6 +105,10 @@ module bmischism
           set_value_at_indices_double
 ! !     procedure :: print_model_info
   end type bmi_schism
+
+  type box
+    class(bmi), pointer :: ptr => null()
+  end type
 
   private
   public :: bmi_schism
@@ -1700,7 +1700,6 @@ end function schism_finalizer
 #ifdef NGEN_ACTIVE
   function register_bmi(this) result(bmi_status) bind(C, name="register_bmi")
    use, intrinsic:: iso_c_binding, only: c_ptr, c_loc, c_int
-   use iso_c_bmif_2_0
    implicit none
    type(c_ptr) :: this ! If not value, then from the C perspective `this` is a void**
    integer(kind=c_int) :: bmi_status
