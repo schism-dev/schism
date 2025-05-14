@@ -12,7 +12,7 @@ if(WIN32)
     NAMES powershell pwsh
     DOC "PowerShell executable"
   )
-  
+
   if(POWERSHELL_EXECUTABLE)
     add_custom_target(
       sversion
@@ -26,7 +26,7 @@ if(WIN32)
 else()
   # Unix-like systems (Linux, macOS, etc.) - use Bash script
   find_program(BASH_EXECUTABLE bash)
-  
+
   if(BASH_EXECUTABLE)
     add_custom_target(
       sversion
