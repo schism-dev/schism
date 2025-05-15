@@ -15,18 +15,18 @@ p=zdata(); p.flag={}
 #       if base is None: skip this file
 #  flag=1: re-generate input file
 #----------------------------------------------------------------------
-p.StartT=datenum(1991,1,1);  p.EndT=datenum(2020,12,31) #simulation time
+p.StartT=datenum(1991,1,1);  p.EndT=datenum(1995,12,31) #simulation time
 
-p.base= '../RUN11c' # reference run
+p.base= 'None' # reference run
 p.grid_dir='/sciclone/data10/wangzg/CBP/grid/v9b' #directory of hgrid & vgrid; p.grid_dir=p.base if it is None
 
 #models
 p.flag['ICM']= 0  #ICM   model (1: 21 variables; 10: 21-variable offline mode; 2: 17 variables; 20: 17-variable offline mode)
-p.flag['SED']= 1  #SED3D model
-p.flag['WWM']= 1  #Wave  model
+p.flag['SED']= 0  #SED3D model
+p.flag['WWM']= 0  #Wave  model
 
 #sub-modules
-p.flag['VEG'] = 1 #Hydro Vegetation module 
+p.flag['VEG'] = 0 #Hydro Vegetation module
 p.flag['CLAM']= 0 #ICM: oyster/clam model
 p.flag['SAV'] = 0 #ICM: SAV model
 p.flag['WET'] = 0 #ICM: tidal-wetland model
@@ -156,7 +156,7 @@ if p.flag['WWM']==1 and (not fexist(sname)):
    pm['ENDTC_OUT']=num2date(p.EndT).strftime('%Y%m%d.000000');   pm['ENDTC']="'{}'".format(pm['ENDTC_OUT'])
    for i in pm: chparam(fname,i,pm[i]) #update wwminput.nml
 
-fname='icm.nml'; sname='{}/{}'.format(p.base,fname); pm={}
+fname='icm.nml'; sname='{}/{}'.format(p.base,fname); pm={}; pm0=read(fname,1)
 pm['iout_icm']=2; pm['iClam']=0; pm['isav_icm']=0; pm['imarsh_icm']=0
 if p.flag['ICM']!=0: 
    if p.flag['ICM'] in [1,10] and (not fexist(sname)): pm['iSRM']=1
@@ -165,8 +165,12 @@ if p.flag['ICM']!=0:
    if (p.flag['ICM'] in [1,2]): pm['nspool_icm']=24
    if p.flag['ICM'] in [10,20]: pm['nsub']=int(p.dt_offline/150); pm['iKe']=1; pm['nspool_icm']=1
    if p.flag['CLAM']==1: pm['iClam']=1; pm['cFc']='-999   '*5; pm['cMTB']='-999   '*5   
-   if p.flag['SAV']==1: pm['isav_icm']=1; pm['sFc']=-999
+   if p.flag['SAV']==1: pm['isav_icm']=2; pm['sFc']=-999
    if p.flag['WET']==1: pm['imarsh_icm']=2; pm['vAw']=-999
+   if not fexist(sname): #change WSP, WSPn, KC0/KN0/KP0
+      for i in [3,4,6,7,11,12]: pm0['WSP'][i]=-999; pm0['WSPn'][i]=-999
+      pm0['KC0'][2]=-999; pm0['KN0'][2]=-999; pm0['KP0'][2]=-999;
+      for i in ['WSP','WSPn','KC0','KN0','KP0']: pm[i]='  '.join([str(k) for k in pm0[i]])
    for i in pm: chparam(fname,i,pm[i]) #update icm.nml
 
 #----------------------------------------------------------------------
