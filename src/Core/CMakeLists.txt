@@ -3,16 +3,29 @@
 
 set(versionfile "${CMAKE_CURRENT_BINARY_DIR}/schism_version.F90")
 
+cmake_host_system_information(RESULT HOSTNAME QUERY HOSTNAME)
+
 if (NOT Python_FOUND)
   find_package(Python COMPONENTS Interpreter)
   message(INFO " Python_EXECUTABLE = ${Python_EXECUTABLE}")
 endif()
 
-add_custom_target(
+# On levante, the python detection of git version is not working, we thus
+# use the bash version instead only on this system until we find a better solution
+if(HOSTNAME MATCHES "^levante")
+  add_custom_target(
+    sversion
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/gen_version.bash ${versionfile}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  )
+  message(INFO " SCHISM version will be generated via a bash script on this platform only.")
+else()
+  add_custom_target(
     sversion
     COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/gen_version.py ${versionfile}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
+  )
+endif() 
 
 set_source_files_properties(${versionfile} PROPERTIES GENERATED TRUE)
 
