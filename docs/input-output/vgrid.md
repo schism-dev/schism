@@ -71,5 +71,5 @@ There is no limit such as $h_c$ mentioned above, so $LSC^2$ is more robust.
 
 Also see illustrations below:
 
-![Sample LSC^2 vgrid](../../assets/vgrid_lsc2_example.png) 
+![Sample LSC^2 vgrid](../assets/vgrid_lsc2_example.jpg) 
 
