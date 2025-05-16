@@ -1780,45 +1780,44 @@
   <h1>Generate river map</h1>
 
 <h2 id="scripts">Scripts<a class="headerlink" href="#scripts" title="Permanent link">&para;</a></h2>
-<p><a href="https://github.com/schism-dev/RiverMeshTools/tree/main/RiverMapper">RiverMapper</a> is available from the <a href="https://github.com/schism-dev/RiverMeshTools">RiverMeshTools repository</a> under schism-dev.</p>
+<p><a href="https://github.com/schism-dev/RiverMeshTools/tree/main/RiverMapper">RiverMapper</a> is available in the <a href="https://github.com/schism-dev/RiverMeshTools">RiverMeshTools repository</a> maintained by schism-dev.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <p>RiverMapper requires two inputs:</p>
 <ol>
 <li>
-<p>*.tif, which are DEM tiles in lon/lat from one or more sources.</p>
+<p>*.tif files — DEM tiles in lon/lat coordinates, from one or more sources.</p>
 </li>
 <li>
-<p>a shapefile with a 'LineString' type, which contains a 1D river network.</p>
+<p>A shapefile of 'LineString' type, representing a 1D river network.</p>
 </li>
 </ol>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The 1D river network can be any reasonable approximation of the thalwegs. It can be:
+<p>The 1D river network can be any reasonable approximation of the thalwegs. It may be:
 <ul>
-    <li>extracted from DEM using the method presented in the <a href="extract-thalweg.html">previous section</a></li>
-    <li>or duplicated from the river network of a hydrological model such as the National Water Model</li>
-    <li>or manually drawn for <a href="">quick local touch-ups</a></li>
+    <li>Extracted from DEMs using the method described in the <a href="extract-thalweg.html">previous section</a></li>
+    <li>Copied from the river network of a hydrological model, such as the National Water Model</li>
+    <li>Manually drawn for <a href="">quick local touch-ups</a></li>
 </ul></p>
 </div>
 <p>The outputs include:</p>
 <ul>
 <li>
-<p>"total_river_arcs.map", which contains river arcs to be used for the final meshing in SMS.</p>
+<p><code>total_river_arcs.map</code> — river arcs used for final meshing in SMS.</p>
 </li>
 <li>
-<p>other *.map files for diagnostic purposes.</p>
+<p>Additional *.map files for diagnostic purposes.</p>
 </li>
 </ul>
 <p>A sample output looks like this:</p>
-<p><img alt="Sample river map" src="../../assets/sample-river-map.png" /> </p>
+<p><img alt="Sample river map" src="../../assets/sample-river-map.png" /></p>
 <h2 id="sample-applications">Sample applications<a class="headerlink" href="#sample-applications" title="Permanent link">&para;</a></h2>
-<p>To test the RiverMapper tool, you can start by extracting the "RiverMapper_Samples/" directory from <a href="http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar">RiverMapper_Samples.tar</a>.
-Find the following two subdirectories: "Serial" and "Parallel", which provide sample applications for meshing watershed rivers in a smaller domain and a larger domain respectively.
-Each subdirectory contains a sample Python script and the necessary input files.</p>
-<p>Note that these two samples use the default settings suitable for small watershed rivers that are 
-narrower than a few hundred meters.
-Similar settings are used in the latest version of NOAA's operational forecast <a href="https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/">STOFS3D Atlantic</a>.
-If you are interested in meshing rivers with a wider range of widths, check samples with more parameter settings <a href="#more-parameterization">below</a>.</p>
+<p>To test the RiverMapper tool, begin by extracting the "RiverMapper_Samples/" directory from <a href="http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar">RiverMapper_Samples.tar</a>.</p>
+<p>Inside, you’ll find two subdirectories: "Serial" and "Parallel", which demonstrate sample applications for meshing watershed rivers in small and large domains, respectively.<br />
+Each subdirectory contains a sample Python script along with the required input files.</p>
+<p>These two samples use default settings tailored for small watershed rivers typically narrower than a few hundred meters.<br />
+Similar configurations are employed in the latest version of NOAA's operational forecast system, <a href="https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/">STOFS3D Atlantic</a>.</p>
+<p>If you're interested in meshing rivers with a broader range of widths, see additional parameterized examples <a href="#more-parameterization">below</a>.</p>
 <h3 id="meshing-watershed-rivers-in-a-small-domain-serial-mode">Meshing watershed rivers in a small domain (Serial mode)<a class="headerlink" href="#meshing-watershed-rivers-in-a-small-domain-serial-mode" title="Permanent link">&para;</a></h3>
 <p>For a small domain (covering one or two states), a direct function call to the serial "make_river_map" suffices.
 See the sample script:
