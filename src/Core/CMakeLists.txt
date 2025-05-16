@@ -99,7 +99,7 @@ if(EXISTS ${TEMPLATE_FILE})
 else()
     # Fallback: create minimal version file if template doesn't exist
     file(WRITE ${versionfile}
-"      character(LEN=32),parameter :: schism_version = '${SCHISM_VERSION}', git_version = '${GIT_VERSION}'
+"      character(LEN=*),parameter :: schism_version = '${SCHISM_VERSION}', git_version = '${GIT_VERSION}'
 ")
 endif()
 
