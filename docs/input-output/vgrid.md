@@ -68,3 +68,8 @@ There is no limit such as $h_c$ mentioned above, so $LSC^2$ is more robust.
 1 -1. -1. -1. -1. -9. -9. -9. ... !level #, sigma coordinates $\in [-1,0]$ at level 1 for all nodes. '-9' means level 1 is below the bottom of this node
 2 -0.884251  -0.874424  -0.888763 -0.884930 -1. ... 
 ```
+
+Also see illustrations below:
+
+![Sample LSC^2 vgrid](../../assets/vgrid_lsc2_example.png) 
+
