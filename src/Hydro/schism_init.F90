@@ -1135,8 +1135,8 @@
 
 !     Volume and mass sources/sinks option (-1:nc; 1:ASCII)
       if(iabs(if_source)>1) call parallel_abort('INIT: wrong if_source')
-#ifdef USE_NWM_BMI
-      if(if_source==0) call parallel_abort('INIT: USE_NWM_BMI cannot go with if_source=0')
+#ifdef USE_BMI
+      if(if_source==0) call parallel_abort('INIT: USE_BMI cannot go with if_source=0')
 #endif
 
 !     Check all ramp periods
@@ -2800,6 +2800,75 @@
 
       endif !ihydraulics/=0
 
+! To ingest the proper T-Route nexus ids linked to the
+! sources and sinks that intersect the SCHISM inland
+! boundaries, we will use a modified source_sink.in file
+! containing that information here
+#ifdef USE_BMI
+!     Read in source/sink info
+      if(if_source==1) then !ASCII
+        if(myrank==0) then
+          open(31,file=in_dir(1:len_in_dir)//'source_sink_BMI.in',status='old')
+          read(31,*)nsources_bmi
+          ! Keep source_sink.in file format the same, but just force
+          ! all elements in the  mesh to be sources for potential
+          ! forecasted precipitation sources in the future
+          nsources = ne_global
+        endif !myrank
+        call mpi_bcast(nsources_bmi,1,itype,0,comm,istat)
+        call mpi_bcast(nsources,1,itype,0,comm,istat)
+
+        if(iorder==0) then
+          allocate(ieg_source_ngen(max(1,nsources_bmi)),stat=istat)
+          allocate(ieg_source_flowpath_ids(max(1,nsources_bmi)),stat=istat)
+          allocate(ieg_source(max(1,nsources)),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_source failure')
+        endif
+
+        if(myrank==0) then
+          ! Assign element ids for T-Route linking to inland boundary inflows
+          do i=1,nsources_bmi
+            read(31,*)ieg_source_ngen(i), ieg_source_flowpath_ids(i) !global elem.for T-Route coupling only along with T-Route's flowpath id in NextGen
+          enddo !i
+          ! Assign all element ids universal to the SCHISM mesh based on global number of elements
+          do i=1, nsources
+              ieg_source(i) = i
+          enddo
+          ! Now read the number of sinks in the source_sink_BMI.in file
+          read(31,*) !blank line
+          read(31,*)nsinks
+        endif !myrank
+        call mpi_bcast(ieg_source_ngen,max(1,nsources_bmi),itype,0,comm,istat)
+        call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
+        call mpi_bcast(ieg_source_flowpath_ids,max(1,nsources),itype,0,comm,istat)
+        call mpi_bcast(nsinks,1,itype,0,comm,istat)
+
+        ! Now define the time step interval for sources and sinks here
+        ! where it will be currently set to only update every hour for
+        ! sources and sinks within the NextGen framework
+        th_dt3(:)=dble(3600.0)
+        call mpi_bcast(th_dt3,nthfiles3,rtype,0,comm,istat)
+
+        if(iorder==0) then
+          allocate(ieg_sink(max(1,nsinks)),ath3(max(1,nsources,nsinks),ntracers,2,nthfiles3),ieg_sink_flowpath_ids(max(1,nsinks)),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: ieg_sink failure')
+        endif
+
+        if(myrank==0) then
+          if(nsinks > 0) then
+            do i=1,nsinks
+              read(31,*)ieg_sink(i), ieg_sink_flowpath_ids(i)
+            enddo !i
+            close(31)
+          else
+            ieg_sink(1) = 0
+            ieg_sink_flowpath_ids(1) = 0
+            close(31)
+          endif
+        endif !myrank
+        call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
+      endif !if_source
+#else
 !     Read in source/sink info 
       if(if_source==1) then !ASCII
         if(myrank==0) then
@@ -2861,6 +2930,7 @@
         endif !myrank
         call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source
+#endif /*USE_BMI*/
 
       if(if_source==-1) then !nc
 #ifdef SH_MEM_COMM
@@ -4001,6 +4071,7 @@
           allocate(xsta(nout_sta),ysta(nout_sta),zstal(nout_sta),zsta(nout_sta),iep_sta(nout_sta),iep_flag(nout_sta), &
      &arco_sta(nout_sta,4),sta_out(nout_sta,nvar_sta),sta_out_gb(nout_sta,nvar_sta), &
      &sta_out3d(nvrt,nout_sta,nvar_sta),sta_out3d_gb(nvrt,nout_sta,nvar_sta), &
+     &xsta_bmi(nout_sta),ysta_bmi(nout_sta),zsta_bmi(nout_sta), &
      &zta_out3d(nvrt,nout_sta,nvar_sta),zta_out3d_gb(nvrt,nout_sta,nvar_sta),stat=istat)
           if(istat/=0) call parallel_abort('MAIN: sta. allocation failure')
           iep_flag=0
@@ -4021,6 +4092,9 @@
 
         do i=1,nout_sta
           if(ics==2) then
+            xsta_bmi(i) = xsta(i)
+            ysta_bmi(i) = ysta(i)
+            zsta_bmi(i) = zsta(i)
             xtmp=xsta(i)/180.d0*pi
             ytmp=ysta(i)/180.d0*pi
             xsta(i)=rearth_eq*cos(ytmp)*cos(xtmp)
