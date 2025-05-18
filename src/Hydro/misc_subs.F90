@@ -297,7 +297,7 @@
 #else /*USE_ATMOS*/
         !Read 1st record
         if(myrank==0) then
-          j=nf90_open(in_dir(1:len_in_dir)//'atmos.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_atmos)
+          j=nf90_open(in_dir(1:len_in_dir)//'atmos.nc',NF90_NOWRITE,ncid_atmos)
           if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc')
 !          j=nf90_inq_varid(ncid_atmos, "time_step",mm)
 !          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc time_step')
@@ -628,7 +628,7 @@
       th_time2=0.d0
 
       if(nettype2>0) then
-        j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_elev2D)
+        j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',NF90_NOWRITE,ncid_elev2D)
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev2D.th.nc')
         j=nf90_inq_dimid(ncid_elev2D,'nOpenBndNodes',mm)
         j=nf90_inquire_dimension(ncid_elev2D,mm,len=itmp)
@@ -654,7 +654,7 @@
       endif !nettype2
 
       if(nfltype2>0) then
-        j=nf90_open(in_dir(1:len_in_dir)//'uv3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_uv3D)
+        j=nf90_open(in_dir(1:len_in_dir)//'uv3D.th.nc',NF90_NOWRITE,ncid_uv3D)
         if(j/=NF90_NOERR) call parallel_abort('MISC: uv3D.th.nc')
         j=nf90_inq_dimid(ncid_uv3D,'nOpenBndNodes',mm)
         j=nf90_inquire_dimension(ncid_uv3D,mm,len=itmp)
@@ -685,7 +685,7 @@
       do i=1,natrm
         if(ntrs(i)>0.and.nnode_tr2(i)>0) then
           icount=icount+1
-          j=nf90_open(in_dir(1:len_in_dir)//tr_mname(i)//'_3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_tr3D(i))
+          j=nf90_open(in_dir(1:len_in_dir)//tr_mname(i)//'_3D.th.nc',NF90_NOWRITE,ncid_tr3D(i))
           if(j/=NF90_NOERR) call parallel_abort('MISC: '//tr_mname(i)//'_3D.th.nc')
           j=nf90_inq_dimid(ncid_tr3D(i),'nOpenBndNodes',mm)
           j=nf90_inquire_dimension(ncid_tr3D(i),mm,len=itmp)

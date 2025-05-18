@@ -416,7 +416,7 @@
       it_char=adjustl(it_char)
       leng=len_trim(it_char)
       file62='out2d_'//it_char(1:leng)//'.nc'
-      iret=nf90_open(trim(adjustl(file62)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid4)
+      iret=nf90_open(trim(adjustl(file62)),NF90_NOWRITE,ncid4)
       if(iret/=NoErr) stop 'failed to open out2d'
       !time is double
       iret=nf90_inq_varid(ncid4,'time',itime_id)
@@ -429,9 +429,9 @@
         file63=trim(varname2)//'_'//it_char(1:leng)//'.nc'
         varname2=adjustl(varname(2))
         file64=trim(varname2)//'_'//it_char(1:leng)//'.nc'
-        iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid5)
+        iret=nf90_open(trim(adjustl(file63)),NF90_NOWRITE,ncid5)
         if(iret/=NoErr) stop 'failed to open(1)'
-        iret=nf90_open(trim(adjustl(file64)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid6)
+        iret=nf90_open(trim(adjustl(file64)),NF90_NOWRITE,ncid6)
         if(iret/=NoErr) stop 'failed to open(2)'
       endif !ifile
 

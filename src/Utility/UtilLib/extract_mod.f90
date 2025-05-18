@@ -49,7 +49,7 @@
       char_len=len_trim(stack_char)
       file_char='schout_'//stack_char(1:char_len)//'.nc'
 
-      iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+      iret=nf90_open(trim(adjustl(file_char)),NF90_NOWRITE,ncid2)
       if(iret.ne.NF90_NOERR) then
         print*, nf90_strerror(iret); stop 'extract_mod: (1)'
       endif
@@ -131,7 +131,7 @@
       else
         file_char='schout_'//stack_char(1:char_len)//'.nc'
       endif
-      iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+      iret=nf90_open(trim(adjustl(file_char)),NF90_NOWRITE,ncid2)
       !time is double for combined but single for uncombined!
       iret=nf90_inq_varid(ncid2,'time',itime_id)
       if(present(icomb)) then
@@ -159,7 +159,7 @@
       stack_char=adjustl(stack_char)
       char_len=len_trim(stack_char)
       file_char='schout_'//stack_char(1:char_len)//'.nc'
-      iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+      iret=nf90_open(trim(adjustl(file_char)),NF90_NOWRITE,ncid2)
       iret=nf90_inq_varid(ncid2,'elev',ielev_id)
 
       start_2d(1)=1; start_2d(2)=irec
@@ -201,7 +201,7 @@
         file_char='schout_'//stack_char(1:char_len)//'.nc'
       endif
 !      print*, 'Inside get_outvar, file=',trim(adjustl(file_char)),istack,irec,varname
-      iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+      iret=nf90_open(trim(adjustl(file_char)),NF90_NOWRITE,ncid2)
       if(iret/=nf90_NoErr) stop 'get_outvar: cannot open'
       iret=nf90_inq_varid(ncid2,'elev',ielev_id)
       if(iret/=nf90_NoErr) stop 'get_outvar: cannot find elev'
@@ -456,7 +456,7 @@
       else
         file_char='schout_'//stack_char(1:char_len)//'.nc'
       endif
-      iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+      iret=nf90_open(trim(adjustl(file_char)),NF90_NOWRITE,ncid2)
       iret=nf90_inq_varid(ncid2,'elev',ielev_id)
 
       start_2d(1)=1; start_2d(2)=irec1

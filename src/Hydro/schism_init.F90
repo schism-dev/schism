@@ -187,7 +187,7 @@
 !     Name list
       integer :: ntracer_gen,ntracer_age,sed_class,eco_class !,flag_fib
       namelist /CORE/ipre,ibc,ibtp,ntracer_gen,ntracer_age,sed_class,eco_class, &
-     &nspool,ihfskip,msc2,mdc2,dt,rnday,nbins_veg_vert
+     &nspool,ihfskip,msc2,mdc2,dt,rnday,nbins_veg_vert,nmarsh_types
 
       namelist /OPT/ gen_wsett,flag_fib,ics,rearth_pole,rearth_eq,indvel, &
      &imm,ibdef,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
@@ -214,7 +214,8 @@
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
-     &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2
+     &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
+     &drown_marsh,create_marsh_min,create_marsh_max
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm, &
@@ -322,6 +323,7 @@
       if(mod(ihfskip,nspool)/=0) call parallel_abort('ihfskip/nspool /= integer')
 !'
       if(nbins_veg_vert<=0) call parallel_abort('INIT: nbins_veg_vert<=0')
+      if(nmarsh_types<=0) call parallel_abort('INIT: nmarsh_types<=0')
  
 !     m[sd]c2 are checked inside WWM
 
@@ -448,7 +450,8 @@
      &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_mice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
-     &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1),stat=istat)
+     &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1), &
+     &veg_di0(nmarsh_types),veg_h0(nmarsh_types),veg_nv0(nmarsh_types),veg_cd0(nmarsh_types),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
         srqst7(:)=MPI_REQUEST_NULL
         !Global output on/off flags
@@ -513,6 +516,13 @@
       veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
       veg_vert_scale_D=(/(1.0d0,i=1,nbins_veg_vert+1)/)
       veg_lai=1.d0; veg_cw=1.5d0
+      veg_di0=1.d-2 !m
+      veg_h0=0.3d0 !m
+      veg_nv0=10.d0 !/m^2
+      veg_cd0=1.d0 
+      drown_marsh=0.5d0
+      create_marsh_min = -1.d0 
+      create_marsh_max = 0.d0
 
       !Output elev, hvel by detault
       nc_out=1
@@ -1153,6 +1163,7 @@
 
 #ifdef USE_MARSH
       if(iveg==0) call parallel_abort('INIT: marsh needs vegetation option')
+      if(create_marsh_min>create_marsh_max) call parallel_abort('INIT: marsh_min>marsh_max')
       !SLR rate in mm/year
       !Convert to m/s
 !      if(slr_rate<0) call parallel_abort('INIT: slr_rate<0')
@@ -2181,7 +2192,7 @@
           read(32,*)j,buf4(i) !tmp2
           itmp1=nint(buf3(i))
           itmp2=nint(buf4(i))
-          if(itmp1/=0.and.itmp1/=1.or.itmp2/=0.and.itmp2/=1) then
+          if(itmp1<0.or.itmp1>nmarsh_types.or.itmp2/=0.and.itmp2/=1) then
             write(errmsg,*)'Unknown marsh flag:',i,tmp1,tmp2
             call parallel_abort(errmsg)
           endif
@@ -2857,7 +2868,7 @@
 #else  /*SH_MEM_COMM*/
         if(myrank==0) then
 #endif /*SH_MEM_COMM*/
-          j=nf90_open(in_dir(1:len_in_dir)//'source.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_source)
+          j=nf90_open(in_dir(1:len_in_dir)//'source.nc',NF90_NOWRITE,ncid_source)
           if(j/=NF90_NOERR) call parallel_abort('init: source.nc')
           j=nf90_inq_dimid(ncid_source,'nsources',mm)
           j=nf90_inquire_dimension(ncid_source,mm,len=nsources)
@@ -3798,7 +3809,7 @@
 
         if(inu_tr(k)==2) then
           if(myrank==0) then
-            j=nf90_open(in_dir(1:len_in_dir)//tr_mname(k)//'_nu.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_nu(k))
+            j=nf90_open(in_dir(1:len_in_dir)//tr_mname(k)//'_nu.nc',NF90_NOWRITE,ncid_nu(k))
             if(j/=NF90_NOERR) call parallel_abort('init: nudging input not found:')
             !Static info
             j=nf90_inq_dimid(ncid_nu(k),'node',mm)
@@ -3835,7 +3846,7 @@
 
 !     Surface T,S restoration: open nc handle
       if(iref_ts/=0.and.myrank==0) then
-        j=nf90_open(in_dir(1:len_in_dir)//'surface_restore.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_ref_ts)
+        j=nf90_open(in_dir(1:len_in_dir)//'surface_restore.nc',NF90_NOWRITE,ncid_ref_ts)
         if(j/=NF90_NOERR) call parallel_abort('init: surface_restore.nc not found')
       endif !iref_ts
 
@@ -3921,17 +3932,15 @@
         veg_di_unbent=veg_di
 
 #ifdef USE_MARSH
-        !Assume constant inputs from .gr3; save these values
-        veg_di0=veg_di(1); veg_h0=veg_h(1); veg_nv0=veg_nv(1); veg_cd0=veg_cd(1)
         !Reset
         veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha0=0.d0; veg_cd=0.d0
         do i=1,nea
-          if(imarsh(i)>0) then
-            veg_di(elnode(1:i34(i),i))=veg_di0 
-            veg_h(elnode(1:i34(i),i))=veg_h0 
-            veg_nv(elnode(1:i34(i),i))=veg_nv0
-            veg_cd(elnode(1:i34(i),i))=veg_cd0
-            veg_alpha0(elnode(1:i34(i),i))=veg_di0*veg_nv0*veg_cd0/2.d0
+          if(imarsh(i)>0) then !imarsh<=nmarsh_types
+            veg_di(elnode(1:i34(i),i))=veg_di0(imarsh(i)) 
+            veg_h(elnode(1:i34(i),i))=veg_h0(imarsh(i)) 
+            veg_nv(elnode(1:i34(i),i))=veg_nv0(imarsh(i))
+            veg_cd(elnode(1:i34(i),i))=veg_cd0(imarsh(i))
+            veg_alpha0(elnode(1:i34(i),i))=veg_di0(imarsh(i))*veg_nv0(imarsh(i))*veg_cd0(imarsh(i))/2.d0
           endif
         enddo !i
 #endif
@@ -5354,7 +5363,7 @@
         if(istat/=0) call parallel_abort('Init: alloc(9.1)')
 
         !All ranks open .nc but rank 0 reads most of data 
-        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',NF90_NOWRITE,ncid2)
         if(j/=NF90_NOERR) call parallel_abort('init: hotstart.nc not found')
 
         if(myrank==0) then
