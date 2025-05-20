@@ -5,21 +5,7 @@
 # SPDX-License-Identifier: CC0-1.0
 # SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
 
-message(WARNING "If you get an error 'Error copying Fortran module' with uppercase/lowercase mismatch, then try setting the CMAKE_C_PREPROCESS_FLAG to an empty string in cmake/SCHISMCompile.cmake")
-
 set(CMAKE_Fortran_COMPILER $ENV{CONDA_PREFIX}/bin/mpifort CACHE PATH "Path to parallel Fortran compiler")
 set(CMAKE_C_COMPILER $ENV{CONDA_PREFIX}/bin/mpicc CACHE PATH "Path to parallel C compiler")
 set(CMAKE_CXX_COMPILER $ENV{CONDA_PREFIX}/bin/mpicxx CACHE PATH "Path to parallel C++ compiler")
 set(PARMETIS_ROOT $ENV{CONDA_PREFIX} CACHE PATH "Root path for external (par)metis")
-
-set_source_files_properties(
-  *.F90
-  PROPERTIES Fortran_PREPROCESS ON
-)
-
-# Fix gfortran/clang for conda environments
-if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU")
-    if("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
-      set( C_PREPROCESS_FLAG "" CACHE STRING "C Preprocessor Flag")
-    endif()
-endif()

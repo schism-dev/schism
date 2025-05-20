@@ -38,10 +38,15 @@ if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU")
     set( CMAKE_Fortran_FLAGS_DEBUG_INIT "-g ${SCHISM_GFORTRAN_OPTIONS}")
     set( CMAKE_Fortran_FLAGS_RELWITHDEBINFO_INIT "-O2 -g ${SCHISM_GFORTRAN_OPTIONS}")
     unset( C_PREPROCESS_FLAG CACHE)
-    if("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
-      set( C_PREPROCESS_FLAG "--preprocess" CACHE STRING "C Preprocessor Flag")
-    elseif("${CMAKE_C_COMPILER_ID}" STREQUAL "AppleClang")
-      set( C_PREPROCESS_FLAG "--preprocess" CACHE STRING "C Preprocessor Flag")
+    if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
+      # gfortran cannot handle Clang's --preprocess flag, thus we need to 
+      # remove it (Clang preprocesses by default, even without the flag)
+      # and enable Fortran preprocessing for .f90 and F90 files.
+      set( C_PREPROCESS_FLAG "" CACHE STRING "C Preprocessor Flag")
+      set_source_files_properties(
+        *.F90 *.f90
+        PROPERTIES Fortran_PREPROCESS ON 
+      )
     else()
       set( C_PREPROCESS_FLAG "-cpp" CACHE STRING "C Preprocessor Flag")
     endif()
