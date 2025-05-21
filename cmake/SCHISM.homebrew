@@ -1,16 +1,17 @@
-# CMake presets for compiling on a homebrew (linux/mac) system with 
+# CMake presets for compiling on a homebrew (linux/mac) system 
 # 
 # SPDX-FileCopyrightText: 2024-2025 Helmholtz-Zentrum hereon GmbH
 # SPDX-License-Identifier: CC0-1.0
 # SPDX-FileContributor: Carsten Lemmen <carsten.lemmen@hereon.de>
 # 
 # Prerequisites
-#   `brew install gcc@14 gfortran cmake make`
-#   `CC=gcc brew install open-mpi netcdf netcdf-fortran`
+#   `brew install gfortran cmake make`
+#   `CC=clang brew install mpich netcdf netcdf-fortran`
 #
 # You may also use a different toolchain, e.g. substituting the C compiler
-# with `clang`, the MPI implementation with `mpich` or the Fortran 
+# with `gcc`, the MPI implementation with `open-mpi` or the Fortran 
 # compiler with `flang`.  These have not been tested (correct this if you do).
+# Homebrew does not (currently) have ParMETIS. 
 
 # Modern homebrew is installed in /opt/homebrew as a prefix, older versions, 
 # including those on Intel mac in /usr/local
@@ -23,9 +24,11 @@ endif()
 set(CMAKE_Fortran_COMPILER "${HOMEBREW_PREFIX}/bin/mpifort" CACHE PATH "Path to parallel Fortran compiler")
 set(CMAKE_C_COMPILER "${HOMEBREW_PREFIX}/bin/mpicc" CACHE PATH "Path to parallel C compiler")
 set(CMAKE_CXX_COMPILER "${HOMEBREW_PREFIX}/bin/mpicxx" CACHE PATH "Path to parallel C++ compiler")
-set(NetCDF_FORTRAN_DIR "${HOMEBREW_PREFIX}" CACHE PATH "Path to NetCDF Fortran library")
-set(NetCDF_C_DIR "${HOMEBREW_PREFIX}" CACHE PATH "Path to NetCDF C library")
+set(NetCDF_C_ROOT "${HOMEBREW_PREFIX}" CACHE PATH "Path to root of NetCDF library")
+set(NetCDF_FORTRAN_DIR "${HOMEBREW_PREFIX}/lib" CACHE PATH "Path to root of NetCDF library")
+set(NetCDF_C_DIR "${HOMEBREW_PREFIX}/lib" CACHE PATH "Path to root of NetCDF library")
+set(NetCDF_INCLUDE_DIR "${HOMEBREW_PREFIX}/include" CACHE PATH "Path to root of NetCDF library")
 
 # The following should not be here but in the main CMake configuration
-set(CMAKE_Fortran_FLAGS "-ffree-line-length-none -fallow-argument-mismatch" CACHE STRING "Fortran flags" FORCE)
-set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -ffree-line-length-none -static-libgfortran -finit-local-zero" CACHE STRING "Fortran release flags" FORCE)
+# set(CMAKE_Fortran_FLAGS "-ffree-line-length-none -fallow-argument-mismatch" CACHE STRING "Fortran flags" FORCE)
+# set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -ffree-line-length-none -static-libgfortran -finit-local-zero" CACHE STRING "Fortran release flags" FORCE)
