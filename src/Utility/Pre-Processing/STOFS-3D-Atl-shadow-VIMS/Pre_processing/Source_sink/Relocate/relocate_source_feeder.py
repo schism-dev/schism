@@ -31,8 +31,9 @@ from pylib_essentials.utility_functions import inside_polygon
 # record them in the mandatory_sources_coor array.
 # The first two columns are the lon/lat to be relocated to.
 # The third and fourth columns are lon/lat of original source location.
+# In this case, future meshing should resolve the channel.
 #
-# Some rivers are based on manual polygons so there is no nearby auto arcs.
+# Some rivers are resolved but based on manual polygons so there is no nearby auto arcs.
 # They also need to be recorded in the mandatory_sources_coor array,
 # otherwise the sources will be relocated to the nearest auto arc.
 # In this case, the original source is already in the correct location,

@@ -705,7 +705,7 @@ def stofs3d_atl_driver(
     model_input_path, run_dir, _ = prep_run_dir(project_dir, runid, scr_dir=scr_dir)
 
     # make a copy of the script itself to the model_input_path
-    os.system(f'cp -r {script_path} {model_input_path}/Pre_processing_scripts_backup')
+    os.system(f'cp -rf {script_path} {model_input_path}/Pre_processing_scripts_backup')
     # make a copy of the hgrid to the model_input_path
     os.system(f'cp {hgrid_path} {model_input_path}/hgrid.gr3')
 
