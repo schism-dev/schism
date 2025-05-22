@@ -451,7 +451,7 @@
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
      &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1), &
-     &veg_di0(nmarsh_types),veg_h0(nmarsh_types),veg_nv0(nmarsh_types),veg_cd0(nmarsh_types),stat=istat)
+     &veg_di0(nmarsh_types),veg_h0(nmarsh_types),veg_nv0(nmarsh_types),veg_cd0(nmarsh_types),drown_marsh(nmarsh_types),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
         srqst7(:)=MPI_REQUEST_NULL
         !Global output on/off flags

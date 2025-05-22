@@ -747,7 +747,7 @@
   veg_h0 = 0.1,0.1 ![m] heights for each marsh type
   veg_nv0 = 0.1,0.1 ![m^-2] density for each marsh type
   veg_cd0 = 1.,1. ![-] form drag coefficients for each marsh type
-  drown_marsh = 0.5d0 ![m] depth at which marsh will be drowned
+  drown_marsh = 0.5,0. ![m] depth at which marsh will be drowned
   !min/max depth interval favorable for marsh creation/migration
   create_marsh_min = -1. ![m]
   create_marsh_max = 0. ![m] 
