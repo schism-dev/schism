@@ -130,9 +130,11 @@ def genGLOFASsource(starttime,enddate,glofasfiles,glofasdir,tag =''):
        if np.min(datalon) < 0 and np.max(lonN) >=180: # mismatch between -180-180 data grid and 0-360 grid during prep
            lonN[lonN >180] -=360
        ilat = len(datalat)  -  np.searchsorted(datalat,latN+0.000001,sorter=np.arange(len(datalat)-1, -1, -1)) # lon grid is in descending order, adjust lat value slightly upward to handle potential low precision rounding error 
+       ilat[ilat==datalat.shape[0]] -=1 # force ilat index to be within range, out of range lats get excluded by np.isclose check
        ilon = np.searchsorted(datalon,lonN+0.000001)-1
+       ilon[ilon<0] == 0 # force ilon index to be within range, otherwise loops around
        g = np.logical_and(np.isclose(datalon[ilon],lonN), np.isclose(datalat[ilat], latN))
-       print(f'found {g.shape} locations in area, out of {ind0N.shape}')
+       print(f'found {np.sum(g)} locations in area, out of {ind0N.shape}')
        Rlon = ncid.variables['longitude'][ilon[g]]
        Rlat = ncid.variables['latitude'][ilat[g]]
        riverCoordsSubset[g,:] = np.c_[Rlon,Rlat]
@@ -142,7 +144,6 @@ def genGLOFASsource(starttime,enddate,glofasfiles,glofasdir,tag =''):
           GLOFASstart = datetime.strptime(time_units,'seconds since %Y-%m-%dT%H:%M:%S')
        except:
           GLOFASstart = datetime.strptime(time_units,'seconds since %Y-%m-%d')
-       GLOFASreftime = ncid.variables['forecast_reference_time'][0]
        relmodstart = (startdate - GLOFASstart).total_seconds()
        relmodend = (enddate - GLOFASstart).total_seconds()
        if len(T.shape)>0:
@@ -157,7 +158,11 @@ def genGLOFASsource(starttime,enddate,glofasfiles,glofasdir,tag =''):
               timeind = np.array([-1])
        T = T[timeind]-relmodstart
        discharge = np.zeros((timeind.shape[0],ind0N.shape[0])) * np.nan
-       dis24 = ncid.variables['dis24'][timeind,0,:,:]
+       nd = ncid.variables['dis24'].shape
+       if nd == 4:
+         dis24 = ncid.variables['dis24'][timeind,0,:,:]
+       else:
+         dis24 = ncid.variables['dis24'][timeind,:,:]
        for i in g:
          discharge[:,i] = dis24[:,ilat[i],ilon[i]]
     
@@ -410,7 +415,11 @@ if __name__ == '__main__':
               sources_all[layer] = np.array(sources)[:,::4].T
            else:
               sources_all[layer] = np.array(sources).T
-
+    # Hawaii historical NWM data ends before the end of 2018, pad the remainder of the year with the last value
+    if  sources_all['hawaii'].shape[0] < sources_all['conus'].shape[0]:
+        a = sources_all['hawaii']
+        n = sources_all['conus'].shape[0]
+        sources_all['hawaii'] =  np.r_[a,np.repeat(np.mean(a,axis=0)[np.newaxis,:],n-a.shape[0],axis=0)]
     sources = np.concatenate((sources_all['conus'], sources_all['alaska'], sources_all['hawaii']), axis=1) 
  
     #combine with GLOFAS

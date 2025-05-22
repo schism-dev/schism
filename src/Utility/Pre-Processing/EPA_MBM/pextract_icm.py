@@ -111,9 +111,7 @@ if myrank==0:
    if len(setdiff1d(['bPOC1','bPOC2','bPOC3'],[*sdict]))==0: S.bPOC=c_[S.bPOC1[...,None],S.bPOC2[...,None],S.bPOC3[...,None]]; delattr(S,'bPOC1'); delattr(S,'bPOC2');delattr(S,'bPOC3');
    if len(setdiff1d(['bPON1','bPON2','bPON3'],[*sdict]))==0: S.bPON=c_[S.bPON1[...,None],S.bPON2[...,None],S.bPON3[...,None]]; delattr(S,'bPON1'); delattr(S,'bPON2');delattr(S,'bPON3');
    if len(setdiff1d(['bPOP1','bPOP2','bPOP3'],[*sdict]))==0: S.bPOP=c_[S.bPOP1[...,None],S.bPOP2[...,None],S.bPOP3[...,None]]; delattr(S,'bPOP1'); delattr(S,'bPOP2');delattr(S,'bPOP3');
-   savez(sname,S)
-   if 'salt_elem' in S.attr(): S.rename('salt_elem','salt')
-   if 'temp_elem' in S.attr(): S.rename('temp_elem','temp')
+   [S.rename(i,i.split('_')[0]) for i in ['salt_elem','temp_elem']]; savez(sname,S)
    for i in fnames: os.remove(i)
 
 #-----------------------------------------------------------------------------

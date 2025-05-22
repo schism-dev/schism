@@ -8321,7 +8321,7 @@
         smax=maxval(dp(elnode(1:i34(i),i)))+slr_elev !max depth with SLR
         smin=minval(dp(elnode(1:i34(i),i)))+slr_elev !min depth
         if(nwild(i)>0) then !marsh elem
-          if(smax>drown_marsh) then !drowned
+          if(smax>drown_marsh(nwild(i))) then !drowned
             imarsh(i)=0
 !            Cdp(elnode(1:i34(i),i))=0.001d0
 !            Cd(elside(1:i34(i),i))=0.001d0

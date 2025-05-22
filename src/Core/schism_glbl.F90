@@ -110,10 +110,10 @@ module schism_glbl
                       &slr_rate,rho0,shw,gen_wsett,turbinj,turbinjds,alphaw,h1_bcc,h2_bcc,vclose_surf_frac, &
                       &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
                       &stemp_stc,stemp_dz(2),ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
-                      &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2,ri_st,drown_marsh, &
+                      &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2,ri_st, &
                       &create_marsh_min,create_marsh_max
   real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:), &
-        &veg_di0(:),veg_h0(:),veg_nv0(:),veg_cd0(:)
+        &veg_di0(:),veg_h0(:),veg_nv0(:),veg_cd0(:),drown_marsh(:)
 
   ! Misc. variables shared between routines
   integer,save :: nz_r,ieqstate,kr_co, &
