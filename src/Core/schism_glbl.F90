@@ -121,7 +121,7 @@ module schism_glbl
                   &ihydraulics,irouse_test,iwbl_itmax,nettype,nfltype, &
                   &ntetype,nsatype,ntrtype1(natrm),nettype2,nnode_et,nfltype2,nnode_fl, &
                   &ntetype2,nsatype2,nnode_tr2(natrm),inu_tr(natrm),iref_ts, &
-                  &nvar_sta,nout_sta,ntip,nbfr,itr_met,if_source,mass_source,nsources,nsinks, &
+                  &nvar_sta,nout_sta,ntip,nbfr,itr_met,if_source,mass_source,nsources,nsources_bmi,nsinks, &
                   &max_flreg,irange_tr(2,natrm),nea_wwm,mnei_wwm,ne_wwm,neg_wwm, &
                   &max_iadjust_mass_consv,nsteps_from_cold
 
@@ -411,7 +411,10 @@ module schism_glbl
 
   ! Dynamic quantities
   integer,save,allocatable :: ieg_source(:)   !global elem. indices for volume/mass sources
+  integer,save,allocatable :: ieg_source_ngen(:)   !global elem. indices for T-Route only volume/mass sources in NextGen
+  real(rkind),save,allocatable :: ieg_source_flowpath_ids(:)   ! T-Route flowpath ids needed for NextGen framework coupling with SCHISM sources
   integer,save,allocatable :: ieg_sink(:)   !global elem. indices for volume/mass sinks
+  real(rkind),save,allocatable :: ieg_sink_flowpath_ids(:)   ! T-Route flowpath ids needed for NextGen framework coupling with SCHISM sinks
   !tracer concentration @ prism center; used as temp. storage. tr_el(ntracers,nvrt,nea2) but last index usually
   !is valid up to nea only except for TVD
   real(rkind),save,allocatable,target :: tr_el(:,:,:) 
@@ -566,6 +569,7 @@ module schism_glbl
 
   ! Station and other output arrays
   real(rkind),save,allocatable :: xsta(:),ysta(:),zstal(:),zsta(:),arco_sta(:,:), &
+                                  xsta_bmi(:),ysta_bmi(:),zsta_bmi(:), &
                                   &sta_out(:,:),sta_out_gb(:,:),sta_out3d(:,:,:), &
                                   &zta_out3d(:,:,:),sta_out3d_gb(:,:,:),zta_out3d_gb(:,:,:)
   integer,save,allocatable :: iep_sta(:),iep_flag(:),iof_sta(:),indx_out(:,:),indx_wwm_out(:)
