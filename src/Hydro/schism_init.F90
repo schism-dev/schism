@@ -2868,7 +2868,7 @@
         endif !myrank
         call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source
-#else
+#else /*USE_BMI*/
 !     Read in source/sink info 
       if(if_source==1) then !ASCII
         if(myrank==0) then
