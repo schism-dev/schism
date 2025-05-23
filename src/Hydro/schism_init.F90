@@ -194,7 +194,7 @@
      &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,drampbc, &
      &dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min, &
      &hmin_man,ncor,rlatitude,coricoef,nws,wtiminc,iwind_form, &
-     &drampwind,iwindoff,ihconsv,isconsv,itur,icompute_cpsi3,iscnd_coeff,ri_st,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
+     &drampwind,iwindoff,ihconsv,itur,icompute_cpsi3,iscnd_coeff,ri_st,dfv0,dfh0,h1_pp,h2_pp,vdmax_pp1, &
      &vdmax_pp2,vdmin_pp1,vdmin_pp2,tdmin_pp1,tdmin_pp2,mid,stab,xlsc0, &
      &ibcc_mean,flag_ic,start_year,start_month,start_day,start_hour,utc_start, &
      &itr_met,h_tvd,eps1_tvd_imp,eps2_tvd_imp,ip_weno, &
@@ -470,7 +470,7 @@
       dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
       nws=0; wtiminc=dt; iwind_form=1; iwindoff=0;
-      drampwind=1._rkind; ihconsv=0; isconsv=0; i_hmin_airsea_ex=2; i_hmin_salt_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
+      drampwind=1._rkind; ihconsv=0; i_hmin_airsea_ex=2; i_hmin_salt_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind; icompute_cpsi3=0; ri_st=0.25d0; iscnd_coeff=5
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
@@ -749,9 +749,15 @@
         endif
       endif !nws
 
+!     Convert PREC_EVAP to a flag (for convenience)     
+      isconsv=0
+#ifdef PREC_EVAP
+      isconsv=1
+#endif
+
 !     Heat and salt conservation flags
-      if(ihconsv<0.or.ihconsv>1.or.isconsv<0.or.isconsv>1) then
-        write(errmsg,*)'Unknown ihconsv or isconsv',ihconsv,isconsv
+      if(ihconsv<0.or.ihconsv>1) then
+        write(errmsg,*)'Unknown ihconsv',ihconsv
         call parallel_abort(errmsg)
       endif
       if(isconsv/=0.and.ihconsv==0) call parallel_abort('Evap/precip model must be used with heat exchnage model')
@@ -781,15 +787,6 @@
           write(errmsg,*)'INIT: illegal i_hmin_salt_ex',i_hmin_salt_ex
           call parallel_abort(errmsg)
         endif 
-      endif
-
-      if(isconsv/=0) then
-#ifndef PREC_EVAP
-        write(errmsg,*)'Pls enable PREC_EVAP:',isconsv
-        call parallel_abort(errmsg)
-!       USE_SFLUX and USE_NETCDF are definitely enabled in Makefile when
-!       isconsv=1
-#endif
       endif
 
 !...  Turbulence closure options
