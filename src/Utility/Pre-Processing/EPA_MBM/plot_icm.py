@@ -71,16 +71,15 @@ if iflags[0]==1:
        mdatas=[]
        for n,[run,fname,f,svar,mtime,mstation] in enumerate(zip(runs,fnames,models,svars,mtimes,mstations)):
            mdata=None
+           if mvar in ['chla','PB1','PB2','PB3']: c2chl=f('icm').c2chl if ('icm' in svar) else f('param').c2chl if ('param' in svar) else [0.075, 0.06, 0.06]
            if mvar in svar: #variable exist
               mdata=f(mvar)
+              if mvar in ['PB1','PB2','PB3']: mdata=f(mvar)/c2chl[int(mvar[-1])-1]
            elif (mvar in pvars) and (bvars[pvars.index(mvar)] not in svar): #variable not exist
               mdata=nan*zeros([len(mstation),len(mtime)],'float32')
            else:
               #for chlorophyll, POC,PON,POP,DO TN, TP
-              if mvar in ['chla','PB1','PB2','PB3']:
-                  c2chl=f('icm').c2chl if ('icm' in svar) else f('param').c2chl if ('param' in svar) else [0.075, 0.06, 0.06]
-                  if mvar=='chla': mdata=f('chla') if ('chla' in svar) else f('PB1')/c2chl[0]+f('PB2')/c2chl[1]+f('PB3')/c2chl[2]
-                  if mvar in ['PB1','PB2','PB3']: mdata=f(mvar)/c2chl[int(mvar[-1])-1]
+              if mvar=='chla': mdata=f('chla') if ('chla' in svar) else f('PB1')/c2chl[0]+f('PB2')/c2chl[1]+f('PB3')/c2chl[2]
               if mvar=='POC':   mdata=f('RPOC')+f('LPOC')
               if mvar=='PON':   mdata=f('RPON')+f('LPON')
               if mvar=='POP':   mdata=f('RPOP')+f('LPOP')
