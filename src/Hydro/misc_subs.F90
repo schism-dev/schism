@@ -1994,6 +1994,8 @@
           if(ivcor/=1) kbp(i)=0
         else !wet
           idry2(i)=0
+          !znl() may not be used as later idry2 may be reset to 1
+          !All eventually wet nodes have valid znl()
           call zcoor(0,i,kbp(i),znl(:,i))
         endif !wet ot dry
       enddo !i=1,npa
