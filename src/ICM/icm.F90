@@ -265,7 +265,7 @@ subroutine ecosystem(it)
         xT=temp(k)-TNit
         rKHR(k)=rKC(3,k)*DOX(k)/(KhDOox+DOX(k))
         rKCOD(k)=(DOX(k)/(KhCOD+DOX(k)))*KCD*exp(KTRCOD*(temp(k)-TRCOD))
-        rDenit(k)=an2c*rKC(3,k)*KhDOox*NO3(k)/(KhDOox+DOX(k))/(KhNO3dn+NO3(k))
+        rDenit(k)=an2c*rKC(3,k)*KhDOox*NO3(k)/(KhDOox+DOX(k)+1.d-6)/(KhNO3dn+NO3(k))
         !rNit(k)=(DOX(k)*Nit*KhNH4n/((KhNH4n+NH4(k))*(KhDOn+DOX(k))))*exp(-max(-KTNit(1)*xT,KTNit(2)*xT)*abs(xT))
         rNit(k)=(DOX(k)*Nit/(KhDOn+DOX(k)))*exp(-max(-KTNit(1)*xT,KTNit(2)*xT)*abs(xT))
       enddo !k
