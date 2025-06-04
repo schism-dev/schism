@@ -155,7 +155,7 @@ module schism_glbl
   integer,save :: ihfskip,nrec,nspool,ifile,ifile_len, &
      &noutput,it_main,iths_main,id_out_var(2000),id_out_ww3(100),ncount_2dnode, &
      &ncount_2delem,ncount_2dside,ncount_3dnode,ncount_3delem,ncount_3dside,nsend_varout
-  integer,save,allocatable :: srqst7(:)
+  integer,save,allocatable :: srqst7(:),ndims_schout(:),nouts_schout(:)
   real(rkind),save :: time_stamp !simulation time in sec
   !Send var buffers
   real(4),save,allocatable :: varout_3dnode(:,:,:),varout_3delem(:,:,:),varout_3dside(:,:,:)
@@ -166,7 +166,7 @@ module schism_glbl
   character(len= 8),save :: a_8
   character(len= 4),save :: a_4
   integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D,irec0_schout, &
- &istack0_schout,ncid_source,ncid_schout(7),ncid_schout_2(7),nrec_schout,nstride_schout, &
+ &istack0_schout(2),ncid_source,ncid_schout(8,2),nrec_schout,nstride_schout, &
  &ncid_atmos,ncid_ref_ts
         
   ! ADT for global-to-local linked-lists
