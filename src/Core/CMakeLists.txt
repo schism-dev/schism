@@ -148,5 +148,7 @@ add_library(core ${local_extra_code}
 
 add_dependencies(core sversion)
 
+target_link_libraries(core ${NetCDFLIBS} ${HDF5_LIBRARIES} MPI::MPI_Fortran)
+
 list( APPEND locallibs core)
 set(schismmodlibs ${locallibs} ${schismmodlibs} PARENT_SCOPE)

@@ -633,10 +633,11 @@ if p.flag[fname]==1:
    for irec,mt in enumerate(mts):
        for m,svar in enumerate(svars):
            t=num2date(mt); fname='{}/sflux_{}.{:04d}_{:02d}_{:02d}.nc'.format(p.sflux,svar,t.year,t.month,t.day)
-           if len(mts)<10000:
-              sname='{}/sflux_{}_1.{:04d}.nc'.format(tdir,svar,irec+1)
-           else:
-              sname='{}/sflux_{}_1.{:05d}.nc'.format(tdir,svar,irec+1)
+           sname='{}/sflux_{}_1.{:d}.nc'.format(tdir,svar,irec+1)
+           #if len(mts)<10000:
+           #   sname='{}/sflux_{}_1.{:04d}.nc'.format(tdir,svar,irec+1)
+           #else:
+           #   sname='{}/sflux_{}_1.{:05d}.nc'.format(tdir,svar,irec+1)
            os.symlink('../'+relpath(fname),sname)
            if m==0 and irec%365==0: print('    sflux: {:04d}-{:02d}-{}'.format(t.year,t.month,t.day))
    fid=open('{}/sflux_inputs.txt'.format(tdir),'w+'); fid.write('&sflux_inputs\n   \n/'); fid.close()

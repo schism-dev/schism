@@ -404,7 +404,8 @@ def stofs3d_v8_LA():
         Take the maximum depth from the two grids
 
         Note: since the first grid is the primary grid by default,
-        Bluetopo prevails in the entire domain
+        Bluetopo is applied in the entire domain where it has coverage for the first grid.
+        This is different from STOFS3D-v7 or STOFS3D-v8.
     """
     # dem_dir = '/work2/noaa/nos-surge/feiye/npz2/'
     wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I20/Bathy_edit/DEM_loading/'
@@ -482,7 +483,7 @@ def stofs3d_v7p2_original():
 
 def stofs3d_v8():
     """
-    Load bathymetry for STOFS3D-v8.
+    Load bathymetry for STOFS3D-v8 and STOFS3D-v7.2.
 
     Needs hgrid.ll in the working directory.
 
@@ -492,7 +493,7 @@ def stofs3d_v8():
     This leads to three bathymetry-loaded grids.
 
     A region (Louisiana) is defined where the v6 grid seems too shallow.
-    The v8 grid depth takes the larger value from the three grids inside region,
+    The v8 grid depth takes the larger value from the three grids inside the region,
     i.e., where BlueTopo and NGOM leads to deeper channels than v6.
     And it takes the v6 value outside the region.
     """
@@ -605,4 +606,5 @@ def sample_convert_dem():
 
 if __name__ == '__main__':
     # sample_convert_dem()
-    stofs3d_v7p2_original()
+    # stofs3d_v7p2_original()
+    stofs3d_v8()

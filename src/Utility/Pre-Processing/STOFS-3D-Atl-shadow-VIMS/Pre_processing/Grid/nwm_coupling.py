@@ -250,7 +250,6 @@ class Rivers():
     def match_transect(self, poi_xy: np.ndarray, diag_output_dir=None) -> tuple[list[np.ndarray], list[np.ndarray]]:
         '''
         find the nearest resolved river transect of each point of interest
-        :param nwm_gdf: gpd.GeoDataFrame, NWM hydrofabric
         :param poi_xy: np.ndarray, shape=(n_points, 2), x, y coordinates of points of interest
         :param diag_output_dir: str, directory to save diagnostic files, None if not saving
 
@@ -259,6 +258,10 @@ class Rivers():
            x, y, z coordinates of river head transects
         riverhead_transects_center: list of np.ndarray, shape=(3, ),
            x, y, z coordinates of river head transects center
+
+        Note: not only used for river heads, but also for mid-points,
+           i.e., only depending on how poi_xy is defined
+           the variable naming needs to be changed
         '''
 
         rivercenter_coor = np.vstack(self.rivers_centerline_coor)
@@ -584,7 +587,9 @@ def make_interior_vsource(
     heads=True, mid_points=True, output_dir=None
 ) -> source_sink:
     '''
-    Make a source_sink object based on NWM.
+    Make a source_sink object based on NWM, 
+    which contains the volume source at the head of each river inside the domain
+    and lateral sources at the mid-points of the rivers.
 
     Inputs:
         - heads: bool, whether to include river heads
@@ -645,6 +650,9 @@ def make_interior_vsource(
         gdf['z'] = np.mean(volume_sources, axis=0)
         gdf.to_file(f'{output_dir}/{poi_type}_ele_vsources.shp')
 
+        gdf = gpd.GeoDataFrame(geometry=gpd.points_from_xy( xy[:, 0], xy[:, 1]), crs='EPSG:4326')
+        gdf.to_file(f'{output_dir}/{poi_type}_nwm_vsources.shp')
+
         total_volume_sources = np.c_[total_volume_sources, volume_sources]
         total_vs_eleids = np.r_[total_vs_eleids, poi_ele_ids]
 
@@ -662,7 +670,7 @@ def make_interior_vsource(
     # )
 
     # make a source_sink object
-    _, idx = np.unique(total_vs_eleids, return_index=True)  # only retain unique elements
+    _, idx = np.unique(total_vs_eleids, return_index=True)  # only retain unique elements; todo, probably should add vsource from repeated elements
     vs = TimeHistory(
         data_array=np.c_[time_seconds, total_volume_sources[:, idx]],
         columns=(total_vs_eleids[idx] + 1).tolist(),  # +1 to convert to 1-based index, same as source_sink.in
@@ -710,7 +718,6 @@ def generate_test_source_sink():
 
     output_dir = '/sciclone/schism10/feiye/STOFS3D-v8/I05a/Source_sink/NWM_source_sink_v8/'
     # ------------------------------------------------
-    '''
 
     # -------------------- inputs ----------------
     start_time = datetime(2021, 8, 1, 0, 0, 0)
@@ -730,19 +737,21 @@ def generate_test_source_sink():
         start_time_str=start_time.strftime('%Y-%m-%d %H:%M:%S')
     )
 
+    inject_heads = True
+    inject_mid_points = True
     plumbing_test = False
 
     output_dir = '/sciclone/schism10/feiye/STOFS3D-v8/I09j/Source_sink/Bnd_interior_source_sink/'
     # ------------------------------------------------
-
     '''
+
     # -------------------- inputs ----------------
     start_time = datetime(2024, 3, 5, 0, 0, 0)
     hgrid_obj = cread_schism_hgrid('/sciclone/schism10/feiye/STOFS3D-v8/I09d/hgrid.gr3')
     watershed_gdf = gpd.read_file('/sciclone/schism10/Hgrid_projects/STOFS3D-v8/'
                                   'v43s2_RiverMapper/v44/Clip/outputs/watershed.shp')
     river_mapper_dir = ('/sciclone/schism10/Hgrid_projects/STOFS3D-v8/'
-                        'v43s2_RiverMapper/Outputs/femto.v44.v44_centerline_16-core/')
+                        'v43s2_RiverMapper/Outputs/gulf.v45.v45_centerline_5-core')
 
     nwm_gdf = gpd.read_file('/sciclone/schism10/Hgrid_projects/STOFS3D-v8/'
                             'v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2_order2.gpkg')
@@ -750,14 +759,17 @@ def generate_test_source_sink():
                             'original_source_sink/20240305/nwm.t00z.medium_range.channel_rt_1.*.nc'))
 
     base_ss = source_sink.from_files(
-        '/sciclone/schism10/feiye/STOFS3D-v8/I09f/Source_sink/original_source_sink/',
+        '/sciclone/schism10/feiye/STOFS3D-v8/I09f4/Source_sink/original_source_sink/',
         start_time_str=start_time.strftime('%Y-%m-%d %H:%M:%S')
     )
 
+    inject_heads = True
+    inject_mid_points = True
     plumbing_test = False
 
-    output_dir = '/sciclone/schism10/feiye/STOFS3D-v8/I09f/Source_sink/Bnd_interior_source_sink0/'
-    '''
+    output_dir = '/sciclone/schism10/feiye/STOFS3D-v8/I09f4/Source_sink/Bnd_interior_source_sink0/'
+
+    # ------------------------------------------------
 
     # save a copy of this script to the output directory
     os.makedirs(output_dir, exist_ok=True)
@@ -767,7 +779,7 @@ def generate_test_source_sink():
     interior_ss = make_interior_vsource(
         start_time,
         hgrid_obj, watershed_gdf, river_mapper_dir, nwm_gdf, nwm_files,
-        heads=True, mid_points=False, output_dir=output_dir
+        heads=inject_heads, mid_points=inject_mid_points, output_dir=output_dir
     )
 
     combined_ss = base_ss + interior_ss
@@ -1035,10 +1047,10 @@ def view_nwm():
 
 
 if __name__ == '__main__':
+    view_nwm()
     generate_test_source_sink()
     generate_selected_source_sink()
     dredge_river_transects()
-    view_nwm()
     reposition_bp()
 
     print('Done')

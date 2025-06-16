@@ -294,7 +294,7 @@
 ! than once, and the code will accumulate the volumes; for mass conc, 
 ! values are applied at _net_ source elem (no summation for conc).
 
-! If USE_NWM_BMI is on with if_source/=0, some parts of the reading and some b.c. will be bypassed (but the inputs
+! If USE_BMI is on with if_source/=0, some parts of the reading and some b.c. will be bypassed (but the inputs
 ! will still be needed).
 !-----------------------------------------------------------------------
   if_source = 0
@@ -573,10 +573,9 @@
 
 !-----------------------------------------------------------------------
 ! Heat and salt exchange using Zeng's (default) or Fairall (USE_BULK_FAIRALL) scheme.
-! isconsv=1 needs ihconsv=1; ihconsv=1 needs nws=2.
-! If isconsv=1, need to compile with precip/evap module turned on.
-! If at least one of ihconsv and isconsv is set to 1,
-! locally turning off air-sea exchange in shallow waters (<0.25 m) is recommended.
+! To enable salt exchange, recompile with precip/evap module turned on.
+! In this case, ihconsv must =1; ihconsv=1 needs nws=2,4.
+! If ihconsv/=0, locally turning off air-sea exchange in shallow waters (<0.25 m) is recommended.
 ! Options for locally turning off heat/salt exchange are specified by
 ! i_hmin_airsea_ex, i_hmin_salt_ex respectively:
 !   0: not turned off locally;
@@ -588,11 +587,11 @@
 !   0.2 m is recommended for both "1" and "2"
 !-----------------------------------------------------------------------
   ihconsv = 0 !heat exchange option
-  isconsv = 0 !evaporation/precipitation model
+!  isconsv = 0 !evaporation/precipitation model
   i_hmin_airsea_ex = 2 ! no effect if ihconsv=0 
   hmin_airsea_ex = 0.2 ![m], no effect if ihconsv=0 
-  i_hmin_salt_ex = 2 ! no effect if isconsv=0 
-  hmin_salt_ex = 0.2 ![m], no effect if isconsv=0 
+  i_hmin_salt_ex = 2 ! no effect if PREC_EVAP is on
+  hmin_salt_ex = 0.2 ![m], no effect if PREC_EVAP is on
   iprecip_off_bnd = 0 !if /=0, precip will be turned off near land bnd
   !watertype_* below are used for water type '8'
   watertype_rr = 0.58
@@ -747,7 +746,7 @@
   veg_h0 = 0.1,0.1 ![m] heights for each marsh type
   veg_nv0 = 0.1,0.1 ![m^-2] density for each marsh type
   veg_cd0 = 1.,1. ![-] form drag coefficients for each marsh type
-  drown_marsh = 0.5d0 ![m] depth at which marsh will be drowned
+  drown_marsh = 0.5,0. ![m] depth at which marsh will be drowned
   !min/max depth interval favorable for marsh creation/migration
   create_marsh_min = -1. ![m]
   create_marsh_max = 0. ![m] 

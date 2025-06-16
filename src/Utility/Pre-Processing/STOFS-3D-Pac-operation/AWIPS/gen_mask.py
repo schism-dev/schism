@@ -24,13 +24,16 @@ if __name__ == '__main__':
     gd.split_quads(angle_max=-1, angle_min=360)
 
     area_headers = {  # key is file name, value is header
-        'puertori.xyz': '76275         339         225',
-        'conus.xyz': '2953665        2145        1377',
+        'alaska.xy': '',
+        'conus_west.xy': '',
+        'guam.xy': '',
+        'hawaii.xy': '',
+        'northpacific.xy': '',
     }
     for area_file, area_header in area_headers.items():
         output_name, npoints = gen_mask(gd, area_file=area_file)
 
         # insert header
-        if npoints != int(area_header.split()[0]):
-            raise ValueError(f"Number of points in {area_file} does not match header: {area_header}")
-        os.system(f"sed -i '1i{area_header}' {output_name}")
+        # if npoints != int(area_header.split()[0]):
+        #     raise ValueError(f"Number of points in {area_file} does not match header: {area_header}")
+        # os.system(f"sed -i '1i{area_header}' {output_name}")
