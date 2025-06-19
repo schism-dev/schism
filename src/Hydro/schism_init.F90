@@ -5329,6 +5329,12 @@
 #ifdef USE_MICE
       if(lhas_quad) call parallel_abort('init: no quads for mice')
       if(.not.lreadll) call parallel_abort('init: mice needs hgrid.ll')
+
+      if(myrank==0) write(16,*)'start init multi ice...'
+      call ice_init
+      if(myrank==0) write(16,*)'done init multi ice...'
+      call clock_init(time) !by wq
+      if(myrank==0) write(16,*) yearnew,month_mice,day_in_month,timeold
       !Read in modified (rotated north pole) lon/lat for ice model
 !      if(myrank==0) then
 !        open(32,file=in_dir(1:len_in_dir)//'hgrid2.ll',status='old')
@@ -7105,15 +7111,6 @@
 #ifdef USE_PETSC
       call init_petsc
 #endif 
-
-#ifdef USE_MICE
-      if(myrank==0) write(16,*)'start init multi ice...'
-      call ice_init
-      if(myrank==0) write(16,*)'done init multi ice...'
-      call clock_init(time) !by wq
-      if(myrank==0) write(16,*) yearnew,month_mice,day_in_month,timeold
-#endif
-
 
 !...  Init PaHM on rank 0 only
 #ifdef USE_PAHM
