@@ -1680,10 +1680,11 @@
 <p>There are 4 types of files in sflux/dir; see <a href="http://ccrm.vims.edu/yinglong/wiki_files/NARR/">this site</a> for sample files.</p>
 <ol>
 <li>sflux_inputs.txt: This asci file is a namelist</li>
-<li>sflux_air_1.[XXXX].nc: netcdf files that have time (in days), wind speed at 10m above MSL (u,v), air temperature and pressure and specific humidity;</li>
-<li>sflux_prc_1.[XXXX].nc: netcdf files that time (in days), have precipitation data;</li>
-<li>sflux_rad_1.[XXXX].nc: netcdf files that have time (in days), downward long and short (solar) wave radiation fluxes.</li>
+<li>sflux_air_1.X.nc: netcdf files that have time (in days), wind speed at 10m above MSL (u,v), air temperature and pressure and specific humidity;</li>
+<li>sflux_prc_1.X.nc: netcdf files that time (in days), have precipitation data;</li>
+<li>sflux_rad_1.X.nc: netcdf files that have time (in days), downward long and short (solar) wave radiation fluxes.</li>
 </ol>
+<p>Note that X denotes the time stack number (1,2,3,...). There is no limit on max.</p>
 <div class="admonition note">
 <p class="admonition-title">sflux_input.txt</p>
 <p>sflux_input.txt has the following basic structure - </p>
@@ -1694,7 +1695,7 @@ All parameters inside this input are optional. Advanced users may consult the so
 </div>
 <div class="admonition note">
 <p class="admonition-title">sflux_air</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>netcdf sflux_air_1.001 {
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>netcdf sflux_air_1.10 {
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>dimensions:
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>        nx_grid = 349 ;
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>        ny_grid = 277 ;
@@ -1741,7 +1742,7 @@ All parameters inside this input are optional. Advanced users may consult the so
 </div>
 <div class="admonition notes">
 <p class="admonition-title">sflux_prc</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>netcdf sflux_prc_1.001 {
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>netcdf sflux_prc_1.10 {
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>dimensions:
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        nx_grid = 349 ;
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        ny_grid = 277 ;
@@ -1772,7 +1773,7 @@ All parameters inside this input are optional. Advanced users may consult the so
 </div>
 <div class="admonition notes">
 <p class="admonition-title">sflux_rad</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>netcdf sflux_rad_1.001 {
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>netcdf sflux_rad_1.10 {
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>dimensions:
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>        nx_grid = 349 ;
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>        ny_grid = 277 ;
@@ -1807,20 +1808,20 @@ All parameters inside this input are optional. Advanced users may consult the so
 </div>
 <p>Note that <code>sflux_rad</code> is only required if the heat exchange module is invoked via <code>ihconsv=1</code>, and <code>sflux_prc</code> is only required if the salt exchange module is invoked via <code>isconsv=1</code>.
 Since a barotropic model cannot do heat/salt exchange properly, these two types of sflux inputs should not be used there. To impose rainfall in a  barotropic model,
- you have to use the source/sink option <code>if_source</code> by converting rainfall rate into sources.</p>
+ you may use the source/sink option <code>if_source</code> by converting rainfall rate into sources.</p>
 <p>We have NARR sflux files from 1979-present, but cannot upload all of them to the web due to disk space limitation. You can find some samples at <a href="http://ccrm.vims.edu/yinglong/wiki_files/NARR/">http://ccrm.vims.edu/yinglong/wiki_files/NARR/</a>.</p>
-<p>Two sources of data are allowed for each type of <code>.nc</code> files, and the relative priority is fixed by the file name. For instance <code>sflux_air_1.0003.nc</code> might be blended with a file called <code>sflux_air_2.0003.nc</code>. The ".0003" component of the name represents the order of the file within the stack of provided input files. For instance, there might be a new file (<code>0001</code>, <code>0002</code>, <code>0003</code>) produced every 12 hours in a forecast cycle.</p>
+<p>Two sources of data are allowed for each type of <code>.nc</code> files, and the relative priority is fixed by the file name. For instance <code>sflux_air_1.3.nc</code> might be blended with a file called <code>sflux_air_2.3.nc</code>. The ".3" component of the name represents the order of the file within the stack of provided input files. For instance, there might be a new file (<code>1</code>, <code>2</code>, <code>3</code>) produced every 12 hours in a forecast cycle.</p>
 <h2 id="interpolation-and-prioritization">Interpolation and prioritization<a class="headerlink" href="#interpolation-and-prioritization" title="Permanent link">&para;</a></h2>
-<p>Using air as an example, it is assumed that the file <code>sflux_air_2.0001.nc</code> is more resolved or accurate than sflux_air_1.0001.nc. The two will be blended in the model in a way that favors the ‘_2’ file. This blending of the fields is only adjustable in the code as described in notes below. The default in sflux_9c.F90 is a 99:1 blend of the ‘_2’ file to the ‘_1’ file.</p>
-<p>As was remarked above, the files are arranged temporally in a stack of files starting with ".0001". Given the sequence of forecasting and analysis, it is common for atmospheric files to overlap. A file might begin with a brief period of data assimilation plus a few days of forecast. SCHISM assumes that a new file indicates the injection of information, so when it encounters overlap, it advances to the later file.</p>
+<p>Using air as an example, it is assumed that the file <code>sflux_air_2.1.nc</code> is more resolved or accurate than sflux_air_1.1.nc. The two will be blended in the model in a way that favors the ‘_2’ file. This blending of the fields is only adjustable in the code as described in notes below. The default in sflux_9c.F90 is a 99:1 blend of the ‘_2’ file to the ‘_1’ file.</p>
+<p>As was remarked above, the files are arranged temporally in a stack of files starting with ".1". Given the sequence of forecasting and analysis, it is common for atmospheric files to overlap. A file might begin with a brief period of data assimilation plus a few days of forecast. SCHISM assumes that a new file indicates the injection of information, so when it encounters overlap, it advances to the later file.</p>
 <h2 id="using-narr-files-for-your-simulation-north-america-only">Using NARR files for your simulation (North America only)<a class="headerlink" href="#using-narr-files-for-your-simulation-north-america-only" title="Permanent link">&para;</a></h2>
 <p>First, make sure the NARR grid covers your <code>hgrid.ll</code> to ensure proper sptatial interpolation.</p>
 <p>In your run directory, <code>mkdir sflux</code> and inside it, create symbolic links to the NARR files. e.g., if you run starts from June 10, 2004 and ends June 20, 2004, then</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>sflux_air_1.0001.nc --&gt; narr_air.2004_06_10.nc
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>sflux_air_1.0002.nc --&gt; narr_air.2004_06_11.nc
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>sflux_air_1.1.nc --&gt; narr_air.2004_06_10.nc
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>sflux_air_1.2.nc --&gt; narr_air.2004_06_11.nc
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>...
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>sflux_air_1.0011.nc --&gt; narr_air.2004_06_20.nc
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>sflux_air_1.0012.nc --&gt; narr_air.2004_06_21.nc # (extra day to account for time zone difference)
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>sflux_air_1.11.nc --&gt; narr_air.2004_06_20.nc
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>sflux_air_1.12.nc --&gt; narr_air.2004_06_21.nc # (extra day to account for time zone difference)
 </code></pre></div>
 <p>Similarly for <code>sflux_rad_*.nc</code> and <code>sflux_prc_*.nc</code>. As described above, the number "1" after "air_" denotes the first data set used, with the second set taking priority; you can use up to 2 sets in SCHISM (which combines them with some given weights set in sflux_subs.F90); we only use 1 set in this example.</p>
 <h2 id="global-sflux-ncep-cfsr">Global sflux - NCEP CFSR<a class="headerlink" href="#global-sflux-ncep-cfsr" title="Permanent link">&para;</a></h2>
