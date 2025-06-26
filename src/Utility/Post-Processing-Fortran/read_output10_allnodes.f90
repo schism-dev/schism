@@ -37,7 +37,7 @@
       allocatable :: sigma(:),cs(:),ztot(:)
       allocatable :: outvar(:,:,:),out(:,:,:),icum(:,:,:),eta2(:),ztmp(:,:)
       allocatable :: xcj(:),ycj(:),dp(:),dps(:),kbs(:),xctr(:),yctr(:),dpe(:),kbe(:)
-      allocatable :: zs(:,:),ze(:,:),idry(:),outs(:,:,:),oute(:,:,:),rstat2d(:,:),rviolator(:)
+      allocatable :: zs(:,:),ze(:,:),idry(:),outs(:,:,:),oute(:,:,:),rstat2d(:,:),rviolator(:),time_stat(:)
       allocatable :: ic3(:,:),isdel(:,:),isidenode(:,:),kbp(:),sigma_lcl(:,:),kbp00(:)
       integer, allocatable :: elside(:,:),idry_e(:),nne(:),indel(:,:),iviolator(:)
       integer,allocatable :: i34(:),elnode(:,:)
@@ -169,7 +169,7 @@
 
       print*, '<<<<<last_dim: ',last_dim
 
-      allocate(idry_e(ne),rstat2d(3,ne),ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np), &
+      allocate(idry_e(ne),rstat2d(3,ne),time_stat(np),ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np), &
      &outvar(nvrt,last_dim,ivs),eta2(np),idry(np),ztmp(nvrt,np),timeout(nrec), &
      &rviolator(ne),iviolator(ne),kbp00(np))
       outvar=-huge(1.0) !test mem
@@ -191,11 +191,12 @@
 !...
       outvar=-99 !init.
       ztmp=-99
+      time_stat=-99 !timing of max
       if(iinitial==1) then
         print*,'setting initial elev = -dp for all (dry and wet) nodes'
         rstat2d(1,1:np)=-dp !for elev, min is -h
-        rstat2d(2,1:np)=-dp !for elev, min is -h
-        rstat2d(3,1:np)=-dp !for elev, min is -h
+        rstat2d(2,1:np)=-dp !for elev, max is -h
+        rstat2d(3,1:np)=-dp !for elev, mean is -h
       else
         if (icomp_stats(1)==1) then  !min
           rstat2d(1,:)=huge(1.0)
@@ -290,93 +291,96 @@
         endif 
 
         !Available now: outvar(nvrt,np,ivs), eta2(np)
-          if(i23d==1) then !2D
-!           Output: time, 2D variable at all nodes/elem
-            if(maxval(icomp_stats(1:3))/=0) &
+        if(i23d==1) then !2D
+!         Output: time, 2D variable at all nodes/elem
+          if(maxval(icomp_stats(1:3))/=0) &
      &write(65,'(e14.6,1000000(1x,e14.4))')timeout(irec)/86400,(outvar(1,i,1),i=1,np)
 
-            !Compute stats (magnitude for vectors)
-            if(sum(icomp_stats(:))/=0) then
-              if(is_elev==1 .and. icomp_stats(2)==1) then !maxelev
+          !Compute stats (magnitude for vectors)
+          if(sum(icomp_stats(:))/=0) then
+            if(is_elev==1 .and. icomp_stats(2)==1) then !maxelev
 
-                !Mark wet elem
-                do i=1,ne
-                  !if(minval(outvar(1,elnode(1:i34(i),i),1)+dp(elnode(1:i34(i),i)))>0) then
-                  if(minval(eta2(elnode(1:i34(i),i))+dp(elnode(1:i34(i),i)))>0) then
-                    idry_e(i)=0
-                  else
-                    idry_e(i)=1
-                  endif 
-                enddo !i
-                do i=1,ne
-                  if(idry_e(i)==0) then !wet
-                    ifl=1 !isolated wet
-                    loop2: do j=1,i34(i)
-                      nd=elnode(j,i)
-                      do m=1,nne(nd)
-                        ie=indel(m,nd)
-                        if(i/=ne.and.idry_e(ie)==0) then
-                          ifl=0
-                          exit loop2
-                        endif
-                      enddo !m
-                    enddo loop2 !j
-
-                    if(ifl==0) then ! not isolated wet
-                      do j=1,i34(i)
-                        nd=elnode(j,i)
-                        tmp=outvar(1,nd,1)
-                        if(tmp+dp(nd)>0) rstat2d(2,nd)=max(rstat2d(2,nd),tmp)
-                      enddo
-                    endif 
-                  endif !idry_e
-                enddo !i=1,ne 
-              else !other variables, or min_ele or avg_ele
-                do i=1,last_dim
-                  tmp=outvar(1,i,1)
-                  if (icomp_stats(1)==1) then !min
-                    rstat2d(1,i)=min(rstat2d(1,i),tmp)
-                  endif
-                  if(icomp_stats(2)==1) then !max
-                    rstat2d(2,i)=max(rstat2d(2,i),tmp)
-                  endif
-                  if(icomp_stats(3)==1) then !average
-                    rstat2d(3,i)=tmp+rstat2d(3,i)
-                  endif
-                enddo !i 
-              endif !is_elev
-            endif ! icomp_stats
-          else !3D 
-            !Compute z coordinates
-            do i=1,last_dim
-              if(ivcor==1) then !localized
-                if(dp(i)+eta2(i)<=h0) then
-                  idry(i)=1
-                else !wet
-                  idry(i)=0
-                  do k=kbp(i),nvrt
-                    ztmp(k,i)=(eta2(i)+dp(i))*sigma_lcl(k,i)+eta2(i)
-                  enddo !k
-                endif !wet/dry
-              else if(ivcor==2) then !SZ
-                call zcor_SZ_single(dp(i),eta2(i),h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot, &
-     &sigma,ztmp(:,i),idry(i),kbpl)
-              endif
-
-              do k=max0(1,kbp00(i)),nvrt
-!               Output: time, node #, level #, z-coordinate, 3D variable 
-                if(idry(i)==1) then
-                  write(65,*)timeout(irec)/86400,i,k,-1.e6,outvar(k,i,1:ivs)
+              !Mark wet elem
+              do i=1,ne
+                !if(minval(outvar(1,elnode(1:i34(i),i),1)+dp(elnode(1:i34(i),i)))>0) then
+                if(minval(eta2(elnode(1:i34(i),i))+dp(elnode(1:i34(i),i)))>0) then
+                  idry_e(i)=0
                 else
-                  write(65,*)timeout(irec)/86400,i,k,ztmp(k,i),outvar(k,i,1:ivs)
-                endif
-              enddo !k
- 
-              !Debug
-              !write(65,*)x(i),y(i),out(i,1,1:ivs) 
+                  idry_e(i)=1
+                endif 
+              enddo !i
+              do i=1,ne
+                if(idry_e(i)==0) then !wet
+                  ifl=1 !isolated wet
+                  loop2: do j=1,i34(i)
+                    nd=elnode(j,i)
+                    do m=1,nne(nd)
+                      ie=indel(m,nd)
+                      if(i/=ne.and.idry_e(ie)==0) then
+                        ifl=0
+                        exit loop2
+                      endif
+                    enddo !m
+                  enddo loop2 !j
 
-            enddo !i
-          endif !i23d
+                  if(ifl==0) then ! not isolated wet
+                    do j=1,i34(i)
+                      nd=elnode(j,i)
+                      tmp=outvar(1,nd,1)
+                      if(tmp+dp(nd)>0.and.rstat2d(2,nd)<tmp) then
+                        rstat2d(2,nd)=tmp
+                        time_stat(nd)=timeout(irec)/86400 !days
+                      endif
+                    enddo
+                  endif 
+                endif !idry_e
+              enddo !i=1,ne 
+            else !other variables, or min_ele or avg_ele
+              do i=1,last_dim
+                tmp=outvar(1,i,1)
+                if (icomp_stats(1)==1) then !min
+                  rstat2d(1,i)=min(rstat2d(1,i),tmp)
+                endif
+                if(icomp_stats(2)==1) then !max
+                  rstat2d(2,i)=max(rstat2d(2,i),tmp)
+                endif
+                if(icomp_stats(3)==1) then !average
+                  rstat2d(3,i)=tmp+rstat2d(3,i)
+                endif
+              enddo !i 
+            endif !is_elev
+          endif ! icomp_stats
+        else !3D 
+          !Compute z coordinates
+          do i=1,last_dim
+            if(ivcor==1) then !localized
+              if(dp(i)+eta2(i)<=h0) then
+                idry(i)=1
+              else !wet
+                idry(i)=0
+                do k=kbp(i),nvrt
+                  ztmp(k,i)=(eta2(i)+dp(i))*sigma_lcl(k,i)+eta2(i)
+                enddo !k
+              endif !wet/dry
+            else if(ivcor==2) then !SZ
+              call zcor_SZ_single(dp(i),eta2(i),h0,h_s,h_c,theta_b,theta_f,kz,nvrt,ztot, &
+     &sigma,ztmp(:,i),idry(i),kbpl)
+            endif
+
+            do k=max0(1,kbp00(i)),nvrt
+!             Output: time, node #, level #, z-coordinate, 3D variable 
+              if(idry(i)==1) then
+                write(65,*)timeout(irec)/86400,i,k,-1.e6,outvar(k,i,1:ivs)
+              else
+                write(65,*)timeout(irec)/86400,i,k,ztmp(k,i),outvar(k,i,1:ivs)
+              endif
+            enddo !k
+ 
+            !Debug
+            !write(65,*)x(i),y(i),out(i,1,1:ivs) 
+
+          enddo !i
+        endif !i23d
       enddo !irec
       iret=nf90_close(ncid)
       iret=nf90_close(ncid4)
@@ -395,24 +399,19 @@
       do k=1,3
         if(icomp_stats(k)==0) cycle
 
-!        if (inode_ele==0) then !node-based, write gr3
-          open(12,file=trim(adjustl(varname))//'_'//trim(adjustl(outname(k)))//'.gr3',status='replace')
-          write(12,*)iday1,iday2
-          write(12,*)ne,np
-          do i=1,np
+        open(12,file=trim(adjustl(varname))//'_'//trim(adjustl(outname(k)))//'.gr3',status='replace')
+        write(12,*)iday1,iday2
+        write(12,*)ne,np
+        do i=1,np
+          if(k==2) then !max
+            write(12,*)i,xnd(i),ynd(i),rstat2d(k,i),time_stat(i)
+          else
             write(12,*)i,xnd(i),ynd(i),rstat2d(k,i)
-          enddo !i
-          do i=1,ne
-            write(12,*)i,i34(i),elnode(1:i34(i),i)
-          enddo !i
-          close(12)
-!        elseif(inode_ele==1) then !ele based, write prop
-!          open(12,file=trim(adjustl(varname))//'_'//trim(adjustl(outname(k)))//'.prop',status='replace')
-!          do i=1,ne
-!            write(12,*)i,rstat2d(k,i)
-!          enddo
-!        endif
-
+          endif
+        enddo !i
+        do i=1,ne
+          write(12,*)i,i34(i),elnode(1:i34(i),i)
+        enddo !i
         close(12)
       enddo !k=1,3
 
@@ -432,18 +431,10 @@
         write(13,*) 'violators <', thres
         write(13,*) nrec
 
-!        if (inode_ele==0) then !node-based
         do i=1,nrec
           ip=iviolator(i)
           write(13,*) i,xnd(ip),ynd(ip),rviolator(i),ip
         enddo
-!        elseif (inode_ele==1) then !ele based
-!          do i=1,nrec
-!            ie=iviolator(i)
-!            write(13,*) i,sum(xnd(elnode(1:i34(ie),ie)))/i34(ie),&
-!              & sum(ynd(elnode(1:i34(ie),ie)))/i34(ie), rviolator(i),ie
-!          enddo
-!        endif
         close(13)
       enddo !k=1,3
 
