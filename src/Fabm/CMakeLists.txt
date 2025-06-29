@@ -21,7 +21,9 @@ if(USE_FABM)
     add_subdirectory(${FABM_BASE} fabm_src)
     set(FABM_LIBRARIES fabm)
     #message(STATUS "Adding FABM library -l${FABM_LIBRARIES}")
-    set(FABM_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/fabm_src/modules ${FABM_BASE}/include)
+    set(FABM_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/fabm_src/modules 
+      ${FABM_BASE}/include ${FABM_BASE}/src/drivers/schism
+    )
     #message(STATUS "Adding FABM includes ${FABM_INCLUDE_DIRS}")
     mark_as_advanced(FORCE FABM_PREFIX)
   endif()

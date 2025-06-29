@@ -46,7 +46,7 @@
       allocatable :: sigma(:),cs(:),ztot(:)
       allocatable :: outvar(:,:,:,:),out(:,:,:),icum(:,:,:),eta2(:,:),ztmp(:,:)
       allocatable :: xcj(:),ycj(:),dps(:),kbs(:),xctr(:),yctr(:),dpe(:),kbe(:)
-      allocatable :: zs(:,:),ze(:,:),idry(:),outs(:,:,:),oute(:,:,:),rstat2d(:,:),rviolator(:)
+      allocatable :: zs(:,:),ze(:,:),idry(:),outs(:,:,:),oute(:,:,:),rstat2d(:,:),rviolator(:),time_stat(:)
       allocatable :: ic3(:,:),isdel(:,:),isidenode(:,:),kbp(:),sigma_lcl(:,:)
       integer, allocatable :: elside(:,:),idry_e(:),nne(:),indel(:,:),iviolator(:)
       real*8,allocatable :: timeout(:)
@@ -202,7 +202,7 @@
       if(ispec_max==1) nrec3=max_array_size/(2*nvrt*last_dim)-1
       nrec3=min(nrec,max(nrec3,1))
 
-      allocate(idry_e(ne),rstat2d(3,ne),ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),kbp(np), &
+      allocate(idry_e(ne),rstat2d(3,ne),time_stat(np),ztot(nvrt),sigma(nvrt),sigma_lcl(nvrt,np),kbp(np), &
      &outvar(2,nvrt,last_dim,nrec3),eta2(np,nrec3),idry(np),ztmp(nvrt,np),timeout(nrec), &
      &rviolator(ne),iviolator(ne))
       outvar=-huge(1.0) !test mem
@@ -224,6 +224,7 @@
 !...
       outvar=-99 !init.
       ztmp=-99
+      time_stat=-99 !time for max
       if(iinitial==1) then
         print*,'setting initial elev = -dp for all (dry and wet) nodes'
         rstat2d(1,1:np)=-dp !for elev, min is -h
@@ -309,7 +310,10 @@
                       do j=1,i34(i)
                         nd=elnode(j,i)
                         tmp=outvar(1,1,nd,irec)
-                        if(tmp+dp(nd)>0) rstat2d(2,nd)=max(rstat2d(2,nd),tmp)
+                        if(tmp+dp(nd)>0.and.rstat2d(2,nd)<tmp) then
+                          rstat2d(2,nd)=tmp
+                          time_stat(nd)=timeout(irec_real)/86400
+                        endif
                       enddo
                     endif 
                   endif !idry_e
@@ -390,7 +394,11 @@
           write(12,*)iday1,iday2
           write(12,*)ne,np
           do i=1,np
-            write(12,*)i,x(i),y(i),rstat2d(k,i)
+            if(k==2) then !max
+              write(12,*)i,x(i),y(i),rstat2d(k,i),time_stat(i)
+            else
+              write(12,*)i,x(i),y(i),rstat2d(k,i)
+            endif
           enddo !i
           do i=1,ne
             write(12,*)i,i34(i),elnode(1:i34(i),i)

@@ -297,7 +297,7 @@
 #else /*USE_ATMOS*/
         !Read 1st record
         if(myrank==0) then
-          j=nf90_open(in_dir(1:len_in_dir)//'atmos.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_atmos)
+          j=nf90_open(in_dir(1:len_in_dir)//'atmos.nc',NF90_NOWRITE,ncid_atmos)
           if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc')
 !          j=nf90_inq_varid(ncid_atmos, "time_step",mm)
 !          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc time_step')
@@ -628,7 +628,12 @@
       th_time2=0.d0
 
       if(nettype2>0) then
-        j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_elev2D)
+! SCHISM BMI will bypass the elev2D.th.nc
+! forcing file dependency and instead will fill
+! the ath2, th_dt2, and th_time2 variables through
+! the NextGen framework coupled formulation
+#ifndef USE_BMI
+        j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',NF90_NOWRITE,ncid_elev2D)
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev2D.th.nc')
         j=nf90_inq_dimid(ncid_elev2D,'nOpenBndNodes',mm)
         j=nf90_inquire_dimension(ncid_elev2D,mm,len=itmp)
@@ -642,7 +647,6 @@
         ninv=time/th_dt2(1)
         th_time2(1,1)=real(ninv,rkind)*th_dt2(1)
         th_time2(2,1)=th_time2(1,1)+th_dt2(1)
-
         j=nf90_inq_varid(ncid_elev2D, "time_series",mm)
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev time_series')
         j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,1,1), &
@@ -651,10 +655,11 @@
         j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,2,1), &
     &(/1,1,1,ninv+2/),(/1,1,nnode_et,1/))
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev time_series2')
-      endif !nettype2
+#endif /*USE_BMI*/
+      endif
 
       if(nfltype2>0) then
-        j=nf90_open(in_dir(1:len_in_dir)//'uv3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_uv3D)
+        j=nf90_open(in_dir(1:len_in_dir)//'uv3D.th.nc',NF90_NOWRITE,ncid_uv3D)
         if(j/=NF90_NOERR) call parallel_abort('MISC: uv3D.th.nc')
         j=nf90_inq_dimid(ncid_uv3D,'nOpenBndNodes',mm)
         j=nf90_inquire_dimension(ncid_uv3D,mm,len=itmp)
@@ -685,7 +690,7 @@
       do i=1,natrm
         if(ntrs(i)>0.and.nnode_tr2(i)>0) then
           icount=icount+1
-          j=nf90_open(in_dir(1:len_in_dir)//tr_mname(i)//'_3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_tr3D(i))
+          j=nf90_open(in_dir(1:len_in_dir)//tr_mname(i)//'_3D.th.nc',NF90_NOWRITE,ncid_tr3D(i))
           if(j/=NF90_NOERR) call parallel_abort('MISC: '//tr_mname(i)//'_3D.th.nc')
           j=nf90_inq_dimid(ncid_tr3D(i),'nOpenBndNodes',mm)
           j=nf90_inquire_dimension(ncid_tr3D(i),mm,len=itmp)
@@ -724,22 +729,12 @@
       endif !myrank==0
 
 !...  Source/sinks: read by rank 0 first
-#ifdef USE_NWM_BMI
-      ninv=time/th_dt3(1)
-      th_time3(1,1)=ninv*th_dt3(1)
-      th_time3(2,1)=th_time3(1,1)+th_dt3(1)
-
-      ninv=time/th_dt3(2)
-      th_time3(1,2)=ninv*th_dt3(2)
-      th_time3(2,2)=th_time3(1,2)+th_dt3(2)
-
-      ninv=time/th_dt3(3)
-      th_time3(1,3)=ninv*th_dt3(3)
-      th_time3(2,3)=th_time3(1,3)+th_dt3(3)
-
-      ath3(:,1,1,1:2)=0.d0
-      ath3(:,1,1,3)=-9999.d0
-#else /*USE_NWM_BMI*/
+#ifdef USE_BMI
+        ! SCHISM BMI will bypass the .th or .nc
+        ! source/sinks forcing file dependency and instead
+        ! will fill the ath3, th_dt3, and th_time3 variables
+        ! through the NextGen framework coupled formulations
+#else
 
 #ifdef SH_MEM_COMM
       if(if_source==1.and.myrank_node==0) then !ASCII
@@ -837,6 +832,8 @@
         endif !nsinks>0
       endif !if_source=-1
 
+#endif /*USE_BMI*/
+
 !     Bcast
       if(if_source/=0) then
         !First 2 vars are bcast from rank 0 of comm, which must be a member of myrank_node=0?
@@ -850,7 +847,6 @@
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
 #endif
       endif 
-#endif /*USE_NWM_BMI*/
 
 #ifdef USE_SED
 !...  Sediment model initialization
@@ -1998,6 +1994,8 @@
           if(ivcor/=1) kbp(i)=0
         else !wet
           idry2(i)=0
+          !znl() may not be used as later idry2 may be reset to 1
+          !All eventually wet nodes have valid znl()
           call zcoor(0,i,kbp(i),znl(:,i))
         endif !wet ot dry
       enddo !i=1,npa

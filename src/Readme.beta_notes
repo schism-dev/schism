@@ -9,8 +9,11 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `2135910d` (23 May 2025): removed 'isconsv' (redundant with PREC_EVAP);
+- `970a5597` (9 May 2025): added new mandatory parameter 'nmarsh_types', and optional: veg_di0,
+                           veg_h0,veg_nv0,veg_cd0,drown_marsh,create_marsh_min,create_marsh_max
 - `be0fcd27` (29 April 2025): removed padding 0's in sflux names (to allow unlimited stacks);
-- `5ff6e6e6` (17 April 2025): added 3 optional parameters underitur=3,5: icompute_cpsi3, iscnd_coeff,ri_st (using steady-state Richardson # to compute c_psi3) 
+- `5ff6e6e6` (17 April 2025): added 3 optional parameters under itur=3,5: icompute_cpsi3, iscnd_coeff,ri_st (using steady-state Richardson # to compute c_psi3) 
 - `0c46ec84` (1 Mar 2025): added water type '8', which requires user to specify 'watertype_rr',
                            'watertype_d[1,2]' in param.nml;
 

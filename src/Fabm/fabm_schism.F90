@@ -385,7 +385,8 @@ subroutine fabm_schism_init_stage2
     if (kbe(i) > 1) fs%mask(1:kbe(i),i) = 1
   enddo
 #endif
-  
+
+#ifdef _HAS_MASK_  
 #if _FABM_API_VERSION_ < 1
 #ifndef _FABM_HORIZONTAL_MASK_
   call fabm_set_mask(fs%model, fs%mask, fs%mask_hz)
@@ -397,6 +398,7 @@ subroutine fabm_schism_init_stage2
   call fs%model%set_mask(fs%mask, fs%mask_hz)
 #else
   call fs%model%set_mask(fs%mask_hz)
+#endif
 #endif
 #endif
 

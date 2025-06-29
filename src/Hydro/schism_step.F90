@@ -124,11 +124,10 @@
                  &side_dim,nvrt_dim,ntracers_dim,three_dim,two_dim,one_dim, &
                  &four_dim,five_dim,six_dim,seven_dim,eight_dim,nine_dim,nvars_hot, &
                  &MBEDP_dim,Nbed_dim,SED_ntr_dim,ice_ntr_dim,ICM_ntr_dim,ndelay_dim, &
-                 &irec2,istack,var1d_dim(1),var2d_dim(2),var3d_dim(3),iscribe_2d, &
-                 &ised_out_sofar,irec4,istack4,nums_dim(20),names_dim(20)
-                 !ncid_schout,ncid_schout2,ncid_schout3,ncid_schout4,ncid_schout5, &
-                 !&ncid_schout6,ncid_schout7,ncid_schout_2,ncid_schout2_2,ncid_schout3_2,ncid_schout4_2,ncid_schout5_2, &
-                 !&ncid_schout6_2,ncid_schout7_2,
+                 &irec2(2),istack(2),var1d_dim(1),var2d_dim(2),var3d_dim(3),iscribe_2d, &
+                 &ised_out_sofar,nums_dim(20),names_dim(20),nschout,ndim_schout,dimid_schout(5), &
+                 &dim_schout(5),nout_schout
+
 !      integer :: nstp,nnew !Tsinghua group !1120:close
       real(rkind) :: cwtmp,cwtmp2,cwtmp3,wtmp1,wtmp2,time,ramp,rampbc,rampwind,rampwafo,dzdx,dzdy, &
                      &dudz,dvdz,dudx,dudx2,dvdx,dvdx2,dudy,dudy2,dvdy,dvdy2, &
@@ -179,7 +178,7 @@
       character(len=72) :: it_char
       character(len=72) :: fgb  ! Processor specific global output file name
       character(len=6),save :: a_6
-      character(len=48) :: time_string
+      character(len=48) :: time_string,sname,snames_schout(8),vnames_schout(8)
       integer :: lfgb       ! Length of processor specific global output file name
       real(4) :: floatout
       real(8) :: dbleout2(1)
@@ -230,7 +229,7 @@
       real(rkind),allocatable :: swild96(:,:,:),swild97(:,:,:) !used in ELAD (deallocate immediately afterwards)
       real(rkind),allocatable :: swild95(:,:,:) !for analysis module
       real(rkind),allocatable :: swild13(:) 
-      real(4),allocatable :: swild11(:),swild12(:,:),swild14(:,:,:) !reading schout*
+      real(4),allocatable :: swild11(:),swild12(:,:) !reading schout*
       real(rkind),allocatable :: hp_int(:,:,:),buf1(:,:),buf2(:,:),buf3(:),msource(:,:)
       real(rkind),allocatable :: fluxes_tr(:,:),fluxes_tr_gb(:,:) !fluxes output between regions
       real(rkind),allocatable :: veg_alpha3D(:,:),veg_alpha_vert_mean(:)
@@ -764,6 +763,8 @@
 
           wtime1=wtime2
           wtime2=wtime2+wtiminc
+
+#ifndef   USE_BMI
 !$OMP parallel do default(shared) private(i)
           do i=1,npa
             windx1(i)=windx2(i)
@@ -773,6 +774,7 @@
             shum1(i)=shum2(i)
           enddo
 !$OMP end parallel do
+#endif /*USE_BMI*/
 
           call get_wind(wtime2,windx2,windy2,pr2,airt2,shum2)
         endif !time>=wtime2
@@ -1493,7 +1495,13 @@
       enddo !i
 
       if(nettype2>0) then
-        if(time>th_time2(2,1)) then        
+#ifdef USE_BMI
+        if(time>th_time2(2,1)) then
+          th_time2(1,1)=th_time2(2,1)
+          th_time2(2,1)=th_time2(2,1)+th_dt2(1)
+        endif
+#else
+        if(time>th_time2(2,1)) then
           ath2(:,:,:,1,1)=ath2(:,:,:,2,1)
           icount3=time/th_dt2(1)+2
           j=nf90_inq_varid(ncid_elev2D, "time_series",mm)
@@ -1505,6 +1513,7 @@
           th_time2(1,1)=th_time2(2,1)
           th_time2(2,1)=th_time2(2,1)+th_dt2(1)
         endif !time
+#endif /*USE_BMI*/
 !        if(it==iths_main+1.and.abs(floatout-time)>1.e-4) then
 !          write(errmsg,*)'Starting time wrong for eta 2',it,floatout
 !          call parallel_abort(errmsg)
@@ -1668,7 +1677,7 @@
         !Exceptions
         msource(1:2,:)=-9999.d0 !junk so ambient values will be used
 
-#ifdef USE_NWM_BMI
+#ifdef USE_BMI
         !Update everything except time series at new time (need to coordinate
         !with BMI on the timing of updates)
         if(nsources>0) then
@@ -1690,7 +1699,7 @@
           th_time3(2,2)=th_time3(2,2)+th_dt3(2)
         endif
 
-#else /*USE_NWM_BMI*/
+#else /*USE_BMI*/
 
         !Reading by rank 0
 #ifdef SH_MEM_COMM
@@ -1761,7 +1770,7 @@
 #else
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
 #endif
-#endif /*USE_NWM_BMI*/
+#endif /*USE_BMI*/
 
         if(nsources>0) then
           rat=(time-th_time3(1,1))/th_dt3(1)
@@ -2069,32 +2078,45 @@
       !Other vars: zcor and dry flags are computed either from schism_init or from levels*() after
       !transport solver; similarly for tr_nd* and [uu,vv,ww]2 (for btrack)
 
+      !list of filenames (snames) and variables names (vnames)
+      nschout=8
+#ifdef OLDIO
+      snames_schout(1:8)='schout'
+      vnames_schout(1:8)=(/'elev          ' ,'diffusivity   ' ,'hvel_side     ' ,'hvel_side     ',&
+                        &  'temp_elem     ' ,'salt_elem     ' ,'SED_TSC       ' ,'SED_bed_stress'/)
+#else
+      snames_schout(1:8)=(/'out2d               ', 'diffusivity         ', 'horizontalSideVelX  ', 'horizontalSideVelY  ',&
+                        &  'temperatureAtElement', 'salinityAtElement   ', 'totalSuspendedLoad  ', 'out2d               '/)
+      vnames_schout(1)='elevation'; vnames_schout(2:7)=snames_schout(2:7);  vnames_schout(8)='sedBedStress'
+#endif
+      if(itransport_only/=2) nschout=6 !remove outputs
+      if(it==iths_main+1) then
+        allocate(ndims_schout(nschout),nouts_schout(nschout),stat=istat)
+        if(istat/=0) call parallel_abort('STEP: alloc ndims_schout')
+        ndims_schout=0; nouts_schout=0
+      endif
+
       !Read time from 1st stack and check dt==multiple of dtout
       if(it==iths_main+1.and.myrank==0) then
         !Outputs (nstride_schout,nrec_schout) and time origin info are only used by rank 0
-#ifdef OLDIO
-        j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_1.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(1))
-#else 
-!       Scribe I/O
-        j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/out2d_1.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(1))
-#endif /*OLDIO*/
+        j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/'//trim(adjustl(snames_schout(1)))//'_1.nc',NF90_NOWRITE,ncid_schout(1,1))
         if(j/=NF90_NOERR) call parallel_abort('STEP: schout_1.nc not found')
-        j= nf90_inquire(ncid_schout(1), unlimitedDimId=mm)
-        j= nf90_inquire_dimension(ncid_schout(1),mm,len=nrec_schout)
+        j= nf90_inquire(ncid_schout(1,1), unlimitedDimId=mm)
+        j= nf90_inquire_dimension(ncid_schout(1,1),mm,len=nrec_schout)
         allocate(swild13(nrec_schout))
 
-        j=nf90_inq_varid(ncid_schout(1),"time",mm)
+        j=nf90_inq_varid(ncid_schout(1,1),"time",mm)
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc time')
-        j=nf90_get_att(ncid_schout(1),mm,"base_date",time_string)
+        j=nf90_get_att(ncid_schout(1,1),mm,"base_date",time_string)
         !For some reason nf90 does not like start/count for unlimited dim
-        j=nf90_get_var(ncid_schout(1),mm,swild13) !,(/1/),(/1/)) !double
+        j=nf90_get_var(ncid_schout(1,1),mm,swild13) !,(/1/),(/1/)) !double
         if(j/=NF90_NOERR) call parallel_abort('STEP: nc get time')
         nstride_schout=dt/swild13(1)
         if(abs(dt-nstride_schout*swild13(1))>1.d-4) then
           write(errmsg,*)'STEP: dt must be multiple of output time step, ',dt,swild13(1),nstride_schout
           call parallel_abort(errmsg)
         endif
-        j=nf90_close(ncid_schout(1))
+        j=nf90_close(ncid_schout(1,1))
 
         !Time origin
         read(time_string,'(i5,2(1x,i2),2(1x,f10.2))')nwild(1:3),av_cff1,av_cff2 !start_year,start_month,start_day,start_hour,utc_start
@@ -2113,302 +2135,142 @@
         deallocate(swild13)
       endif !it==
 
-      allocate(swild11(np_global),stat=istat)
-      if(istat/=0) call parallel_abort('STEP: alloc swild11')
       if(myrank==0) then
         !Calculate stack and record # to read from for step n and n+1
-        istack=int(dble((it*nstride_schout+irec0_schout-1)+1.d-6)/nrec_schout)+1
-        irec2=it*nstride_schout+irec0_schout-(istack-1)*nrec_schout !->time step n (start)
-        if(istack<=0.or.irec2<=0.or.irec2>nrec_schout) then
+        istack(1)=int(dble((it*nstride_schout+irec0_schout-1)+1.d-6)/nrec_schout)+1
+        irec2(1)=it*nstride_schout+irec0_schout-(istack(1)-1)*nrec_schout !->time step n (start)
+        istack(2)=int(dble(((it+1)*nstride_schout+irec0_schout-1)+1.d-6)/nrec_schout)+1 !may exceed max stack #
+        irec2(2)=(it+1)*nstride_schout+irec0_schout-(istack(2)-1)*nrec_schout !->time step n+1 (new)
+        if(istack(2)>istack(1)) then !if istack(2) not exisit (last record), use previous stack
+          write(it_char,'(i72)')istack(2)
+          inquire(file=in_dir(1:len_in_dir)//'hydro_out/'//trim(adjustl(snames_schout(1)))//'_'//trim(adjustl(it_char))//'.nc',exist=ltmp)
+          if(.not.ltmp) then !not exist; use same stack and reset record #
+            istack(2)=istack(1); irec2(2)=irec2(1)
+          endif
+        endif
+        if(minval(istack(:))<=0.or.minval(irec2(:))<=0.or.maxval(irec2(:))>nrec_schout) then !check
           write(errmsg,*)'STEP: wrong record or stack #, ',istack,irec2
           call parallel_abort(errmsg)
         endif
-        istack4=int(dble(((it+1)*nstride_schout+irec0_schout-1)+1.d-6)/nrec_schout)+1 !may exceed max stack #
-        irec4=(it+1)*nstride_schout+irec0_schout-(istack4-1)*nrec_schout !->time step n+1 (new)
-        if(istack4<=0.or.irec4<=0.or.irec4>nrec_schout) then
-          write(errmsg,*)'STEP: wrong new record or stack #, ',istack4,irec4
-          call parallel_abort(errmsg)
-        endif
 
-        if(istack/=istack0_schout) then !open stack for reading step n
-          istack0_schout=istack
-          j=nf90_close(ncid_schout(1))
-          write(it_char,'(i72)')istack
-          it_char=adjustl(it_char); lit=len_trim(it_char)
-#ifdef OLDIO
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(1))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: schout*.nc not found')
-#else
-          do i=2,6; j=nf90_close(ncid_schout(i)); enddo
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/out2d_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(1))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: out2d*.nc not found')
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/diffusivity_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(2))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: dffusivity*.nc not found')
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelX_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(3))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: horizontalSideVelX*.nc not found')
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelY_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(4))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: horizontalSideVelY*.nc not found')
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/temperatureAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(5))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: temperatureAtElement*.nc not found')
-          j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/salinityAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(6))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: salinityAtElement*.nc not found')
-          if(itransport_only==2) then !read additional variables
-            j=nf90_close(ncid_schout(7))
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/totalSuspendedLoad_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout(7))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: totalSuspendedLoad*.nc not found')
-          endif !itransport_only==2
-#endif
-          write(16,*)'reading from schout stack #:',istack,irec2,time/3600
-        endif !istack
+        !open stack for reading steps n and n+1
+        do m=1,2
+          if(istack(m)/=istack0_schout(m)) then !open stack for reading
+            !close existing channel 1st
+            if(istack0_schout(m)/=0.and.m==1) then
+              do n=1,nschout
+                 ltmp=.true.
+                 do k=1,(n-1); if(ncid_schout(n,1)==ncid_schout(k,1)) ltmp=.false. ; enddo !skip same ncid
+                 if(ltmp) j=nf90_close(ncid_schout(n,1))
+              enddo !i
+            endif !istack0_schout(m)/=0
 
-        if(istack4==istack) then !existing stack for reading step n+1
-          ncid_schout_2(:)=ncid_schout(:)
-        else !open new stack
-          write(it_char,'(i72)')istack4
-          it_char=adjustl(it_char); lit=len_trim(it_char)
-          !This stack might not exisit (last record)
-#ifdef OLDIO
-          inquire(file=in_dir(1:len_in_dir)//'hydro_out/schout_'//it_char(1:lit)//'.nc',exist=ltmp)
-#else
-          inquire(file=in_dir(1:len_in_dir)//'hydro_out/out2d_'//it_char(1:lit)//'.nc',exist=ltmp)
-#endif
-          if(.not.ltmp) then !not exist; use same stack and reset record #
-            istack4=istack; irec4=irec2
-            ncid_schout_2(:)=ncid_schout(:)
-          else !stack exists
+            !open new channels
+            if(istack0_schout(m)==0.or.m==2) then !always open new channel
+              if(istack0_schout(m)==0.and.m==2.and.istack(1)==istack(2)) then !1st stacks are the same for n and n+1
+                 ncid_schout(:,2)=ncid_schout(:,1); istack0_schout(m)=istack(m)
+              else
+                write(it_char,'(i72)')istack(m); istack0_schout(m)=istack(m)
+                do n=1,nschout
+                  ltmp=.true.
+                  do k=1,(n-1)
+                    if(trim(adjustl(snames_schout(n)))==trim(adjustl(snames_schout(k)))) then
+                      ncid_schout(n,m)=ncid_schout(k,m); ltmp=.false.
+                    endif
+                  enddo !k
+                  if(ltmp) then
+                    sname='hydro_out/'//trim(adjustl(snames_schout(n)))//'_'//trim(adjustl(it_char))//'.nc'
+                    j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(sname)),NF90_NOWRITE,ncid_schout(n,m))
+                    if(j/=NF90_NOERR) call parallel_abort('STEP: not found: '//trim(adjustl(sname)))
+                  endif
+                enddo !n
+              endif
+              write(16,*)'reading from schout stack #:',m,istack(m),irec2(m),time/3600
+            elseif(m==1) then
+              ncid_schout(:,1)=ncid_schout(:,2); istack0_schout(1)=istack0_schout(2)
+              write(16,*)'reading from schout stack #:',m,istack(m),irec2(m),time/3600
+            endif!stack0_schout(m)==0
+          endif !istack(m)/=istack0_schout(m)
+        enddo !m
+      endif !myrank==0
 
-#ifdef OLDIO
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/schout_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(1))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: schout*.nc not found(2)')
-#else
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/out2d_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(1))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: out2d*.nc not found(2)')
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/diffusivity_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(2))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: dffusivity*.nc not found(2)')
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelX_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(3))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: horizontalSideVelX*.nc not found(2)')
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/horizontalSideVelY_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(4))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: horizontalSideVelY*.nc not found(2)')
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/temperatureAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(5))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: temperatureAtElement*.nc not found(2)')
-            j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/salinityAtElement_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(6))
-            if(j/=NF90_NOERR) call parallel_abort('STEP: salinityAtElement*.nc not found(2)')
-            if(itransport_only==2) then !read additional variables
-              j=nf90_open(in_dir(1:len_in_dir)//'hydro_out/totalSuspendedLoad_'//it_char(1:lit)//'.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_schout_2(7))
-              if(j/=NF90_NOERR) call parallel_abort('STEP: totalSuspendedLoad*.nc not found')
-            endif !itransport_only==2
-#endif
-          endif !.not.ltmp
-          write(16,*)'reading from schout stack #:',istack4,irec4,time/3600
-        endif !istack4
+      !read record
+      allocate(swild11(np_global),swild12(nvrt,max(ns_global,ne_global)),stat=istat)
+      if(istat/=0) call parallel_abort('STEP: alloc swild11')
+      do m=1,2 !n and n+1 record
+        do n=1,nschout
+           if(m==2.and.n/=5.and.n/=6) cycle !only save T,S at n+1 step
+           if(myrank==0) then
+             !get variable information
+             j=nf90_inq_varid(ncid_schout(n,m),trim(adjustl(vnames_schout(n))),mm)
+             if(j/=NF90_NOERR) call parallel_abort('STEP: nc fails varid '//trim(adjustl(vnames_schout(n))))
+             j=nf90_inquire_variable(ncid_schout(n,m),mm,ndims=ndim_schout)
+             if(j/=NF90_NOERR) call parallel_abort('STEP: nc fails ndims '//trim(adjustl(vnames_schout(n))))
+             j=nf90_inquire_variable(ncid_schout(n,m),mm,dimids=dimid_schout(1:ndim_schout))
+             if(j/=NF90_NOERR) call parallel_abort('STEP: nc fails dimid '//trim(adjustl(vnames_schout(n))))
+             do k=1,ndim_schout
+                j= nf90_inquire_dimension(ncid_schout(n,m),dimid_schout(k),len=dim_schout(k))
+                if(j/=NF90_NOERR) call parallel_abort('STEP: nc fails dimension'//trim(adjustl(vnames_schout(n))))
+             enddo
 
-#ifdef OLDIO
-        j=nf90_inq_varid(ncid_schout(1), "elev",mm)
-#else
-        j=nf90_inq_varid(ncid_schout(1), "elevation",mm)
-#endif
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc elev')
-        j=nf90_get_var(ncid_schout(1),mm,swild11(1:np_global),(/1,irec2/),(/np_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get eta2')
-      endif !myrank=0
+             !get variable value
+             nout_schout=dim_schout(ndim_schout-1)
+             if(ndim_schout==2) then
+                j=nf90_get_var(ncid_schout(n,m),mm,swild11(1:nout_schout),(/1,irec2(m)/),(/nout_schout,1/))
+             elseif (ndim_schout==3) then
+                j=nf90_get_var(ncid_schout(n,m),mm,swild12(:,1:nout_schout),(/1,1,irec2(m)/),(/nvrt,nout_schout,1/))
+             elseif (ndim_schout==4) then !hvel_side in OLDID
+                if(n==3) j=nf90_get_var(ncid_schout(n,m),mm,swild12(:,1:nout_schout),(/1,1,1,irec2(m)/),(/1,nvrt,nout_schout,1/))
+                if(n==4) j=nf90_get_var(ncid_schout(n,m),mm,swild12(:,1:nout_schout),(/2,1,1,irec2(m)/),(/1,nvrt,nout_schout,1/))
+             endif
+             if(j/=NF90_NOERR) call parallel_abort('STEP: nc fails get_var '//trim(adjustl(vnames_schout(n))))
+           endif !myrank
 
-      call mpi_bcast(swild11,np_global,mpi_real,0,comm,istat) 
-      do i=1,np_global
-        if(ipgl(i)%rank==myrank) then
-          ip=ipgl(i)%id
-          !Save new elev as eta1 first for btrack; will update to eta2 b4
-          !transport
-          eta1(ip)=swild11(i)
-        endif
-      enddo !i
-
-      if(itransport_only==2) then
-        !read saved sediment bed shear stress
-        if(myrank==0) then
-#ifdef OLDIO
-          j=nf90_inq_varid(ncid_schout(1),"SED_bed_stress",mm)
-#else
-          j=nf90_inq_varid(ncid_schout(1),"sedBedStress",mm)
-#endif
-          if(j/=NF90_NOERR) call parallel_abort('STEP: nc SED_bed_stress')
-          j=nf90_get_var(ncid_schout(1),mm,swild11(1:np_global),(/1,irec2/),(/np_global,1/))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: nc get SED_bed_stress')
-        endif !myrank=0
-        call mpi_bcast(swild11,np_global,mpi_real,0,comm,istat)
-        do i=1,np_global
-          if(ipgl(i)%rank==myrank) then
-            ip=ipgl(i)%id
-            btaun(ip)=swild11(i)/rho0
-          endif
-        enddo !i
-      endif !itransport_only==2
-      deallocate(swild11)
-
-      allocate(swild12(nvrt,ns_global),stat=istat)
-      if(istat/=0) call parallel_abort('STEP: alloc swild12')
-      swild12(nvrt,ns_global)=0 !test mem
-
-      if(myrank==0) then
-        !write(16,*)'done reading elev...'
-#ifdef OLDIO
-        j=nf90_inq_varid(ncid_schout(1), "diffusivity",mm)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc dfh')
-        j=nf90_get_var(ncid_schout(1),mm,swild12(:,1:np_global),(/1,1,irec2/),(/nvrt,np_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get dfh')
-#else
-        j=nf90_inq_varid(ncid_schout(2),"diffusivity",mm)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc dfh')
-        j=nf90_get_var(ncid_schout(2),mm,swild12(:,1:np_global),(/1,1,irec2/),(/nvrt,np_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get dfh')
-#endif
-      endif !myrank=0
-      call mpi_bcast(swild12,ns_global*nvrt,mpi_real,0,comm,istat)
-      do i=1,np_global
-        if(ipgl(i)%rank==myrank) then
-          ip=ipgl(i)%id
-          dfh(:,ip)=swild12(:,i)
-        endif
-      enddo !i
-
-      if(myrank==0) then
-        !write(16,*)'done reading dfh...'
-#ifdef OLDIO
-        j=nf90_inq_varid(ncid_schout(1), "hvel_side",mm)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc hvel')
-        j=nf90_get_var(ncid_schout(1),mm,swild12,(/1,1,1,irec2/),(/1,nvrt,ns_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get hvel')
-#else
-        j=nf90_inq_varid(ncid_schout(3), "horizontalSideVelX",mm)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc hvelside')
-        j=nf90_get_var(ncid_schout(3),mm,swild12,(/1,1,irec2/),(/nvrt,ns_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get hvel')
-#endif
-          !write(16,*)'done reading su2'
-      endif !myrank=0
-      call mpi_bcast(swild12,nvrt*ns_global,mpi_real,0,comm,istat)
-      do i=1,ns_global
-        if(isgl(i)%rank==myrank) then
-          isd=isgl(i)%id
-          su2(:,isd)=swild12(:,i)
-        endif
-      enddo !i
-
-      if(myrank==0) then
-#ifdef OLDIO
-        j=nf90_get_var(ncid_schout(1),mm,swild12,(/2,1,1,irec2/),(/1,nvrt,ns_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get hvel2')
-#else
-        j=nf90_inq_varid(ncid_schout(4), "horizontalSideVelY",mm)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc hvelsideY')
-        j=nf90_get_var(ncid_schout(4),mm,swild12,(/1,1,irec2/),(/nvrt,ns_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get hvel2')
-#endif
-!        write(16,*)'finished reading sv2...'
-      endif !myrank=0
-      call mpi_bcast(swild12,nvrt*ns_global,mpi_real,0,comm,istat)
-      do i=1,ns_global
-        if(isgl(i)%rank==myrank) then
-          isd=isgl(i)%id
-          sv2(:,isd)=swild12(:,i)
-        endif
-      enddo !i
-
-      if(itransport_only==2) then
-        !read saved total_sed_conc
-        if(myrank==0) then
-#ifdef OLDIO
-          j=nf90_inq_varid(ncid_schout(1), "SED_TSC",mm)
-          if(j/=NF90_NOERR) call parallel_abort('STEP: nc SED_TSC')
-          j=nf90_get_var(ncid_schout(1),mm,swild12(:,1:np_global),(/1,1,irec2/),(/nvrt,np_global,1/))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: nc get SED_TSC')
-#else
-          j=nf90_inq_varid(ncid_schout(7),"totalSuspendedLoad",mm)
-          if(j/=NF90_NOERR) call parallel_abort('STEP: nc totalSuspendedLoad')
-          j=nf90_get_var(ncid_schout(7),mm,swild12(:,1:np_global),(/1,1,irec2/),(/nvrt,np_global,1/))
-          if(j/=NF90_NOERR) call parallel_abort('STEP: nc get totalSuspendedLoad')
-#endif
-        endif !myrank=0
-        call mpi_bcast(swild12,nvrt*ns_global,mpi_real,0,comm,istat)
-        do i=1,np_global
-          if(ipgl(i)%rank==myrank) then
-            ip=ipgl(i)%id
-            total_sus_conc(:,ip)=swild12(:,i)
-          endif
-        enddo !i
-      endif !itransport_only==2
-      deallocate(swild12)
-
-!     T,S
-      allocate(swild14(nvrt,ne_global,2),stat=istat)
-      if(istat/=0) call parallel_abort('STEP: alloc swild14')
-      swild14(nvrt,ne_global,2)=0 !test mem
-
-      if(myrank==0) then
-#ifdef OLDIO
-        j=nf90_inq_varid(ncid_schout(1), "temp_elem",mm)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc temp_elem')
-        j=nf90_inq_varid(ncid_schout(1), "salt_elem",jj)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc salt_elem')
-        j=nf90_get_var(ncid_schout(1),mm,swild14(:,:,1),(/1,1,irec2/),(/nvrt,ne_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get temp_elem')
-        j=nf90_get_var(ncid_schout(1),jj,swild14(:,:,2),(/1,1,irec2/),(/nvrt,ne_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get salt_elem')
-#else
-        j=nf90_inq_varid(ncid_schout(5), "temperatureAtElement",mm)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc temp_elem')
-        j=nf90_inq_varid(ncid_schout(6), "salinityAtElement",jj)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc salt_elem')
-        j=nf90_get_var(ncid_schout(5),mm,swild14(:,:,1),(/1,1,irec2/),(/nvrt,ne_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get temp_elem')
-        j=nf90_get_var(ncid_schout(6),jj,swild14(:,:,2),(/1,1,irec2/),(/nvrt,ne_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get salt_elem')
-#endif
-        write(16,*)'done reading T,S...'
-      endif !myrank=0
-      call mpi_bcast(swild14,2*nvrt*ne_global,mpi_real,0,comm,istat)
-      if(istat/=MPI_SUCCESS) call parallel_abort('STEP: mpi_bcast in reading T,S')
-      do i=1,ne_global
-        if(iegl(i)%rank==myrank) then
-          ie=iegl(i)%id !up to nea
-          ts_offline(1,:,ie)=swild14(:,i,1)
-          ts_offline(2,:,ie)=swild14(:,i,2)
-        endif
-      enddo !i
-
-      !Read step n+1
-      if(myrank==0) then
-#ifdef OLDIO
-        j=nf90_inq_varid(ncid_schout_2(1), "temp_elem",mm)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc temp_elem(2)')
-        j=nf90_inq_varid(ncid_schout_2(1), "salt_elem",jj)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc salt_elem(2)')
-        j=nf90_get_var(ncid_schout_2(1),mm,swild14(:,:,1),(/1,1,irec4/),(/nvrt,ne_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get temp_elem(2)')
-        j=nf90_get_var(ncid_schout_2(1),jj,swild14(:,:,2),(/1,1,irec4/),(/nvrt,ne_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get salt_elem(2)')
-#else
-        j=nf90_inq_varid(ncid_schout_2(5), "temperatureAtElement",mm)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc temp_elem(2)')
-        j=nf90_inq_varid(ncid_schout_2(6), "salinityAtElement",jj)
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc salt_elem(2)')
-        j=nf90_get_var(ncid_schout_2(5),mm,swild14(:,:,1),(/1,1,irec4/),(/nvrt,ne_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get temp_elem(2)')
-        j=nf90_get_var(ncid_schout_2(6),jj,swild14(:,:,2),(/1,1,irec4/),(/nvrt,ne_global,1/))
-        if(j/=NF90_NOERR) call parallel_abort('STEP: nc get salt_elem(2)')
-#endif
-        write(16,*)'done reading T,S @n+1'
-      endif !myrank=0
-      call mpi_bcast(swild14,2*nvrt*ne_global,mpi_real,0,comm,istat)
-      if(istat/=MPI_SUCCESS) call parallel_abort('STEP: mpi_bcast in reading T,S(2)')
-      do i=1,ne_global
-        if(iegl(i)%rank==myrank) then
-          ie=iegl(i)%id !up to nea
-          ts_offline(3,:,ie)=swild14(:,i,1)
-          ts_offline(4,:,ie)=swild14(:,i,2)
-        endif
-      enddo !i
-
-      deallocate(swild14)
+           !pass global value and assign to variabels
+           if(ndims_schout(n)==0) then
+             call mpi_bcast(ndim_schout,1,mpi_int,0,comm,istat); ndims_schout(n)=ndim_schout
+             call mpi_bcast(nout_schout,1,mpi_int,0,comm,istat); nouts_schout(n)=nout_schout
+           endif
+           if(ndims_schout(n)==2) then
+             call mpi_bcast(swild11,np_global,mpi_real,0,comm,istat)
+             if(nouts_schout(n)==np_global) then
+               do i=1,np_global
+                 if(ipgl(i)%rank==myrank) then
+                   if(n==1) eta1(ipgl(i)%id) =swild11(i) !Save new elev as eta1 first for btrack; will update to eta2 b4, transport
+                   if(n==8) btaun(ipgl(i)%id)=swild11(i)/rho0 !bed stress
+                 endif
+               enddo !
+             endif
+           elseif(ndims_schout(n)==3.or.ndims_schout(n)==4) then
+             call mpi_bcast(swild12,nvrt*max(ns_global,ne_global),mpi_real,0,comm,istat)
+             if(nouts_schout(n)==np_global) then
+               do i=1,np_global
+                 if(ipgl(i)%rank==myrank) then
+                   if(n==2) dfh(:,ipgl(i)%id)=swild12(:,i) !diffusivity
+                   if(n==7) total_sus_conc(:,ipgl(i)%id)=swild12(:,i) !TSS
+                 endif
+               enddo
+             elseif(nouts_schout(n)==ne_global) then
+               do i=1,ne_global
+                 if(iegl(i)%rank==myrank) then
+                   if(m==1.and.n==5) ts_offline(1,:,iegl(i)%id)=swild12(:,i) !temp_elem, n
+                   if(m==1.and.n==6) ts_offline(2,:,iegl(i)%id)=swild12(:,i) !salt_elem, n
+                   if(m==2.and.n==5) ts_offline(3,:,iegl(i)%id)=swild12(:,i) !temp_elem, n+1
+                   if(m==2.and.n==6) ts_offline(4,:,iegl(i)%id)=swild12(:,i) !salt_elem, n+1
+                 endif
+               enddo
+             elseif(nouts_schout(n)==ns_global) then
+               do i=1,ns_global
+                 if(isgl(i)%rank==myrank) then
+                   if(n==3) su2(:,isgl(i)%id)=swild12(:,i) !hvel_side
+                   if(n==4) sv2(:,isgl(i)%id)=swild12(:,i) !hvel_side
+                 endif
+               enddo !i
+             endif !nouts_schout
+           endif !ndim_schout
+        enddo !n
+      enddo !m
+      deallocate(swild11,swild12)
 
 !     Deal with junks
       where(abs(dfh)>1.d3) dfh=1.d-6
@@ -8310,26 +8172,26 @@
         !not barrier
         smax=maxval(dp(elnode(1:i34(i),i)))+slr_elev !max depth with SLR
         smin=minval(dp(elnode(1:i34(i),i)))+slr_elev !min depth
-        if(nwild(i)==1) then !marsh elem
-          if(smax>0.5d0) then !drowned
+        if(nwild(i)>0) then !marsh elem
+          if(smax>drown_marsh(nwild(i))) then !drowned
             imarsh(i)=0
 !            Cdp(elnode(1:i34(i),i))=0.001d0
 !            Cd(elside(1:i34(i),i))=0.001d0
 !            rough_p(elnode(1:i34(i),i))=1.d-4
           endif !smax
         else !non-marsh elem @last step
-          if(smax<=0.d0.and.smin>=-1.d0) then !create marsh
+          if(smax<=create_marsh_max.and.smin>=create_marsh_min) then !create marsh
             ifl=0
             loop16: do j=1,i34(i)
               nd=elnode(j,i)
               do m=1,nne(nd)
                 ie=indel(m,nd)
-                if(nwild(ie)==1) then !not barrier
-                  ifl=1; exit loop16
+                if(nwild(ie)>0) then !not barrier
+                  ifl=nwild(ie); exit loop16
                 endif
               enddo !m
             end do loop16
-            if(ifl==1) imarsh(i)=1
+            if(ifl>0) imarsh(i)=ifl
           endif !smax
         endif !nwild
       enddo !i=1,ne
@@ -8347,12 +8209,16 @@
       do i=1,np
         do j=1,nne(i)
           ie=indel(j,i)
-          if(imarsh(ie)==1) then !iveg/=0
-            veg_di(i)=veg_di0
-            veg_h(i)=veg_h0
-            veg_nv(i)=veg_nv0
-            veg_cd(i)=veg_cd0
-            veg_alpha0(i)=veg_di0*veg_nv0*veg_cd0/2.d0
+          if(imarsh(ie)>0) then !iveg/=0
+            if(imarsh(i)>nmarsh_types) then
+              write(errmsg,*)'STEP: imarsh(i)>nmarsh_',iplg(i),imarsh(i)
+              call parallel_abort(errmsg)
+            endif
+            veg_di(i)=veg_di0(imarsh(i))
+            veg_h(i)=veg_h0(imarsh(i))
+            veg_nv(i)=veg_nv0(imarsh(i))
+            veg_cd(i)=veg_cd0(imarsh(i))
+            veg_alpha0(i)=veg_di0(imarsh(i))*veg_nv0(imarsh(i))*veg_cd0(imarsh(i))/2.d0
           endif !imarsh
 
           !drowned marsh: veg_di etc =0

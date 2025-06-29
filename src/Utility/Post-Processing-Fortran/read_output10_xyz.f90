@@ -214,7 +214,7 @@
       it_char=adjustl(it_char)
       leng=len_trim(it_char)
       file62='out2d_'//it_char(1:leng)//'.nc'
-      iret=nf90_open(trim(adjustl(file62)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid4)
+      iret=nf90_open(trim(adjustl(file62)),NF90_NOWRITE,ncid4)
       !time is double
       iret=nf90_inq_varid(ncid4,'time',itime_id)
       iret=nf90_get_var(ncid4,itime_id,timeout,(/1/),(/nrec/))
@@ -244,7 +244,7 @@
         file64=file62
       endif
 
-      iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+      iret=nf90_open(trim(adjustl(file63)),NF90_NOWRITE,ncid)
       iret=nf90_inq_varid(ncid,varname(1:len_var),ivarid1)
       if(iret/=nf90_NoErr) stop 'Var not found'
       iret=nf90_Inquire_Variable(ncid,ivarid1,ndims=ndims,dimids=dimids)
@@ -258,7 +258,7 @@
       if(idims(ndims)/=nrec) stop 'last dim is not time'
 
       if(ivs==2) then !vector
-        iret=nf90_open(trim(adjustl(file64)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+        iret=nf90_open(trim(adjustl(file64)),NF90_NOWRITE,ncid2)
         if(iret/=nf90_NoErr) stop 'Failed to open file64'
         iret=nf90_inq_varid(ncid2,varname2(1:len_var),ivarid2)
         if(iret/=nf90_NoErr) stop 'Var2 not found'
