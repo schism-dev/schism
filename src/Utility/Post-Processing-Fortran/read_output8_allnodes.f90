@@ -395,9 +395,9 @@
           write(12,*)ne,np
           do i=1,np
             if(k==2) then !max
-              write(12,*)i,x(i),y(i),rstat2d(k,i),time_stat(i)
+              write(12, '(i12, 20(1x, e18.8))') i,x(i),y(i),rstat2d(k,i),time_stat(i)
             else
-              write(12,*)i,x(i),y(i),rstat2d(k,i)
+              write(12,'(i12, 20(1x, e18.8))') i,x(i),y(i),rstat2d(k,i)
             endif
           enddo !i
           do i=1,ne
