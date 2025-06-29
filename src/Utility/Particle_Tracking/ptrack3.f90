@@ -71,7 +71,7 @@
 
 !...  definition of variables
 !...
-      module global
+      module global_ptrack
         implicit none
         public
 
@@ -113,11 +113,11 @@
         real(kind=dbl_kind),save, allocatable :: uu1(:,:),vv1(:,:),ww1(:,:),uu2(:,:),vv2(:,:),ww2(:,:)
         real*8,save, allocatable :: wnx1(:),wnx2(:),wny1(:),wny2(:),hf1(:,:),vf1(:,:),hf2(:,:),vf2(:,:)
         real*8,save, allocatable :: hvis_e(:,:)
-      end module global
+      end module global_ptrack
 
 !...  Main program
       program ptrack
-      use global
+      use global_ptrack
       use netcdf
       use compute_zcor
       use schism_geometry_mod
@@ -312,7 +312,7 @@
       write(ifile_char,'(i12)') ifile
       ifile_char=adjustl(ifile_char); len_char=len_trim(ifile_char)
       file63='schout_'//ifile_char(1:len_char)//'.nc'
-      iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+      iret=nf90_open(trim(adjustl(file63)),NF90_NOWRITE,ncid)
       if(iret/=nf90_NoErr) stop '1st stack not opened'
       iret=nf90_inq_varid(ncid,'elev',ielev_id)
       if(iret/=nf90_NoErr) stop 'elev not found'
@@ -694,7 +694,7 @@
         write(ifile_char,'(i12)') ifile
         ifile_char=adjustl(ifile_char); len_char=len_trim(ifile_char)
         file63='schout_'//ifile_char(1:len_char)//'.nc'
-        iret=nf90_open(trim(adjustl(file63)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+        iret=nf90_open(trim(adjustl(file63)),NF90_NOWRITE,ncid)
         if(iret/=nf90_NoErr) stop 'schout not opened (2)'
         !time is double
         iret=nf90_inq_varid(ncid,'time',itime_id)
@@ -1348,7 +1348,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       subroutine area_coord(nnel,xt,yt,arco)
-      use global, only : dbl_kind,elnode,area,x,y
+      use global_ptrack, only : dbl_kind,elnode,area,x,y
       implicit real(kind=dbl_kind)(a-h,o-z),integer(i-n)
       integer, intent(in) :: nnel
       real(kind=dbl_kind), intent(in) :: xt,yt
@@ -1381,7 +1381,7 @@
 !********************************************************************
 !
       subroutine levels
-      use global
+      use global_ptrack
       use compute_zcor
       implicit real(kind=dbl_kind)(a-h,o-z),integer(i-n)
 
@@ -1463,7 +1463,7 @@
       subroutine quicksearch(iloc,idt,ipar,nnel0,jlev0,time,x0,y0,z0,xt,yt,zt,nnel1,jlev1, &
      &nodel2,arco,zrat,nfl,etal,dp_p,ztmp,kbpl,ist2,inbr2,rnds,pbeach)
 
-      use global
+      use global_ptrack
       use compute_zcor
       implicit real(kind=dbl_kind)(a-h,o-z),integer(i-n)
 
@@ -1817,7 +1817,7 @@
 !            xp,yp: point to be tested
 !     Outputs:
 !            inside: 1, inside
-      use global, only : small1
+      use global_ptrack, only : small1
       implicit real*8(a-h,o-z)
       integer, intent(in) :: i34
       real*8, intent(in) :: x(i34),y(i34),xp,yp

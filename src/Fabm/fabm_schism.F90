@@ -11,8 +11,8 @@
 !> @author Jan Kossack <jan.kossack@hereon.de>
 !> @author Wang Zhenggui
 
-!> @copyright Copyright 2021-2022 Virginia Institute of Marine Science
 !> @copyright Copyright 2021-2024 Helmholtz-Zentrum hereon GmbH
+!> @copyright Copyright 2021-2022 Virginia Institute of Marine Science
 !> @copyright Copyright 2017-2021 Helmholtz-Zentrum Geesthacht GmbH
 !
 ! @license dual-licensed under the Apache License, Version 2.0
@@ -249,7 +249,7 @@ subroutine fabm_schism_init_model(ntracers)
     call get_param('schism_fabm.in','background_extinction',2,tmp_int,fs%background_extinction,tmp_string)
     call get_param('schism_fabm.in','par_fraction',2,tmp_int,fs%par_fraction,tmp_string)
   else
-    call driver%log_message('skipped reading non-existent "'// &
+    call driver%log_message('skipped reading optional "'// &
       in_dir(1:len_in_dir)//'schism_fabm.in"')
   end if
 
@@ -385,7 +385,8 @@ subroutine fabm_schism_init_stage2
     if (kbe(i) > 1) fs%mask(1:kbe(i),i) = 1
   enddo
 #endif
-  
+
+#ifdef _HAS_MASK_  
 #if _FABM_API_VERSION_ < 1
 #ifndef _FABM_HORIZONTAL_MASK_
   call fabm_set_mask(fs%model, fs%mask, fs%mask_hz)
@@ -397,6 +398,7 @@ subroutine fabm_schism_init_stage2
   call fs%model%set_mask(fs%mask, fs%mask_hz)
 #else
   call fs%model%set_mask(fs%mask_hz)
+#endif
 #endif
 #endif
 

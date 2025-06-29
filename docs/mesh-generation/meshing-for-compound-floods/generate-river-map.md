@@ -1,42 +1,42 @@
 ## Scripts
-[RiverMapper](https://github.com/schism-dev/RiverMeshTools/tree/main/RiverMapper) is available from the [RiverMeshTools repository](https://github.com/schism-dev/RiverMeshTools) under schism-dev.
-
+[RiverMapper](https://github.com/schism-dev/RiverMeshTools/tree/main/RiverMapper) is available in the [RiverMeshTools repository](https://github.com/schism-dev/RiverMeshTools) maintained by schism-dev.
 
 ## Usage
 RiverMapper requires two inputs:
 
-1. \*.tif, which are DEM tiles in lon/lat from one or more sources.
+1. \*.tif files — DEM tiles in lon/lat coordinates, from one or more sources.
 
-2. a shapefile with a 'LineString' type, which contains a 1D river network.
+2. A shapefile of 'LineString' type, representing a 1D river network.
 
-!!!Note 
-    The 1D river network can be any reasonable approximation of the thalwegs. It can be:
+!!!Note
+    The 1D river network can be any reasonable approximation of the thalwegs. It may be:
     <ul>
-        <li>extracted from DEM using the method presented in the [previous section](./extract-thalweg.md)</li>
-        <li>or duplicated from the river network of a hydrological model such as the National Water Model</li>
-        <li>or manually drawn for [quick local touch-ups]()</li>
+        <li>Extracted from DEMs using the method described in the [previous section](./extract-thalweg.md)</li>
+        <li>Copied from the river network of a hydrological model, such as the National Water Model</li>
+        <li>Manually drawn for [quick local touch-ups]()</li>
     </ul>
 
 The outputs include:
 
-- "total_river_arcs.map", which contains river arcs to be used for the final meshing in SMS.
+- `total_river_arcs.map` — river arcs used for final meshing in SMS.
 
-- other \*.map files for diagnostic purposes.
+- Additional \*.map files for diagnostic purposes.
 
 A sample output looks like this:
 
-![Sample river map](../../assets/sample-river-map.png) 
+![Sample river map](../../assets/sample-river-map.png)
 
 
 ## Sample applications
-To test the RiverMapper tool, you can start by extracting the "RiverMapper_Samples/" directory from [RiverMapper_Samples.tar](http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar).
-Find the following two subdirectories: "Serial" and "Parallel", which provide sample applications for meshing watershed rivers in a smaller domain and a larger domain respectively.
-Each subdirectory contains a sample Python script and the necessary input files.
+To test the RiverMapper tool, begin by extracting the "RiverMapper_Samples/" directory from [RiverMapper_Samples.tar](http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar).
 
-Note that these two samples use the default settings suitable for small watershed rivers that are 
-narrower than a few hundred meters.
-Similar settings are used in the latest version of NOAA's operational forecast [STOFS3D Atlantic](https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/).
-If you are interested in meshing rivers with a wider range of widths, check samples with more parameter settings [below](#more-parameterization).
+Inside, you’ll find two subdirectories: "Serial" and "Parallel", which demonstrate sample applications for meshing watershed rivers in small and large domains, respectively.  
+Each subdirectory contains a sample Python script along with the required input files.
+
+These two samples use default settings tailored for small watershed rivers typically narrower than a few hundred meters.  
+Similar configurations are employed in the latest version of NOAA's operational forecast system, [STOFS3D Atlantic](https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/).
+
+If you're interested in meshing rivers with a broader range of widths, see additional parameterized examples [below](#more-parameterization).
 
 
 ### Meshing watershed rivers in a small domain (Serial mode)

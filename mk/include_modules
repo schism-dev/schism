@@ -2,6 +2,10 @@
 # NO_PARMETIS = yes
 # EXEC := $(EXEC)_NOPM
 
+# Share memory communicator
+# SH_MEM_COMM = yes
+# EXEC := $(EXEC)_SH_MEM_COMM
+
 # Old nc output option (each rank dumps its own data)
 # USE_OLDIO = yes
 # EXEC := $(EXEC)_OLDIO
@@ -16,9 +20,9 @@
 # USE_ATMOS = yes
 # EXEC := $(EXEC)_ATMOS
 
-# Use NWM BMI for source and some b.c.
-# USE_NWM_BMI = yes
-# EXEC := $(EXEC)_NWM_BMI
+# Build a library that can be used from BMI, with sources and some b.c. provided by BMI
+# USE_BMI = yes
+# EXEC := $(EXEC)_BMI
 
 # Precip/evaporation model
 # USE_PREC_EVAP = yes

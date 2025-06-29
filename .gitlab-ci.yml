@@ -1,0 +1,35 @@
+# GitLab CI configuration file for building SCHISM in an ESMF
+# docker image based on ubuntu/gfortran/mpich
+# 
+# SPDX-FileCopyrightText: 2022-2025 Helmholtz-Zentrum hereon
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
+
+stages:
+    - build
+
+variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    VERSION: v8.4.0
+    CONTAINER_REGISTRY_IMAGE: $CI_REGISTRY_IMAGE/schism:esmf${VERSION}-gfortran-${COMMUNICATOR}
+
+.base:
+    image: docker:20.10.22
+    services:
+        - docker:20.10.22-dind
+    parallel:
+        matrix:
+            - COMMUNICATOR: ["openmpi", "mpich"]
+    allow_failure: false
+    interruptible: true
+
+build:
+    extends: .base
+    stage: build
+    before_script: 
+        - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+
+    script:
+        - docker build -t ${CONTAINER_REGISTRY_IMAGE} --build-arg VERSION=${VERSION} --build-arg COMMUNICATOR=${COMMUNICATOR} .
+        - docker push ${CONTAINER_REGISTRY_IMAGE}

@@ -35,6 +35,9 @@
 
 ! # of vertical bins in vegetation module (used only if iveg/=0)
   nbins_veg_vert = 2
+  
+! # of marsh types (used only if USE_MARSH)
+  nmarsh_types = 2
 
 ! Global output controls
   nspool = 36 !output step spool
@@ -123,10 +126,8 @@
 !-----------------------------------------------------------------------
 ! Main ramp option
 !-----------------------------------------------------------------------
-!  nramp = 1 !ramp-up option (1: on; 0: off)
   dramp = 1. !ramp-up period in days for b.c. etc (no ramp-up if <=0)
 
-!  nrampbc = 0 !ramp-up flag for baroclinic force
   drampbc = 0. !ramp-up period in days for baroclinic force
 
 !-----------------------------------------------------------------------
@@ -209,7 +210,6 @@
            !icou_elfe_wwm/=0 and nchi=1. If icou_elfe_wwm=0, set iwbl=0): 
            !1-modified Grant-Madsen formulation; 2-Soulsby (1997)
   hmin_radstress = 1. !min. total water depth used only in radiation stress calculation [m]
-!  nrampwafo = 0       !ramp-up option for the wave forces (1: on; 0: off)
   drampwafo = 0.      !ramp-up period in days for the wave forces (no ramp-up if <=0)
   turbinj = 0.15      !% of depth-induced wave breaking energy injected in turbulence 
                       !(default: 0.15 (15%), as proposed by Feddersen, 2012)
@@ -294,11 +294,10 @@
 ! than once, and the code will accumulate the volumes; for mass conc, 
 ! values are applied at _net_ source elem (no summation for conc).
 
-! If USE_NWM_BMI is on with if_source/=0, some parts of the reading and some b.c. will be bypassed (but the inputs
+! If USE_BMI is on with if_source/=0, some parts of the reading and some b.c. will be bypassed (but the inputs
 ! will still be needed).
 !-----------------------------------------------------------------------
   if_source = 0
-!  nramp_ss = 1 !needed if if_source=1; ramp-up flag for source/sinks
   dramp_ss = 2 !needed if if_source/=0; ramp-up period in days for source/sinks (no ramp-up if <=0)
 
 !----------------------------------------------------------------------
@@ -546,18 +545,18 @@
   small_elad = 1.e-4  !small (inactive at the moment)
 
 !-----------------------------------------------------------------------
-! Atmos. option. Use nws=2 and USE_ATMOS for coupling with atmospheric model.
+! Atmos. option. Use nws=4 and USE_ATMOS for coupling with atmospheric model.
 ! If nws=0, no atmos. forcing is applied. If nws=1, atmos.
 ! variables are read in from wind.th. If nws=2, atmos. variables are
 ! read in from sflux_ files.
-! If nws=4, ascii format is used for wind and atmos. pressure at each node (see source code).
+! If nws=4, atmos.nc (interpolated onto hgrid.gr3) is used for forcing.
 ! If nws=-1 (requires USE_PAHM), use Holland parametric wind model (barotropic only with wind and atmos. pressure).
 !  In this case, the Holland model is called every step so wtiminc is not used. An extra 
 !  input file is needed: hurricane-track.dat, in addition to a few parameters below.
 !
 ! Stress calculation:
 ! If nws=2, ihconsv=1 and iwind_form=0, the stress is calculated from heat exchange
-! routine; in this case USE_ATMOS cannot be on.
+! routine.
 ! Otherwise if iwind_form=-1, the stress is calculated from Pond & Pichard formulation;
 ! if iwind_form=1, Hwang (2018) formulation (Cd tapers off at high wind).
 ! If WWM is enabled and icou_elfe_wwm>0 and iwind_form=-2 or -3, stress is overwritten by WWM:
@@ -567,7 +566,6 @@
 !-----------------------------------------------------------------------
   nws = 0 
   wtiminc = 150. !time step for atmos. forcing. Default: same as dt
-!  nrampwind = 1 !ramp-up option for atmos. forcing
   drampwind = 1. !ramp-up period in days for wind (no ramp-up if <=0)
   iwindoff = 0 !needed only if nws/=0; '1': needs windfactor.gr3
   iwind_form = 1 !needed if nws/=0
@@ -575,10 +573,9 @@
 
 !-----------------------------------------------------------------------
 ! Heat and salt exchange using Zeng's (default) or Fairall (USE_BULK_FAIRALL) scheme.
-! isconsv=1 needs ihconsv=1; ihconsv=1 needs nws=2.
-! If isconsv=1, need to compile with precip/evap module turned on.
-! If at least one of ihconsv and isconsv is set to 1,
-! locally turning off air-sea exchange in shallow waters (<0.25 m) is recommended.
+! To enable salt exchange, recompile with precip/evap module turned on.
+! In this case, ihconsv must =1; ihconsv=1 needs nws=2,4.
+! If ihconsv/=0, locally turning off air-sea exchange in shallow waters (<0.25 m) is recommended.
 ! Options for locally turning off heat/salt exchange are specified by
 ! i_hmin_airsea_ex, i_hmin_salt_ex respectively:
 !   0: not turned off locally;
@@ -590,12 +587,16 @@
 !   0.2 m is recommended for both "1" and "2"
 !-----------------------------------------------------------------------
   ihconsv = 0 !heat exchange option
-  isconsv = 0 !evaporation/precipitation model
+!  isconsv = 0 !evaporation/precipitation model
   i_hmin_airsea_ex = 2 ! no effect if ihconsv=0 
   hmin_airsea_ex = 0.2 ![m], no effect if ihconsv=0 
-  i_hmin_salt_ex = 2 ! no effect if isconsv=0 
-  hmin_salt_ex = 0.2 ![m], no effect if isconsv=0 
+  i_hmin_salt_ex = 2 ! no effect if PREC_EVAP is on
+  hmin_salt_ex = 0.2 ![m], no effect if PREC_EVAP is on
   iprecip_off_bnd = 0 !if /=0, precip will be turned off near land bnd
+  !watertype_* below are used for water type '8'
+  watertype_rr = 0.58
+  watertype_d1 = 0.35 
+  watertype_d2 = 23.
 
 !-----------------------------------------------------------------------
 ! Option to add a sediment layer for the buffer effect on temperature
@@ -607,6 +608,7 @@
 
 !-----------------------------------------------------------------------
 ! Turbulence closure.
+! itur=4 requires building with GOTM (input in gotmturb.nml). In this case, mid, stab are not used. 
 !-----------------------------------------------------------------------
   itur = 3 !Default: 0
   dfv0 = 1.e-2 !needed if itur=0
@@ -614,6 +616,11 @@
   mid = 'KL' !needed if itur=3,5. Use KE if itur=5 
   stab = 'KC' !needed if itur=3 or 5. Use 'GA' if turb_met='MY'; otherwise use 'KC'. 
   xlsc0 = 0.1 !needed if itur=3 or 5. Scale for surface & bottom mixing length (>0)
+  icompute_cpsi3 = 0 !needed if itur=3,5; optional to compute c_psi3
+  !2nd-order stability function coefficient options (options 1 to 7); needed if icompute_cpsi3/=0
+  !5: Canuto A; 6: Canuto B (see misc_subs.F90 for other options)
+  iscnd_coeff = 5 
+  ri_st = 0.25 !needed if icompute_cpsi3/=0. Try [0.1,0.25]
 
 !-----------------------------------------------------------------------
 ! Sponge layer for elevation and vel.
@@ -735,6 +742,14 @@
 ! Marsh model parameters (only if USE_MARSH is on)
 !----------------------------------------------------------------------
   slr_rate = 120. !sea-level rise rate in mm/yr, times morphological acceleration if used
+  veg_di0 = 0.1,0.1 !(1:nmarsh_types) [m]; diamters for each marsh type
+  veg_h0 = 0.1,0.1 ![m] heights for each marsh type
+  veg_nv0 = 0.1,0.1 ![m^-2] density for each marsh type
+  veg_cd0 = 1.,1. ![-] form drag coefficients for each marsh type
+  drown_marsh = 0.5,0. ![m] depth at which marsh will be drowned
+  !min/max depth interval favorable for marsh creation/migration
+  create_marsh_min = -1. ![m]
+  create_marsh_max = 0. ![m] 
 
 !----------------------------------------------------------------------
 ! Vegetation model
@@ -1074,6 +1089,19 @@
 !  iof_ice(6)= 0 !ice volume [m] {iceTracer_1}   2D
 !  iof_ice(7)= 0 !ice concentration [-] {iceTracer_2}  2D
 !  iof_ice(8)= 0 !snow volume [m] {iceTracer_3}  2D
+
+!-----------------------------------------------------------------------
+! Multi-class ice module outputs (if USE_MICE is on)
+!-----------------------------------------------------------------------
+!  iof_mice(1)= 0 !divergence @ elem ('Delta') [1/sec] {iceStrainRate}  2D
+!  iof_mice(2)= 0 !ice advective velcoity vector [m/s] {iceVelocityX,Y}  2D vector
+!  iof_mice(3)= 0 !net heat flux to ocean (>0 warm up SST) [W/m/m] {iceNetHeatFlux}  2D
+!  iof_mice(4)= 0 !net fresh water flux to ocean (>0 freshens up SSS) [kg/s/m/m] {iceFreshwaterFlux}  2D
+!  iof_mice(5)= 0 !ice temperature [C] at air-ice interface {iceTopTemperature}  2D
+
+!  iof_mice(6)= 0 !ice volume [m] {iceTracer_1}   2D
+!  iof_mice(7)= 0 !ice concentration [-] {iceTracer_2}  2D
+!  iof_mice(8)= 0 !snow volume [m] {iceTracer_3}  2D
 
 !-----------------------------------------------------------------------
 ! Analysis module outputs (USE_ANALYSIS)

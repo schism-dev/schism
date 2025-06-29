@@ -2,6 +2,11 @@
 '''
 Load bathymetry for SCHISM hgrid
 
+Recommended usage:
+Run this script in the SCHISM source code folder where it originally resides.
+Select a suitable pre-configuration (e.g., stofs3d_v8()) or start a new one,
+set parameters at the beginning of the function, then call it in main()
+
 Needs to prepare the following files/folder:
    - hgrid.ll: hgrid in lon/lat
 
@@ -21,23 +26,32 @@ Needs to prepare the following files/folder:
 
 import os
 import sys
+import socket
 import re
 import time
 import json
 import errno
+from pathlib import Path
 from copy import deepcopy
+from glob import glob
 
 import numpy as np
 from mpi4py import MPI
 import geopandas as gpd
-from pylib import load_bathymetry, zdata
+from pylib import load_bathymetry, zdata, convert_dem_format
 
+import rasterio
+from rasterio.warp import calculate_default_transform, reproject, Resampling
 
 # Attempt to import experimental grid reader for speed-up
-try:
-    from pylib_experimental.schism_file import cread_schism_hgrid as read_hgrid
-except ImportError:
-    from pylib import schism_grid as read_hgrid
+if 'gulf' in socket.gethostname():
+    from pylib_experimental.schism_file import cread_schism_hgrid as schism_read
+    print('Using c++ function to accelerate hgrid reading')
+else:
+    from pylib import schism_grid as schism_read
+    print('Using python function to read hgrid')
+
+script_dir = os.path.dirname(os.path.realpath(__file__))
 
 
 # ---------------------- MPI Utilities ----------------------
@@ -156,6 +170,17 @@ def set_final_bathymetry(grid_data, gd, fnames_sort, fnames0):
     return did, dname
 
 
+def prep_dir(wdir, dem_json_list, region_shpfile_list):
+    """
+    Prepare directory for output files.
+    """
+    os.system(f'cp {__file__} {wdir}')
+    for dem_json_file in dem_json_list:
+        os.system(f'cp {script_dir}/{dem_json_file} {wdir}')
+    for region_shpfile in region_shpfile_list:
+        os.system(f'cp {script_dir}/{Path(region_shpfile).stem}.* {wdir}')
+
+
 def write_diagnostics(grdout, did, dname):
     """
     Write diagnostic files with DEM IDs and names.
@@ -176,7 +201,7 @@ def pload_dem(grd, grdout, dem_json, dem_dir, reverse_sign=True):
 
     # read inputs
     if myrank == 0:
-        gd = read_hgrid(grd)
+        gd = schism_read(grd)
         gd.dp[:] = -9999  # Reset depth to -9999
         dem_info_dict = json.load(open(dem_json, encoding='utf-8'))
         check_dem_files(dem_info_dict.keys(), dem_dir)
@@ -214,11 +239,13 @@ def pload_dem(grd, grdout, dem_json, dem_dir, reverse_sign=True):
         return None
 
 
-def max_dp_in_region(grid_list: list, region_file: str, primary_grid_idx: int = 0):
+def max_dp_in_region(grid_list: list, region_file: str, primary_grid_idx: int = 0, reverse_sign: bool = False):
     """
     In a specified region, copy the depth of the first grid in a list
     and change it to the maximum depth of all grids.
     If region_file is None, the operation applies to the entire grid.
+
+    if reverse_sign is True, the minimum depth is taken instead of the maximum.
     """
 
     dp = deepcopy(grid_list[primary_grid_idx].dp)
@@ -233,8 +260,11 @@ def max_dp_in_region(grid_list: list, region_file: str, primary_grid_idx: int = 
         ).index.values
         print(f'{len(points_in_region)} nodes in region.')
 
-        dp_max = np.max([gd.dp for gd in grid_list], axis=0)
-        dp[points_in_region] = dp_max[points_in_region]
+        if reverse_sign:
+            dp_processed = np.min([gd.dp for gd in grid_list], axis=0)
+        else:
+            dp_processed = np.max([gd.dp for gd in grid_list], axis=0)
+        dp[points_in_region] = dp_processed[points_in_region]
     else:
         dp = np.max([gd.dp for gd in grid_list], axis=0)
 
@@ -246,8 +276,8 @@ def sample_max_dp_usage():
     '''Sample usage of the max_dp_in_region function.'''
 
     wdir = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_test/Bathy_edit/DEM_loading/'
-    gd1 = read_hgrid(f'{wdir}/Original/hgrid.ll.dem_loaded.mpi.gr3')
-    gd2 = read_hgrid(f'{wdir}/BlueTopo/hgrid.ll.dem_loaded.mpi.gr3')
+    gd1 = schism_read(f'{wdir}/Original/hgrid.ll.dem_loaded.mpi.gr3')
+    gd2 = schism_read(f'{wdir}/BlueTopo/hgrid.ll.dem_loaded.mpi.gr3')
 
     dp = max_dp_in_region([gd1, gd2], region_file=f'{wdir}/v18_s2_v1_polys_dissolved.shp')
 
@@ -270,7 +300,7 @@ def stofs3d_v6():
 
 def stofs3d_v7_hercules():
     """
-    Similar to stofs3d_v7 below, but with minor tweaks 
+    Similar to stofs3d_v7 below, but with minor tweaks
     to resolve some unknown issues on Hercules.
     """
     # ----------- inputs -------------------
@@ -301,7 +331,7 @@ def stofs3d_v7_hercules():
     # On root process, take the maximum depth from loaded_grids
     if myrank == 0:
         print(f'Taking the maximum depth from loaded grids: {loaded_grid_fnames}')
-        loaded_grids = [read_hgrid(f) for f in loaded_grid_fnames]
+        loaded_grids = [schism_read(f) for f in loaded_grid_fnames]
         dp = max_dp_in_region(loaded_grids, region_file=dem_region_shpfile)
         loaded_grids[0].save(output_fname, value=dp)
 
@@ -324,17 +354,22 @@ def stofs3d_v7():
     # ----------- inputs -------------------
     # wdir = '/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/DEM_loading_example/'
     # dem_dir = '/work2/noaa/nos-surge/feiye/npz2/'
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_test/Bathy_edit/DEM_loading/'
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I13b/Bathy_edit/DEM_loading/'
     dem_dir = '/sciclone/schism10/Hgrid_projects/DEMs/npz2/'
     dem_json_list = [
-        f'{wdir}/DEM_info_original.json',
-        f'{wdir}/DEM_info_with_bluetopo.json',
+        'DEM_info_original.json',
+        'DEM_info_with_bluetopo.json',
     ]
-    dem_region_shpfile = f'{wdir}/v18_s2_v1_polys_dissolved.shp'
+    dem_region_shpfile = 'v18_s2_v1_polys_dissolved.shp'
     output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
     # ---------------------------------------
 
     comm, _, myrank = initialize_mpi()
+    if myrank == 0:  # copy this script to the working directory to keep a record
+        os.system(f'cp {__file__} {wdir}')
+        for dem_json_file in dem_json_list:
+            os.system(f'cp {dem_json_file} {wdir}')
+        os.system(f'cp {dem_region_shpfile} {wdir}')
 
     loaded_grids = []
     for dem_json in dem_json_list:
@@ -361,21 +396,31 @@ def stofs3d_v8_LA():
     Load bathymetry for STOFS3D-v8 Louisiana.
 
     Two DEM sets are used to load bathymetry from different sources: v2a and v3a.
-        DEM_info.json v2a: v1 (STOFS-3D-Atl v6) + Bluetopo
-            (locally applied in LA, mainly Mississippi River)¬
+        DEM_info.json v2a: v1 (DEM_info_original.json, used for STOFS-3D-Atl v6) +
+                           Bluetopo, same as DEM_info_with_BlueTopo.json
+
         DEM_info.json v3a: v1 + NGOM_CoNED_2022 (mostly LA, but including Mobile Bay, AL)¬
+
+        Take the maximum depth from the two grids
+
+        Note: since the first grid is the primary grid by default,
+        Bluetopo is applied in the entire domain where it has coverage for the first grid.
+        This is different from STOFS3D-v7 or STOFS3D-v8.
     """
     # dem_dir = '/work2/noaa/nos-surge/feiye/npz2/'
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I09/Bathy_edit/DEM_loading_new/'
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I20/Bathy_edit/DEM_loading/'
     dem_dir = '/sciclone/schism10/Hgrid_projects/DEMs/npz2/'
-    dem_json_list = [f'{wdir}/DEM_info_v2a.json', f'{wdir}/DEM_info_v3a.json']
-    dem_region_shpfile = f'{wdir}/v18_s2_v1_polys_dissolved.shp'
+    dem_json_list = ['DEM_info_v2a.json', 'DEM_info_v3a.json']
+    dem_region_shpfile = 'v18_s2_v1_polys_dissolved.shp'
     output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
     # ---------------------------------------
 
     comm, _, myrank = initialize_mpi()
     if myrank == 0:  # copy this script to the working directory to keep a record
         os.system(f'cp {__file__} {wdir}')
+        for dem_json_file in dem_json_list:
+            os.system(f'cp {dem_json_file} {wdir}')
+        os.system(f'cp {dem_region_shpfile} {wdir}')
 
     loaded_grids = []
     for dem_json in dem_json_list:
@@ -397,5 +442,169 @@ def stofs3d_v8_LA():
     comm.Barrier()
 
 
+def stofs3d_v7p2_original():
+    """
+    Load bathymetry for STOFS3D-v7.2, using the original set of DEMs only:
+    """
+    # ----------- inputs -------------------
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I15g_v7/Bathy_edit/DEM_loading/'
+    dem_dir = '/sciclone/schism10/Hgrid_projects/DEMs/npz2/'
+    dem_json_list = [
+        'DEM_info_original_patched.json',
+    ]
+    output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
+    # ---------------------------------------
+
+    comm, _, myrank = initialize_mpi()
+    if myrank == 0:  # copy this script to the working directory to keep a record
+        prep_dir(wdir, dem_json_list, region_shpfile_list=[])
+        print(f'preparing files in {wdir}, DEM list: {dem_json_list}')
+
+    comm.Barrier()
+
+    loaded_grids = []
+    for dem_json in dem_json_list:
+        # Load grids in parallel
+        loaded_grids.append(
+            pload_dem(grd=f'{wdir}/hgrid.ll', grdout=None, dem_json=f'{wdir}/{dem_json}',
+                      dem_dir=dem_dir, reverse_sign=True)  # returns None for non-root
+        )  # On non-root processes, loaded_grids only contains None
+        comm.Barrier()  # wait for all cores to finish populating loaded_grids
+        if myrank == 0:
+            print(f'---------Loaded grid from {dem_json}----------\n')
+
+    if myrank == 0:
+        print(f'processing loaded grids: {loaded_grids}')
+        hgrid_final = deepcopy(loaded_grids[0])
+        hgrid_final.save(output_fname)
+
+    comm.Barrier()
+
+
+def stofs3d_v8():
+    """
+    Load bathymetry for STOFS3D-v8 and STOFS3D-v7.2.
+
+    Needs hgrid.ll in the working directory.
+
+    Three DEM sets are used to load bathymetry from different sources.
+    The first one corresponds to v6, the second one includes BlueTopo.
+    The third one includes NGOM_CoNED_2022.
+    This leads to three bathymetry-loaded grids.
+
+    A region (Louisiana) is defined where the v6 grid seems too shallow.
+    The v8 grid depth takes the larger value from the three grids inside the region,
+    i.e., where BlueTopo and NGOM leads to deeper channels than v6.
+    And it takes the v6 value outside the region.
+    """
+    # ----------- inputs -------------------
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I15a_v7/Bathy_edit/DEM_loading/'
+    dem_dir = '/sciclone/schism10/Hgrid_projects/DEMs/npz2/'
+    dem_json_list = [
+        'DEM_info_original_patched.json',
+        'DEM_info_with_bluetopo.json',
+        'DEM_info_v3a.json',  # v3a has CoNED 2022 NGOM for LA
+        'DEM_info_Statewide.json',  # , v4 added USGS 1M Statewide for CT and RI
+    ]
+    max_dem_region_shpfile = 'bluetopo_regions4.shp'
+    min_dem_region_shpfile = 'breakwaters_poly.shp'
+    output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
+    # ---------------------------------------
+
+    comm, _, myrank = initialize_mpi()
+    if myrank == 0:  # copy this script to the working directory to keep a record
+        prep_dir(wdir, dem_json_list, [max_dem_region_shpfile, min_dem_region_shpfile])
+        print(f'preparing files in {wdir}, DEM list: {dem_json_list}')
+
+    comm.Barrier()
+
+    loaded_grids = []
+    for dem_json in dem_json_list:
+        # Load grids in parallel
+        loaded_grids.append(
+            pload_dem(grd=f'{wdir}/hgrid.ll', grdout=None, dem_json=f'{wdir}/{dem_json}',
+                      dem_dir=dem_dir, reverse_sign=True)  # returns None for non-root
+        )  # On non-root processes, loaded_grids only contains None
+        comm.Barrier()  # wait for all cores to finish populating loaded_grids
+        if myrank == 0:
+            print(f'---------Loaded grid from {dem_json}----------\n')
+
+    # On root process, take the maximum depth from loaded_grids
+    if myrank == 0:
+        print(f'processing loaded grids: {loaded_grids}')
+        hgrid_final = deepcopy(loaded_grids[0])
+        hgrid_final.dp = max_dp_in_region(
+            loaded_grids[:-1], region_file=f'{wdir}/{max_dem_region_shpfile}')
+        hgrid_final.dp = max_dp_in_region(
+            [hgrid_final, loaded_grids[-1]],
+            region_file=f'{wdir}/{min_dem_region_shpfile}',
+            reverse_sign=True)
+
+        hgrid_final.save(output_fname)
+
+    comm.Barrier()
+
+
+def convert_tif_crs(tif_path, output_path="converted_to_lonlat.tif"):
+    """Prints the original CRS of a GeoTIFF file and converts to WGS84 (lon-lat) if needed."""
+    with rasterio.open(tif_path) as src:
+        original_crs = src.crs
+        print("Original CRS:", original_crs)
+
+        # Check if already in lon-lat (WGS84)
+        if original_crs == "EPSG:4326":
+            print("The file is already in lon-lat (WGS84). No conversion needed.")
+            return
+
+        # Convert to WGS84 (EPSG:4326)
+        transform, width, height = calculate_default_transform(
+            original_crs, "EPSG:4326", src.width, src.height, *src.bounds
+        )
+
+        # Create a new dataset with the transformed data
+        kwargs = src.meta.copy()
+        kwargs.update({
+            "crs": "EPSG:4326",
+            "transform": transform,
+            "width": width,
+            "height": height
+        })
+
+        with rasterio.open(output_path, "w", **kwargs) as dst:
+            for i in range(1, src.count + 1):  # Loop through bands
+                reproject(
+                    source=rasterio.band(src, i),
+                    destination=rasterio.band(dst, i),
+                    src_transform=src.transform,
+                    src_crs=original_crs,
+                    dst_transform=transform,
+                    dst_crs="EPSG:4326",
+                    resampling=Resampling.nearest
+                )
+
+        print(f"Converted file saved as: {output_path}")
+
+
+def sample_convert_dem():
+    """
+    Sample converting *.tif to *.npz,
+    may need:
+        pip install tifffile
+        pip install imagecodecs
+    """
+    # input_tifs = glob('/sciclone/schism10/Hgrid_projects/DEMs/USGS_1M_Stationwide/*.tif')
+    # tif_lonlat_files = []
+    # for tif_file in input_tifs:
+    #     tif_outname = tif_file.replace('.tif', '_lonlat.tif')
+    #     convert_tif_crs(tif_file, tif_outname)
+    #     tif_lonlat_files.append(tif_outname)
+
+    tif_lonlat_files = glob('/sciclone/schism10/Hgrid_projects/DEMs/USGS_1M_Stationwide/*_lonlat.tif')
+    for tif_lonlat_file in tif_lonlat_files:
+        convert_dem_format(tif_lonlat_file, sname=tif_lonlat_file.replace('.tif', '.npz'))
+
+
 if __name__ == '__main__':
-    stofs3d_v8_LA()
+    # sample_convert_dem()
+    # stofs3d_v7p2_original()
+    stofs3d_v8()

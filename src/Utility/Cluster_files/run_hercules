@@ -20,4 +20,7 @@ ulimit -s unlimited
 
 source /home/yjzhang/modules.hercules
 
+#Ufuk suggested the following to avoid hang on large jobs for Intel MPI
+#export FI_MLX_INJECT_LIMIT=0
+
 srun ./pschism_HERCULES_NO_PARMETIS_PREC_EVAP_TVD-VL 7

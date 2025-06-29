@@ -41,8 +41,12 @@ def main():
     # startdate = datetime(2024, 3, 5)
 
     # ------------------------- hardwired inputs for operation--------------------------
-    working_dir = '/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/relocated_source_sink2/'
-    nwm_folder = '/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/original_source_sink/20240305/'
+    #zy-working_dir = '/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/relocated_source_sink2/'
+    #zy-nwm_folder = '/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/original_source_sink/20240305/'
+    working_dir = './'
+    nwm_folder = './'
+
+
     layer = 'conus'
     # ------------------------- end hardwired inputs--------------------------
 
@@ -84,7 +88,7 @@ def main():
     idx = np.argsort(np.array([int(key) for key in source2fid_dict.keys()]))
     # write source time history file
     np.savetxt(f'{working_dir}/vsource.th',
-               np.c_[times, sources[:, idx]], fmt='%10.4f', delimiter=' ')
+               np.c_[times, sources[:, idx]], fmt='%.4f', delimiter=' ')
 
 
 if __name__ == '__main__':

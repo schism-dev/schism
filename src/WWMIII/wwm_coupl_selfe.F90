@@ -148,16 +148,22 @@
               Vint       = Vint + SPSIG(IS)*k_loc*SINTH(ID)*E_loc
             END DO !MDC
 
-            ! Loop on the vertical nodes
-            DO IL = KBP(IP), NVRT
-              ! Here we need to compute z+h of Eq. C.1 of Bennis et al. (2011)
-              ! In her framework, z varies from -h to eta, meaning that z+h corresponds to the distance to the bed
-              ! -ZETA(KBP(IP),IP) corresponds to h, the depth at node IP (not the total water depth)
-              ! Waves
-              z_loc           = ZETA(IL,IP) - ZETA(KBP(IP),IP)
-              USTOKES_loc(IL) = USTOKES_loc(IL) + Uint*DCOSH(2.D0*k_loc*z_loc)/DSINH(kD_loc)**2
-              VSTOKES_loc(IL) = VSTOKES_loc(IL) + Vint*DCOSH(2.D0*k_loc*z_loc)/DSINH(kD_loc)**2
-            END DO !NVRT
+            ! Computing Stokes Drift following Bennis et al. (2011)
+            ! Note that in 2D, the depth-integration is obtained theoretically from the 3D expression of Bennis et al. (2011)
+            IF(kbp(IP)+1 == NVRT) THEN ! 2D
+              USTOKES_loc = USTOKES_loc + Uint*DSINH(2.D0*kD_loc)/(2D0*k_loc*D_loc*DSINH(kD_loc)**2)
+              VSTOKES_loc = VSTOKES_loc + Vint*DSINH(2.D0*kD_loc)/(2D0*k_loc*D_loc*DSINH(kD_loc)**2)
+            ELSE ! 3D
+              ! Loop on the vertical nodes
+              DO IL = KBP(IP), NVRT
+                ! Here, we need to compute z+h of Eq. C.1 of Bennis et al. (2011)
+                ! In her framework, z varies from -h to eta, meaning that z+h corresponds to the distance to the bed
+                ! -ZETA(KBP(IP),IP) corresponds to h, the depth at node IP (not the total water depth)
+                z_loc           = ZETA(IL,IP) - ZETA(KBP(IP),IP)
+                USTOKES_loc(IL) = USTOKES_loc(IL) + Uint*DCOSH(2.D0*k_loc*z_loc)/DSINH(kD_loc)**2
+                VSTOKES_loc(IL) = VSTOKES_loc(IL) + Vint*DCOSH(2.D0*k_loc*z_loc)/DSINH(kD_loc)**2
+              END DO !NVRT
+            END IF ! 2D vs 3D case
           END DO !MSC
 
           ! Surface roller contribution to horizontal Stokes drift velocities

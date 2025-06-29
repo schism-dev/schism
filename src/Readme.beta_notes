@@ -9,6 +9,15 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `2135910d` (23 May 2025): removed 'isconsv' (redundant with PREC_EVAP);
+- `970a5597` (9 May 2025): added new mandatory parameter 'nmarsh_types', and optional: veg_di0,
+                           veg_h0,veg_nv0,veg_cd0,drown_marsh,create_marsh_min,create_marsh_max
+- `be0fcd27` (29 April 2025): removed padding 0's in sflux names (to allow unlimited stacks);
+- `5ff6e6e6` (17 April 2025): added 3 optional parameters under itur=3,5: icompute_cpsi3, iscnd_coeff,ri_st (using steady-state Richardson # to compute c_psi3) 
+- `0c46ec84` (1 Mar 2025): added water type '8', which requires user to specify 'watertype_rr',
+                           'watertype_d[1,2]' in param.nml;
+
+Tag v5.13.0: (12 Feb 2025)
 - `95030324` (17 Sept 2024): added surface T,S restoration (for large-scale long-term runs); 
                              related parameters are iref_ts,ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,
                              ref_ts_tscale,ref_ts_dt, and the input is surface_restore.nc;
@@ -91,7 +100,7 @@ d07d75d (April 21, 2021): added T,S in required inputs for offline transport (to
 b66e554 (April 14, 2021): added ishapiro=2 - Smagorinsky like filter option. In this option, shapiro0 is the coefficient;
 b43afea (April 2, 2021): changed x,y to double in nc outputs (for newer visIT);
 9150d86 (Mar 31, 2021): added a new SAL option (iloadtide=2) using scaling;
-084e149 (Feb 25, 2021): Removed parameters: ibtrack_openbnd, iwindoff, dzb_decay (with hardwire); also
+084e149 (Feb 25, 2021): removed parameters: ibtrack_openbnd, iwindoff, dzb_decay (with hardwire); also
                         removed option for negative roughness. Fixed race condition for marsh module.
 3576c9c (Jan 24, 2021): added new option for source/sink input: if_source=-1 requires source.nc (which
                         includes elem list inside; allows different time steps and # of records for
@@ -613,9 +622,11 @@ git versions:
 149. `045962` (Sept 13, 2023): removed goto in lap.F90
 150. `66242aa` (Sept 13, 2023): removed goto in harm.F90
 151. `5914ae2` (Mar 26, 2024): fix an init error for diffm* (c/o Ufuk)
-161. `ca44ba0` (1 May 2024): fixed bugs in vegetation&marsh module (uninited sav_h0 etc) 
-162. `cfb58a5` [5 July 2024] replace fatal errors with warning in btrack (no intersecting edges). These are exaordinary exceptions that occur rarely.
-163. - `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter;
+152. `ca8f96c` (Dec 2023): updated  GOTM5.2 input (c/o Seaton)
+153. `ca44ba0` (1 May 2024): fixed bugs in vegetation&marsh module (uninited sav_h0 etc) 
+154. `cfb58a5` [5 July 2024] replace fatal errors with warning in btrack (no intersecting edges). These are exaordinary exceptions that occur rarely.
+155. `2f88fc5` (7 Aug 2024): changed horizontal diffusion method to filter;
+156. `c441ace` (12 Dec 2024): added share memory communicator for efficient bcast for if_source/=0;
 
 ================================================================================================
 (D) Auto-test history:

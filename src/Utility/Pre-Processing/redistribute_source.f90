@@ -6,7 +6,7 @@
 !     Works for mixed tri/quads, lon/lat or proj. The code will look for neigboring bnd cells 
 !     (with at least 1 node on land bnd) to spread flow.
 !     Inputs: redistribute_source.in, constants below, hgrid.gr3, source_sink.in.0, vsource.th.0
-!     Output: source_sink.in,vsource.th, msource.th,vsource.bp.out (depth of 1=> new sources)
+!     Output: source_sink.in,vsource.th, msource.th (-9999 for T),vsource.bp.out (depth of 1=> new sources)
 !             Warning messages in warning.out; fatal on screen
 
 !     ifx -CB -O2 -g -traceback -o redistribute_source redistribute_source.f90
@@ -36,7 +36,7 @@
       open(9,file='redistribute_source.in',status='old')      
       read(9,*)lonlat !>0 for lon/lat
       read(9,*)dt !Estimated max time step in .nml
-      read(9,*)nbbox !# of bounding boxes in which to exclude sources
+      read(9,*)nbbox !# of bounding boxes in which to exclude regions from manipulation
       allocate(bbox_ll(2,max(nbbox,1)),bbox_ur(2,max(nbbox,1)))
       do i=1,nbbox
         read(9,*)bbox_ll(:,i),bbox_ur(:,i) !lower-left and upper right coordinates

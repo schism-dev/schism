@@ -13,23 +13,24 @@ import os
 import geopandas as gpd
 
 # ------------------------- inputs ---------------------------
-WDIR = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v23/Clip/'
+WDIR = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v31/Clip/'
 CRS = 'esri:102008'
 
 # manual polygons defined in the coastal coverage,
-# may need to delete some polygons so that they are treated as watershed
+# may need to delete some polygons so that they are treated as watershed,
+# check coastal_remove coverage for polygons to be removed
 coastal_shpfile = f'{WDIR}/inputs/coastal.shp'  # esri:102008
 
 # land boundary + coastal, i.e., watershed region between the coastline and the land boundary
-# as well as manual polygons in the coastal coverage
+# as well as manual polygons in the coastal coverage, remove the land between CB and DB
 lbnd_coastal_shpfile = f'{WDIR}/inputs/lbnd_coastal.shp'  # esri:102008
 
 # use linestring as the levee shapefile
 levee_shpfile = f'{WDIR}/inputs/levee.shp'  # esri:102008
 LEVEE_BUF_DISTANCE = 5
 
-# used to select manual polygons that are supposedly better refined than the auto arcs
-select_nearshore_shpfile = f'{WDIR}/inputs/select_nearshore_v3.shp'  # esri:102008
+# used to select un-refined polygons, which are allowed to be intersected by auto arcs
+select_nearshore_shpfile = f'{WDIR}/inputs/select_nearshore_v4.shp'  # esri:102008
 
 auto_arcs_file = f'{WDIR}/inputs/total_arcs.shp'  # lonlat
 auto_polys_file = f'{WDIR}/inputs/total_river_polys.shp'  # lonlat
@@ -54,7 +55,7 @@ raw_watershed = lbnd_coastal.overlay(coastal, how='difference').dissolve()
 
 # Extract the refined coastal polygons, i.e.,
 # coastal minus the un-refined polyogns (those intersecting the select_nearshore),
-# which are the manual polygons that are supposedly better configured than the auto arcs.
+# Reined polygons are manual polygons supposedly better configured than the auto arcs.
 # It also implies that refined coastal polygons accomodate the connectivity to watershed
 # rivers, e.g., a lake shoreline should have denser nodes where it connects to a river.
 # However, this is not always the case because some manualy polygons are not accurate,

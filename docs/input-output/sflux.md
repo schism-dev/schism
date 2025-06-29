@@ -3,9 +3,11 @@ The `sflux/` dir is required if `nws=2`. In this case, atmoserpic forcings inclu
 There are 4 types of files in sflux/dir; see [this site](http://ccrm.vims.edu/yinglong/wiki_files/NARR/) for sample files.
 
 1. sflux_inputs.txt: This asci file is a namelist
-2. sflux_air_1.[XXXX].nc: netcdf files that have time (in days), wind speed at 10m above MSL (u,v), air temperature and pressure and specific humidity;
-3. sflux_prc_1.[XXXX].nc: netcdf files that time (in days), have precipitation data;
-4. sflux_rad_1.[XXXX].nc: netcdf files that have time (in days), downward long and short (solar) wave radiation fluxes.
+2. sflux_air_1.X.nc: netcdf files that have time (in days), wind speed at 10m above MSL (u,v), air temperature and pressure and specific humidity;
+3. sflux_prc_1.X.nc: netcdf files that time (in days), have precipitation data;
+4. sflux_rad_1.X.nc: netcdf files that have time (in days), downward long and short (solar) wave radiation fluxes.
+
+Note that X denotes the time stack number (1,2,3,...). There is no limit on max.
 
 
 !!!note "sflux_input.txt"
@@ -19,7 +21,7 @@ There are 4 types of files in sflux/dir; see [this site](http://ccrm.vims.edu/yi
 
 !!!note "sflux_air"
     ```
-    netcdf sflux_air_1.001 {
+    netcdf sflux_air_1.10 {
     dimensions:
             nx_grid = 349 ;
             ny_grid = 277 ;
@@ -66,7 +68,7 @@ There are 4 types of files in sflux/dir; see [this site](http://ccrm.vims.edu/yi
 
 !!!notes "sflux_prc"
     ```
-    netcdf sflux_prc_1.001 {
+    netcdf sflux_prc_1.10 {
     dimensions:
             nx_grid = 349 ;
             ny_grid = 277 ;
@@ -97,7 +99,7 @@ There are 4 types of files in sflux/dir; see [this site](http://ccrm.vims.edu/yi
 
 !!!notes "sflux_rad"
     ```
-    netcdf sflux_rad_1.001 {
+    netcdf sflux_rad_1.10 {
     dimensions:
             nx_grid = 349 ;
             ny_grid = 277 ;
@@ -132,17 +134,17 @@ There are 4 types of files in sflux/dir; see [this site](http://ccrm.vims.edu/yi
 
 Note that `sflux_rad` is only required if the heat exchange module is invoked via `ihconsv=1`, and `sflux_prc` is only required if the salt exchange module is invoked via `isconsv=1`.
 Since a barotropic model cannot do heat/salt exchange properly, these two types of sflux inputs should not be used there. To impose rainfall in a  barotropic model,
- you have to use the source/sink option `if_source` by converting rainfall rate into sources.
+ you may use the source/sink option `if_source` by converting rainfall rate into sources.
 
 
 We have NARR sflux files from 1979-present, but cannot upload all of them to the web due to disk space limitation. You can find some samples at [http://ccrm.vims.edu/yinglong/wiki_files/NARR/](http://ccrm.vims.edu/yinglong/wiki_files/NARR/).
 
-Two sources of data are allowed for each type of `.nc` files, and the relative priority is fixed by the file name. For instance `sflux_air_1.0003.nc` might be blended with a file called `sflux_air_2.0003.nc`. The ".0003" component of the name represents the order of the file within the stack of provided input files. For instance, there might be a new file (`0001`, `0002`, `0003`) produced every 12 hours in a forecast cycle.
+Two sources of data are allowed for each type of `.nc` files, and the relative priority is fixed by the file name. For instance `sflux_air_1.3.nc` might be blended with a file called `sflux_air_2.3.nc`. The ".3" component of the name represents the order of the file within the stack of provided input files. For instance, there might be a new file (`1`, `2`, `3`) produced every 12 hours in a forecast cycle.
 
 ## Interpolation and prioritization
-Using air as an example, it is assumed that the file `sflux_air_2.0001.nc` is more resolved or accurate than sflux_air_1.0001.nc. The two will be blended in the model in a way that favors the ‘_2’ file. This blending of the fields is only adjustable in the code as described in notes below. The default in sflux_9c.F90 is a 99:1 blend of the ‘_2’ file to the ‘_1’ file.
+Using air as an example, it is assumed that the file `sflux_air_2.1.nc` is more resolved or accurate than sflux_air_1.1.nc. The two will be blended in the model in a way that favors the ‘_2’ file. This blending of the fields is only adjustable in the code as described in notes below. The default in sflux_9c.F90 is a 99:1 blend of the ‘_2’ file to the ‘_1’ file.
 
-As was remarked above, the files are arranged temporally in a stack of files starting with ".0001". Given the sequence of forecasting and analysis, it is common for atmospheric files to overlap. A file might begin with a brief period of data assimilation plus a few days of forecast. SCHISM assumes that a new file indicates the injection of information, so when it encounters overlap, it advances to the later file.
+As was remarked above, the files are arranged temporally in a stack of files starting with ".1". Given the sequence of forecasting and analysis, it is common for atmospheric files to overlap. A file might begin with a brief period of data assimilation plus a few days of forecast. SCHISM assumes that a new file indicates the injection of information, so when it encounters overlap, it advances to the later file.
 
 ## Using NARR files for your simulation (North America only)
 First, make sure the NARR grid covers your `hgrid.ll` to ensure proper sptatial interpolation.
@@ -150,11 +152,11 @@ First, make sure the NARR grid covers your `hgrid.ll` to ensure proper sptatial 
 In your run directory, `mkdir sflux` and inside it, create symbolic links to the NARR files. e.g., if you run starts from June 10, 2004 and ends June 20, 2004, then
 
 ```
-sflux_air_1.0001.nc --> narr_air.2004_06_10.nc
-sflux_air_1.0002.nc --> narr_air.2004_06_11.nc
+sflux_air_1.1.nc --> narr_air.2004_06_10.nc
+sflux_air_1.2.nc --> narr_air.2004_06_11.nc
 ...
-sflux_air_1.0011.nc --> narr_air.2004_06_20.nc
-sflux_air_1.0012.nc --> narr_air.2004_06_21.nc # (extra day to account for time zone difference)
+sflux_air_1.11.nc --> narr_air.2004_06_20.nc
+sflux_air_1.12.nc --> narr_air.2004_06_21.nc # (extra day to account for time zone difference)
 ```
 
 Similarly for `sflux_rad_*.nc` and `sflux_prc_*.nc`. As described above, the number "1" after "air_" denotes the first data set used, with the second set taking priority; you can use up to 2 sets in SCHISM (which combines them with some given weights set in sflux_subs.F90); we only use 1 set in this example.

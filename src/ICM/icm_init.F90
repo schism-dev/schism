@@ -53,7 +53,7 @@ subroutine read_icm_param(imode)
   namelist /ZB/ zGPM,zKhG,zTGP,zKTGP,zAG,zRG,zMRT,zMTB,zTMT,zKTMT,zFCP,zFNP,zFPP, &
            & zFSP,zFCM,zFNM,zFPM,zFSM,zKhDO,zn2c,zp2c,zs2c,z2pr,p2pr 
   namelist /PH_ICM/ ppatch0,inu_ph,pKCACO3,pKCA,pRea
-  namelist /SAV_ICM/ spatch0,sFc,sav0,sGPM,sTGP,sKTGP,sFAM,sFCP,sMTB,sTMT,sKTMT,sFNM,sFPM,sFCM,sFNMb, &
+  namelist /SAV_ICM/ spatch0,sFc,iMTs,sav0,sGPM,sTGP,sKTGP,sFAM,sFCP,sMTB,sTMT,sKTMT,sFNM,sFPM,sFCM,sFNMb, &
            & sFPMb,sFCMb,sKTB,sDoy,sKhN,sKhP,salpha,sKe,shtm,s2ht,sc2dw,sn2c,sp2c,savm,EP0,eGPM,eTGP, &
            & eKTGP,eKe,ealpha,eMTB,eTMT,eKTMT,ePRR,eFCM,eFNM,eFPM,eFCP,eFNP,eFPP,en2c,ep2c,eKhN,eKhP,eKhE
   namelist /MARSH/ iNmarsh,vpatch0,vmarsh0,vGPM,vFAM,vTGP,vKTGP,vFCP,vMTB,vTMT,vKTMT,vFCM,vFNM, &
@@ -132,7 +132,7 @@ subroutine read_icm_param(imode)
     ppatch0=0; inu_ph=0; pKCACO3=0; pKCA=0; pRea=0
 
     !init. SAV module
-    spatch0=0; sFc=0; sav0=0; sGPM=0; sTGP=0; sKTGP=0; sFAM=0; sFCP=0; sMTB=0; sTMT=0; sKTMT=0;
+    spatch0=0; sFc=0; iMTs=1; sav0=0; sGPM=0; sTGP=0; sKTGP=0; sFAM=0; sFCP=0; sMTB=0; sTMT=0; sKTMT=0;
     sFNM=0; sFPM=0; sFCM=0; sFNMb=0; sFPMb=0; sFCMb=0;  sKhN=0; sKhP=0; salpha=0; sKe=0;
     shtm=0; s2ht=0; sc2dw=0; sn2c=0; sp2c=0; savm=0; EP0=0; eGPM=0; eTGP=0; eKTGP=0; eKe=0; ealpha=0;
     eMTB=0; eTMT=0; eKTMT=0; ePRR=0; eFCM=0; eFNM=0; eFPM=0; eFCP=0; eFNP=0; eFPP=0; en2c=0;
@@ -567,7 +567,7 @@ subroutine update_icm_input(time)
 
     if(mtime(2)<0.d0) then
       if(myrank==0) then !read information about input file on myrank=0
-        j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fnames(n))),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+        j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fnames(n))),NF90_NOWRITE,ncid)
         if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(fnames(n)))//': open')
 
         !determine npt
@@ -880,19 +880,19 @@ subroutine icm_vars_init
 
   !SAV,MARSH,BA,pH,CLAM modules
   if(jsav/=0) then
-    pname((m+1):(m+29))=&
+    pname((m+1):(m+30))=&
       & (/'spatch0','sav0   ','sGPM   ','sTGP   ','sKTGP  ',&
         & 'sFAM   ','sFCP   ','sMTB   ','sTMT   ','sKTMT  ',&
         & 'sFCM   ','sFNM   ','sFPM   ','sFCMb  ','sFNMb  ',&
         & 'sFPMb  ','sKhN   ','sKhP   ','salpha ','sKe    ',&
         & 'shtm   ','s2ht   ','sc2dw  ','sn2c   ','sp2c   ',&
-        & 'sKTB   ','sDoy   ','sFc    ','savm   '/)
+        & 'sKTB   ','sDoy   ','sFc    ','savm   ','iMTs   '/)
     sp(m+1)%p=>spatch0;  sp(m+2)%p1=>sav0;  sp(m+3)%p=>sGPM;   sp(m+4)%p=>sTGP;    sp(m+5)%p1=>sKTGP;  m=m+5
     sp(m+1)%p=>sFAM;     sp(m+2)%p1=>sFCP;  sp(m+3)%p1=>sMTB;  sp(m+4)%p1=>sTMT;   sp(m+5)%p1=>sKTMT;  m=m+5
     sp(m+1)%p1=>sFCM;    sp(m+2)%p1=>sFNM;  sp(m+3)%p1=>sFPM;  sp(m+4)%p1=>sFCMb;  sp(m+5)%p1=>sFNMb;  m=m+5
     sp(m+1)%p1=>sFPMb;   sp(m+2)%p1=>sKhN;  sp(m+3)%p1=>sKhP;  sp(m+4)%p=>salpha;  sp(m+5)%p=>sKe;     m=m+5
     sp(m+1)%p1=>shtm;    sp(m+2)%p1=>s2ht;  sp(m+3)%p=>sc2dw;  sp(m+4)%p=>sn2c;    sp(m+5)%p=>sp2c;    m=m+5
-    sp(m+1)%p=>sKTB;     sp(m+2)%p1=>sDoy;  sp(m+3)%p=>sFc;    sp(m+4)%p2=>savm;    m=m+4
+    sp(m+1)%p=>sKTB;     sp(m+2)%p1=>sDoy;  sp(m+3)%p=>sFc;    sp(m+4)%p2=>savm;   sp(m+5)%p=>iMTs;    m=m+5
     if(jsav==2) then
       pname((m+1):(m+21))=&
         & (/'EP0    ','eGPM   ','eTGP   ','eKTGP  ','eKe    ',&
@@ -986,7 +986,7 @@ subroutine icm_vars_init
 
         !read value on myrank=0, then bcast
         if(myrank==0) then
-          j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid)
+          j=nf90_open(in_dir(1:len_in_dir)//trim(adjustl(fname)),NF90_NOWRITE,ncid)
           if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(fname))//': open')
           j=nf90_inq_varid(ncid,trim(adjustl(p%name)),varid)
           if(j/=NF90_NOERR) call parallel_abort(trim(adjustl(p%name))//': wrong varid' )

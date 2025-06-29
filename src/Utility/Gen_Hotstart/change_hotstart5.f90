@@ -153,7 +153,7 @@ program combine_hotstart1
   enddo !i
 
 ! Read in old hotstart
-  iret=nf90_open('hotstart.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+  iret=nf90_open('hotstart.nc',NF90_NOWRITE,ncid2)
   iret=nf90_inq_varid(ncid2, "time",i);
   iret=nf90_get_var(ncid2,i,time);
   iret=nf90_inq_varid(ncid2, "iths",i);

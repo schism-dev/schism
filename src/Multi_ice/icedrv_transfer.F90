@@ -62,7 +62,7 @@
              !cc     = rhowat*4190.0_dbl_kind, & 
              ! Volumetr. heat cap. of water [J/m**3/K](cc = rhowat*cp_water)
              ex     = 0.286_dbl_kind,   &
-             threshold_hw = 30            ! max water depth for grounding
+             threshold_hw = 50            ! max water depth for grounding
 
           integer(kind=dbl_kind)   :: i, n,  k,  elem, j, kbp1, indx
           integer (kind=int_kind)  :: nt_Tsfc
@@ -158,7 +158,7 @@
                               
                hmix(i) = abs(depth0(nvrt)-depth0(nvrt - 1))
                hmix(i) = min(dptot , hmix(i))
-               !if(idry(i)==1) hmix(i) = 0
+               if(idry(i)==1) hmix(i) = 0
 
                T_air(i)  = airt1(i) + 273.15_dbl_kind
                Qa(i)     = shum1(i)
@@ -200,10 +200,10 @@
                     dux=uatm(i)-uvel(i) 
                     dvy=vatm(i)-vvel(i)
                     aux=sqrt(dux**2+dvy**2)*rhoair
-                    !stress_atmice_x(i) = cdwin*aux*dux
-                    !stress_atmice_y(i) = cdwin*aux*dvy
-                    stress_atmice_x(i) = (1.1_dbl_kind+0.04*sqrt(uatm(i)**2+vatm(i)**2))/1000*aux*dux
-                    stress_atmice_y(i) = (1.1_dbl_kind+0.04*sqrt(uatm(i)**2+vatm(i)**2))/1000*aux*dvy
+                    stress_atmice_x(i) = cdwin*aux*dux
+                    stress_atmice_y(i) = cdwin*aux*dvy
+                    !stress_atmice_x(i) = (1.1_dbl_kind+0.04*sqrt(uatm(i)**2+vatm(i)**2))/1000*aux*dux
+                    !stress_atmice_y(i) = (1.1_dbl_kind+0.04*sqrt(uatm(i)**2+vatm(i)**2))/1000*aux*dvy
                     !stress_atmice_x(i) = (0.5_dbl_kind)/1000*aux*dux
                     !stress_atmice_y(i) = (0.5_dbl_kind)/1000*aux*dvy
                     

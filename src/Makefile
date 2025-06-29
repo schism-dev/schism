@@ -135,6 +135,10 @@ ifdef NO_PARMETIS
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DNO_PARMETIS
 endif
 
+ifdef SH_MEM_COMM
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DSH_MEM_COMM
+endif
+
 ifdef USE_OLDIO
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DOLDIO
 endif
@@ -143,8 +147,8 @@ ifdef USE_ATMOS
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DATMOS
 endif
 
-ifdef USE_NWM_BMI
-  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DNWM_BMI
+ifdef USE_BMI
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_BMI
 endif
 
 ifdef USE_PREC_EVAP
@@ -267,7 +271,11 @@ endif
 ifdef USE_FABM
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_FABM
   FABMINSTALLDIR = ./Fabm/build
-  FABMLIBS = -L$(FABMINSTALLDIR)/lib -lfabm
+  ifneq ($(wildcard $(FABMINSTALLDIR)/lib64),)
+    FABMLIBS = -L$(FABMINSTALLDIR)/lib64 -lfabm
+  else
+    FABMLIBS = -L$(FABMINSTALLDIR)/lib -lfabm
+  endif
   OBJS := $(OBJS) fabm_schism.o
   FCPFLAGS += -I$(FABMINSTALLDIR)/include
 endif

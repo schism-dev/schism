@@ -39,6 +39,11 @@ module schism_msgp
                        &ns_global,ns,nsg,nsa,islg,isgl,isdel,isidenode, &
                        &errmsg,fdb,lfdb,ntracers,msc2,mdc2,i34,nea2, &
                        &ielg2,iegl2,is_inter,iside_table,in_dir,out_dir,len_in_dir,len_out_dir
+
+#ifdef SH_MEM_COMM
+  use iso_c_binding, only: c_ptr, c_f_pointer
+#endif
+
   implicit none
 !#ifndef USE_MPIMODULE
   include 'mpif.h'
@@ -88,6 +93,17 @@ module schism_msgp
   integer,public,save,allocatable :: nbrrank_s3(:)  ! Rank of neighboring processors (elements)
   integer,public,save,allocatable :: ranknbr_s3(:)  ! Mapping from MPI rank to neighbor index (elements)
   !<weno
+
+#ifdef SH_MEM_COMM   
+! variables supporting shared memory communications
+  integer,public,save ::  comm_node !communicator for SM 
+  integer,public,save ::  nproc_node, myrank_node
+  integer,public,save ::  h_win  ! handle for shared window for ath3 etc
+  integer(KIND=MPI_ADDRESS_KIND),public,save :: win_size
+  TYPE(C_PTR),public,save :: c_window_ptr
+!  real(4),public,save,pointer :: ath3(:,:,:,:)
+  integer,public,save :: disp_unit       ! displacement stride in shared window  
+#endif /*SH_MEM_COMM*/
 
   !-----------------------------------------------------------------------------
   ! Private data
@@ -378,7 +394,7 @@ subroutine parallel_init(communicator)
   implicit none
   integer, optional :: communicator
 
-  integer :: comm2,nproc3,myrank3,nproc_compute
+  integer :: comm2,nproc3,myrank3,nproc_compute,itmp,itmp2
 
 
   if (present(communicator)) then
@@ -428,6 +444,29 @@ subroutine parallel_init(communicator)
     myrank_scribe=myrank3
 !    print*, 'Scribes:',myrank_schism,nproc_schism,myrank3,nproc3,nproc_compute,nscribes,task_id
   endif
+
+#ifdef SH_MEM_COMM
+! Set up by-node shared-memory communicator for compute nodes
+  if(task_id==1) then
+    CALL MPI_Comm_split_type(comm,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,comm_node,ierr)
+    CALL MPI_Comm_size(comm_node, nproc_node, ierr)
+    CALL MPI_Comm_rank(comm_node, myrank_node,ierr)
+
+    !Ensure that myrank_node=0 (nonunique) includes myrank=0 for some bcast (read in by
+    !myrank_node=0 and then bcast from myrank=0 in comm)
+    if(myrank_node==0.and.myrank==0) then
+      itmp=1 !true
+    else
+      itmp=0
+    endif
+    !Collectives on comm_node won't work as they are on per node basis!
+    call mpi_allreduce(itmp,itmp2,1,itype,MPI_SUM,comm,ierr)
+    if(itmp2==0) then
+      write(*,*)'Ranks:',myrank_node,myrank,itmp,itmp2
+      call parallel_abort('MSGP: myrank=0 is not the head process in share mem')
+    endif
+  endif !task_id
+#endif /*SH_MEM_COMM*/
 
 end subroutine parallel_init
 

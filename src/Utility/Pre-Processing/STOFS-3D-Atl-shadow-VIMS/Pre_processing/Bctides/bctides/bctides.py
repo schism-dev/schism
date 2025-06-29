@@ -17,49 +17,36 @@ class Bctides:
     def __init__(
         self,
         hgrid,
-        flags: list = None,
+        bc_flags: list = None,
         constituents: Union[str, list] = 'major',
         database: str = 'tpxo',
         add_earth_tidal: bool = True,
         cutoff_depth: float = 50.0,
-        ethconst: list = None,
-        vthconst: list = None,
-        tthconst: list = None,
-        sthconst: list = None,
-        tobc: list = None,
-        sobc: list = None,
-        relax: list = None,
+        bc_const: list = None,
+        bc_relax: list = None,
     ):
         """Initialize Bctides ojbect
         Parameters
         --------
         hgrid: Hgrid object
-        flags: nested list of bctypes
+        bc_flags: nested list of bctypes
         constituents: str or list
         database: str ('tpxo' or 'fes2014')
         add_earth_tidal: bool
         cutoff_depth: float
-        ethconst: list (constant elevation value for each open boundary)
-        vthconst: list (constant discharge value for each open boundary)
-        tthconst: list (constant temperature value for each open boundary)
-        sthconst: list (constant salinity value for each open boundary)
-        tobc: list (nuding factor of temperature for each open boundary)
-        sobc: list (nuding factor of salinity for each open boundary)
-        realx: list (relaxation constants for inflow and outflow)
+        bc_const: constant values for each variable at each open boundary
+                   (None if not applicable)
+        bc_relax: relaxation constants for each variable at each open boundary
+               (None if not applicable)
         """
 
         self.hgrid = hgrid
         self.add_earth_tidal = add_earth_tidal
         self.cutoff_depth = cutoff_depth
         self.tides = Tides(constituents=constituents, tidal_database=database)
-        self.flags = flags
-        self.ethconst = ethconst 
-        self.vthconst = vthconst 
-        self.tthconst = tthconst 
-        self.sthconst = sthconst 
-        self.tobc = tobc
-        self.sobc = sobc
-        self.relax = relax
+        self.bc_flags = bc_flags
+        self.bc_const = bc_const 
+        self.bc_relax = bc_relax
 
     def __str__(self):
  
@@ -103,9 +90,9 @@ class Bctides:
  
         #get amplitude and phase for each open boundary         
         f.append(f"{len(self.gdf)} !nope")
-        if len(self.gdf) != len(self.flags):
-            raise ValueError(f'Number of open boundary {len(self.gdf)} is not consistent with number of given bctypes {len(self.flags)}!')
-        for ibnd, (boundary, flag) in enumerate(zip(self.gdf.itertuples(), self.flags)):
+        if len(self.gdf) != len(self.bc_flags):
+            raise ValueError(f'Number of open boundary {len(self.gdf)} is not consistent with number of given bctypes {len(self.bc_flags)}!')
+        for ibnd, (boundary, flag) in enumerate(zip(self.gdf.itertuples(), self.bc_flags)):
             logger.info(f"Processing boundary {ibnd+1}:")
             #number of nodes and flags
             line = [
@@ -127,7 +114,7 @@ class Bctides:
                 logger.warning(f'time history of elevation is read in from elev.th (ASCII)!')
             elif iettype == 2:
                 logger.info("You are choosing type 2 for elevation, value is {selfethconst[ibnd]} ")
-                f.append(f"{self.ethconst[ibnd]}")
+                f.append(f"{self.bc_const[ibnd][0]}")
             elif iettype == 4:
                 logger.warning('time history of elevation is read in from elev2D.th.nc (netcdf)')
             elif iettype == 3 or iettype == 5:
@@ -152,7 +139,7 @@ class Bctides:
                 logger.warning("time history of discharge is read in from flux.th (ASCII)!")
             elif ifltype == 2:
                 logger.info("You are choosing type 2 for velocity, value is {self.vthconst[ibnd]} ")
-                f.append(f"{self.vthconst[ibnd]}")
+                f.append(f"{self.bc_const[ibnd][1]}")
             elif ifltype == 3 or ifltype == 5:
                 if ifltype == 5:
                     logger.warning(f'Combination of 3 and 4, time history of velocity is read in from uv.3D.th.nc!')
@@ -165,8 +152,8 @@ class Bctides:
             elif ifltype == 4 or -4:
                 logger.warning("time history of velocity (not discharge!) is read in from uv3D.th.nc (netcdf)")
                 if ifltype == -4:
-                    logger.info(f"You are using type -4, relaxation constants for inflow  is {self.relax[0]}, for outflow is {self.relax[1]}")
-                    f.append(f"{self.relax[0]} {self.relax[1]} !relaxation constant")
+                    logger.info(f"You are using type -4, relaxation constants for inflow  is {self.bc_relax[ibnd][0]}, for outflow is {self.bc_relax[ibnd][1]}")
+                    f.append(f"{self.bc_relax[ibnd][0]} {self.bc_relax[ibnd][1]} !relaxation constant")
             elif ifltype == -1: 
                 raise NotImplementedError(f"Velocity type {ifltype} not implemented yet!")
                 #logger.info(f"Flather type radiation b.c. (iettype must be 0 in this case)!")
@@ -179,25 +166,25 @@ class Bctides:
             #temperature
             logger.info(f"Temperature type: {itetype}")
             if itetype == 0:
-                logger.warning("Temperature is not sepcified, not input needed!")
+                logger.warning("Temperature is not sepcified, no input needed!")
             elif itetype == 1:
                 logger.warning("time history of temperature will be read in from TEM_1.th!")
-                logger.info(f"Nudging factor for T at boundary {ibnd+1} is {self.tobc[ibnd]}")
-                f.append(f"{self.tobc[ibnd]} !nudging factor for T")
+                logger.info(f"Nudging factor for T at boundary {ibnd+1} is {self.bc_relax[ibnd][2]}")
+                f.append(f"{self.bc_relax[ibnd][2]} !nudging factor for T")
             elif itetype == 2:
-                logger.info("You are choosing type 2 for temperature, value is {self.tthconst[ibnd]} ")
-                f.append(f"{self.tthconst[ibnd]} !T")
+                logger.info(f"You are choosing type 2 for temperature, value is {self.bc_const[ibnd]}[2] ")
+                f.append(f"{self.bc_const[ibnd][2]} !T")
 
-                logger.info(f"Nudging factor for T at boundary {ibnd+1} is {self.tobc[ibnd]}")
-                f.append(f"{self.tobc[ibnd]} !nudging factor for T")
+                logger.info(f"Nudging factor for T at boundary {ibnd+1} is {self.bc_relax[ibnd][2]}")
+                f.append(f"{self.bc_relax[ibnd][2]} !nudging factor for T")
             elif itetype == 3:
                 logger.info("Using initial temperature profile for inflow")
-                logger.info(f"Nudging factor for T at boundary {ibnd+1} is{self.tobc[ibnd]}")
-                f.append(f"{self.tobc[ibnd]} !nudging factor for T")
+                logger.info(f"Nudging factor for T at boundary {ibnd+1} is{self.bc_relax[ibnd][2]}")
+                f.append(f"{self.bc_relax[ibnd][2]} !nudging factor for T")
             elif itetype == 4:
                 logger.warning("time history of temperature is read in from TEM_3D.th.nc (netcdf)!")
-                logger.info(f"Nudging factor for T at boundary {ibnd+1} is{self.tobc[ibnd]}")
-                f.append(f"{self.tobc[ibnd]} !nudging factor for T")
+                logger.info(f"Nudging factor for T at boundary {ibnd+1} is{self.bc_relax[ibnd][2]}")
+                f.append(f"{self.bc_relax[ibnd][2]} !nudging factor for T")
             else:
                 raise IOError(f"Invalid type {itetype} for salinity!")        
 
@@ -207,22 +194,22 @@ class Bctides:
                 logger.info("Salinity is not sepcified, not input needed!")
             elif isatype == 1:
                 logger.warning("time history of salinity will be read in from SAL_1.th!")
-                logger.info(f"Nudging factor for salt at boundary {ibnd+1} is {self.sobc[ibnd]}")
-                f.append(f"{self.sobc[ibnd]} !nudging factor for S")
+                logger.info(f"Nudging factor for salt at boundary {ibnd+1} is {self.bc_relax[ibnd][3]}")
+                f.append(f"{self.bc_relax[ibnd][3]} !nudging factor for S")
             elif isatype == 2:
-                logger.info("Yor are choosing type 2 for salinity, value is {self.sthconst[ibnd]} ")
-                f.append(f"{self.sthconst[ibnd]} !S")
+                logger.info(f"Yor are choosing type 2 for salinity, value is {self.bc_relax[ibnd][3]} ")
+                f.append(f"{self.bc_relax[ibnd][3]} !S")
 
-                logger.info(f"Nudging factor for salt at boundary {ibnd+1} is {self.sobc[ibnd]}")
-                f.append(f"{self.sobc[ibnd]} !nudging factor for S")
+                logger.info(f"Nudging factor for salt at boundary {ibnd+1} is {self.bc_relax[ibnd][3]}")
+                f.append(f"{self.bc_relax[ibnd][3]} !nudging factor for S")
             elif isatype == 3:
                 logger.info("Using initial salinity profile for inflow")
-                logger.info(f"Nudging factor for salt at boundary {ibnd+1} is {self.sobc[ibnd]}")
-                f.append(f"{self.sobc[ibnd]} !nudging factor for S")
+                logger.info(f"Nudging factor for salt at boundary {ibnd+1} is {self.bc_relax[ibnd][3]}")
+                f.append(f"{self.bc_relax[ibnd][3]} !nudging factor for S")
             elif isatype == 4:
                 logger.warning("time history of salinity is read in from SAL_3D.th.nc (netcdf)!")
-                logger.info(f"Nudging factor for salt at boundary {ibnd+1} is {self.sobc[ibnd]}")
-                f.append(f"{self.sobc[ibnd]} !nudging factor for S")
+                logger.info(f"Nudging factor for salt at boundary {ibnd+1} is {self.bc_relax[ibnd][3]}")
+                f.append(f"{self.bc_relax[ibnd][3]} !nudging factor for S")
             else:
                 raise IOError(f"Invalid type {isatype} for salinity!") 
                 
