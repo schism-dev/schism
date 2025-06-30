@@ -485,7 +485,8 @@ module schism_glbl
                                   &sparsem(:,:), & 
                                   &tr_nudge(:,:),fun_lat(:,:), &
                                   &elev_nudge(:),uv_nudge(:),fluxprc(:),fluxevp(:), &
-                                  &dav(:,:),elevmax(:),dav_max(:,:),dav_maxmag(:), & 
+                                  &elevmax(:),time_elevmax(:), &
+                                  &dav(:,:),dav_max(:,:),dav_maxmag(:),time_dav_max(:), & 
                                   &etaic(:),diffmax(:),diffmin(:),dfq1(:,:),dfq2(:,:)
   real(rkind),save,allocatable,target :: rsxx(:), rsxy(:), rsyy(:)
 
