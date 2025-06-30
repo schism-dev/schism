@@ -35,23 +35,26 @@ program combine_gr3
   implicit real(8)(a-h,o-z),integer(i-n)
   character(36) :: fdb,filenm 
   integer :: lfdb,lfilenm,nm(4)
-  allocatable x(:),y(:),elevmax(:,:)
-      
+  allocatable x(:),y(:),varmax(:,:)
+
 !-------------------------------------------------------------------------------
 ! inputs
 !-------------------------------------------------------------------------------
+    print *, 'Input file name (one of: maxelev or maxdahv): '
+    read *, filenm
+  filenm = adjustlfilenm); lfilenm=len_trim(filenm)
 
-  print*, 'Input file name (e.g.: maxelev):'
-  read*, filenm
-  filenm=adjustl(filenm); lfilenm=len_trim(filenm)
-  print*, 'Input # of scalar fields:'
-  read*, nscal
+    print *, 'Input # of scalar fields: '
+    read *, nscal
   if(nscal<=0) stop 'Wrong nscal'
 
-  open(14,file='hgrid.gr3',status='old')
-  read(14,*); read(14,*)ne,np
-  allocate(x(np),y(np),elevmax(nscal,np),stat=istat)
+    open(14,file='hgrid.gr3',status='old')
+    read(14,*); read(14,*) ne,np
+  allocate(x(np), y(np), stat=istat)
   if(istat/=0) stop 'Allocation error: x,y'
+
+  allocate(varmax(nscal,np), stat=istat)
+  if(istat/=0) stop 'Allocation error: varmax'
 
   open(10,file='outputs/'//filenm(1:lfilenm)//'_000000',status='old')
   read(10,*)icount,nproc
@@ -68,19 +71,19 @@ program combine_gr3
     open(10,file='outputs/'//fdb,status='old')
     read(10,*)icount !,nproc
     do i=1,icount
-      read(10,*)nd,xtmp,ytmp,elevmax(:,nd)
-    enddo !i
-  enddo !irank
+      read(10,*)nd,xtmp,ytmp,(varmax(ns,nd), ns=1,nscal)
+    end do !i
+  end do !irank
 
   open(13,file=filenm(1:lfilenm)//'.gr3',status='replace')
   write(13,*); write(13,*)ne,np
   do i=1,np
     read(14,*)j,xtmp,ytmp
-    write(13,'(i10,100(1x,e22.11))')i,xtmp,ytmp,elevmax(:,i)
-  enddo !i
+     write(13, '(i12, 20(1x, e22.12))')i,xtmp,ytmp,varmax(1:nscal,i)
+  end do !i
   do i=1,ne
     read(14,*)j,k,nm(1:k)
     write(13,*)j,k,nm(1:k)
-  enddo !i
+  end do !i
 
 end program combine_gr3

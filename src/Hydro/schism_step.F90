@@ -6259,7 +6259,10 @@
 
 !$OMP do reduction(+: etatotl) 
       do i=1,np
-        if(eta2(i)>elevmax(i)) elevmax(i)=eta2(i) !only for residents
+        if(eta2(i)>elevmax(i)) then
+         elevmax(i)=eta2(i) !only for residents
+         time_elevmax(i)=time/86400.d0
+        endif
 
         if(associated(ipgl(iplg(i))%next)) then !interface node
           if(ipgl(iplg(i))%next%rank<myrank) cycle !already in the sum so skip
@@ -8585,6 +8588,7 @@
         if(dav_mag>dav_maxmag(i)) then
           dav_maxmag(i)=dav_mag
           dav_max(1:2,i)=dav(1:2,i)
+          time_dav_max(i)=time/86400.d0
         endif
       enddo !i=1,npa
 !$OMP end do
