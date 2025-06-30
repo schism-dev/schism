@@ -1416,8 +1416,7 @@
          & hdif(npa),shapiro(nsa),shapiro_smag(nsa),fluxprc(npa),fluxevp(npa),prec_snow(npa),prec_rain(npa), & 
          &  sparsem(0:mnei_p,np), & !sparsem for non-ghosts only
          &  tr_nudge(natrm,npa), & 
-         &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),time_elevmax(npa), &
-         & dav_max(2,npa),dav_maxmag(npa), time_dav_max(npa), &
+         &  fun_lat(0:2,npa),dav(2,npa),elevmax(npa),dav_max(2,npa),dav_maxmag(npa), &
          &  diffmax(npa),diffmin(npa),dfq1(nvrt,npa),dfq2(nvrt,npa),epsilon2_elem(ne), & 
          &  iwater_type(npa),rho_mean(nvrt,nea),erho(nvrt,nea),& 
          &  surf_t1(npa),surf_t2(npa),surf_t(npa),etaic(npa),veg_alpha0(npa), &
@@ -1741,7 +1740,7 @@
       tempmin=-2.d0; tempmax=40.d0; saltmin=0.d0; saltmax=42.d0
       pr1=0.d0; pr2=0.d0; pr=prmsl_ref !uniform pressure (the const. is unimportant)
       uthnd=-99.d0; vthnd=-99.d0; eta_mean=-99.d0; !uth=-99.d0; vth=-99.d0; !flags
-      elevmax=-1.d34; time_elevmax=-99.d0; dav=0.d0; dav_maxmag=0.d0; dav_max=0.d0
+      elevmax=-1.d34; dav=0.d0; dav_maxmag=-1.d0; dav_max=0.d0
       tr_el=0.d0
       timer_ns=0.d0
       iwsett=0; wsett=0.d0 !settling vel.

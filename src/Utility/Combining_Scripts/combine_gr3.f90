@@ -29,37 +29,29 @@
 !  pgf90 -O2 -mcmodel=medium  -Bstatic -o combine_gr3 combine_gr3.f90
 !===============================================================================
 
-PROGRAM combine_gr3
+program combine_gr3
 !-------------------------------------------------------------------------------
 
   implicit real(8)(a-h,o-z),integer(i-n)
   character(36) :: fdb,filenm 
   integer :: lfdb,lfilenm,nm(4)
-  allocatable x(:),y(:),varmax(:,:)
-
+  allocatable x(:),y(:),elevmax(:,:)
+      
 !-------------------------------------------------------------------------------
 ! inputs
 !-------------------------------------------------------------------------------
-    print *, 'Input file name (one of: maxelev or maxdahv): '
-    read *, filenm
-  filenm = adjustl(tolowercase(filenm))
-  lfilenm=len_trim(filenm)
-  if ((trim(filenm) /= 'maxelev') .AND. (trim(filenm) /= 'maxdahv')) then
-    print *, 'The input filename string should be one of: "maxelev" or "maxdahv"'
-    stop
-  endif
 
-    print *, 'Input # of scalar fields: '
-    read *, nscal
+  print*, 'Input file name (e.g.: maxelev):'
+  read*, filenm
+  filenm=adjustl(filenm); lfilenm=len_trim(filenm)
+  print*, 'Input # of scalar fields:'
+  read*, nscal
   if(nscal<=0) stop 'Wrong nscal'
 
-    open(14,file='hgrid.gr3',status='old')
-    read(14,*); read(14,*) ne,np
-  allocate(x(np), y(np), stat=istat)
+  open(14,file='hgrid.gr3',status='old')
+  read(14,*); read(14,*)ne,np
+  allocate(x(np),y(np),elevmax(nscal,np),stat=istat)
   if(istat/=0) stop 'Allocation error: x,y'
-
-  allocate(varmax(nscal,np), stat=istat)
-  if(istat/=0) stop 'Allocation error: varmax'
 
   open(10,file='outputs/'//filenm(1:lfilenm)//'_000000',status='old')
   read(10,*)icount,nproc
@@ -76,64 +68,19 @@ PROGRAM combine_gr3
     open(10,file='outputs/'//fdb,status='old')
     read(10,*)icount !,nproc
     do i=1,icount
-      read(10,*)nd,xtmp,ytmp,(varmax(ns,nd), ns=1,nscal)
-    end do !i
-  end do !irank
+      read(10,*)nd,xtmp,ytmp,elevmax(:,nd)
+    enddo !i
+  enddo !irank
 
   open(13,file=filenm(1:lfilenm)//'.gr3',status='replace')
   write(13,*); write(13,*)ne,np
   do i=1,np
     read(14,*)j,xtmp,ytmp
-    write(13,'(i12, 20(1x, e18.8))')i,xtmp,ytmp,varmax(1:nscal,i)
-  end do !i
+    write(13,'(i10,100(1x,e22.11))')i,xtmp,ytmp,elevmax(:,i)
+  enddo !i
   do i=1,ne
     read(14,*)j,k,nm(1:k)
     write(13,*)j,k,nm(1:k)
-  end do !i
+  enddo !i
 
-!===============================================================================
-CONTAINS
-  PURE FUNCTION ToLowerCase(inpString) RESULT(outString)
-
-    IMPLICIT NONE
-
-    CHARACTER(*), INTENT(IN)  :: inpString
-
-    INTEGER, PARAMETER        :: DUC = ICHAR('A') - ICHAR('a')
-    CHARACTER(LEN(inpString)) :: outString
-    CHARACTER                 :: ch
-    INTEGER                   :: i
-
-    DO i = 1, LEN(inpString)
-      ch = inpString(i:i)
-      IF ((ch >= 'A') .AND. (ch <= 'Z')) ch = CHAR(ICHAR(ch) - DUC)
-      outString(i:i) = ch
-    END DO
-
-    RETURN
-
-  END FUNCTION ToLowerCase
-
-  PURE FUNCTION ToUpperCase(inpString) RESULT(outString)
-
-    IMPLICIT NONE
-
-    CHARACTER(*), INTENT(IN)  :: inpString
-
-    INTEGER, PARAMETER        :: DUC = ICHAR('A') - ICHAR('a')
-    CHARACTER(LEN(inpString)) :: outString
-    CHARACTER                 :: ch
-    INTEGER                   :: i
-
-    DO i = 1, LEN(inpString)
-      ch = inpString(i:i)
-      IF ((ch >= 'a') .AND. (ch <= 'z')) ch = CHAR(ICHAR(ch) + DUC)
-      outString(i:i) = ch
-    END DO
-
-    RETURN
-
-  END FUNCTION ToUpperCase
-!===============================================================================
-
-END PROGRAM combine_gr3
+end program combine_gr3
