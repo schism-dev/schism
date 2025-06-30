@@ -40,16 +40,16 @@ program combine_gr3
 !-------------------------------------------------------------------------------
 ! inputs
 !-------------------------------------------------------------------------------
-    print *, 'Input file name (one of: maxelev or maxdahv): '
-    read *, filenm
+  print *, 'Input file name (one of: maxelev or maxdahv): '
+  read *, filenm
   filenm = adjustl(filenm); lfilenm=len_trim(filenm)
 
-    print *, 'Input # of scalar fields: '
-    read *, nscal
+  print *, 'Input # of scalar fields: '
+  read *, nscal
   if(nscal<=0) stop 'Wrong nscal'
 
-    open(14,file='hgrid.gr3',status='old')
-    read(14,*); read(14,*) ne,np
+  open(14,file='hgrid.gr3',status='old')
+  read(14,*); read(14,*) ne,np
   allocate(x(np), y(np), stat=istat)
   if(istat/=0) stop 'Allocation error: x,y'
 
@@ -79,7 +79,7 @@ program combine_gr3
   write(13,*); write(13,*)ne,np
   do i=1,np
     read(14,*)j,xtmp,ytmp
-     write(13, '(i12, 20(1x, e22.12))')i,xtmp,ytmp,varmax(1:nscal,i)
+    write(13, '(i12, 20(1x, e22.12))')i,xtmp,ytmp,varmax(1:nscal,i)
   end do !i
   do i=1,ne
     read(14,*)j,k,nm(1:k)
