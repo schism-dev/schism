@@ -42,7 +42,7 @@ program combine_gr3
 !-------------------------------------------------------------------------------
     print *, 'Input file name (one of: maxelev or maxdahv): '
     read *, filenm
-  filenm = adjustlfilenm); lfilenm=len_trim(filenm)
+  filenm = adjustl(filenm); lfilenm=len_trim(filenm)
 
     print *, 'Input # of scalar fields: '
     read *, nscal
