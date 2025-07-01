@@ -1233,7 +1233,9 @@
           IF (WRITESTATFLAG == 1) THEN
             WRITE(STAT%FHNDL,*) IFILE, NDT_BND_FILE(IFILE)
           END IF
-        END DO
+          !Last file will be closed below
+          IF(IFILE/=NUM_NETCDF_FILES_BND) ISTAT=NF90_CLOSE(BND_NCID)
+        END DO !IFILE
 !
 ! check dimensions in the netcdf ... again it is assumed that this is not changing for all files ...
 !
@@ -1307,6 +1309,8 @@
           CALL TEST_FILE_EXIST_DIE("Missing ww3 boundary condition file : ", TRIM(NETCDF_FILE_NAMES_BND(IFILE,1)))
           ISTAT = NF90_OPEN(NETCDF_FILE_NAMES_BND(IFILE,1),NF90_NOWRITE,BND_NCID)
           CALL GENERIC_NETCDF_ERROR_WWM(CallFct, 14, ISTAT)
+          ISTAT = nf90_inq_varid(BND_NCID, 'time', ITIME_ID)
+          CALL GENERIC_NETCDF_ERROR_WWM(CallFct, 145, ISTAT)
 
           ALLOCATE (BND_TIME(NDT_BND_FILE(IFILE)), stat=istat)
           IF (istat/=0) CALL WWM_ABORT('wwm_bdcons, allocate error 13')
@@ -1330,6 +1334,9 @@
 !             IF (IT == 1 .AND. IFILE ==1) WRITE(*,*) IFILE, IT, BND_TIME(IT), chrdate
           END DO
           DEALLOCATE(BND_TIME)
+
+          !Close handle to prevent overflow
+          ISTAT=NF90_CLOSE(BND_NCID)
         END DO
 
         BND_TIME_ALL_FILES = BND_TIME_ALL_FILES + DT_DIFF_19901900
