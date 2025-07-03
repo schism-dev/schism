@@ -1,6 +1,5 @@
-extract_slab_fcst_netcdf4.py is under testing
+The following scripts should have been updated with v7.2:
+  extract_slab_fcst_netcdf4.py
+  generate_adcirc.py has a bug fix, which has not been incorporated into operational forecast yet
 
-generate_adcirc.py has a bug fix, which has not been incorporated into operational forecast yet
 
-
-These should be updated with v7.2
