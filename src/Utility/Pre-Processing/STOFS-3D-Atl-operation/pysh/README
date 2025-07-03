@@ -1,4 +1,6 @@
-extract_slab_fcst_netcdf4_current.py is used in the latest operational forecast
 extract_slab_fcst_netcdf4.py is under testing
 
 generate_adcirc.py has a bug fix, which has not been incorporated into operational forecast yet
+
+
+These should be updated with v7.2
