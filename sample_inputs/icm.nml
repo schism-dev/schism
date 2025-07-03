@@ -566,7 +566,8 @@ vKTw   =   0.069              !temperature dependence for wetland effect (oC-1)
 vRTw   =   20                 !reference temperature for wetland effect (oC)
 vKhDO  =   1.0                !half saturation for wetland effect (mg/L)
 vOCw   =   0.1                !wetland oxygen consumption rate (g.m-2.day-1)
-vKPOM  =   0.005 0.005 0.0   0.05 0.05 0.0   0.05 0.05 0.0 0.0 0.0   0.05 0.05 0.0 0.0  0.0 0.0   0.05 0.05 0.05 0.01 !settling velocity caused by marsh (m.day-1)
+vKPOM  =   0.005 0.005 0.0   0.05 0.05 0.0   0.05 0.05 0.0 0.0 0.0   0.05 0.05 0.0 0.0  0.0 0.0   !settling velocity caused by marsh (m.day-1)
+!vKPOM  =   0.005 0.005 0.0   0.05 0.05 0.0   0.05 0.05 0.0 0.0 0.0   0.05 0.05 0.0 0.0  0.0 0.0   0.05 0.05 0.05 0.01 !settling velocity caused by marsh (m.day-1)
 /
 
 &BAG

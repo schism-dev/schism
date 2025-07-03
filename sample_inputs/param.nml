@@ -404,7 +404,7 @@
 !  flag_ic(4) = 1 !Age i.c. flag set inside code
   flag_ic(5) = 1 !SED3D
   flag_ic(6) = 1 !EcoSim
-  flag_ic(7) = 1 !ICM
+  flag_ic(7) = 0 !ICM
   flag_ic(8) = 1 !CoSINE
   flag_ic(9) = 1 !FIB
   flag_ic(10) = 1 !TIMOR
