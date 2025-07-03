@@ -360,7 +360,7 @@
 #ifdef USE_AGE
 !      call get_param('param.in','ntracer_age',1,ntrs(4),tmp,stringvalue)
       ntrs(4)=ntracer_age
-      if(ntrs(4)<=0.or.mod(ntrs(4),2)/=0) call parallel_abort('INIT: age requires even # of tarcers')
+      if(ntrs(4)<=0.or.mod(ntrs(4),2)/=0) call parallel_abort('INIT: age requires even # of tracers')
 !'
       tr_mname(4)='AGE'
 #endif
@@ -524,7 +524,7 @@
       create_marsh_min = -1.d0 
       create_marsh_max = 0.d0
 
-      !Output elev, hvel by detault
+      !Output elev, hvel by default
       nc_out=1
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
       iof_hydro(1)=1; iof_hydro(25:26)=1
@@ -613,7 +613,7 @@
 !...  Momentum advection scheme (0: ELM; 1: upwind)
 !      call get_param('param.in','iupwind_mom',1,iupwind_mom,tmp,stringvalue)
 
-!...  Horizontal viscosity option (0: no viscosity; 1: Lapacian; 2: Bi-harmonic)
+!...  Horizontal viscosity option (0: no viscosity; 1: Laplacian; 2: Bi-harmonic)
 !     ihorcon =0 means horizontal viscosity term=0
 !      call get_param('param.in','ihorcon',1,ihorcon,tmp,stringvalue)
 !!      if(ihorcon/=0) then
@@ -760,7 +760,7 @@
         write(errmsg,*)'Unknown ihconsv',ihconsv
         call parallel_abort(errmsg)
       endif
-      if(isconsv/=0.and.ihconsv==0) call parallel_abort('Evap/precip model must be used with heat exchnage model')
+      if(isconsv/=0.and.ihconsv==0) call parallel_abort('Evap/precip model must be used with heat exchange model')
 !'
       if(ihconsv/=0.and.nws/=2.and.nws/=4) call parallel_abort('Heat budge model must have nws>=2')
 
@@ -932,7 +932,7 @@
       if(inu_tr(12)/=0) call parallel_abort('INIT: nudging for DVD/=0')
 #endif
 
-      !1: final relax is sum of horizontal & vertical relax's; 2: product
+      !1: final relax is sum of horizontal & vertical relaxes; 2: product
       if(nu_sum_mult/=1.and.nu_sum_mult/=2) call parallel_abort('INIT: check nu_sum_mult')
       !All tracers share time steps etc.
       if(step_nu_tr<dt) then
@@ -992,7 +992,7 @@
       endif
 
 !     Kriging option
-!     Choice of generalized covariance fucntion
+!     Choice of generalized covariance function
       if(kr_co<=0.or.kr_co>4) then
         write(errmsg,*)'Wrong kr_co:',kr_co
         call parallel_abort(errmsg)
@@ -1244,7 +1244,7 @@
       enddo !k
 
       if(iorder==0) then
-!       Aquire vertical grid
+!       Acquire vertical grid
         call aquire_vgrid
         if(myrank==0) then
           write(16,*)'done reading vgrid...'        
@@ -1254,7 +1254,7 @@
 !       Partition horizontal grid into subdomains
         call partition_hgrid
 
-!       Aquire full horizontal grid based on partition
+!       Acquire full horizontal grid based on partition
         call aquire_hgrid(.true.) 
 
 !       Dump horizontal grid
@@ -1851,7 +1851,7 @@
 !        stop
 !      endif !ics
 
-!...  Finish off some remaining geometric calcualtions
+!...  Finish off some remaining geometric calculations
 !     Sidecenter coord in the elem frame
       do i=1,nea
         do j=1,i34(i)
@@ -1879,7 +1879,7 @@
 
 !...  Modified depth
       dpmax=maxval(dp(1:npa))
-!     Save intial depth for bed deformation case
+!     Save initial depth for bed deformation case
       dp00=dp
 
 !...  Vgrid
@@ -2088,7 +2088,7 @@
 !$OMP end do
 
 !...  For quads, compute the 4 shape functions for the mid-pts of 2
-!     diagnonals inside the quad formed by 4 sidecenters (for indvel<=0)
+!     diagonals inside the quad formed by 4 sidecenters (for indvel<=0)
 !$OMP workshare
       shape_c2=-99 !flags
 !$OMP end workshare
@@ -2113,7 +2113,7 @@
 !$OMP       critical
             iabort=1
 !$OMP       end critical
-!           Flush it immediatetly for use below (may not be necessary
+!           Flush it immediately for use below (may not be necessary
 !           due to sync implied at 'end'
 !$OMP       flush(iabort)
             write(12,*)'Concave quad formed by sides:',ielg(i),ar1,ar2,ar3,ar4
@@ -2704,7 +2704,7 @@
                 nhtrecv1(irank)=itmp
                 ihtrecv1_ndgb(itmp,irank)=ndgb2 !global node #
                 ihtrecv1(itmp,irank)=i-1 !displacement into recv arrays like block_refnd2_*
-              endif !ref. node 2 is outisde myrank
+              endif !ref. node 2 is outside myrank
             endif; endif !ipgl; ref. node 1 is in myrank and not ghost
           enddo !i=1,nhtblocks 
 
