@@ -68,7 +68,7 @@ p.atmdep    = p.bdir+'atm_load.npz'                    #CBP atmospheric depositi
 p.hycom     = p.bdir+'hycom.nc'                        #HYCOM database
 p.sflux     = p.bdir+'sflux_narr_subdomain'            #sflux database
 p.WW3       = p.bdir+'WW3'                             #WW3 wave forcing
-p.hydro_out = p.bdir+'hydro/RUN11/outputs'             #hydro_out for offline ICM model
+p.hydro_out = p.bdir+'hydro/RUN11fb/outputs'             #hydro_out for offline ICM model
 p.region    = p.bdir+'region/'                         #region files
 p.outdir    = '/sciclone/scr-lst/{}/CBP'.format(os.environ['USER']) #parental direcotry of outputs
 p.dt_offline= 1800 #sec: time step for offline ICM mode
@@ -164,7 +164,7 @@ if p.flag['ICM']!=0:
    if p.flag['ICM_sflux.th.nc']==1: pm['isflux']=1
    if (p.flag['ICM'] in [1,2]): pm['nspool_icm']=24
    if p.flag['ICM'] in [10,20]: pm['nsub']=int(p.dt_offline/150); pm['iKe']=1; pm['nspool_icm']=1
-   if p.flag['CLAM']==1: pm['iClam']=1; pm['cFc']='-999   '*5; pm['cMTB']='-999   '*5   
+   if p.flag['CLAM']==1: pm['iClam']=1; pm['cFc']='   '.join(['-999']*5); pm['cMTB']='   '.join(['-999']*5)
    if p.flag['SAV']==1: pm['isav_icm']=2; pm['sFc']=-999
    if p.flag['WET']==1: pm['imarsh_icm']=2; pm['vAw']=-999
    if not fexist(sname): #change WSP, WSPn, KC0/KN0/KP0
@@ -492,7 +492,7 @@ if p.flag[fname]!=0:
    #inputs
    vnames=['PB1',    'PB2',   'PB3','RPOC','LPOC','DOC','RPON','LPON','DON','NH4', 'NO3',  'RPOP','LPOP','DOP', 'PO4', 'COD','DOX','SRPOC','SRPON','SRPOP','PIP']
    svars =['CHLA',   'CHLA',  'CHLA','POC','POC', 'DOC', 'PON','PON', 'DON','NH4', 'NO3',  'POP',  'POP', 'DOP','PO4', 'DON','DO' ,'POC',   'PON', 'POP',  'POP']
-   rats  =[0.5/13.3, 0.5/16.6, 0.0,  0.1,   0.9,   1.0,  0.1,   0.9,   1.0,  1.0,   1.0,   0.1,    0.9,   1.0,   1.0,   0.0,  1.0,  0.0,    0.0,    0.0,   0.0]
+   rats  =[0.5/13.3, 0.5/16.6, 0.0,  0.9,   0.1,  1.0,   0.9,   0.1,   1.0,  1.0,   1.0,   0.9,    0.1,   1.0,   1.0,   0.0,  1.0,  0.0,    0.0,    0.0,   0.0]
    if p.flag['ICM'] in [2,20]: vnames,svars,rats=vnames[:-4],svars[:-4],rats[:-4]
 
    #interp
@@ -553,43 +553,30 @@ if p.flag[fname]!=0:
 
    #read grid, get get region indices
    gd=loadz(p.grd).hgrid; gd.compute_ctr()
-   sindr=read(p.region+'stream_head.reg').inside(gd.xy)  #upper river region
-   sindo=read(p.region+'estuary_ext.reg').inside(gd.xy,fmt=2)
-   sindoo=read(p.region+'estuary.reg').inside(gd.xy,fmt=2,prj=['epsg:26918','epsg:4326'])
+   sindr=read(p.region+'stream_head_v2.reg').inside(gd.xy)  #upper river region
+   #sindo=read(p.region+'estuary_ext.reg').inside(gd.xy,fmt=2)
+   sindo=read(p.region+'estuary.reg').inside(gd.xy,fmt=2,prj=['epsg:26918','epsg:4326'])
    fpz0=abs(gd.dp)<1.0        #depth<1m
    fpz=(gd.dp>=1)*(gd.dp<=11) #depth in [1,11]
+   bstr=M.f2(gd.xy,value=M.SED_bstr) #sediment bed stress
 
    #settling velocity: WSP and WSPn
+   #limit:   POC,           PON,              POP
+   vids=[     3,             6,               11   ]
+   vms =[ [0.1, 0.5],    [0.1,0.35],      [0.1,  0.2]] #WSP
+   vmns=[ [0.02,0.2],    [0.05,0.2],     [0.01, 0.1]] #WSPn
    ntr=21 if p.flag['ICM'] in [1,10] else 17; WSP=zeros([ntr,gd.np]); WSPn=zeros([ntr,gd.np])
+   for i,vm,vmn in zip(vids,vms,vmns):
+       vi=(vm[0]+(gd.z-1.0)*diff(vm)/10).clip(*vm); WSP[i]=vi; WSP[i+1]=vi
+       vi=minimum(vmn[0]+(gd.z-1.0)*diff(vmn)/10, vmn[1]-diff(vmn)*bstr/0.2).clip(*vmn); WSPn[i]=vi; WSPn[i+1]=vi
 
-   #POC
-   for i in [3,4]:
-      vm=[0.1, 0.5];   WSP[i]=vm[1];  WSP[i,fpz0]=vm[0];   WSP[i,fpz]=vm[0]+(gd.dp[fpz]-1.0)*(vm[1]-vm[0])/10
-      vm=[0.02, 0.2];  WSPn[i]=vm[1]; WSPn[i,fpz0]=vm[0];  WSPn[i,fpz]=vm[0]+(gd.dp[fpz]-1.0)*(vm[1]-vm[0])/10
-
-      vi=gd.dp[sindo]/10; vi[vi>0.5]=0.5; vi[vi<0]=0; WSP[i,sindo]=vi #ocean
-      vi=gd.dp[sindo]/50; vi[vi>0.2]=0.2; vi[vi<0]=0;
-      fp=(gd.dp[sindo]<=20)*(vi>0.02); vi[fp]=0.02; WSPn[i,sindo]=vi #ocean
-
-   #for PON
-   for i in [6,7]:
-       vm=[0.1, 0.5];   WSP[i]=vm[1];  WSP[i,fpz0]=vm[0];  WSP[i,fpz]=vm[0]+(gd.dp[fpz]-1.0)*(vm[1]-vm[0])/10
-       vm=[0.05, 0.35]; WSPn[i]=vm[1]; WSPn[i,fpz0]=vm[0]; WSPn[i,fpz]=vm[0]+(gd.dp[fpz]-1.0)*(vm[1]-vm[0])/10
-       vi=gd.dp[sindo]/30; vi[vi>1.0]=1.0; vi[vi<0]=0; WSP[i,sindo]=vi; WSPn[i,sindo]=vi  #ocean
-   
-   #for POP
-   for i in [11,12]:
-       vm=[0.1,  0.2]; WSP[i] =vm[1];  WSP[i,fpz0] =vm[0];  WSP[i,fpz] =vm[0]+(gd.dp[fpz]-1.0)*(vm[1]-vm[0])/10
-       vm=[0.01, 0.1]; WSPn[i]=vm[1]; WSPn[i,fpz0]=vm[0]; WSPn[i,fpz]=vm[0]+(gd.dp[fpz]-1.0)*(vm[1]-vm[0])/10
-       vi=gd.dp[sindo]/30; vi[vi>1.0]=1.0; vi[vi<0]=0; WSP[i,sindo]=vi; WSPn[i,sindo]=vi  #ocean
-
-   #zero velocity @upper river
-   WSP[:,sindr]=0;    WSPn[:,sindr]=0
+   #smaller velocity @upper river
+   WSP[:,sindr]=0.1*WSP[:,sindr]; WSPn[:,sindr]=0.1*WSPn[:,sindr]
 
    #for KC0,KN0,KP0 in the ocean
-   KC0=zeros([3,gd.np]); KC0[2]=0.05;  KC0[2,sindoo]=0.01
-   KN0=zeros([3,gd.np]); KN0[2]=0.075; KN0[2,sindoo]=0.01
-   KP0=zeros([3,gd.np]); KP0[2]=0.2;  KP0[2,sindoo]=0.01
+   KC0=zeros([3,gd.np]); KC0[2]=0.05;  KC0[2,sindo]=0.01
+   KN0=zeros([3,gd.np]); KN0[2]=0.05;  KN0[2,sindo]=0.01
+   KP0=zeros([3,gd.np]); KP0[2]=0.2;   KP0[2,sindo]=0.01
 
    #write ICM_param
    S=zdata(); S.WSP=WSP; S.WSPn=WSPn; S.KC0=KC0; S.KN0=KN0; S.KP0=KP0; S.save(fname)
