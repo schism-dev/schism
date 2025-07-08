@@ -1,0 +1,9 @@
+# Current Limitations to SCHISM BMI and Future Work
+
+1. MPI parallelization is partially implemented for SCHISM driven
+through BMI. Before calling the BMI initialize routine, the MPI
+Communicator for SCHISM to use can be set in the integer variable
+`bmi_mpi_comm_handle`
+
+2. Water level and source/sink connectors have not been fully
+validated yet for SCHISM.

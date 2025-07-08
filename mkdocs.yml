@@ -99,8 +99,9 @@ nav:
     - Meshing for cross-scale regimes: mesh-generation/cross_regime.md
     - Meshing for compound floods:
       - Overview: mesh-generation/meshing-for-compound-floods/overview.md
-      - Extract thalwegs: mesh-generation/meshing-for-compound-floods/extract-thalweg.md
+      - Extract thalwegs from DEM: mesh-generation/meshing-for-compound-floods/extract-thalweg.md
       - Generate river map: mesh-generation/meshing-for-compound-floods/generate-river-map.md
+      - Special case utilizing NHD (National Hydrography Dataset): mesh-generation/meshing-for-compound-floods/special-case-utilizing-nhd.md
       - Meshing in SMS: mesh-generation/meshing-for-compound-floods/meshing-in-SMS.md
   - Modules:
     - Overview: modules/overview.md
@@ -115,11 +116,12 @@ nav:
     - Analysis mode: modules/analysis-mode.md
     - Hydraulics: modules/hydraulics.md
     - Particle tracking: modules/particle-tracking.md
-    - WWM: modules/wwm.md
+    - WWM (waves): modules/wwm.md
     - FABM: modules/fabm.md
     - PaHM: modules/pahm.md
     - Single-class ice module: modules/single-class-ice.md
     - Multi-class ice module: modules/multi-class-ice.md
+    - Data assimilation (PDAF): modules/pdaf.md
   - Code structure: code-contribution.md
   - Case studies: case-study.md
   - SCHISM external coupling:

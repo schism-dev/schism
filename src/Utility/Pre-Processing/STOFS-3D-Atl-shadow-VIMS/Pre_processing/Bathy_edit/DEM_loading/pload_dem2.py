@@ -404,7 +404,8 @@ def stofs3d_v8_LA():
         Take the maximum depth from the two grids
 
         Note: since the first grid is the primary grid by default,
-        Bluetopo prevails in the entire domain
+        Bluetopo is applied in the entire domain where it has coverage for the first grid.
+        This is different from STOFS3D-v7 or STOFS3D-v8.
     """
     # dem_dir = '/work2/noaa/nos-surge/feiye/npz2/'
     wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I20/Bathy_edit/DEM_loading/'
@@ -441,9 +442,48 @@ def stofs3d_v8_LA():
     comm.Barrier()
 
 
+def stofs3d_v7p2_original():
+    """
+    Load bathymetry for STOFS3D-v7.2, using the original set of DEMs only:
+    """
+    # ----------- inputs -------------------
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I15g_v7/Bathy_edit/DEM_loading/'
+    dem_dir = '/sciclone/schism10/Hgrid_projects/DEMs/npz2/'
+    dem_json_list = [
+        'DEM_info_original_patched.json',
+    ]
+    output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
+    # ---------------------------------------
+
+    comm, _, myrank = initialize_mpi()
+    if myrank == 0:  # copy this script to the working directory to keep a record
+        prep_dir(wdir, dem_json_list, region_shpfile_list=[])
+        print(f'preparing files in {wdir}, DEM list: {dem_json_list}')
+
+    comm.Barrier()
+
+    loaded_grids = []
+    for dem_json in dem_json_list:
+        # Load grids in parallel
+        loaded_grids.append(
+            pload_dem(grd=f'{wdir}/hgrid.ll', grdout=None, dem_json=f'{wdir}/{dem_json}',
+                      dem_dir=dem_dir, reverse_sign=True)  # returns None for non-root
+        )  # On non-root processes, loaded_grids only contains None
+        comm.Barrier()  # wait for all cores to finish populating loaded_grids
+        if myrank == 0:
+            print(f'---------Loaded grid from {dem_json}----------\n')
+
+    if myrank == 0:
+        print(f'processing loaded grids: {loaded_grids}')
+        hgrid_final = deepcopy(loaded_grids[0])
+        hgrid_final.save(output_fname)
+
+    comm.Barrier()
+
+
 def stofs3d_v8():
     """
-    Load bathymetry for STOFS3D-v8.
+    Load bathymetry for STOFS3D-v8 and STOFS3D-v7.2.
 
     Needs hgrid.ll in the working directory.
 
@@ -453,7 +493,7 @@ def stofs3d_v8():
     This leads to three bathymetry-loaded grids.
 
     A region (Louisiana) is defined where the v6 grid seems too shallow.
-    The v8 grid depth takes the larger value from the three grids inside region,
+    The v8 grid depth takes the larger value from the three grids inside the region,
     i.e., where BlueTopo and NGOM leads to deeper channels than v6.
     And it takes the v6 value outside the region.
     """
@@ -515,12 +555,12 @@ def convert_tif_crs(tif_path, output_path="converted_to_lonlat.tif"):
         if original_crs == "EPSG:4326":
             print("The file is already in lon-lat (WGS84). No conversion needed.")
             return
-        
+
         # Convert to WGS84 (EPSG:4326)
         transform, width, height = calculate_default_transform(
             original_crs, "EPSG:4326", src.width, src.height, *src.bounds
         )
-        
+
         # Create a new dataset with the transformed data
         kwargs = src.meta.copy()
         kwargs.update({
@@ -529,7 +569,7 @@ def convert_tif_crs(tif_path, output_path="converted_to_lonlat.tif"):
             "width": width,
             "height": height
         })
-        
+
         with rasterio.open(output_path, "w", **kwargs) as dst:
             for i in range(1, src.count + 1):  # Loop through bands
                 reproject(
@@ -541,7 +581,7 @@ def convert_tif_crs(tif_path, output_path="converted_to_lonlat.tif"):
                     dst_crs="EPSG:4326",
                     resampling=Resampling.nearest
                 )
-        
+
         print(f"Converted file saved as: {output_path}")
 
 
@@ -566,4 +606,5 @@ def sample_convert_dem():
 
 if __name__ == '__main__':
     # sample_convert_dem()
+    # stofs3d_v7p2_original()
     stofs3d_v8()

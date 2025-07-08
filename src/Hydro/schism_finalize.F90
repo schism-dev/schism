@@ -57,7 +57,7 @@
       open(10,file=out_dir(1:len_out_dir)//fdb,status='replace')
       write(10,*)np,nproc
       do i=1,np
-        write(10,'(i11,3(1x,e20.12))')iplg(i),xnd(i),ynd(i),elevmax(i)
+        write(10,'(i11,4(1x,e20.12))')iplg(i),xnd(i),ynd(i),elevmax(i),time_elevmax(i)
       enddo !i
       close(10)
 
@@ -67,7 +67,7 @@
       open(10,file=out_dir(1:len_out_dir)//fdb,status='replace')
       write(10,*)np,nproc
       do i=1,np
-        write(10,'(i11,5(1x,e20.12))')iplg(i),xnd(i),ynd(i),dav_maxmag(i),dav_max(1:2,i)
+        write(10,'(i11,6(1x,e20.12))')iplg(i),xnd(i),ynd(i),dav_maxmag(i),dav_max(1:2,i),time_dav_max(i)
       enddo !i
       close(10)
 

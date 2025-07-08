@@ -30,7 +30,7 @@ prc_1_max_window_hours=24.,
 prc_2_max_window_hours=24.,            
 prc_1_fail_if_missing=.true., 
 prc_2_fail_if_missing=.false.,              
-prc_1_file=sflux_prc_1', 
-prc_2_file=sflux_prc_2',                                    
+prc_1_file='sflux_prc_1', 
+prc_2_file='sflux_prc_2',                                    
 prate_name='prate', !name of precipitation rate variable
 /

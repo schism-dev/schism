@@ -23,6 +23,8 @@
 ! subroutine vinter
 ! subroutine eqstate
 ! subroutine asm
+! subroutine compute_cpsi3
+! subroutine cmue_d
 ! function rint_lag
 ! function lindex
 ! function lindex_s 
@@ -295,7 +297,7 @@
 #else /*USE_ATMOS*/
         !Read 1st record
         if(myrank==0) then
-          j=nf90_open(in_dir(1:len_in_dir)//'atmos.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_atmos)
+          j=nf90_open(in_dir(1:len_in_dir)//'atmos.nc',NF90_NOWRITE,ncid_atmos)
           if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc')
 !          j=nf90_inq_varid(ncid_atmos, "time_step",mm)
 !          if(j/=NF90_NOERR) call parallel_abort('MISC: atmos.nc time_step')
@@ -626,7 +628,12 @@
       th_time2=0.d0
 
       if(nettype2>0) then
-        j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_elev2D)
+! SCHISM BMI will bypass the elev2D.th.nc
+! forcing file dependency and instead will fill
+! the ath2, th_dt2, and th_time2 variables through
+! the NextGen framework coupled formulation
+#ifndef USE_BMI
+        j=nf90_open(in_dir(1:len_in_dir)//'elev2D.th.nc',NF90_NOWRITE,ncid_elev2D)
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev2D.th.nc')
         j=nf90_inq_dimid(ncid_elev2D,'nOpenBndNodes',mm)
         j=nf90_inquire_dimension(ncid_elev2D,mm,len=itmp)
@@ -640,7 +647,6 @@
         ninv=time/th_dt2(1)
         th_time2(1,1)=real(ninv,rkind)*th_dt2(1)
         th_time2(2,1)=th_time2(1,1)+th_dt2(1)
-
         j=nf90_inq_varid(ncid_elev2D, "time_series",mm)
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev time_series')
         j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,1,1), &
@@ -649,10 +655,11 @@
         j=nf90_get_var(ncid_elev2D,mm,ath2(1,1,1:nnode_et,2,1), &
     &(/1,1,1,ninv+2/),(/1,1,nnode_et,1/))
         if(j/=NF90_NOERR) call parallel_abort('MISC: elev time_series2')
-      endif !nettype2
+#endif /*USE_BMI*/
+      endif
 
       if(nfltype2>0) then
-        j=nf90_open(in_dir(1:len_in_dir)//'uv3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_uv3D)
+        j=nf90_open(in_dir(1:len_in_dir)//'uv3D.th.nc',NF90_NOWRITE,ncid_uv3D)
         if(j/=NF90_NOERR) call parallel_abort('MISC: uv3D.th.nc')
         j=nf90_inq_dimid(ncid_uv3D,'nOpenBndNodes',mm)
         j=nf90_inquire_dimension(ncid_uv3D,mm,len=itmp)
@@ -683,7 +690,7 @@
       do i=1,natrm
         if(ntrs(i)>0.and.nnode_tr2(i)>0) then
           icount=icount+1
-          j=nf90_open(in_dir(1:len_in_dir)//tr_mname(i)//'_3D.th.nc',OR(NF90_NETCDF4,NF90_NOWRITE),ncid_tr3D(i))
+          j=nf90_open(in_dir(1:len_in_dir)//tr_mname(i)//'_3D.th.nc',NF90_NOWRITE,ncid_tr3D(i))
           if(j/=NF90_NOERR) call parallel_abort('MISC: '//tr_mname(i)//'_3D.th.nc')
           j=nf90_inq_dimid(ncid_tr3D(i),'nOpenBndNodes',mm)
           j=nf90_inquire_dimension(ncid_tr3D(i),mm,len=itmp)
@@ -722,22 +729,12 @@
       endif !myrank==0
 
 !...  Source/sinks: read by rank 0 first
-#ifdef USE_NWM_BMI
-      ninv=time/th_dt3(1)
-      th_time3(1,1)=ninv*th_dt3(1)
-      th_time3(2,1)=th_time3(1,1)+th_dt3(1)
-
-      ninv=time/th_dt3(2)
-      th_time3(1,2)=ninv*th_dt3(2)
-      th_time3(2,2)=th_time3(1,2)+th_dt3(2)
-
-      ninv=time/th_dt3(3)
-      th_time3(1,3)=ninv*th_dt3(3)
-      th_time3(2,3)=th_time3(1,3)+th_dt3(3)
-
-      ath3(:,1,1,1:2)=0.d0
-      ath3(:,1,1,3)=-9999.d0
-#else /*USE_NWM_BMI*/
+#ifdef USE_BMI
+        ! SCHISM BMI will bypass the .th or .nc
+        ! source/sinks forcing file dependency and instead
+        ! will fill the ath3, th_dt3, and th_time3 variables
+        ! through the NextGen framework coupled formulations
+#else
 
 #ifdef SH_MEM_COMM
       if(if_source==1.and.myrank_node==0) then !ASCII
@@ -835,6 +832,8 @@
         endif !nsinks>0
       endif !if_source=-1
 
+#endif /*USE_BMI*/
+
 !     Bcast
       if(if_source/=0) then
         !First 2 vars are bcast from rank 0 of comm, which must be a member of myrank_node=0?
@@ -848,7 +847,6 @@
         call mpi_bcast(ath3,max(1,nsources,nsinks)*ntracers*2*nthfiles3,MPI_REAL4,0,comm,istat)
 #endif
       endif 
-#endif /*USE_NWM_BMI*/
 
 #ifdef USE_SED
 !...  Sediment model initialization
@@ -1996,6 +1994,8 @@
           if(ivcor/=1) kbp(i)=0
         else !wet
           idry2(i)=0
+          !znl() may not be used as later idry2 may be reset to 1
+          !All eventually wet nodes have valid znl()
           call zcoor(0,i,kbp(i),znl(:,i))
         endif !wet ot dry
       enddo !i=1,npa
@@ -2778,9 +2778,9 @@
       integer :: k,kout,l1,l2
       real(rkind) :: zrat
 
-      logical :: first_call
+!      logical :: first_call
 
-      first_call=.true.
+!      first_call=.true.
 
       if(k1>k2) then !.or.nc>10) then
         write(errmsg,*)'k1>k2 in vinter()'
@@ -2822,7 +2822,7 @@
         endif
       endif
 
-      first_call=.false.
+!      first_call=.false.
       end subroutine vinter
 
 !===============================================================================
@@ -3030,6 +3030,526 @@
       qd2=cmiu2*xl(j,i)*sqrt(q2(j,i))
 
       end subroutine asm
+
+!-----------------------------------------------------------------------
+!YJZ notes: only kept options: turb_method=3 (2nd-order), stab_method=1 (constant)
+!Several constants from SCHISM: cmiu0 etc
+!Code borrowed from GOTM5: turbulence.F90, compute_cpsi3.F90, cmue_d.F90
+
+!BOP
+! !ROUTINE: Calculate c3 from steady-state Richardson number\label{sec:c3}
+!
+! !INTERFACE:
+!   REALTYPE function compute_cpsi3(c1,c2,Ri)
+!
+! !DESCRIPTION:
+! Numerically computes $c_{\psi 3}$ for two-equation models from  given
+! steady-state Richardson-number $Ri_{st}$ and parameters
+! $c_{\psi 1}$ and $c_{\psi 2}$ according to \eq{Ri_st}.
+! A Newton-iteration is used to solve the resulting
+! implicit non-linear equation.
+!
+! \cite{Umlaufetal2003} showed that in the context of models considered
+! in GOTM, the steady-state Richardson number is determined by the
+! relation
+! \begin{equation}
+!   \label{Ri_st}
+!   Ri_{st}=\dfrac{c_\mu}{{c_\mu}'} \dfrac{c_{\psi 2} - c_{\psi 1}}{c_{\psi 2} - c_{\psi 3}}
+!   \point
+! \end{equation}
+! Since it is well-known that, with the equilibrium assumption $P+G=\epsilon$,
+! stability functions reduce to functions of $Ri$ only
+! (\cite{MellorYamada74}, \cite{Galperinetal88}), \eq{Ri_st} is a
+! non-linear equation for the model constant $c_{\psi 3}$ for given
+! $Ri_{st}$. Note, that the structure parameters, $m$ and $n$, do not
+! appear in \eq{Ri_st}. This implies that the type of the two-equation
+! model is irrelevant for the prediction of the mixed layer depth, as
+! long as \eq{Ri_st} is fulfilled for identical $Ri_{st}$. Numerical
+! examples with very different values of $m$ and $n$ confirmed indeed
+! that the mixed layer depth only depends on $Ri_{st}$.
+! The experiment of \cite{KatoPhillips69} could almost perfectly be
+! reproduced, provided the parameter $c_{\psi 3}$ was chosen to
+! correspond to $Ri_{st}\approx0.25$, see \cite{Umlaufetal2003}.
+!-----------------------------------------------------------------------
+   subroutine compute_cpsi3
+   !Inputs: cpsi1,cpsi2,ri_st
+   !Output: cpsi3_comp
+   use schism_glbl, only: rkind,cmiu0,cpsi1,cpsi2,ri_st,cpsi3_comp
+   use schism_msgp, only : parallel_abort
+   implicit none
+!   use turbulence, only:           an,as,cmue1,cmue2
+!   use turbulence, only:           cm0,cm0_fix,Prandtl0_fix
+!   use turbulence, only:           turb_method,stab_method
+!   use turbulence, only:           Constant
+!   use turbulence, only:           MunkAnderson
+!   use turbulence, only:           SchumGerz
+!   use turbulence, only:           EiflerSchrimpf
+!
+! !INPUT PARAMETERS:
+!   REALTYPE, intent(in)            :: c1,c2,Ri
+!
+! !REVISION HISTORY:
+!  Original author(s): Hans Burchard, Lars Umlauf
+!
+!EOP
+!-----------------------------------------------------------------------
+! !LOCAL VARIABLES:
+     integer :: i
+     integer,parameter :: imax=100
+     real(rkind),parameter :: e=1.d-8
+     real(rkind) :: fc,fp,step,ann,an(1),as(1),cmue1,cmue2
+!-----------------------------------------------------------------------
+!BOC
+
+   ann=5.d0
+   do i=0,imax
+      an(1)=ann
+      as(1)=an(1)/ri_st !ri_st>0
+!      if (turb_method.eq.2) then
+!         select case(stab_method)
+!            case(Constant)
+!               cmue1=cm0_fix
+!               cmue2=cm0_fix/Prandtl0_fix
+!            case(MunkAnderson)
+!               call cmue_ma(2)
+!            case(SchumGerz)
+!               call cmue_sg(2)
+!            case(EiflerSchrimpf)
+!               call cmue_rf(2)
+!         end select
+!      else
+      call cmue_d(2,an,as,cmue1,cmue2)
+!      end if
+      fc=cmue1*an(1)/ri_st-cmue2*an(1)-cmiu0**(-3)
+      an(1)=ann+e !perturb
+      as(1)=an(1)/ri_st
+!      if (turb_method.eq.2) then
+!         select case(stab_method)
+!            case(Constant)
+!               cmue1=cm0_fix
+!               cmue2=cm0_fix/Prandtl0_fix
+!            case(MunkAnderson)
+!               call cmue_ma(2)
+!            case(SchumGerz)
+!               call cmue_sg(2)
+!            case(EiflerSchrimpf)
+!               call cmue_rf(2)
+!         end select
+!      else
+      call cmue_d(2,an,as,cmue1,cmue2)
+!      end if
+      fp=cmue1*an(1)/ri_st-cmue2*an(1)-cmiu0**(-3)
+      if(fp==fc) call parallel_abort('MISC, compute_cpsi3: fp=fc')
+      step=-fc/((fp-fc)/e)
+      ann=ann+0.5*step
+      if (abs(step)>100.d0) then
+        call parallel_abort('MISC, compute_cpsi3: Method for calculating c3 does not converge maybe due to ri_st')
+      endif
+      if (abs(step)<1.d-10) exit
+   enddo !i
+
+   !If not converged, use the last values
+   an(1)=ann
+   as(1)=an(1)/ri_st
+!   if (turb_method.eq.2) then
+!      select case(stab_method)
+!         case(Constant)
+!            cmue1=cm0_fix
+!            cmue2=cm0_fix/Prandtl0_fix
+!         case(MunkAnderson)
+!            call cmue_ma(2)
+!         case(SchumGerz)
+!            call cmue_sg(2)
+!         case(EiflerSchrimpf)
+!            call cmue_rf(2)
+!      end select
+!   else
+   call cmue_d(2,an,as,cmue1,cmue2)
+!   end if
+
+  if(cmue2==0.d0) call parallel_abort('MISC, compute_cpsi3: cmue2=0')
+   cpsi3_comp = cpsi2+(cpsi1-cpsi2)/ri_st*cmue1/cmue2
+
+!-----------------------------------------------------------------------
+! Copyright by the GOTM-team under the GNU Public License - www.gnu.org
+!-----------------------------------------------------------------------
+   end subroutine compute_cpsi3
+
+!-----------------------------------------------------------------------
+!BOP
+! !ROUTINE: The quasi-equilibrium stability functions \label{sec:cmueD}
+!
+! !INTERFACE:
+   subroutine cmue_d(nlev,an,as,cmue1,cmue2)
+!
+! !DESCRIPTION:
+!
+!  This subroutine updates the explicit solution of
+!  \eq{bijVertical} and \eq{giVertical} under the same assumptions
+!  as those discussed in \sect{sec:cmueC}. Now, however, an additional
+!  equilibrium assumption is invoked. With the help of \eq{PeVertical},
+!  one can write the equilibrium condition for the TKE as
+! \begin{equation}
+!  \label{quasiEquilibrium}
+!     \dfrac{P+G}{\epsilon} =
+!    \hat{c}_\mu(\alpha_M,\alpha_N) \alpha_M
+!    - \hat{c}'_\mu(\alpha_M,\alpha_N) \alpha_N = 1
+!   \comma
+! \end{equation}
+! where \eq{alphaIdentities} has been used. This is an implicit relation
+! to determine $\alpha_M$ as a function of $\alpha_N$.
+! With the definitions given in \sect{sec:cmueC}, it turns out that
+! $\alpha_M(\alpha_N)$ is a quadratic polynomial that is easily solved.
+! The resulting value for $\alpha_M$ is substituted into the stability
+! functions described in \sect{sec:cmueC}. For negative $\alpha_N$
+! (convection) the shear number $\alpha_M$ computed in this way may
+! become negative. The value of $\alpha_N$ is limited such that this
+! does not happen, see \cite{UmlaufBurchard2005a}.
+!
+! !USES:
+!   use turbulence, only: an,as,at
+!   use turbulence, only: cmue1,cmue2
+!   use turbulence, only: cm0
+!   use turbulence, only: cc1
+!   use turbulence, only: ct1,ctt
+!   use turbulence, only: a1,a2,a3,a4,a5
+!   use turbulence, only: at1,at2,at3,at4,at5
+
+   use schism_glbl, only: rkind,cmiu0,iscnd_coeff
+   use schism_msgp, only : parallel_abort
+   IMPLICIT NONE
+
+! !INPUT PARAMETERS:
+!  number of vertical layers (set as 2 for homogeneous case)
+   integer, intent(in)       :: nlev !hard coded as 2
+   real(rkind), intent(inout) :: an(1),as(1)
+   real(rkind), intent(out) :: cmue1,cmue2  
+
+! !DEFINED PARAMETERS:
+   real(rkind), parameter       :: anLimitFact = 0.5D0
+   real(rkind), parameter       :: small       = 1.0D-10
+
+!
+! !REVISION HISTORY:
+!  Original author(s): Lars Umlauf
+!
+!EOP
+!-----------------------------------------------------------------------
+! !LOCAL VARIABLES:
+!
+     integer :: i
+     real(rkind) :: N,Nt,d0,d1,d2,d3,d4,d5,n0,n1,n2,nt0,nt1,nt2,dCm,nCm,nCmp,cm3_inv, &
+     &tmp0,tmp1,tmp2,tmp10,asMax,asMaxNum,asMaxDen,anMin,anMinNum,anMinDen
+!-----------------------------------------------------------------------
+!BOC
+
+   !From turbulence.F90 (init_scnd)
+! !DEFINED PARAMETERS:
+   real(rkind),  parameter                :: cc1GL78     =  3.6000
+   real(rkind),  parameter                :: cc2GL78     =  0.8000
+   real(rkind),  parameter                :: cc3GL78     =  1.2000
+   real(rkind),  parameter                :: cc4GL78     =  1.2000
+   real(rkind),  parameter                :: cc5GL78     =  0.0000
+   real(rkind),  parameter                :: cc6GL78     =  0.5000
+   real(rkind),  parameter                :: ct1GL78     =  3.0000
+   real(rkind),  parameter                :: ct2GL78     =  0.3333
+   real(rkind),  parameter                :: ct3GL78     =  0.3333
+   real(rkind),  parameter                :: ct4GL78     =  0.0000
+   real(rkind),  parameter                :: ct5GL78     =  0.3333
+   real(rkind),  parameter                :: cttGL78     =  0.8000
+
+   real(rkind),  parameter                :: cc1MY82     =  6.0000
+   real(rkind),  parameter                :: cc2MY82     =  0.3200
+   real(rkind),  parameter                :: cc3MY82     =  0.0000
+   real(rkind),  parameter                :: cc4MY82     =  0.0000
+   real(rkind),  parameter                :: cc5MY82     =  0.0000
+   real(rkind),  parameter                :: cc6MY82     =  0.0000
+   real(rkind),  parameter                :: ct1MY82     =  3.7280
+   real(rkind),  parameter                :: ct2MY82     =  0.0000
+   real(rkind),  parameter                :: ct3MY82     =  0.0000
+   real(rkind),  parameter                :: ct4MY82     =  0.0000
+   real(rkind),  parameter                :: ct5MY82     =  0.0000
+   real(rkind),  parameter                :: cttMY82     =  0.6102
+
+   real(rkind),  parameter                :: cc1KC94     =  6.0000
+   real(rkind),  parameter                :: cc2KC94     =  0.3200
+   real(rkind),  parameter                :: cc3KC94     =  0.0000
+   real(rkind),  parameter                :: cc4KC94     =  0.0000
+   real(rkind),  parameter                :: cc5KC94     =  0.0000
+   real(rkind),  parameter                :: cc6KC94     =  0.0000
+   real(rkind),  parameter                :: ct1KC94     =  3.7280
+   real(rkind),  parameter                :: ct2KC94     =  0.7000
+   real(rkind),  parameter                :: ct3KC94     =  0.7000
+   real(rkind),  parameter                :: ct4KC94     =  0.0000
+   real(rkind),  parameter                :: ct5KC94     =  0.2000
+   real(rkind),  parameter                :: cttKC94     =  0.6102
+
+   real(rkind),  parameter                :: cc1LDOR96   =  3.0000
+   real(rkind),  parameter                :: cc2LDOR96   =  0.8000
+   real(rkind),  parameter                :: cc3LDOR96   =  2.0000
+   real(rkind),  parameter                :: cc4LDOR96   =  1.1180
+   real(rkind),  parameter                :: cc5LDOR96   =  0.0000
+   real(rkind),  parameter                :: cc6LDOR96   =  0.5000
+   real(rkind),  parameter                :: ct1LDOR96   =  3.0000
+   real(rkind),  parameter                :: ct2LDOR96   =  0.3333
+   real(rkind),  parameter                :: ct3LDOR96   =  0.3333
+   real(rkind),  parameter                :: ct4LDOR96   =  0.0000
+   real(rkind),  parameter                :: ct5LDOR96   =  0.3333
+   real(rkind),  parameter                :: cttLDOR96   =  0.8000
+
+   real(rkind),  parameter                :: cc1CHCD01A  =  5.0000
+   real(rkind),  parameter                :: cc2CHCD01A  =  0.8000
+   real(rkind),  parameter                :: cc3CHCD01A  =  1.9680
+   real(rkind),  parameter                :: cc4CHCD01A  =  1.1360
+   real(rkind),  parameter                :: cc5CHCD01A  =  0.0000
+   real(rkind),  parameter                :: cc6CHCD01A  =  0.4000
+   real(rkind),  parameter                :: ct1CHCD01A  =  5.9500
+   real(rkind),  parameter                :: ct2CHCD01A  =  0.6000
+   real(rkind),  parameter                :: ct3CHCD01A  =  1.0000
+   real(rkind),  parameter                :: ct4CHCD01A  =  0.0000
+   real(rkind),  parameter                :: ct5CHCD01A  =  0.3333
+   real(rkind),  parameter                :: cttCHCD01A  =  0.7200
+
+   real(rkind),  parameter                :: cc1CHCD01B  =  5.0000
+   real(rkind),  parameter                :: cc2CHCD01B  =  0.6983
+   real(rkind),  parameter                :: cc3CHCD01B  =  1.9664
+   real(rkind),  parameter                :: cc4CHCD01B  =  1.0940
+   real(rkind),  parameter                :: cc5CHCD01B  =  0.0000
+   real(rkind),  parameter                :: cc6CHCD01B  =  0.4950
+   real(rkind),  parameter                :: ct1CHCD01B  =  5.6000
+   real(rkind),  parameter                :: ct2CHCD01B  =  0.6000
+   real(rkind),  parameter                :: ct3CHCD01B  =  1.0000
+   real(rkind),  parameter                :: ct4CHCD01B  =  0.0000
+   real(rkind),  parameter                :: ct5CHCD01B  =  0.3333
+   real(rkind),  parameter                :: cttCHCD01B  =  0.4770
+
+   real(rkind),  parameter                :: cc1CCH02    =  5.0000
+   real(rkind),  parameter                :: cc2CCH02    =  0.7983
+   real(rkind),  parameter                :: cc3CCH02    =  1.9680
+   real(rkind),  parameter                :: cc4CCH02    =  1.1360
+   real(rkind),  parameter                :: cc5CCH02    =  0.0000
+   real(rkind),  parameter                :: cc6CCH02    =  0.5000
+   real(rkind),  parameter                :: ct1CCH02    =  5.5200
+   real(rkind),  parameter                :: ct2CCH02    =  0.2134
+   real(rkind),  parameter                :: ct3CCH02    =  0.3570
+   real(rkind),  parameter                :: ct4CCH02    =  0.0000
+   real(rkind),  parameter                :: ct5CCH02    =  0.3333
+   real(rkind),  parameter                :: cttCCH02    =  0.8200
+
+   !Type of 2nd-order stability function options
+   integer, parameter                  :: LIST        = 0 
+   integer, parameter                  :: GL78        = 1 !Gibson & Launder 1978
+   integer, parameter                  :: MY82        = 2 !Mellor-Yamada 1982
+   integer, parameter                  :: KC94        = 3 !Kantha & Clayson 1994
+   integer, parameter                  :: LDOR96      = 4 !Luyen 1996
+   integer, parameter                  :: CHCD01A     = 5 !Canuto A
+   integer, parameter                  :: CHCD01B     = 6 !Canuto B
+   integer, parameter                  :: CCH02       = 7 !Cheng 2002
+
+   real(rkind) :: cc1,cc2,cc3,cc4,cc5,cc6,ct1,ct2,ct3,ct4,ct5,ctt,a1,a2,a3,a4,a5,at1,at2,at3,at4,at5
+
+!
+! !REVISION HISTORY:
+!  Original author(s): Lars Umlauf
+!
+!EOP
+!
+!-----------------------------------------------------------------------
+! !LOCAL VARIABLES:
+!
+!-----------------------------------------------------------------------
+!BOC
+
+  select case (iscnd_coeff)
+!  case (LIST)
+!  do nothing, parameters are read from namelist
+  case (1) !GL78: Gibson & Launder 1978
+     cc1     =    cc1GL78
+     cc2     =    cc2GL78
+     cc3     =    cc3GL78
+     cc4     =    cc4GL78
+     cc5     =    cc5GL78
+     cc6     =    cc6GL78
+     ct1     =    ct1GL78
+     ct2     =    ct2GL78
+     ct3     =    ct3GL78
+     ct4     =    ct4GL78
+     ct5     =    ct5GL78
+     ctt     =    cttGL78
+  case (2) !MY82: Mellor-Yamada 1982
+     cc1     =    cc1MY82
+     cc2     =    cc2MY82
+     cc3     =    cc3MY82
+     cc4     =    cc4MY82
+     cc5     =    cc5MY82
+     cc6     =    cc6MY82
+     ct1     =    ct1MY82
+     ct2     =    ct2MY82
+     ct3     =    ct3MY82
+     ct4     =    ct4MY82
+     ct5     =    ct5MY82
+     ctt     =    cttMY82
+  case (3) !KC94: Kantha & Clayson 1994
+     cc1     =    cc1KC94
+     cc2     =    cc2KC94
+     cc3     =    cc3KC94
+     cc4     =    cc4KC94
+     cc5     =    cc5KC94
+     cc6     =    cc6KC94
+     ct1     =    ct1KC94
+     ct2     =    ct2KC94
+     ct3     =    ct3KC94
+     ct4     =    ct4KC94
+     ct5     =    ct5KC94
+     ctt     =    cttKC94
+  case (4) !LDOR96: Luyen 1996
+     cc1     =    cc1LDOR96
+     cc2     =    cc2LDOR96
+     cc3     =    cc3LDOR96
+     cc4     =    cc4LDOR96
+     cc5     =    cc5LDOR96
+     cc6     =    cc6LDOR96
+     ct1     =    ct1LDOR96
+     ct2     =    ct2LDOR96
+     ct3     =    ct3LDOR96
+     ct4     =    ct4LDOR96
+     ct5     =    ct5LDOR96
+     ctt     =    cttLDOR96
+  case (5) !CHCD01A: Canuto A
+     cc1     =    cc1CHCD01A
+     cc2     =    cc2CHCD01A
+     cc3     =    cc3CHCD01A
+     cc4     =    cc4CHCD01A
+     cc5     =    cc5CHCD01A
+     cc6     =    cc6CHCD01A
+     ct1     =    ct1CHCD01A
+     ct2     =    ct2CHCD01A
+     ct3     =    ct3CHCD01A
+     ct4     =    ct4CHCD01A
+     ct5     =    ct5CHCD01A
+     ctt     =    cttCHCD01A
+  case (6) !CHCD01B: Canuto B
+     cc1     =    cc1CHCD01B
+     cc2     =    cc2CHCD01B
+     cc3     =    cc3CHCD01B
+     cc4     =    cc4CHCD01B
+     cc5     =    cc5CHCD01B
+     cc6     =    cc6CHCD01B
+     ct1     =    ct1CHCD01B
+     ct2     =    ct2CHCD01B
+     ct3     =    ct3CHCD01B
+     ct4     =    ct4CHCD01B
+     ct5     =    ct5CHCD01B
+     ctt     =    cttCHCD01B
+  case (7) !CCH02: Cheng 2002
+     cc1     =    cc1CCH02
+     cc2     =    cc2CCH02
+     cc3     =    cc3CCH02
+     cc4     =    cc4CCH02
+     cc5     =    cc5CCH02
+     cc6     =    cc6CCH02
+     ct1     =    ct1CCH02
+     ct2     =    ct2CCH02
+     ct3     =    ct3CCH02
+     ct4     =    ct4CCH02
+     ct5     =    ct5CCH02
+     ctt     =    cttCCH02
+  case default
+     call parallel_abort('MISC: cmue_d: unknown iscnd_coeff')
+  end select
+
+   !  compute the a_i's for the Algebraic Stress Model
+   a1   =  2./3. - cc2/2.
+   a2   =  1.    - cc3/2.
+   a3   =  1.    - cc4/2.
+   a4   =          cc5/2.
+   a5   =  1./2. - cc6/2.
+
+   at1  =           1. - ct2
+   at2  =           1. - ct3
+   at3  =  2. *   ( 1. - ct4)
+   at4  =  2. *   ( 1. - ct5)
+   at5  =  2.*ctt*( 1. - ct5)
+   !End of turbulence.F90 (init_scnd)
+
+     N    =   0.5*cc1
+     Nt   =   ct1
+
+     d0   =   36.* N**3. * Nt**2.
+     d1   =   84.*a5*at3 * N**2. * Nt  + 36.*at5 * N**3. * Nt
+     d2   =   9.*(at2**2.-at1**2.) * N**3. - 12.*(a2**2.-3.*a3**2.) * N * Nt**2.
+     d3   =   12.*a5*at3*(a2*at1-3.*a3*at2) * N + 12.*a5*at3*(a3**2.-a2**2.) * Nt       &
+            + 12.*at5*(3.*a3**2.-a2**2.) * N * Nt
+     d4   =   48.*a5**2.*at3**2. * N + 36.*a5*at3*at5 * N**2.
+     d5   =   3.*(a2**2.-3.*a3**2.)*(at1**2.-at2**2.) * N
+
+
+     n0   =   36.*a1 * N**2. * Nt**2.
+     n1   = - 12.*a5*at3*(at1+at2) * N**2. + 8.*a5*at3*(6.*a1-a2-3.*a3) * N * Nt        &
+            + 36.*a1*at5 * N**2. * Nt
+     n2   =   9.*a1*(at2**2.-at1**2.) * N**2.
+
+     nt0  =   12.*at3 * N**3. * Nt
+     nt1  =   12.*a5*at3**2.  * N**2.
+     nt2  =   9.*a1*at3*(at1-at2) * N**2. + (  6.*a1*(a2-3.*a3)                         &
+            - 4.*(a2**2.-3.*a3**2.) )*at3 * N * Nt
+
+     cm3_inv = 1./cmiu0**3
+
+ !   mininum value of "an" to insure that "as" > 0 in equilibrium
+     tmp2=(d1+nt0)**2. - 4.*d0*(d4+nt1)
+     if(tmp2<0.d0) call parallel_abort('MISC: cmue_d, tmp2<0')
+     anMinNum  = -(d1 + nt0) + sqrt(tmp2) !(d1+nt0)**2. - 4.*d0*(d4+nt1))
+     anMinDen  = 2.*(d4+nt1)
+     if(anMinDen==0.d0) call parallel_abort('MISC: cmue_d, anMinDen=0')
+     anMin     = anMinNum / anMinDen
+
+     if (abs(n2-d5).lt.small) then
+!       (special treatment to  avoid a singularity)
+        do i=1,1 !nlev-1 
+!          clip an at minimum value
+           an(i) = max(an(i),anLimitFact*anMin)
+!          compute the equilibrium value of as
+           tmp0  = -d0 - (d1 + nt0)*an(i) - (d4 + nt1)*an(i)*an(i)
+           tmp1  = -d2 + n0 +  (n1-d3-nt2)*an(i)
+           if(tmp1==0.d0) call parallel_abort('MISC: cmue_d, tmp1=0')
+           as(i) =  - tmp0/tmp1
+!          compute stability function
+           dCm  = d0  +  d1*an(i) +  d2*as(i) + d3*an(i)*as(i) + d4*an(i)*an(i) + d5*as(i)*as(i)
+           nCm  = n0  +  n1*an(i) +  n2*as(i)
+           nCmp = nt0 + nt1*an(i) + nt2*as(i)
+           if(dCm==0.d0) call parallel_abort('MISC: cmue_d, dCm=0')
+           cmue1 =  cm3_inv*nCm /dCm
+           cmue2 =  cm3_inv*nCmp/dCm
+        enddo !i
+     else
+        do i=1,1 !nlev-1
+           an(i) = max(an(i),anLimitFact*anMin)
+!          compute the equilibrium value of as
+           tmp0  = -d0 - (d1 + nt0)*an(i) - (d4 + nt1)*an(i)*an(i)
+           tmp1  = -d2 + n0 + (n1-d3-nt2)*an(i)
+           tmp2  =  n2-d5
+           !abs(n2-d5) checked, but confirming here
+           if(tmp2==0.d0) call parallel_abort('MISC: cmue_d, tmp2=0')
+           tmp10=tmp1*tmp1-4.*tmp0*tmp2
+           if(tmp10<0.d0) call parallel_abort('MISC: cmue_d, tmp10<0')
+
+           !as(i) =  (-tmp1 + sqrt(tmp1*tmp1-4.*tmp0*tmp2) ) / (2.*tmp2)
+           as(i) =  (-tmp1 + sqrt(tmp10)) / (2.*tmp2)
+!          compute stability function
+           dCm  = d0  +  d1*an(i) +  d2*as(i) + d3*an(i)*as(i) + d4*an(i)*an(i) + d5*as(i)*as(i)
+           nCm  = n0  +  n1*an(i) +  n2*as(i)
+           nCmp = nt0 + nt1*an(i) + nt2*as(i)
+           cmue1 =  cm3_inv*nCm /dCm
+           cmue2 =  cm3_inv*nCmp/dCm
+
+        enddo !i
+     endif !abs(n2-d5)
+
+   end subroutine cmue_d
+!-----------------------------------------------------------------------
+! Copyright by the GOTM-team under the GNU Public License - www.gnu.org
+!-----------------------------------------------------------------------
 
 !===============================================================================
 !===============================================================================

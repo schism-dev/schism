@@ -46,7 +46,7 @@
       char_len=len_trim(stack_char)
       file_char='out2d_'//stack_char(1:char_len)//'.nc'
 
-      iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+      iret=nf90_open(trim(adjustl(file_char)),NF90_NOWRITE,ncid2)
       if(iret.ne.NF90_NOERR) then
         print*, nf90_strerror(iret); stop 'extract_mod2: (1)'
       endif
@@ -82,7 +82,7 @@
       char_len=len_trim(stack_char)
       file_char='out2d_'//stack_char(1:char_len)//'.nc'
 
-      iret=nf90_open(trim(adjustl(file_char)),OR(NF90_NETCDF4,NF90_NOWRITE),ncid2)
+      iret=nf90_open(trim(adjustl(file_char)),NF90_NOWRITE,ncid2)
       if(iret.ne.NF90_NOERR) then
         print*, nf90_strerror(iret); stop 'extract_mod2: (2)'
       endif

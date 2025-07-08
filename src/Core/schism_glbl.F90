@@ -87,14 +87,14 @@ module schism_glbl
                   &ibc,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
                   &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
                   &fwvor_streaming,fwvor_wveg,fwvor_wveg_NL,cur_wwm,wafo_obcramp, &
-                  &iwind_form,irec_nu,itur,ihhat,inu_elev, &
+                  &iwind_form,irec_nu,itur,icompute_cpsi3,iscnd_coeff,ihhat,inu_elev, &
                   &inu_uv,ibcc_mean,iflux,iout_sta,nspool_sta,nhot,nhot_write, &
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,iveg, &
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
                   &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm,iof_icm_ba,&
-                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif,&                  
+                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif,nmarsh_types,&                  
                   &imec,nbins_mec_vert
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
@@ -111,8 +111,10 @@ module schism_glbl
                       &slr_rate,rho0,shw,gen_wsett,turbinj,turbinjds,alphaw,h1_bcc,h2_bcc,vclose_surf_frac, &
                       &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
                       &stemp_stc,stemp_dz(2),ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
-                      &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2
-  real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:),mec_vert_z(:),mec_vert_a(:)
+                      &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2,ri_st, &
+                      &create_marsh_min,create_marsh_max
+  real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:), &
+        &veg_di0(:),veg_h0(:),veg_nv0(:),veg_cd0(:),drown_marsh(:),mec_vert_z(:),mec_vert_a(:)
 
   ! Misc. variables shared between routines
   integer,save :: nz_r,ieqstate,kr_co, &
@@ -120,15 +122,15 @@ module schism_glbl
                   &ihydraulics,irouse_test,iwbl_itmax,nettype,nfltype, &
                   &ntetype,nsatype,ntrtype1(natrm),nettype2,nnode_et,nfltype2,nnode_fl, &
                   &ntetype2,nsatype2,nnode_tr2(natrm),inu_tr(natrm),iref_ts, &
-                  &nvar_sta,nout_sta,ntip,nbfr,itr_met,if_source,mass_source,nsources,nsinks, &
+                  &nvar_sta,nout_sta,ntip,nbfr,itr_met,if_source,mass_source,nsources,nsources_bmi,nsinks, &
                   &max_flreg,irange_tr(2,natrm),nea_wwm,mnei_wwm,ne_wwm,neg_wwm, &
                   &max_iadjust_mass_consv,nsteps_from_cold
 
   real(rkind),save :: q2min,tempmin,tempmax,saltmin,saltmax, &
                       &vis_coe1,vis_coe2,h_bcc1,velmin_btrack,h_tvd,rmaxvel1,rmaxvel2, &
                       &difnum_max_l2,wtime1,wtime2,cmiu0, &
-                      &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp,veg_di0,veg_h0,veg_nv0, &
-                      &veg_cd0,dtb_min_transport,bounds_lon(2),time_ref_ts
+                      &cpsi2,rpub,rmub,rnub,cpsi1,psimin,eps_min,tip_dp, &
+                      &dtb_min_transport,bounds_lon(2),time_ref_ts,cpsi3_comp
                       
 
 !  logical,save :: lm2d !2D or 3D model
@@ -155,7 +157,7 @@ module schism_glbl
   integer,save :: ihfskip,nrec,nspool,ifile,ifile_len, &
      &noutput,it_main,iths_main,id_out_var(2000),id_out_ww3(100),ncount_2dnode, &
      &ncount_2delem,ncount_2dside,ncount_3dnode,ncount_3delem,ncount_3dside,nsend_varout
-  integer,save,allocatable :: srqst7(:)
+  integer,save,allocatable :: srqst7(:),ndims_schout(:),nouts_schout(:)
   real(rkind),save :: time_stamp !simulation time in sec
   !Send var buffers
   real(4),save,allocatable :: varout_3dnode(:,:,:),varout_3delem(:,:,:),varout_3dside(:,:,:)
@@ -166,7 +168,7 @@ module schism_glbl
   character(len= 8),save :: a_8
   character(len= 4),save :: a_4
   integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D,irec0_schout, &
- &istack0_schout,ncid_source,ncid_schout(7),ncid_schout_2(7),nrec_schout,nstride_schout, &
+ &istack0_schout(2),ncid_source,ncid_schout(8,2),nrec_schout,nstride_schout, &
  &ncid_atmos,ncid_ref_ts
         
   ! ADT for global-to-local linked-lists
@@ -411,7 +413,10 @@ module schism_glbl
 
   ! Dynamic quantities
   integer,save,allocatable :: ieg_source(:)   !global elem. indices for volume/mass sources
+  integer,save,allocatable :: ieg_source_ngen(:)   !global elem. indices for T-Route only volume/mass sources in NextGen
+  real(rkind),save,allocatable :: ieg_source_flowpath_ids(:)   ! T-Route flowpath ids needed for NextGen framework coupling with SCHISM sources
   integer,save,allocatable :: ieg_sink(:)   !global elem. indices for volume/mass sinks
+  real(rkind),save,allocatable :: ieg_sink_flowpath_ids(:)   ! T-Route flowpath ids needed for NextGen framework coupling with SCHISM sinks
   !tracer concentration @ prism center; used as temp. storage. tr_el(ntracers,nvrt,nea2) but last index usually
   !is valid up to nea only except for TVD
   real(rkind),save,allocatable,target :: tr_el(:,:,:) 
@@ -482,7 +487,8 @@ module schism_glbl
                                   &sparsem(:,:), & 
                                   &tr_nudge(:,:),fun_lat(:,:), &
                                   &elev_nudge(:),uv_nudge(:),fluxprc(:),fluxevp(:), &
-                                  &dav(:,:),elevmax(:),dav_max(:,:),dav_maxmag(:), & 
+                                  &elevmax(:),time_elevmax(:), &
+                                  &dav(:,:),dav_max(:,:),dav_maxmag(:),time_dav_max(:), & 
                                   &etaic(:),diffmax(:),diffmin(:),dfq1(:,:),dfq2(:,:)
   real(rkind),save,allocatable,target :: rsxx(:), rsxy(:), rsyy(:)
 
@@ -566,6 +572,7 @@ module schism_glbl
 
   ! Station and other output arrays
   real(rkind),save,allocatable :: xsta(:),ysta(:),zstal(:),zsta(:),arco_sta(:,:), &
+                                  xsta_bmi(:),ysta_bmi(:),zsta_bmi(:), &
                                   &sta_out(:,:),sta_out_gb(:,:),sta_out3d(:,:,:), &
                                   &zta_out3d(:,:,:),sta_out3d_gb(:,:,:),zta_out3d_gb(:,:,:)
   integer,save,allocatable :: iep_sta(:),iep_flag(:),iof_sta(:),indx_out(:,:),indx_wwm_out(:)

@@ -266,6 +266,7 @@ def set_levees(hgrid_obj, wdir):
 
     print('loading levee heights from National Levee Database')
     # all top nodes of the levee will be attached to hgrid_obj as hgrid_obj.ilevee
+    # this also writes ilevee (levee top nodes) in {levee_name}.gr3 for diagnostic purposes
     hgrid_obj = set_levee_profile(gd=hgrid_obj, wdir=wdir, centerline_shp_dict=centerline_shp_dict)
 
     print('force minimum dp to be above -7 m for all levee top points')
@@ -277,7 +278,7 @@ def set_levees(hgrid_obj, wdir):
     print('loading local levee heights')
     hgrid_obj = set_local_levee_profile(
         gd_ll=hgrid_obj, local_levee_info=local_levee_info, i_levee_top_node=hgrid_obj.ilevee)
-
+    
     return hgrid_obj
 
 

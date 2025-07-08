@@ -21,8 +21,8 @@ def read_station_file(station_file_name):
         for line in f.read().splitlines():
             if '!' in line:
                 station_name.append(line.split('!')[-1])
-                lon.append(line.split(' ')[1])
-                lat.append(line.split(' ')[2])
+                lon.append(line.split()[1])
+                lat.append(line.split()[2])
     return np.array(lon).astype('float'), np.array(lat).astype('float'), np.array(station_name)
 
 if __name__ == '__main__':
@@ -100,15 +100,25 @@ if __name__ == '__main__':
     #out2d: SCHISM_hgrid_node_x, SCHISM_hgrid_node_y, depth, SCHISM_hgrid_face_node
 
     #get station id
-    lon, lat, station_name = read_station_file(stationID)
-    nstation = len(station_name)
+    # lon, lat, station_name = read_station_file(stationID)
+    # nstation = len(station_name)
 
-    #Read bp file
+    #Read station bp file
     bp = read_schism_bpfile(stationID)
+    nstation = len(bp.station)
+    lon = bp.x
+    lat = bp.y
+    station_name = bp.station
 
     #Compute area coordinate for stations
-    #bp.ie, bp.ip, bp.acor = hgrid.compute_acor(np.c_[bp.x, bp.y])
-    bp.ie, bp.ip, bp.acor = hgrid.compute_acor(np.c_[lon, lat])
+    bp.ie, bp.ip, bp.acor = hgrid.compute_acor(np.c_[lon, lat], fmt=1, out=0)
+    #check pts inside grid
+    pts_outside_grid = np.nonzero(bp.ie == -1)[0]
+    if len(pts_outside_grid) != 0:
+        for pt in pts_outside_grid:
+            print(f'Warning: Station {station_name[pt]} ({bp.x[pt]}, {bp.y[pt]}) is outside model domain, ')
+            print('the value of the nearest node will be used.\n')
+
     bp.depth = hgrid.dp[bp.ip]
     bp.depth0 = (bp.depth*bp.acor).sum(axis=1)
 
@@ -118,13 +128,7 @@ if __name__ == '__main__':
         bp.kbp = vgrid.kbp[bp.ip]
         vgrid.sigma = None
 
-    #check pts inside grid
-    pts_outside_grid = np.nonzero(bp.ie == -1)[0]
-    if len(pts_outside_grid) != 0:
-        sys.exit('points outside of domain: {}'.format(np.c_[x[pts_outside_grid], y[pts_outside_grid]]))
-
     for i, istack in enumerate(stacks):
-
         #get elevation
         ds2d = Dataset(f'{schism_outputs_dir}/out2d_{istack}.nc')
 
@@ -180,7 +184,7 @@ if __name__ == '__main__':
 
 
     namelen = 100
-    with Dataset(f'{output_dir}/stofs_stations_forecast.nc', "w", format="NETCDF3_CLASSIC") as fout:
+    with Dataset(f'{output_dir}/stofs_stations_profile_{stack_start}_{stack_end}.nc', "w", format="NETCDF3_CLASSIC") as fout:
         fout.createDimension('station', nstation)
         fout.createDimension('namelen', namelen)
         fout.createDimension('siglay', vgrid.nvrt)

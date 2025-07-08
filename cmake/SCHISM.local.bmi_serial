@@ -1,0 +1,65 @@
+######################### SCHISM COMPONENTS
+#  This is an example cache initialization file for choosing the SCHISM modules and algorithm settings
+
+#   For purposes of clarity and re-usability, the configuration examples have been separated into
+#   system locations and compilers (see SCHISM.local.system) and module/algorithm choices (e.g. USE_SED,TVD_LIM).
+#   This file is an example of the latter.
+
+#   In practice, you don't have to separate them. If you do,
+#   cmake works fine with two init files: cmake -C<system_init> -C<build_init>
+#
+#   PETSc status: discussions with PETSc developers indicate older versions are not actively supported with cmake,
+#   so use gnu make instead.
+#####################################################################
+#Leave this on
+set(BLD_STANDALONE ON CACHE BOOLEAN "SCHISM standalone")
+set(SH_MEM_COMM ON CACHE BOOLEAN "Use shared memory communicator")
+
+#Default is NO_PARMETIS=OFF, i.e. use ParMETIS
+set(NO_PARMETIS OFF CACHE BOOLEAN "Turn off ParMETIS")
+
+#   Algorithm choices
+# TVD_LIM must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher.")
+set (TVD_LIM VL CACHE STRING "Flux limiter")
+# Build with OLD/IO to enable SCHISM to run in serial mode
+set (OLDIO ON CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
+set (USE_ATMOS ON CACHE BOOLEAN "Coupling with atmospheric model via ESMF or BMI")
+set (USE_BMI ON CACHE BOOLEAN "Build a library that can be used from BMI, with sources and some b.c. provided by BMI")
+set (BUILD_SHARED_LIBS ON CACHE BOOLEAN "Build SCHISM shared libraries for BMI compliancy")
+set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
+set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
+## GOTM5.2 is installed by default, and has been tested successfully, defined GOTM_BASE to use a non-standard GOTM source
+## Note that source code of GOTM5.2 is from GOTM web so make sure to use recursive clone (to get the submodule)
+##set( GOTM_BASE /work2/03473/seatonc/frontera/GOTM5.2/code CACHE STRING "Path to non-standard GOTM base directory")
+set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model. This just enables the build -- GOTM must still be selected in param.nml")
+set (USE_HA OFF CACHE BOOLEAN "Enable harmonic analysis output modules")
+set( USE_MARSH OFF CACHE BOOLEAN "Use marsh module")
+set( USE_PAHM OFF CACHE BOOLEAN "Use PaHM module")
+
+#   Enable/Disable Modules
+#Use SED instead of USE_SED2D
+##set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
+set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
+##Coupling to WW3, either via ESMF or hard coupling (in dev)
+set( USE_WW3 OFF CACHE BOOLEAN "Use Wave Watch III")
+set( USE_ICE OFF CACHE BOOLEAN "Use 1-class ICE module")
+set( USE_MICE OFF CACHE BOOLEAN "Use multi-class ICE module")
+
+#Tracer models
+set( USE_GEN OFF CACHE BOOLEAN "Use generic tracer module")
+set( USE_AGE OFF CACHE BOOLEAN "Use age module")
+set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
+set( USE_ICM OFF  CACHE BOOLEAN "Use ICM module")
+set( USE_COSINE OFF   CACHE BOOLEAN "Use CoSiNE module")
+set( USE_FIB OFF   CACHE BOOLEAN "Use fecal indicating bacteria module")
+set( USE_SED OFF   CACHE BOOLEAN "Use sediment module")
+
+set( USE_FABM OFF   CACHE BOOLEAN "FABM BGC model interface")
+#If FABM is on, need to set FABM_BASE (after cloning from Joseph's fork: https://github.com/josephzhang8/fabm.git).
+#Use master branch of the fork
+set( FABM_BASE /sciclone/home10/wangzg/fabm CACHE STRING "Path to FABM base")
+
+set( USE_DVD OFF CACHE BOOLEAN "DVD module interface")
+
+set (DEBUG OFF CACHE BOOLEAN "Enable diagnostic output")
+set (USE_ANALYSIS OFF CACHE BOOLEAN "Enable (somewhat costly) derviation of derived flow/stress quantities")

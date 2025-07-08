@@ -28,3 +28,6 @@ Some details for using scribed IO mode are following:
 
 !!!caution "WWM"
     When running with WWM, make sure to remove `fort.*` in the directory where hgrid.gr3 is; otherwise the code will try to read in `fort.*` which may result in NaN error. You can add this into your batch script.
+
+!!!caution "Runtime errors due to version change"
+    If you get errors when switching to different versions, see [here](https://schism-dev.github.io/schism/master/changelog.html).
