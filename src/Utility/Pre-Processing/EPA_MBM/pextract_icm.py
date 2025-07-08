@@ -101,7 +101,7 @@ if myrank==0:
            if not fexist(fname): continue
            C=loadz(fname); datai=C.__dict__[k]; fnames.append(fname)
            data.extend(datai.transpose([1,0,*arange(2,datai.ndim)])); mtime.extend(C.time)
-       if len(data)>0: S.__dict__[m]=array(data).transpose([1,0,*arange(2,array(data).ndim)])
+       if len(data)>0: S.__dict__[m]=array(data).transpose([1,0,*arange(2,array(data).ndim)]).astype('float32')
        if len(mtime)>len(S.time): S.time=array(mtime)
    S.bp=read_schism_bpfile(bpfile)
    for pn in ['param','icm','sediment','cosine','wwminput']:
