@@ -3,9 +3,9 @@
 ! Fix negative tri elements and output list of skew tri elem, CFL violation etc.
 !
 ! Inputs: screen; hgrid.ll (tri only)
-! Outputs: hgrid.ll.new; fort.99 (diagnostics; depths are error code)
+! Outputs: hgrid.ll.new; fort.99 (diagnostics; depths are error code); fort.13 (prop format for eq. radius)
 
-! ifort -O2 -mcmodel=medium -CB -Bstatic -o check_lonlat_grid check_lonlat_grid.f90
+! ifx -O2 -mcmodel=medium -CB -Bstatic -o check_lonlat_grid check_lonlat_grid.f90
 
   implicit real*8(a-h,o-z)
   real*8, parameter :: pi=3.1415926d0
@@ -17,7 +17,7 @@
   real*8 :: xx(4),yy(4),swild(4)
   integer, allocatable :: i34(:),elnode(:,:),i34_new(:),elnode_new(:,:)
   real*8, allocatable :: xlon(:),ylat(:),dp(:),area(:),quad_loc(:,:), &
- &xctr(:),yctr(:),xnd(:),ynd(:),znd(:),pframe(:,:,:)
+ &xctr(:),yctr(:),xnd(:),ynd(:),znd(:),pframe(:,:,:),eq_rad(:)
 
   print*, 'Input max allowable skewness for triangles:'
   read*, skew_max
@@ -30,7 +30,7 @@
 
   allocate(xlon(np),ylat(np),dp(np),area(ne),i34(ne),elnode(4,ne), &
  &i34_new(ne),elnode_new(4,ne),quad_loc(2,ne),xctr(ne),yctr(ne),xnd(np),ynd(np),znd(np), &
- &pframe(3,3,np))
+ &pframe(3,3,np),eq_rad(ne))
 
   do i=1,np
     read(14,*) j,xlon(i),ylat(i),dp(i)
@@ -123,6 +123,7 @@
       endif
     endif !ifl
     
+    write(13,*)i,real(sqrt(area(i)/pi))
   enddo !i=1,ne
 
 ! Output
