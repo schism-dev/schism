@@ -12,7 +12,7 @@ program schism_driver_test
   !---------------------------------------------------------------------
   use mpi
   use bmischism
-  use bmif_2_0
+  use bmif_2_0_iso
   !use schism_glbl, only: np_global, nea
   !use schism_glbl, only: i34
   use schism_glbl
