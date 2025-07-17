@@ -1,6 +1,6 @@
 module bmischism
   
-  use bmif_2_0
+  use bmif_2_0_iso
 
   use schism_glbl, only: pi, llist_type, elnode, i34, ipgl
   use schism_glbl, only: ns_global, isidenode, elside

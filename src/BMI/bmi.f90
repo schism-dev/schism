@@ -4,17 +4,20 @@
 ! Interface Definition Language (SIDL) file bmi.sidl located at
 ! https://github.com/csdms/bmi.
 
-module bmif_2_0
-
+module bmif_2_0_iso
+  use, intrinsic :: iso_c_binding, only: c_int
   implicit none
 
   integer, parameter :: BMI_MAX_COMPONENT_NAME = 2048
   integer, parameter :: BMI_MAX_VAR_NAME = 2048
   integer, parameter :: BMI_MAX_TYPE_NAME = 2048
   integer, parameter :: BMI_MAX_UNITS_NAME = 2048
+  integer, parameter :: BMI_MAX_LOCATION_NAME = 2048
+  !Add a bound to max allowable file name length
+  integer, parameter :: BMI_MAX_FILE_NAME = 2048
 
   integer, parameter :: BMI_FAILURE = 1
-  integer, parameter :: BMI_SUCCESS = 0
+  integer(kind=c_int), parameter :: BMI_SUCCESS = 0
 
   type, abstract :: bmi
     contains
@@ -44,7 +47,7 @@ module bmif_2_0
       procedure(bmif_get_current_time), deferred :: get_current_time
       procedure(bmif_get_start_time), deferred :: get_start_time
       procedure(bmif_get_end_time), deferred :: get_end_time
-      procedure(bmif_get_time_units), deferred :: get_time_units
+       procedure(bmif_get_time_units), deferred :: get_time_units
       procedure(bmif_get_time_step), deferred :: get_time_step
 
       ! Getters, by type
@@ -102,14 +105,16 @@ module bmif_2_0
 
     ! Perform startup tasks for the model.
     function bmif_initialize(this, config_file) result(bmi_status)
+      use, intrinsic :: iso_c_binding, only: c_int, c_char
       import :: bmi
       class(bmi), intent(out) :: this
-      character(len=*), intent(in) :: config_file
-      integer :: bmi_status
+      character(kind=c_char, len=*), intent(in) :: config_file
+      integer(kind=c_int) :: bmi_status
     end function bmif_initialize
 
     ! Advance the model one time step.
     function bmif_update(this) result(bmi_status)
+
       import :: bmi
       class(bmi), intent(inout) :: this
       integer :: bmi_status
@@ -130,13 +135,13 @@ module bmif_2_0
       integer :: bmi_status
     end function bmif_finalize
 
-    ! Get the name of the model.
-    function bmif_get_component_name(this, name) result(bmi_status)
-      import :: bmi
-      class(bmi), intent(in) :: this
-      character(len=*), pointer, intent(out) :: name
-      integer :: bmi_status
-    end function bmif_get_component_name
+   ! Get the name of the model.
+   function bmif_get_component_name(this, name) result(bmi_status)
+     import :: bmi
+     class(bmi), intent(in) :: this
+     character(len=*), pointer, intent(out) :: name
+     integer :: bmi_status
+   end function bmif_get_component_name
 
     ! Count a model's input variables.
     function bmif_get_input_item_count(this, count) result(bmi_status)
@@ -420,7 +425,7 @@ module bmif_2_0
       integer :: bmi_status
     end function bmif_get_grid_rank
 
-    ! Get the total number of elements in the computational grid.
+! Get the total number of elements in the computational grid.
     function bmif_get_grid_size(this, grid, size) result(bmi_status)
       import :: bmi
       class(bmi), intent(in) :: this
@@ -561,4 +566,4 @@ module bmif_2_0
 
   end interface
 
-end module bmif_2_0
+end module bmif_2_0_iso
