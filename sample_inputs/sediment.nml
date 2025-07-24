@@ -323,6 +323,8 @@ Cdb_max = 0.01
 !-   during one time step (typically a few centimeters). A large value is 
 !-   equivalent to no limitation of the active layer thickness computed 
 !-   according to Harris and Wiberg (1997)
+!-  Code will ensure the top layer is no thicker than this (accounting for morph
+!-  acceleration)
 !------------------------------------------------------------------------------
 actv_max = 0.05d0
 
@@ -351,7 +353,7 @@ toplay_inithick = 10.0d-2
 !- If deposition exceeds this value, a new layer is created
 !  but the active layer thickness is given in bottom(:,:,iactv)
 !------------------------------------------------------------------------------
-newlayer_thick = 0.001d0
+!newlayer_thick = 0.001d0
 
 !- EXNER EQUATION -------------------------------------------------------------
 !- Numerical method for the resolution of the sediment continuity equation to

@@ -165,7 +165,7 @@
       INTEGER,save :: Ksed,i,indx,ised,j,k,ks,l
       INTEGER,save :: nm1,nm2,nm3 !bnew
 
-      REAL(rkind),save :: time,ta,tmp
+      REAL(rkind),save :: time,ta,tmp,rat
       REAL(rkind),save :: cff, cff1, cff2, cff3, cffL, cffR, dltL, dltR
       REAL(rkind),save :: cu, cff4, cff6, aref, cff7, cff8, cff9
       REAL(rkind),save :: thck_avail,thck_to_add,eros_mss,depo_mss,flux_eros,flux_depo
@@ -188,7 +188,7 @@
       REAL(rkind),save :: tauc0
       REAL(rkind),save :: derx1,derx2,derx3,dery1,dery2,dery3
       REAL(rkind),save :: yp,xp,flux      
-      REAL(rkind), allocatable :: dep_mass(:,:)
+      REAL(rkind), allocatable :: tmass(:)
 
       ! - For MPM bed load
       REAL(rkind),save :: alphas,tauc
@@ -226,7 +226,7 @@
 
 
 !- Start Statement --------------------------------------------------!
-      allocate(dep_mass(nea,ntr_l),stat=i)
+      allocate(tmass(ntr_l),stat=i)
       if(i/=0) call parallel_abort('SED: alloc failed')
 
       if(.not.allocated(hdep)) allocate(hdep(nea))
@@ -252,7 +252,6 @@
       cffL     = 0.d0
 !      FC       = 0.d0
       cff      = 0.d0
-      dep_mass = 0.d0
       hdep_nd  = 0.d0
       hdep     = 0.d0
       hbed     = 0.d0
@@ -949,7 +948,7 @@
             select case(ised_bc_bot)
               case(1) !Warner
                 !BM: Correction of depo_mss, otherwise conservation issues would occur 
-                depo_mss=dt*Wsed(ised)*tr_el(indx,kbe(i)+1,i) !s * m/s * kg/m3
+                depo_mss=dt*Wsed(ised)*tr_el(indx,kbe(i)+1,i) !s * m/s * kg/m3 = kg/m/m
 
                 !BM: output
                 depflxel(i,ised)=depo_mss/dt ! en kg/m2/s
@@ -976,17 +975,16 @@
                 else
                   CALL parallel_abort('SED3D: unknown erosion formula')
                 endif !ierosion
+                
+                !Limit erosion by active layer
                 eros_mss=MIN(eros_mss,MIN(Srho(ised)*cff1*bottom(i,iactv),bed_mass(top,i,nnew,ised))+depo_mss) !>=0
 
 !...            Save erosion and depo. fluxes [kg/m/m/s] for b.c. of transport eq.
 !               This should not be scaled by morph_fac, b/cos both mass
 !               and dt are multiplied by same factor
                 flux_eros=eros_mss/dt !>=0
-                !flux_depo=depo_mss/dt
-
                 !BM: output
                 eroflxel(i,ised)=flux_eros ! en kg/m2/s            
-
 !...            Update flx_bt for transport solver
                 flx_bt(indx,i)=-flux_eros ![kg/m/m/s]
 
@@ -1003,25 +1001,26 @@
                   hdep(i)=hdep(i)+(eros_mss-depo_mss)/Srho(ised)/(1.0d0-bed(top,i,iporo))
                 ENDIF !sed_morph
 
-! - Store deposit material in temporary array, dep_mass
-                IF (eros_mss<depo_mss) THEN
-                  !IF(time>bed(top,i,iaged)+1.1d0*dt.and.bed(top,i,ithck)>newlayer_thick) THEN
-                  IF(bed(top,i,ithck)>newlayer_thick) THEN !171027
-                    dep_mass(i,ised)=depo_mss-eros_mss !>0 !kg/m/m
-                  ENDIF
-                  bed(top,i,iaged)=time
-                ENDIF
+! - Store deposit material in temporary array, dep_mass (net depo)
+!                IF (eros_mss<depo_mss) THEN
+!                  !IF(time>bed(top,i,iaged)+1.1d0*dt.and.bed(top,i,ithck)>newlayer_thick) THEN
+!                  IF(bed(top,i,ithck)>newlayer_thick) THEN !171027
+!                  ENDIF
+!                  bed(top,i,iaged)=time
+!                ENDIF
 
 ! - Update bed mass arrays.
 !jl.  The whole nnew/bnew,nstp is way more confusing than need be
-                bed_mass(top,i,nnew,ised)=MAX(bed_mass(top,i,nnew,ised)-eros_mss+depo_mss,0.0d0)
-                DO k=2,Nbed
-                  bed_mass(k,i,nnew,ised)=bed_mass(k,i,nstp,ised)
-                  if(bed_mass(k,i,nnew,ised)<0) then
-                    WRITE(errmsg,*)'SED3D: bed_m<0',k,bed_mass(k,i,nnew,ised)
-                    CALL parallel_abort(errmsg)
-                  endif
-                ENDDO !k
+!                dep_mass(i,ised)=depo_mss-eros_mss !kg/m/m
+                !Limiting eros_mss above guarantees bed_mass>=0 so no conservation error
+                bed_mass(top,i,nnew,ised)=MAX(bed_mass(top,i,nnew,ised)+depo_mss-eros_mss,0.0d0) !kg/m/m
+!                DO k=2,Nbed
+!                  bed_mass(k,i,nnew,ised)=bed_mass(k,i,nstp,ised)
+!                  if(bed_mass(k,i,nnew,ised)<0) then
+!                    WRITE(errmsg,*)'SED3D: bed_m<0',k,bed_mass(k,i,nnew,ised)
+!                    CALL parallel_abort(errmsg)
+!                  endif
+!                ENDDO !k
 
               case(2) !Tsinghua Univ. group
                 !Xiaonan's addition here
@@ -1064,156 +1063,147 @@
                 ENDIF !sed_morph
 
                 ! - Store deposit material in array dep_mass for each class
-                IF (eros_mss<depo_mss) THEN
-                  IF(time>bed(top,i,iaged)+1.1d0*dt.and.bed(top,i,ithck)>newlayer_thick) THEN
-                    dep_mass(i,ised)=depo_mss-eros_mss !>0 !kg/m/m
-                  ENDIF
-                  bed(top,i,iaged)=time
-                ENDIF
+!                IF (eros_mss<depo_mss) THEN
+!                  IF(time>bed(top,i,iaged)+1.1d0*dt.and.bed(top,i,ithck)>newlayer_thick) THEN
+!                  ENDIF
+!                  bed(top,i,iaged)=time
+!                ENDIF
 
                 ! - Update bed mass arrays.
                 !jl.  The whole nnew/bnew,nstp is way more confusing than need be
-                bed_mass(top,i,nnew,ised)=MAX(bed_mass(top,i,nnew,ised)-eros_mss+depo_mss,0.0d0)
-                DO k=2,Nbed
-                  bed_mass(k,i,nnew,ised)=bed_mass(k,i,nstp,ised)
-                  if(bed_mass(k,i,nnew,ised)<0) then
-                    WRITE(errmsg,*)'SED3D: bed_m<0',k,bed_mass(k,i,nnew,ised)
-                    CALL parallel_abort(errmsg)
-                  endif
-                ENDDO
-                !bed_mass(top,i,nnew,ised)=MAX(bed_mass(top,i,nnew,ised),0.0d0) 
+                bed_mass(top,i,nnew,ised)=MAX(bed_mass(top,i,nnew,ised)+depo_mss-eros_mss,0.0d0)
+!                DO k=2,Nbed
+!                  bed_mass(k,i,nnew,ised)=bed_mass(k,i,nstp,ised)
+!                  if(bed_mass(k,i,nnew,ised)<0) then
+!                    WRITE(errmsg,*)'SED3D: bed_m<0',k,bed_mass(k,i,nnew,ised)
+!                    CALL parallel_abort(errmsg)
+!                  endif
+!                ENDDO
 
               case default
                 call parallel_abort('SED: unknown ised_bc_bot')
             end select
           ENDDO !i=1,nea
-
-!          IF (sed_morph.GE.1) THEN
-!            CALL exchange_e2d(hdep(:))
-!          ENDIF
-
         ENDDO SED_LOOP !ised=1,ntr_l
 
         IF(myrank==0) WRITE(16,*)'SED: out of sus. load loop...'
 
-!        call schism_output_custom(indx,5,1,222,'hdep',1,nea,hdep)
-
-! - If first time step of deposit, create new layer and combine bottom
-! two bed layers.
-        DO i=1,nea
-          IF (idry_e(i)==1) CYCLE
-
-          IF(Nbed>1) THEN
-            cff = 0.0d0
-            DO ised=1,ntr_l
-              cff = cff+dep_mass(i,ised)
-            ENDDO
-
-            IF (cff>0.0d0) THEN !deposition ocurred
-
-              ! Combine bottom layers.
-              ! BM : poro updated after
-              !bed(Nbed,i,iporo) = 0.5d0*(bed(Nbed-1,i,iporo)+        &
-              !&                          bed(Nbed,i,iporo))
-              bed(Nbed,i,iaged) = 0.5d0*(bed(Nbed-1,i,iaged)+        &
-              &                          bed(Nbed,i,iaged))
-
-              DO ised=1,ntr_l
-                bed_mass(Nbed,i,nnew,ised) =                         &
-                &                   bed_mass(Nbed-1,i,nnew,ised)+    &
-                &                   bed_mass(Nbed,i,nnew,ised)
-              ENDDO
-
-              ! Push layers down.
-              DO k=Nbed-1,2,-1
-                !bed(k,i,iporo) = bed(k-1,i,iporo) ! BM : idem
-                bed(k,i,iaged) = bed(k-1,i,iaged)
-                DO ised =1,ntr_l
-                  bed_mass(k,i,nnew,ised) = bed_mass(k-1,i,nnew,ised)
-                ENDDO
-              ENDDO
-
-              ! Set new top layer parameters.
-              DO ised=1,ntr_l
-                if(dep_mass(i,ised)<0) then
-                  WRITE(errmsg,*)'SED3D: dep_mass(i,ised)<0; ',dep_mass(i,ised),i,ised
-                  CALL parallel_abort(errmsg)
-                endif
-                bed_mass(2,i,nnew,ised)=MAX(bed_mass(2,i,nnew,ised)-dep_mass(i,ised),0.0d0) !>=0
-                bed_mass(top,i,nnew,ised)=dep_mass(i,ised) !>=0
-              ENDDO !ised
-
-            ENDIF ! Deposition occurred (cff>0)
-          ENDIF !Nbed>1
-
-! If Nbed = 1
-! - Recalculate thickness and fractions for all layers.
-!   bed(ithck) = bed_mass/Srho
-!     [m]      = [m.m-2] / [kg.m-2] --> Do not have to integrate over
-!     area
-          DO k=1,Nbed
-            cff3=0.0d0 !total mass
-            DO ised=1,ntr_l
-              if(bed_mass(k,i,nnew,ised)<0) then
-                WRITE(errmsg,*)'SED3D, mass<0(3):',bed_mass(k,i,nnew,ised),k,ielg(i),ised 
-                CALL parallel_abort(errmsg)
-              endif
-              cff3 = cff3+bed_mass(k,i,nnew,ised)
-            ENDDO
-
-            cff3=max(cff3,eps)
-
-
-!!! BM : update of bed_frac --> compute new porosity --> deduce new thickness
-
-!            bed(k,i,ithck) = 0.0d0
-!            if(bed(k,i,iporo)==1) call parallel_abort('SED3D: div. by 0 (6)')
-!!'
+!! - If first time step of deposit, create new layer and combine bottom
+!! two bed layers.
+!        DO i=1,nea
+!          IF (idry_e(i)==1) CYCLE
+!
+!          IF(Nbed>1) THEN
+!            cff = 0.0d0
+!            DO ised=1,ntr_l
+!              cff = cff+dep_mass(i,ised)
+!            ENDDO
+!
+!            IF (cff>0.0d0) THEN !deposition ocurred
+!
+!              ! Combine bottom layers.
+!              ! BM : poro updated after
+!              !bed(Nbed,i,iporo) = 0.5d0*(bed(Nbed-1,i,iporo)+        &
+!              !&                          bed(Nbed,i,iporo))
+!              bed(Nbed,i,iaged) = 0.5d0*(bed(Nbed-1,i,iaged)+        &
+!              &                          bed(Nbed,i,iaged))
+!
+!              DO ised=1,ntr_l
+!                bed_mass(Nbed,i,nnew,ised) =                         &
+!                &                   bed_mass(Nbed-1,i,nnew,ised)+    &
+!                &                   bed_mass(Nbed,i,nnew,ised)
+!              ENDDO
+!
+!              ! Push layers down.
+!              DO k=Nbed-1,2,-1
+!                !bed(k,i,iporo) = bed(k-1,i,iporo) ! BM : idem
+!                bed(k,i,iaged) = bed(k-1,i,iaged)
+!                DO ised =1,ntr_l
+!                  bed_mass(k,i,nnew,ised) = bed_mass(k-1,i,nnew,ised)
+!                ENDDO
+!              ENDDO
+!
+!              ! Set new top layer parameters.
+!              DO ised=1,ntr_l
+!                if(dep_mass(i,ised)<0) then
+!                  WRITE(errmsg,*)'SED3D: dep_mass(i,ised)<0; ',dep_mass(i,ised),i,ised
+!                  CALL parallel_abort(errmsg)
+!                endif
+!                bed_mass(2,i,nnew,ised)=MAX(bed_mass(2,i,nnew,ised)-dep_mass(i,ised),0.0d0) !>=0
+!                bed_mass(top,i,nnew,ised)=dep_mass(i,ised) !>=0
+!              ENDDO !ised
+!
+!            ENDIF ! Deposition occurred (cff>0)
+!          ENDIF !Nbed>1
+!
+!! If Nbed = 1
+!! - Recalculate thickness and fractions for all layers.
+!!   bed(ithck) = bed_mass/Srho
+!!     [m]      = [m.m-2] / [kg.m-2] --> Do not have to integrate over
+!!     area
+!          DO k=1,Nbed
+!            cff3=0.0d0 !total mass
+!            DO ised=1,ntr_l
+!              if(bed_mass(k,i,nnew,ised)<0) then
+!                WRITE(errmsg,*)'SED3D, mass<0(3):',bed_mass(k,i,nnew,ised),k,ielg(i),ised 
+!                CALL parallel_abort(errmsg)
+!              endif
+!              cff3 = cff3+bed_mass(k,i,nnew,ised)
+!            ENDDO
+!
+!            cff3=max(cff3,eps)
+!
+!
+!!!! BM : update of bed_frac --> compute new porosity --> deduce new thickness
+!
+!!            bed(k,i,ithck) = 0.0d0
+!!            if(bed(k,i,iporo)==1) call parallel_abort('SED3D: div. by 0 (6)')
+!!!'
+!!            DO ised=1,ntr_l
+!!              bed_frac(k,i,ised)=bed_mass(k,i,nnew,ised)/cff3
+!!              bed(k,i,ithck)=bed(k,i,ithck)+bed_mass(k,i,nnew,ised)/(Srho(ised)*(1.0d0-bed(k,i,iporo)))
+!!            ENDDO !ised
+!
 !            DO ised=1,ntr_l
 !              bed_frac(k,i,ised)=bed_mass(k,i,nnew,ised)/cff3
+!            ENDDO !ised
+!            IF (poro_option .EQ. 2) THEN
+!              CALL sed_comp_poro_noncoh(bed_frac(k,i,:),bed(k,i,iporo))
+!            END IF
+!            if(bed(k,i,iporo)==1) call parallel_abort('SED3D: div. by 0(6)')
+!!'
+!            bed(k,i,ithck) = 0.0d0
+!            DO ised=1,ntr_l
 !              bed(k,i,ithck)=bed(k,i,ithck)+bed_mass(k,i,nnew,ised)/(Srho(ised)*(1.0d0-bed(k,i,iporo)))
 !            ENDDO !ised
+!          ENDDO !k=1,Nbed
+!
+!          ! BM: bottom(i,isd50) and  bottom(i,tauc) need to be updated 
+!          ! in the top layer to compute an active layer thickness bottom(i,iactv) 
+!          ! representative of new bed features, resulting from previous bedload 
+!          ! and suspended load dynamics.
+!          cff1 = 1.0d0
+!          cff2 = 1.0d0
+!          cff5 = 0.0d0
+!          DO ised=1,ntr_l
+!            cff1 = cff1*tau_ce(ised)**bed_frac(1,i,ised)
+!            cff2 = cff2*Sd50(ised)**bed_frac(1,i,ised)
+!            cff5 = cff5+bed_frac(top,i,ised)
+!          ENDDO !ntr_l
+!          if(cff5<0) then
+!            WRITE(errmsg,*)'SED3D: cff5<0 (1a); ',cff5
+!            call parallel_abort(errmsg)
+!          else if(cff5==0) then
+!            bottom(i,itauc) = tau_ce(1)
+!            bottom(i,isd50) = Sd50(1)
+!          else !cff5>0
+!            bottom(i,itauc) = cff1**(1.0d0/cff5)
+!            bottom(i,isd50) = MAX(MIN(cff2**(1.0d0/cff5),MAXVAL(Sd50(:))),MINVAL(Sd50(:)))
+!          endif !cff5
+!
+!        ENDDO !i=1,nea
 
-            DO ised=1,ntr_l
-              bed_frac(k,i,ised)=bed_mass(k,i,nnew,ised)/cff3
-            ENDDO !ised
-            IF (poro_option .EQ. 2) THEN
-              CALL sed_comp_poro_noncoh(bed_frac(k,i,:),bed(k,i,iporo))
-            END IF
-            if(bed(k,i,iporo)==1) call parallel_abort('SED3D: div. by 0(6)')
-!'
-            bed(k,i,ithck) = 0.0d0
-            DO ised=1,ntr_l
-              bed(k,i,ithck)=bed(k,i,ithck)+bed_mass(k,i,nnew,ised)/(Srho(ised)*(1.0d0-bed(k,i,iporo)))
-            ENDDO !ised
-          ENDDO !k=1,Nbed
-
-          ! BM: bottom(i,isd50) and  bottom(i,tauc) need to be updated 
-          ! in the top layer to compute an active layer thickness bottom(i,iactv) 
-          ! representative of new bed features, resulting from previous bedload 
-          ! and suspended load dynamics.
-          cff1 = 1.0d0
-          cff2 = 1.0d0
-          cff5 = 0.0d0
-          DO ised=1,ntr_l
-            cff1 = cff1*tau_ce(ised)**bed_frac(1,i,ised)
-            cff2 = cff2*Sd50(ised)**bed_frac(1,i,ised)
-            cff5 = cff5+bed_frac(top,i,ised)
-          ENDDO !ntr_l
-          if(cff5<0) then
-            WRITE(errmsg,*)'SED3D: cff5<0 (1a); ',cff5
-            call parallel_abort(errmsg)
-          else if(cff5==0) then
-            bottom(i,itauc) = tau_ce(1)
-            bottom(i,isd50) = Sd50(1)
-          else !cff5>0
-            bottom(i,itauc) = cff1**(1.0d0/cff5)
-            bottom(i,isd50) = MAX(MIN(cff2**(1.0d0/cff5),MAXVAL(Sd50(:))),MINVAL(Sd50(:)))
-          endif !cff5
-
-        ENDDO !i=1,nea
-
-        IF(myrank==0) WRITE(16,*)'SED: End of suspended sediment'
+!        IF(myrank==0) WRITE(16,*)'SED: End of suspended sediment'
       ENDIF !suspended_load==1
 !---------------------------------------------------------------------
 !         *** End of Suspended Sediment only section ***
@@ -1232,8 +1222,8 @@
 
 !---------------------------------------------------------------------
 ! - Ensure top bed layer thickness is greater or equal than active 
-! layer thickness. If need to add sed to top layer, then entrain from 
-! lower levels. Create new layers at bottom to maintain Nbed.
+! layer thickness but less than user specified actv_max. If needed, entrain sed to top layer from 
+! lower layers (if Nbed>1)
 !---------------------------------------------------------------------
 
       DO i=1,nea
@@ -1244,10 +1234,7 @@
         bottom(i,iactv)=MAX(0.0d0,7.0d-3*(tau_wc(i)-bottom(i,itauc))*rhom)+6.0d0*bottom(i,isd50)
         ! - BM: the active layer thickness cannot exceed a used-defined
         !       one, actv_max
-        bottom(i,iactv)=MIN(actv_max,bottom(i,iactv))
-!>0
-
-
+        bottom(i,iactv)=MIN(actv_max,bottom(i,iactv)) !>0 [m]
 
 ! - Apply morphology factor
 !jl. The application of morph_fac is arbitrary here.  This is not in  
@@ -1261,14 +1248,27 @@
 !    sediment classes ... morph_fac is now set as a parameter in
 !    sediment.in
 
+        !actv_max already scaled up by morph_fac
         IF(sed_morph>=1) bottom(i,iactv)=MAX(bottom(i,iactv)*morph_fac,bottom(i,iactv))
 
-        IF(bed(top,i,ithck)<bottom(i,iactv)) THEN
+        !Adjust bed thickness (sum of classes) at top layer
+        bed(top,i,ithck)=0.0d0
+        DO ised=1,ntr_l
+          if(bed(top,i,iporo)==1) call parallel_abort('SED3D: div. by 0 (6)')
+          bed(top,i,ithck)=bed(top,i,ithck)+bed_mass(top,i,nnew,ised)/Srho(ised)/(1.0d0-bed(top,i,iporo)) !>=0
+        ENDDO !ised
 
-          IF(Nbed==1) THEN
-            bottom(i,iactv) = bed(top,i,ithck) !possibly 0
-          ELSE ! Nbed>1
-            !Increase top bed layer - entrain from layers below
+        if(Nbed==1) then
+          IF(bed(top,i,ithck)<bottom(i,iactv)) bottom(i,iactv) = bed(top,i,ithck) !possibly 0
+        else !Nbed>1 
+          IF(bed(top,i,ithck)<bottom(i,iactv)) THEN
+            !Total bed mass for each class
+            do ised=1,ntr_l
+              tmass(ised)=sum(bed_mass(1:Nbed,i,nnew,ised))
+            enddo !ised
+
+            !Adjust bed_mass in all layers to increase top layer thickness
+            !by entraining from layers below
             thck_to_add = bottom(i,iactv)-bed(top,i,ithck) !>0
             thck_avail = 0.0d0
             Ksed=Nbed !initialize to include all
@@ -1283,22 +1283,18 @@
               write(errmsg,*)'SED3D: thck_avail<0:',ielg(i),thck_avail
               CALL parallel_abort(errmsg)
             ELSE IF(thck_avail==0) THEN
-              IF (sed_debug .EQ. 1) THEN
+              IF (sed_debug==1) THEN
                 write(12,*)'SED3D: not enough sed; likely all eroded:', &
        &ielg(i),thck_avail,thck_to_add,bed(:,i,ithck),it
               END IF
-              bottom(i,iactv)=bed(top,i,ithck) !0326
+!              bottom(i,iactv)=bed(top,i,ithck) !0326
               bed(2:Nbed,i,ithck)=0
               bed_frac(2:Nbed,i,:)=0
               bed_mass(2:Nbed,i,nnew,:)=0
-
-!              bed(:,i,ithck)=0
-!              bed_frac(:,i,:)=0
-!              bed_mass(:,i,nnew,:)=0
             ELSE !thck_avail>0
 ! - Catch here if there was not enough bed material
               IF(thck_avail<thck_to_add) THEN
-                bottom(i,iactv) = bed(top,i,ithck)+thck_avail
+!                bottom(i,iactv) = bed(top,i,ithck)+thck_avail
                 thck_to_add = thck_avail
               ENDIF
 
@@ -1309,82 +1305,79 @@
 
 ! - Update bed mass of top layer and fraction of layer Ksed
               cff2=(thck_avail-thck_to_add)/MAX(bed(Ksed,i,ithck),eps) !\in [0,1]; fraction of Ksed left
+              cff2=max(0.d0,min(1.d0,cff2))
               DO ised=1,ntr_l
                 cff1=0.0d0
-                DO k=1,Ksed
+                DO k=1,Ksed-1
                   cff1 = cff1+bed_mass(k,i,nnew,ised)
                 ENDDO
-                cff3 = cff2*bed_mass(Ksed,i,nnew,ised) !what's left there (>=0)
-                !Account for small underflow
-                if(cff1-cff3<-1.d-6) then
-                  write(errmsg,*)'SED3D, cff1-cff3<0:',ielg(i),cff1-cff3
+                cff3 = (1.d0-cff2)*bed_mass(Ksed,i,nnew,ised) !>=0
+                bed_mass(top,i,nnew,ised)=cff1+cff3 !>=0
+                if(bed_mass(top,i,nnew,ised)>tmass(ised)) then
+                  write(errmsg,*)'SED3D, mass exceeded:',ielg(i),bed_mass(top,i,nnew,ised),tmass(ised)
                   CALL parallel_abort(errmsg)
                 endif
-                bed_mass(top,i,nnew,ised)=max(0.d0,cff1-cff3) !>=0
-                bed_mass(Ksed,i,nnew,ised)=cff3 !>=0
+
+                !Evenly redistribute the remaining mass among layers 2:Nbed
+                bed_mass(2:Nbed,i,nnew,ised)=(tmass(ised)-bed_mass(top,i,nnew,ised))/(Nbed-1) !>=0
+                !Average other properties
+                !Ksed<=Nbed
+                tmp=sum(bed(Ksed:Nbed,i,iporo))/(Nbed-Ksed+1)
+                bed(2:Nbed,i,iporo)=tmp
+                tmp=sum(bed(Ksed:Nbed,i,iaged))/(Nbed-Ksed+1)
+                bed(2:Nbed,i,iaged)=tmp
+                tmp=sum(bed_frac(Ksed:Nbed,i,ised))/(Nbed-Ksed+1)
+                bed_frac(2:Nbed,i,ised)=tmp
               ENDDO !ised
 
-! - Update thickness of fractional layer Ksed
-              bed(Ksed,i,ithck)=thck_avail-thck_to_add !>=0
-
 ! - Update bed fraction of top layer
-              cff3=0.0d0
-              DO ised=1,ntr_l
-                cff3=cff3+bed_mass(top,i,nnew,ised)
-              ENDDO
+              cff3=sum(bed_mass(top,i,nnew,1:ntr_l))
               cff3=max(cff3,eps)
               DO ised=1,ntr_l
                 bed_frac(top,i,ised)=bed_mass(top,i,nnew,ised)/cff3 !>=0
               ENDDO
 
-! Upate bed thickness of top layer
-              bed(top,i,ithck)=bottom(i,iactv)
               !!! >BM : new porosity --> Hyp : Top layer can be different
               !!!      from theoritical active layer thickness
               IF (poro_option .EQ. 2) THEN
                 CALL sed_comp_poro_noncoh(bed_frac(top,i,:),bed(top,i,iporo))
               END IF
-              IF (bed(top,i,iporo)==1) call parallel_abort('SED3D: div. by 0(6)')
+              IF (bed(top,i,iporo)>=1) call parallel_abort('SED3D: div. by 0(5)')
 !'
-              bed(top,i,ithck) = 0.0d0
-              DO ised=1,ntr_l
-                bed(top,i,ithck)=bed(top,i,ithck)+bed_mass(top,i,nnew,ised)/(Srho(ised)*(1.0d0-bed(top,i,iporo)))
-              ENDDO !ised
-              !!! <BM
-
-
-            
-! Pull all layers closer to the surface 
-              ks=Ksed-2 !reduction of # of layers; >=0
-              DO k=Ksed,Nbed
-                bed(k-ks,i,ithck) = bed(k,i,ithck)
-                bed(k-ks,i,iporo) = bed(k,i,iporo)
-                bed(k-ks,i,iaged) = bed(k,i,iaged)
+              !Update bed thickness at all layers
+              DO k=1,Nbed
+                bed(k,i,ithck) = 0.0d0
                 DO ised=1,ntr_l
-                  bed_frac(k-ks,i,ised) = bed_frac(k,i,ised)
-                  bed_mass(k-ks,i,nnew,ised) = bed_mass(k,i,nnew,ised)
-                ENDDO
+                  if(bed(k,i,iporo)>=1.d0) call parallel_abort('SED3D: div. by 0 (7)')
+                  bed(k,i,ithck)=bed(k,i,ithck)+bed_mass(k,i,nnew,ised)/Srho(ised)/(1.0d0-bed(k,i,iporo)) !>=0
+                ENDDO !ised
               ENDDO !k
-
-! By now there are only Nbed-ks layers left
-! Split bottom-most layer to make Nbed layers in total and
-! conserve total mass
-              if(ks+1==0) call parallel_abort('SED3D: ks+1==0')
-              cff=1.0d0/(ks+1) !fraction
-              DO k=Nbed,Nbed-ks,-1
-                bed(k,i,ithck) = bed(Nbed-ks,i,ithck)*cff
-                bed(k,i,iaged) = bed(Nbed-ks,i,iaged)
-                !!! BM porosity 
-                bed(k,i,iporo) = bed(Nbed-ks,i,iporo)
-                DO ised=1,ntr_l
-                  bed_frac(k,i,ised) = bed_frac(Nbed-ks,i,ised)
-                  bed_mass(k,i,nnew,ised)=bed_mass(Nbed-ks,i,nnew,ised)*cff
-                ENDDO
-              ENDDO ! k
             ENDIF !thck_avail
+          ENDIF !bed(top,i,ithck)<bottom(i,iactv)
 
-          ENDIF !Nbed > 1
-        ENDIF  ! End test increase top bed layer
+          !Splitting top layer is the cause of noisy sorting 
+!          !Split top layer if too thick
+!          IF(bed(top,i,ithck)>actv_max) THEN !put extra mass into layer 2
+!            rat=actv_max/bed(top,i,ithck) !bed()>0; 1>rat>0
+!            bed_mass(top,i,nnew,:)=bed_mass(top,i,nnew,:)*rat
+!            bed(top,i,ithck)=actv_max
+!            bed_mass(2,i,nnew,:)=bed_mass(2,i,nnew,:)+bed_mass(top,i,nnew,:)*(1-rat)
+!            bed(2,i,ithck) = 0.0d0
+!            DO ised=1,ntr_l
+!              IF(bed(2,i,iporo)>=1) call parallel_abort('SED3D: div. by 0(8)')
+!              bed(2,i,ithck)=bed(2,i,ithck)+bed_mass(2,i,nnew,ised)/Srho(ised)/(1.0d0-bed(2,i,iporo)) !>=0
+!            ENDDO !ised
+!
+!            ! - Update bed fraction of layer 2
+!            cff3=sum(bed_mass(2,i,nnew,1:ntr_l))
+!            cff3=max(cff3,eps)
+!            DO ised=1,ntr_l
+!              bed_frac(2,i,ised)=bed_mass(2,i,nnew,ised)/cff3 !>=0
+!            ENDDO
+!
+!            !No adjustment of other properties for layer 2
+!          ENDIF !bed(top,i,ithck)>actv_max
+        endif !Nbed
       ENDDO !i=1,nea
 
 !---------------------------------------------------------------------
@@ -1404,10 +1397,10 @@
         cff5 = 0.0d0
         ! weighted geometric mean
         DO ised=1,ntr_l
-          cff1 = cff1*tau_ce(ised)**bed_frac(1,i,ised)
-          cff2 = cff2*Sd50(ised)**bed_frac(1,i,ised)
-          cff3 = cff3*(Wsed(ised)+eps)**bed_frac(1,i,ised)
-          cff4 = cff4*Srho(ised)**bed_frac(1,i,ised)
+          cff1 = cff1*tau_ce(ised)**bed_frac(top,i,ised)
+          cff2 = cff2*Sd50(ised)**bed_frac(top,i,ised)
+          cff3 = cff3*(Wsed(ised)+eps)**bed_frac(top,i,ised)
+          cff4 = cff4*Srho(ised)**bed_frac(top,i,ised)
           cff5 = cff5+bed_frac(top,i,ised)
         ENDDO !ntr_l
 
@@ -1521,9 +1514,9 @@
       IF(sed_morph==2.AND.Nbed==1)THEN
         DO i=1,nea
           tmp=sum(bedthick_overall(elnode(1:i34(i),i)))/i34(i)
-          bed(1,i,ithck)=tmp !bedthick_overall
+          bed(top,i,ithck)=tmp
           DO ised=1,ntr_l
-            bed_mass(1,i,nnew,ised)=tmp*Srho(ised)*(1.0d0-bed(1,i,iporo))*bed_frac(1,i,ised)
+            bed_mass(top,i,nnew,ised)=tmp*Srho(ised)*(1.0d0-bed(top,i,iporo))*bed_frac(top,i,ised)
             if(bed_mass(1,i,nnew,ised)<0.d0) then
               WRITE(errmsg,*)'SED3D: mass<0; ',bed_mass(1,i,nnew,ised),i,nnew,ised
               CALL parallel_abort(errmsg)
@@ -1620,7 +1613,7 @@
       do i=1,ne
         do k=1,Nbed
           do ised=1,ntr_l
-            cff=cff+bed_mass(k,i,2,ised)*area(i) !kg
+            cff=cff+bed_mass(k,i,nnew,ised)*area(i) !kg
           enddo !ised
         enddo !k
       enddo !i
@@ -1635,7 +1628,7 @@
         CALL parallel_abort(errmsg)
       endif
 
-      deallocate(dep_mass)
+      deallocate(tmass)
       first_call=.false.
 
       end SUBROUTINE sediment

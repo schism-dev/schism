@@ -163,7 +163,7 @@
 
 ! user specified constants
 ! will be read in from sediment.in
-       REAL(rkind) :: newlayer_thick          ! New layer deposit thickness criteria (m)
+!       REAL(rkind) :: newlayer_thick          ! New layer deposit thickness criteria (m)
        REAL(rkind) :: bedload_coeff           ! bedload rate coefficient [-]
        REAL(rkind) :: bdldiffu                ! bedload diffusivity coef. 
        REAL(rkind) :: dry_slope_cr            ! critical slope for dry nods
