@@ -386,7 +386,7 @@ subroutine fabm_schism_init_stage2
   enddo
 #endif
 
-#ifdef _HAS_MASK_  
+#ifdef _FABM_MASK_TYPE_
 #if _FABM_API_VERSION_ < 1
 #ifndef _FABM_HORIZONTAL_MASK_
   call fabm_set_mask(fs%model, fs%mask, fs%mask_hz)
