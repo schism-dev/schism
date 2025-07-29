@@ -42,7 +42,7 @@ def main():
 
     # ------------------------- hardwired inputs for operation--------------------------
     working_dir = './'
-    nwm_folder = './combine/'
+    nwm_folder = './'  #  for shadow forecast, use './combine/'
     layer = 'conus'
     # ------------------------- end hardwired inputs--------------------------
 

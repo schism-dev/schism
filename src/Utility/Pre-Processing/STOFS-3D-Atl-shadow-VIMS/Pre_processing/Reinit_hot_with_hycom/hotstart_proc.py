@@ -525,26 +525,26 @@ if __name__ == "__main__":
     #     shapefile_name='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/ocean.shp'
     # )
 
-    # # Sample 2.2: similar as 2.1, but using a function provided by the Hotstart class
-    # bg_hot = Hotstart(
-    #     grid_info='./',
-    #     hot_file='./hotstart_20230118_hycom.nc'
-    # )
-    # fg_hot = Hotstart(
-    #     grid_info='./',
-    #     hot_file='./hotstart_20230118_oper.nc'
-    # )
-    # fg_hot.grid.hgrid.plot(fmt=1, value=fg_hot.tr_nd.val[:, -1, 0].flatten(), clim=[0, 30])
-    # plt.savefig(f'./old_surface_temp.png', dpi=700)
+    # Sample 2.2: similar as 2.1, but using a function provided by the Hotstart class
+    bg_hot = Hotstart(
+        grid_info='./',
+        hot_file='./hotstart_20230118_hycom.nc'
+    )
+    fg_hot = Hotstart(
+        grid_info='./',
+        hot_file='./hotstart_20230118_oper.nc'
+    )
+    fg_hot.grid.hgrid.plot(fmt=1, value=fg_hot.tr_nd.val[:, -1, 0].flatten(), clim=[0, 30])
+    plt.savefig(f'./old_surface_temp.png', dpi=700)
 
-    # fg_hot.replace_vars(
-    #     var_dict={'tr_nd': bg_hot.tr_nd.val, 'tr_nd0': bg_hot.tr_nd0.val, 'tr_el': bg_hot.tr_el.val},
-    #     shapefile_name='./ocean.shp',
-    # )  # sample *.shp is provided under the same folder as this script in SCHISM GIT
-    # fg_hot.writer(f'{fg_hot.source_dir}/reinit_hotstart.nc')
-    # plt.clf()
-    # fg_hot.grid.hgrid.plot(fmt=1, value=fg_hot.tr_nd.val[:, -1, 0].flatten(), clim=[0, 30])
-    # plt.savefig(f'./new_surface_temp.png', dpi=700)
+    fg_hot.replace_vars(
+        var_dict={'tr_nd': bg_hot.tr_nd.val, 'tr_nd0': bg_hot.tr_nd0.val, 'tr_el': bg_hot.tr_el.val},
+        shapefile_name='./ocean.shp',
+    )  # sample *.shp is provided under the same folder as this script in SCHISM GIT
+    fg_hot.writer(f'{fg_hot.source_dir}/reinit_hotstart.nc')
+    plt.clf()
+    fg_hot.grid.hgrid.plot(fmt=1, value=fg_hot.tr_nd.val[:, -1, 0].flatten(), clim=[0, 30])
+    plt.savefig(f'./new_surface_temp.png', dpi=700)
 
     # Sample 2.3 tweaking a single variable directly
     # [_, node_idx_list] = find_ele_node_in_shpfile(
@@ -569,14 +569,14 @@ if __name__ == "__main__":
     # my_hot.writer(f'{my_hot.source_dir}/interp_hotstart.nc')
 
     # Sample 4: replacing a variable
-    myhot = Hotstart(
-        grid_info='/sciclone/schism10/feiye/STOFS3D-v7/Inputs/Iv7_Francine_update/Reinit_hot/',
-        hot_file='/sciclone/schism10/feiye/STOFS3D-v7/Inputs/Iv7_Francine_update/Reinit_hot/hotstart.nc'
-    )
-    hg = myhot.grid.hgrid
-    elev = myhot.eta2.val
-    hg.save('elev0.gr3', value=elev)
+    # myhot = Hotstart(
+    #     grid_info='/sciclone/schism10/feiye/STOFS3D-v7/Inputs/Iv7_Francine_update/Reinit_hot/',
+    #     hot_file='/sciclone/schism10/feiye/STOFS3D-v7/Inputs/Iv7_Francine_update/Reinit_hot/hotstart.nc'
+    # )
+    # hg = myhot.grid.hgrid
+    # elev = myhot.eta2.val
+    # hg.save('elev0.gr3', value=elev)
 
-    elev = schism_grid('/sciclone/schism10/feiye/STOFS3D-v7/Inputs/Iv7_Francine_update/Elev_ic/elev_ic.gr3')
-    myhot.eta2.val[:] = elev.dp[:]
-    myhot.writer('./hotstart_reinit_elev.nc')
+    # elev = schism_grid('/sciclone/schism10/feiye/STOFS3D-v7/Inputs/Iv7_Francine_update/Elev_ic/elev_ic.gr3')
+    # myhot.eta2.val[:] = elev.dp[:]
+    # myhot.writer('./hotstart_reinit_elev.nc')

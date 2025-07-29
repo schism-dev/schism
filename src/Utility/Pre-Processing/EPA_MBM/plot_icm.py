@@ -2,20 +2,15 @@
 from pylib import *
 close("all")
 
-
 #------------------------------------------------------------------------------
 #inputs
 #------------------------------------------------------------------------------
-#runs=['CH3D','RUN10ie']; StartTs=[datenum(1991,1,1),datenum(1991,1,1),]
-runs=['RUN10ie','RUN10if']; StartTs=[datenum(1991,1,1),datenum(1991,1,1),]
-
-ftypes=[1,1]      #ftype=0: icm.nc;   ftype=1: icm.npz or CH3D.npz
+runs=['CH3D','RUN12f']; StartTs=[datenum(1991,1,1),datenum(1991,1,1),]
 xm=[datenum(1991,1,1),datenum(2001,1,1)]   #time range for plotting
-bdir='/sciclone/data10/wangzg/CBP/'
 
 #variables
-mvars=['temp', 'salt',    'chla','DO','TN','TP','NO3',  'NH4', 'PO4', 'DOC','POC','PON','POP','RPOC','LPOC','RPON','LPON','RPOP','LPOP','PB1', 'PB2', 'PB3', 'DON','DOP',]  #model variables
-ovars=['WTEMP','SALINITY','CHLA','DO','TN','TP','NO23F','NH4F','PO4F','DOC','PC', 'PN', 'PP', 'PC',  'PC',  'PN',   'PN', 'PP',  'PP',  'CHLA','CHLA','CHLA','DON','DOP', ] #observation
+mvars=['temp', 'salt',    'chla','DO','TN','TP','NO3',  'NH4', 'PO4', 'DOC','POC','PON','POP','RPOC','LPOC','RPON','LPON','RPOP','LPOP','PB1', 'PB2', 'PB3', 'DON','DOP'] #model variables
+ovars=['WTEMP','SALINITY','CHLA','DO','TN','TP','NO23F','NH4F','PO4F','DOC','PC', 'PN', 'PP', 'PC',  'PC',  'PN',   'PN', 'PP',  'PP',  'CHLA','CHLA','CHLA','DON','DOP'] #observation
 
 #stations
 regions=['channel','shoal','WT','ET','patuxent','potomac','rappahannock','york','james',] #main stations
@@ -29,23 +24,35 @@ pstations=(['CB1.1','CB2.1','CB2.2','CB3.1','CB3.2','CB3.3C','CB4.1C','CB4.2C','
     ['TF4.2','TF4.4','RET4.1','RET4.2','RET4.3','YRK028.58','LE4.1','YRK015.09','LE4.2','YRK005.40','LE4.3','WE4.2'], # york
     ['TF5.2','TF5.2A','TF5.3','TF5.4','TF5.5','TF5.5A','TF5.6','JMS050.74','RET5.2','LE5.1','LE5.2','LE5.3','LE5.4','CB8.1'],) # james
 
-#subset of variables/stations
-#mvars=mvars[2:6]; ovars=ovars[2:6]
-#regions=regions[:3]; pstations=pstations[:3]
-
 #more details
 layers=['S','B']  #surface and bottom
-iflags=[0, 0, 1] # TS(1 var, stations), TS(vars, 1 station), statistics
+iflags=[1, 0, 1] # TS(1 var, stations), TS(vars, 1 station), statistics
+bdir='/sciclone/data10/wangzg/CBP/'
 #------------------------------------------------------------------------------
 #read data and obs info
 #------------------------------------------------------------------------------
-fnames=['/sciclone/data10/wangzg/CBP/Data/CH3D/CH3D.npz' if i=='CH3D' else '{}/{}/outputs/icm.nc'.format(bdir,i) if k==0 else '{}/{}/results/icm.npz'.format(bdir,i) for i,k in zip(runs,ftypes)]    
-C=loadz(bdir+'/setup_files/CBP_WQData.npz'); models=[]; svars=[]; mtimes=[]; mzs=[]; mstations=[]; avars=[]
+fnames=[bdir+ ('Data/CH3D/CH3D.npz' if i=='CH3D' else i+'/results/icm.npz') for i in runs]; C=read(bdir+'Data/cbp/CBP_WQData.npz')
+models=[]; svars=[]; mtimes=[]; mzs=[]; mstations=[]
 for run,StartT,fname in zip(runs,StartTs,fnames):
-    f=read(fname,'IO'); svar=f('vars'); mtime=f('time'); mtime=mtime if run=='CH3D' else mtime+StartT
-    mz=f('bp').z if 'bp' in svar else f('z')
-    mstation=f('bp').station if 'bp' in svar else f('station')
-    models.append(f); svars.append(svar); mtimes.append(mtime); mzs.append(mz); mstations.append(mstation); avars.extend(svar)
+    M=read(fname,1); svar=M.attr(); mtime=M.time[:] if run=='CH3D' else M.time[:]+StartT
+    mz,mstation=[M.bp.z,M.bp.station] if M.hasattr('bp') else [M.z[:],M.station[:]]
+    #add conversion coefficients
+    M.c2chl=[0.75, 0.06, 0.06]; M.n2c=[0.167, 0.167, 0.167]; M.p2c=[0.0125, 0.0125, 0.0125] #default values
+    for i in ['c2chl','n2c','p2c']: M.attr(i,array(M.icm.attr(i) if M.hasattr('icm') else M.param.attr(i) if M.hasattr('param') else M.attr(i))); 
+    models.append(M); svars.append(svar); mtimes.append(mtime); mzs.append(mz); mstations.append(mstation)
+
+def get_icm_var(model,mvar):
+    M=model; mdata=None; 
+    if M.hasattr(mvar): return M.attr(mvar) if (mvar not in ['PB1','PB2','PB3']) else M.attr(mvar)/M.c2chl[int(mvar[-1])-1] #variable exist
+    #original variable not exist (for chlorophyll, POC,PON,POP,DO TN, TP, etc)
+    if mvar=='chla':  mdata=M.chla if M.hasattr('chla') else M.CHLA if M.hasattr('CHLA') else (c_[M.attr(['PB1','PB2','PB3'])]/M.c2chl[:,None,None]).sum(axis=0)
+    if mvar in ['POC','PON','POP']: mdata=M.attr('R'+mvar)+M.attr('L'+mvar)
+    if (mvar[:4] in ['bPOC','bPON','bPOP']) and M.hasattr(mvar[:4]): mvari=mvar[:4]; im=int(mvar[4])-1;  mdata=M.attr(mvari)[...,im]
+    if mvar=='DO' and fname.endswith('icm.nc'): mdata=M.DOX
+    if mvar=='TN' and mdata==None: mdata=M.attr(['RPON','LPON','DON','NH4','NO3'],fmt=1).sum(axis=0)+(M.attr(['PB1','PB2','PB3'],fmt=1)*M.n2c[:,None,None]).sum(axis=0)+M.attr('SRPON',default=0)
+    if mvar=='TP' and mdata==None: mdata=M.attr(['RPOP','LPOP','DOP','PO4'],fmt=1).sum(axis=0)+(M.attr(['PB1','PB2','PB3'],fmt=1)*M.p2c[:,None,None]).sum(axis=0)+M.attr('SRPOP',default=0)+M.attr('PIP',default=0)
+    if mvar=='TSS': mdata=M.attr('sed_tconc')*1e3
+    return mdata
 
 #------------------------------------------------------------------------------
 #plot each variable time series
@@ -60,69 +67,36 @@ cs=array([['g','k'],['b','m'],['c','r']]); ms=array([['-','-'],['-','-'],['-','-
 #------------------------------------------------------------------------------
 if iflags[0]==1:
    S=zdata(); st_vars=['run','region','layer','station','var','R','ME','MAE','RMSD']; [S.attr(i,[]) for i in st_vars] #init. statistics capsule
-   hf=figure() #fig init.
    for m, [mvar,ovar] in enumerate(zip(mvars,ovars)):
-       pvars=['chla','DO', 'POC', 'PON', 'POP', 'bPOC1','bPOC2','TN',  'TP'] #special treatment
-       bvars=['PB1', 'DOX','RPOC','RPON','RPOP','bPOC', 'bPOC', 'RPON','RPOP'] #special treatment
-       if mvar not in [*avars,*pvars]: continue
-
        #read model variable, obs data
-       t0=time.time()
-       mdatas=[]
-       for n,[run,fname,f,svar,mtime,mstation] in enumerate(zip(runs,fnames,models,svars,mtimes,mstations)):
-           mdata=None
-           if mvar in ['chla','PB1','PB2','PB3']: c2chl=f('icm').c2chl if ('icm' in svar) else f('param').c2chl if ('param' in svar) else [0.075, 0.06, 0.06]
-           if mvar in svar: #variable exist
-              mdata=f(mvar)
-              if mvar in ['PB1','PB2','PB3']: mdata=f(mvar)/c2chl[int(mvar[-1])-1]
-           elif (mvar in pvars) and (bvars[pvars.index(mvar)] not in svar): #variable not exist
-              mdata=nan*zeros([len(mstation),len(mtime)],'float32')
-           else:
-              #for chlorophyll, POC,PON,POP,DO TN, TP
-              if mvar=='chla': mdata=f('chla') if ('chla' in svar) else f('PB1')/c2chl[0]+f('PB2')/c2chl[1]+f('PB3')/c2chl[2]
-              if mvar=='POC':   mdata=f('RPOC')+f('LPOC')
-              if mvar=='PON':   mdata=f('RPON')+f('LPON')
-              if mvar=='POP':   mdata=f('RPOP')+f('LPOP')
-              if mvar=='bPOC1' and ('bPOC' in svar): mdata=f('bPOC')[:,0]
-              if mvar=='bPOC2' and ('bPOC' in svar): mdata=f('bPOC')[:,1]
-              if mvar=='DO' and fname.endswith('icm.nc'): mdata=f('DOX')
-              if mvar=='TN' and mdata==None:
-                 n2c=f('icm').n2c if ('icm' in svar) else f('param').n2c if ('param' in svar) else [0.167, 0.167, 0.167]
-                 mdata=f('RPON')+f('LPON')+f('DON')+f('NH4')+f('NO3')+n2c[0]*f('PB1')+n2c[1]*f('PB2')+n2c[2]*f('PB3')+ (f('SRPON') if 'SRPON' in svar else 0)
-              if mvar=='TP' and mdata==None:
-                 p2c=f('icm').p2c if ('icm' in svar) else f('param').p2c if ('param' in svar) else [0.0125, 0.0125, 0.0125]
-                 mdata=f('RPOP')+f('LPOP')+f('DOP')+f('PO4')+p2c[0]*f('PB1')+p2c[1]*f('PB2')+p2c[2]*f('PB3')+ (f('SRPOP') if 'SRPOP' in svar else 0)
-           mdatas.append(mdata)
+       mys=[]; icheck=0; t0=time.time()
+       for n,[run,fname,M,mtime,mstation] in enumerate(zip(runs,fnames,models,mtimes,mstations)):
+           my=get_icm_var(M,mvar); mys.append(my); icheck=icheck+(my is None)
+       if icheck==len(runs): continue # no available data
        fp=(C.var==ovar)*((C.layer=='S')|(C.layer=='B')); otime,ostation,odata,olayer=C.time[fp],C.station[fp],C.data[fp],C.layer[fp] #obs
 
        #for each region and each station
        for nn,[region, stations] in enumerate(zip(regions,pstations)):
            fsizes=[[19,9.4],[19,9.4],[19,9.4],[19,9.4],[19,9.4],[19,9.4],[19,9.4],[19,9.4],[19,9.4]]
            fsubs= [[5,5],   [4,5],   [3,4],   [5,5],   [3,4],   [3,4],   [3,5],   [3,5],   [3,5]]
-           hf=hf if fignum_exists(hf.number) else figure(); hf.clf(); hf.set_figwidth(fsizes[nn][0]); hf.set_figheight(fsizes[nn][1])
+           hf=figure(figsize=fsizes[nn])
            print('plotting time series: {}, {}'.format(mvar,region))
            for i,station in enumerate(stations):
-               subplot(*fsubs[nn],i+1)
-   
-               #get obs
-               fp=(ostation==station)*(otime>=xm[0])*(otime<=xm[1])*(olayer=='S'); ots=otime[fp]; oys=odata[fp] 
-               fp=(ostation==station)*(otime>=xm[0])*(otime<=xm[1])*(olayer=='B'); otb=otime[fp]; oyb=odata[fp] 
-       
-               #plot model
-               lstr=[]
-               for n,[run,mtime,mdata,mz,mstation] in enumerate(zip(runs,mtimes,mdatas,mzs,mstations)):
-                   if mdata is None: continue
+               subplot(*fsubs[nn],i+1); lstr=[]
+               fp=(ostation==station)*(otime>=xm[0])*(otime<=xm[1])*(olayer=='S'); ots=otime[fp]; oys=odata[fp] #get surf. obs
+               fp=(ostation==station)*(otime>=xm[0])*(otime<=xm[1])*(olayer=='B'); otb=otime[fp]; oyb=odata[fp] #get bott. obs
+               for n,[run,mtime,my,mz,mstation] in enumerate(zip(runs,mtimes,mys,mzs,mstations)): #plot model
+                   if my is None: continue
                    #get model variable
                    for k, layer in enumerate(layers):
-                       fps=mstation==station; sids=nonzero(fps)[0]; zs=mz[fps]
-                       sid=sids[argmin(zs) if layer=='S' else argmax(zs)];  tag='surface' if layer=='S' else 'bottom'
-                       myi=mdata[sid]; myi[myi<-1e4]=nan
-                       plot(mtime,myi,ms[n,k],color=cs[n,k],alpha=aps[n,k])
-                       lstr.append('{}: {}'.format(run,tag))
+                       sids=pindex(mstation==station); zs=mz[sids] 
+                       fps=mstation==station; sids=nonzero(fps)[0]; zs=mz[fps]; sid=sids[argmin(zs) if layer=='S' else argmax(zs)]
+                       myi=my[sid]; myi[myi<-1e4]=nan; tag='surface' if layer=='S' else 'bottom'
+                       plot(mtime,myi,ms[n,k],color=cs[n,k],alpha=aps[n,k]); lstr.append('{}: {}'.format(run,tag))
    
                        #do statistics
                        if iflags[2]==1:
-                          if mvar in ['PB1','PB2','PB3','LPOC','RPOC','LPON','RPON','LPOP','RPOP',]: continue
+                          if (mvar in ['PB1','PB2','PB3','LPOC','RPOC','LPON','RPON','LPOP','RPOP']) or len(otime)==0: continue
                           ot,oy=[ots,oys] if layer=='S' else [otb,oyb]
                           if len(ot)!=0: fp=(ot>=tm[0])*(ot<=tm[1]); ot,oy=ot[fp],oy[fp];  fmyi=[]
                           if len(ot)==0: continue #no obs. data in this period
@@ -132,16 +106,13 @@ if iflags[0]==1:
                              for oti,oyi in zip(ot,oy): fp=(abs(mtime-oti)<=0.5)*(~isnan(myi)); myii=myi[fp]; fmyi.append(myii[argmin(abs(myii-oyi))]) #find best match
                              s=get_stat(array(fmyi),oy); [S.attr(i).append(s.attr(i)) for i in ['R','ME','MAE','RMSD']]; 
                           S.run.append(run); S.region.append(region); S.layer.append(layer); S.station.append(station); S.var.append(mvar)
-       
-               #plot obs
-               plot(ots,oys,'r^',ms=2); lstr.append('Obs: {}_surface'.format(mvar))
-               plot(otb,oyb,linestyle='None',color='orange',marker='s',ms=2); lstr.append('Obs: {}_bottom'.format(mvar))
+               plot(ots,oys,'r^',ms=2); lstr.append('Obs: {}_surface'.format(mvar)) #plot surf. obs
+               plot(otb,oyb,linestyle='None',color='orange',marker='s',ms=2); lstr.append('Obs: {}_bottom'.format(mvar)) #plot bott. obs
        
                #note
                setp(gca(),xticks=xts,xticklabels=xls,xlim=xm); gca().xaxis.grid('on')
                text(xlim()[0]+0.03*diff(xlim()),ylim()[0]+0.8*diff(ylim()),station,fontsize=12,fontweight='bold')
                if i==0: hl=legend(lstr)
-       
            gcf().tight_layout()
            hl.set_bbox_to_anchor([0.82,0.075,0.1,0.1],transform=gcf().transFigure)
         
@@ -150,7 +121,7 @@ if iflags[0]==1:
            if not fexist(sdir): os.mkdir(sdir)
            #show(block=False); sys.exit()
            #savefig(sname+'.pp')
-           savefig(sname,dpi=300)
+           savefig(sname,dpi=300); close()
    if iflags[2]==1: 
       S.x,S.y=proj_pts(*array([[C.lon[i],C.lat[i]] for i in S.station]).T,'epsg:4326','epsg:26918')
       S.to_array(); S.save('stat_'+'_'.join(runs))
@@ -161,43 +132,28 @@ if iflags[0]==1:
 if iflags[1]==1:
    for nn,[region, stations] in enumerate(zip(regions,pstations)):
        for i,station in enumerate(stations):
-   
            figure(figsize=(28,14))
-           print('plotting '+ region+','+ station) # suptitle(station,fontsize=15,fontweight='bold'); 
+           print('plotting '+ region+','+ station)
            for m, [mvar,ovar] in enumerate(zip(mvars,ovars)):
-               mdatas=[]
-               #read model variable values
-               for n,[run,fname,f,svar] in enumerate(zip(runs,fnames,models,svars)):
-                   mdata=None
-                   if mvar in svar: mdata=f(mvar)
-                   #for chlorophyll
-                   if mvar in ['chla','PB1','PB2','PB3']:
-                       c2chl=f('icm').c2chl if ('icm' in svar) else f('param').c2chl if ('param' in svar) else [0.075, 0.06, 0.06]
-                       if mvar=='chla': mdata=f('chla') if ('chla' in svar) else f('PB1')/c2chl[0]+f('PB2')/c2chl[1]+f('PB3')/c2chl[2]
-                       if mvar in ['PB1','PB2','PB3']: mdata=f(mvar)/c2chl[int(mvar[-1])-1]
-                   #POC,PON,POP,DO
-                   if mvar=='POC':   mdata=f('RPOC')+f('LPOC')
-                   if mvar=='PON':   mdata=f('RPON')+f('LPON')
-                   if mvar=='POP':   mdata=f('RPOP')+f('LPOP')
-                   if mvar=='bPOC2' and ('bPOC' in svar): mdata=f('bPOC')[:,1]
-                   if mvar=='DO' and fname.endswith('icm.nc'): mdata=f('DOX')
-                   mdatas.append(mdata)
-   
-               #get obs
-               fps=(C.station==station)*(C.var==ovar)*(C.time>=xm[0])*(C.time<=xm[1])*(C.layer=='S')
+               #read model variable, obs data
+               mys=[]; icheck=0; t0=time.time()
+               for n,[run,fname,M,mtime,mstation] in enumerate(zip(runs,fnames,models,mtimes,mstations)):
+                   my=get_icm_var(M,mvar); mys.append(my); icheck=icheck+(my is None)
+               if icheck==len(runs): continue # no available data
+               fps=(C.station==station)*(C.var==ovar)*(C.time>=xm[0])*(C.time<=xm[1])*(C.layer=='S') #get obs
                fpb=(C.station==station)*(C.var==ovar)*(C.time>=xm[0])*(C.time<=xm[1])*(C.layer=='B')
                ots=C.time[fps]; oys=C.data[fps]; otb=C.time[fpb]; oyb=C.data[fpb]
    
                subplot(5,5,m+1)
                #plot model
                lstr=[]
-               for n,[run,mtime,mdata,mz,mstation] in enumerate(zip(runs,mtimes,mdatas,mzs,mstations)):
-                   if mdata is None: continue
+               for n,[run,mtime,my,mz,mstation] in enumerate(zip(runs,mtimes,mys,mzs,mstations)):
+                   if my is None: continue
                    #get model variable
                    for k, layer in enumerate(layers):
                        fps=mstation==station; sids=nonzero(fps)[0]; zs=mz[fps]
                        sid=sids[argmin(zs) if layer=='S' else argmax(zs)];  tag='surface' if layer=='S' else 'bottom'
-                       myi = mdata[sid]
+                       myi = my[sid]
                        myi[myi<-1e4]=nan
    
                        plot(mtime,myi,ms[n,k],color=cs[n,k],alpha=aps[n,k], linewidth=1.5)
@@ -222,10 +178,10 @@ if iflags[1]==1:
 #------------------------------------------------------------------------------
 #write statistics excel files
 #------------------------------------------------------------------------------
-if iflags[2]==1:
+if iflags[2]!=0:
    S=read('stat_{}.npz'.format('_'.join(runs))); tname='statistics_'+'_'.join(runs)+'.xlsx'
-   xvars=['temp','salt','chla', 'DO', 'TN', 'TP','NH4', 'NO3', 'PO4', 'DOC', 'DON', 'DOP', 'POC', 'PON', 'POP']
-   vms  =[1.5,     2,     10,    2,    1,   0.1,  0.1,  0.4,   0.02 ,  2,    0.3,   0.02,  2,     0.2,   0.05]
+   xvars=['temp','salt','chla', 'DO', 'TN', 'TP','NH4', 'NO3', 'PO4', 'DOC', 'DON', 'DOP', 'POC', 'PON', 'POP','TSS']
+   vms  =[1.5,     2,     10,    2,    1,   0.1,  0.1,  0.4,   0.02 ,  2,    0.3,   0.02,  2,     0.2,   0.05, 10]
    xvars,vms=array([[i,k] for i,k in zip(xvars,vms) if i in unique(S.var)]).T; vms=vms.astype('float')
    if fexist(tname): os.remove(tname)
    hf=figure()
@@ -263,59 +219,60 @@ if iflags[2]==1:
        write_excel(tname,fn,sht,fmt=3,indy=idy+1,indx=3,figsize=[80*fw,80*fh]); idy=idy+50
 
    #plot barplot
-   for mvar in xvars: #adjust the order 
-       idy=0; unit='oC' if mvar=='temp' else 'mg/L'
-       for region,stations in zip(regions,pstations): 
-           print('barplot: ', mvar,region)
-           for layer in ['S','B']:
-               #get header, title
-               tag='Surface' if layer=='S' else 'Bottom'; header1='{}: {} @{} ({})'.format(region,mvar,tag,unit); header2=['Station']
-               for i in ['R2','Bias','RMSE']:
-                   for run in runs: header2.append('{} ({})'.format(i,run if run=='CH3D' else 'MBM'))
+   if iflags[2]==2:
+      for mvar in xvars: #adjust the order 
+          idy=0; unit='oC' if mvar=='temp' else 'mg/L'
+          for region,stations in zip(regions,pstations): 
+              print('barplot: ', mvar,region)
+              for layer in ['S','B']:
+                  #get header, title
+                  tag='Surface' if layer=='S' else 'Bottom'; header1='{}: {} @{} ({})'.format(region,mvar,tag,unit); header2=['Station']
+                  for i in ['R2','Bias','RMSE']:
+                      for run in runs: header2.append('{} ({})'.format(i,run if run=='CH3D' else 'MBM'))
 
-               #get statistics data
-               CC=[]; ME=[]; RMSD=[] #orangize stat data
-               for run in runs:
-                   CCi=[]; MEi=[]; RMSDi=[]
-                   for station in stations:
-                       fp=(S.run==run)*(S.var==mvar)*(S.station==station)*(S.layer==layer)
-                       if sum(fp)==0:
-                          CCi.append(nan); MEi.append(nan); RMSDi.append(nan)
-                       else:
-                          fp=nonzero(fp)[0][0]; CCi.append(S.R[fp]); MEi.append(S.ME[fp]); RMSDi.append(S.RMSD[fp])
-                   CC.append(CCi); ME.append(MEi); RMSD.append(RMSDi)
-               CC=squeeze(array(CC))**2; ME=squeeze(array(ME)); RMSD=squeeze(array(RMSD))
-               #fpn=~isnan(ME.sum(axis=0)); stations,CC,ME,RMSD=array(stations)[fpn],CC[:,fpn],ME[:,fpn],RMSD[:,fpn] #remove nan data
-               data=r_[CC,ME,RMSD].T; mdata=data.mean(axis=0)
-                
-               #write excel data
-               write_excel(tname,header1,mvar,indy=idy,indx=1,fontsize=12,fontweight='bold',color='k') 
-               write_excel(tname,header2,mvar,indy=idy+1,fontsize=10,fontweight='bold',color='b') 
-               write_excel(tname,stations,mvar,indy=idy+2,align='column')
-               write_excel(tname,'mean',mvar,indy=idy+2+len(stations),indx=0,fontweight='bold')
-               write_excel(tname,data,mvar,indy=idy+2,indx=1,number_format="0.0000")
-               write_excel(tname,mdata,mvar,indy=idy+2+len(data),indx=1,number_format="0.0000",fontweight='bold')
+                  #get statistics data
+                  CC=[]; ME=[]; RMSD=[] #orangize stat data
+                  for run in runs:
+                      CCi=[]; MEi=[]; RMSDi=[]
+                      for station in stations:
+                          fp=(S.run==run)*(S.var==mvar)*(S.station==station)*(S.layer==layer)
+                          if sum(fp)==0:
+                             CCi.append(nan); MEi.append(nan); RMSDi.append(nan)
+                          else:
+                             fp=nonzero(fp)[0][0]; CCi.append(S.R[fp]); MEi.append(S.ME[fp]); RMSDi.append(S.RMSD[fp])
+                      CC.append(CCi); ME.append(MEi); RMSD.append(RMSDi)
+                  CC=squeeze(array(CC))**2; ME=squeeze(array(ME)); RMSD=squeeze(array(RMSD))
+                  #fpn=~isnan(ME.sum(axis=0)); stations,CC,ME,RMSD=array(stations)[fpn],CC[:,fpn],ME[:,fpn],RMSD[:,fpn] #remove nan data
+                  data=r_[CC,ME,RMSD].T; mdata=data.mean(axis=0)
+                   
+                  #write excel data
+                  write_excel(tname,header1,mvar,indy=idy,indx=1,fontsize=12,fontweight='bold',color='k') 
+                  write_excel(tname,header2,mvar,indy=idy+1,fontsize=10,fontweight='bold',color='b') 
+                  write_excel(tname,stations,mvar,indy=idy+2,align='column')
+                  write_excel(tname,'mean',mvar,indy=idy+2+len(stations),indx=0,fontweight='bold')
+                  write_excel(tname,data,mvar,indy=idy+2,indx=1,number_format="0.0000")
+                  write_excel(tname,mdata,mvar,indy=idy+2+len(data),indx=1,number_format="0.0000",fontweight='bold')
 
-               #insert figure
-               ns=len(stations); xi=arange(ns); dw=0.35
-               fs=[2*max(24*ns,400),max(22*ns,240)]; fsize=[2*max(ns*0.5,8),max(ns*0.5,5)]
-               hf.clf(); hf.set_figwidth(fsize[0]); hf.set_figheight(fsize[1]); fn=hf
+                  #insert figure
+                  ns=len(stations); xi=arange(ns); dw=0.35
+                  fs=[2*max(24*ns,400),max(22*ns,240)]; fsize=[2*max(ns*0.5,8),max(ns*0.5,5)]
+                  hf.clf(); hf.set_figwidth(fsize[0]); hf.set_figheight(fsize[1]); fn=hf
 
-               for mm in arange(3):
-                   subplot(2,2,mm+1); lstr=[]; tstr=[]
-                   for m, run in enumerate(runs):
-                       if mm==0: cdata=ME[m]; stag='Bias'
-                       if mm==1: cdata=CC[m]; stag='R2'
-                       if mm==2: cdata=RMSD[m]; stag='RMSE'
-                       lstr.append(run); tstr.append('{}({})={:0.4f}'.format(stag,run,mean(cdata)))
-                       bar(xi-dw/2+m*dw,cdata, width=0.35)
-                   if mm==1: setp(gca(),ylim=[0,1])
-                   legend(lstr,loc=1, fontsize=12)
-                   if mm==0: plot([-1,100],[0,0],'k:')
-                   setp(gca(),xticks=xi,xticklabels=stations,xlim=[-0.5,max(ns,8)]); xticks(fontsize=12, rotation=45)
-                   ylabel(stag,fontsize=12); title(', '.join(tstr),fontsize=14)
-               gcf().tight_layout()
+                  for mm in arange(3):
+                      subplot(2,2,mm+1); lstr=[]; tstr=[]
+                      for m, run in enumerate(runs):
+                          if mm==0: cdata=ME[m]; stag='Bias'
+                          if mm==1: cdata=CC[m]; stag='R2'
+                          if mm==2: cdata=RMSD[m]; stag='RMSE'
+                          lstr.append(run); tstr.append('{}({})={:0.4f}'.format(stag,run,mean(cdata)))
+                          bar(xi-dw/2+m*dw,cdata, width=0.35)
+                      if mm==1: setp(gca(),ylim=[0,1])
+                      legend(lstr,loc=1, fontsize=12)
+                      if mm==0: plot([-1,100],[0,0],'k:')
+                      setp(gca(),xticks=xi,xticklabels=stations,xlim=[-0.5,max(ns,8)]); xticks(fontsize=12, rotation=45)
+                      ylabel(stag,fontsize=12); title(', '.join(tstr),fontsize=14)
+                  gcf().tight_layout()
 
-               write_excel(tname,fn,mvar,fmt=3,indy=idy+2,indx=9,figsize=fs)
-               idy=idy+5+max(len(data),10)
+                  write_excel(tname,fn,mvar,fmt=3,indy=idy+2,indx=9,figsize=fs)
+                  idy=idy+5+max(len(data),10)
 

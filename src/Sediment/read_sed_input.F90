@@ -81,7 +81,7 @@
       CHARACTER(len=90) :: line_str,str_tmp,str_tmp2
 
       namelist /SED_CORE/Sd50,Erate
-      namelist /SED_OPT/Wsed,tau_ce,Srho,iSedtype,newlayer_thick,bedload_coeff, &
+      namelist /SED_OPT/Wsed,tau_ce,Srho,iSedtype,bedload_coeff, &
      &sed_debug,Cdb_min,Cdb_max,actv_max,poro_option,porosity,Awooster,Bwooster, &
      &sedlay_ini_opt,toplay_inithick,bdldiffu,Nbed,bedload,bedload_filter, &
      &bedload_limiter,suspended_load,slope_formulation,alpha_bs,alpha_bn, &
@@ -120,7 +120,8 @@
       Sd50=-huge(1.d0); Erate=-huge(1.d0)
 
       Srho(:)=2650.d0; iSedtype(:)=1; 
-      newlayer_thick=0.001d0; bedload_coeff=1
+!      newlayer_thick=0.001d0; 
+      bedload_coeff=1
       sed_debug=0; Cdb_min=1.d-6; Cdb_max=1.d-2; actv_max=0.05d0
       poro_option=1; porosity=0.4d0; Awooster=0.42d0; Bwooster=-0.458d0
       sedlay_ini_opt=0; toplay_inithick=10.0d-2; bdldiffu=0.5d0; Nbed=1
@@ -420,6 +421,10 @@
 ! Critical shear for erosion and deposition (Tau_ce) input is in [N/m2]
 !---------------------------------------------------------------------
 
+      !Scale up max top layer thickness
+      actv_max=actv_max*morph_fac
+      if(actv_max<=0.d0) call parallel_abort('read_sed: actv_max<=0')
+
       ! Conversion of threshold from mm to m
       bedmass_threshold = bedmass_threshold/1000.0d0
 
@@ -473,7 +478,7 @@
           WRITE(16,*) ' > morphological factor: ',morph_fac
         END IF
 !        WRITE(16,*) 'bedthick_overall(1): ',bedthick_overall(1)
-        WRITE(16,*) 'New layer thickness',newlayer_thick
+!        WRITE(16,*) 'New layer thickness',newlayer_thick
         WRITE(16,*) '----------------------------------------------'
         WRITE(16,*) 'Sed type  ;  Sd50 [m]  ;  Srho [kg/m3]  ;',     &
         &          '  Wsed [m/s]  ;  Erate ;  tau_ce', &
