@@ -5,7 +5,19 @@
 # SPDX-License-Identifier: CC0-1.0
 # SPDX-FileContributor Carsten Lemmen <carsten.lemmen@hereon.de
 
+if(NOT DEFINED ENV{CONDA_PREFIX})
+  message(FATAL_ERROR "CONDA_PREFIX is not set. Please activate your conda environment before configuring.")
+endif()
+
 set(CMAKE_Fortran_COMPILER $ENV{CONDA_PREFIX}/bin/mpifort CACHE PATH "Path to parallel Fortran compiler")
 set(CMAKE_C_COMPILER $ENV{CONDA_PREFIX}/bin/mpicc CACHE PATH "Path to parallel C compiler")
 set(CMAKE_CXX_COMPILER $ENV{CONDA_PREFIX}/bin/mpicxx CACHE PATH "Path to parallel C++ compiler")
-set(PARMETIS_ROOT $ENV{CONDA_PREFIX} CACHE PATH "Root path for external (par)metis")
+
+# Prefer conda parmetis by defining PARMETIS_ROOT if it is installed in conda.  
+# Validation is leveraged to the FindParMETIS cmake module
+if(EXISTS "$ENV{CONDA_PREFIX}/include/parmetis.h")
+  message(STATUS "Found ParMETIS header in conda environment; setting PARMETIS_ROOT to $ENV{CONDA_PREFIX}")
+  set(PARMETIS_ROOT "$ENV{CONDA_PREFIX}" CACHE PATH "Root path for external (par)metis")
+else()
+  message(STATUS "ParMETIS header not found in conda environment; PARMETIS_ROOT not set")
+endif()
