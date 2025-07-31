@@ -1694,7 +1694,7 @@
  z level or at a sigma level) or vertical transects. In particular, <code>SCHISM_SLAB2.m</code>  and <code>SCHISM_TRANSECT2.m</code> for for 
  the new scribed outputs, while <code>SCHISM_SLAB.m</code> and <code>SCHISM_TRANSECT.m</code> are for the old outputs (schout*.nc).</p>
 <h2 id="visualization-with-pylib">Visualization with pylib<a class="headerlink" href="#visualization-with-pylib" title="Permanent link">&para;</a></h2>
-<p>pylib provides <code>schismview</code> to visualize outputs (scribed outputs, OLDIO not supported yet). <code>schismview</code> will collect all the available variables from your outputs. For each variable, you can do 1). contour plot, 2). animation, 3). extract time series, and 4) query, etc. This is a lightweight app, and please report bug to SCHISM maillist or wzhengui@gmail.com.</p>
+<p>pylib provides <code>schismview</code> to visualize outputs (scribed outputs only). <code>schismview</code> will collect all the available variables from your outputs. For each variable, you can do 1). contour plot, 2). transect plot; 3) animation, 4). extract time series, and 5) query, etc. Please report bug to SCHISM maillist or wzhengui@gmail.com.</p>
 <h3 id="installation-of-pylib"><strong><a href="pre-processing-with-pylib/installation.html">Installation of pylib</a></strong><a class="headerlink" href="#installation-of-pylib" title="Permanent link">&para;</a></h3>
 <p>By running the following code, you can locate the executable of <code>schismview</code> <br>
 <code>python -c "from pylib import *; print(path_scripts+'/schismview')"</code>. For ealier pylibs versions, use <br>
