@@ -1903,6 +1903,7 @@
           ! for vertically varying velocities of vertical movement.
           ! If iwsett=0 (default), set wsett(nvrt|kbe)=0 (actually bypassed below with if) and use wsett(kbe(i)+1:nvrt-1) for
           ! vertical velocities at whole levels
+
           ! Limit wsett to avoid char line out of boundary 
           do k=kbe(i),nvrt 
             tmp=0.9*(ze(nvrt,i)-ze(kbe(i),i))/dt !>0; safety factor added
@@ -1954,14 +1955,14 @@
               endif
             endif !k>kbe(i)+1
 
-            !Extra terms for sediment at bottom b.c.: \kapp*dT/dz+w_s*T=w_s*T-E
-            if(iwsett(m)==1.and.k==kbe(i)+1) then
-              if(swild(k-1)<0.0d0) then
-                write(errmsg,*)'TRAN_IMP: wsett<0,',m,k,ielg(i),swild(k-1) !wsett(m,k-1,i)
-                call parallel_abort(errmsg)   
-              endif
-              bdia(kin)=bdia(kin)+area(i)*dt_by_bigv*swild(k-1) !wsett(m,k-1,i)
-            endif !k==kbe(i)+1
+!            !Extra terms for sediment at bottom b.c.
+!            if(iwsett(m)==1.and.k==kbe(i)+1) then
+!              if(swild(k-1)<0.0d0) then
+!                write(errmsg,*)'TRAN_IMP: wsett<0,',m,k,ielg(i),swild(k-1) !wsett(m,k-1,i)
+!                call parallel_abort(errmsg)   
+!              endif
+!              bdia(kin)=bdia(kin)+area(i)*dt_by_bigv*swild(k-1) !wsett(m,k-1,i)
+!            endif !k==kbe(i)+1
          
             !# of column=1 as tracer loop is outside
             rrhs(1,kin)=trel_tmp(m,k,i)
@@ -1971,9 +1972,7 @@
             endif !k==nvrt
 
             if(k==kbe(i)+1) then
-              !NOTE: with settling vel., flx_bt=D-E-w_s*T_{kbe+1}, since
-              !in well-formulated b.c., D \approx w_s*T_{kbe+1}. D&E are
-              !deposi. & erosional fluxes respectively
+              !flx_bt includes deposi. & erosional fluxes
               rrhs(1,kin)=rrhs(1,kin)-area(i)*dt_by_bigv*flx_bt(m,i)
             endif !k==kbe(i)+1
 

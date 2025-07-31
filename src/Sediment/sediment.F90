@@ -947,8 +947,8 @@
 
             select case(ised_bc_bot)
               case(1) !Warner
-                !BM: Correction of depo_mss, otherwise conservation issues would occur 
-                depo_mss=dt*Wsed(ised)*tr_el(indx,kbe(i)+1,i) !s * m/s * kg/m3 = kg/m/m
+                !Error: change to ELM
+                depo_mss= !dt*Wsed(ised)*tr_el(indx,kbe(i)+1,i) !s * m/s * kg/m3 = kg/m/m
 
                 !BM: output
                 depflxel(i,ised)=depo_mss/dt ! en kg/m2/s
@@ -986,7 +986,7 @@
                 !BM: output
                 eroflxel(i,ised)=flux_eros ! en kg/m2/s            
 !...            Update flx_bt for transport solver
-                flx_bt(indx,i)=-flux_eros ![kg/m/m/s]
+                flx_bt(indx,i)=(depo_mss-eros_mss)/dt ![kg/m/m/s]
 
                 IF (sed_morph>=1) THEN
 ! - Apply morphology factor to flux and settling...
