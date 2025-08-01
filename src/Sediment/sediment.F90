@@ -947,8 +947,62 @@
 
             select case(ised_bc_bot)
               case(1) !Warner
-                !Error: change to ELM
-                depo_mss= !dt*Wsed(ised)*tr_el(indx,kbe(i)+1,i) !s * m/s * kg/m3 = kg/m/m
+                !XB go back to the original ELM approach of Warner
+                !semi-Lagrangian to calculate depo_mss=\int w_s*c^* dt
+                cff=ze(nvrt,i)-ze(kbe(i),i) !total depth
+                cff1=ze(kbe(i)+1,i)-ze(kbe(i),i) !bottom cell thickness
+
+                if(cff1.LE.0.d0) then
+                  WRITE(errmsg,*)'SED, wrong bottom layer0:',cff,ze(kbe(i)+1,i),ze(kbe(i),i)
+                  CALL parallel_abort(errmsg)
+                endif
+
+                !Limit ratio between reference depth and bottom depth
+                !ta=min(0.5d0,relath*cff/cff1) !usually the relath is 0.01; for natural river, it should be even smaller
+                !aref=ta*we(kbe(i)+1,i) !w-vel. at ref. height
+
+                !Estimate the starting pt
+                cff8=(ze(kbe(i)+1,i)+ze(kbe(i),i))/2 !bottom half cell -starting pt of ELM
+                cff9=cff8+Wsed(ised)*dt !>cff8; foot of char.
+                if(cff9<=cff8) call parallel_abort('SED: (9)')
+                Ksed=nvrt+1 !init. for abnormal case
+                do k=kbe(i)+2,nvrt
+                  if(cff9<=(ze(k,i)+ze(k-1,i))/2) then
+                    Ksed=k
+                    exit
+                  endif
+                enddo !k
+
+                do k=kbe(i)+2,min(nvrt,Ksed)
+                  cff7=(ze(k-2,i)+ze(k-1,i))/2
+                  cff8=(ze(k,i)+ze(k-1,i))/2
+                  if(cff9<cff7) then
+                    WRITE(errmsg,*)'SED, wrong cff9:',cff9,cff7,ielg(i),ised,k
+                    CALL parallel_abort(errmsg)
+                endif
+
+                                 if(cff9<cff8) then
+                    cff5=(cff9-cff7)/(cff8-cff7) !ratio
+                    if(cff5<0.or.cff5>1) then
+                      WRITE(errmsg,*)'SED, wrong ratio:',cff5,ielg(i),ised,k
+                      CALL parallel_abort(errmsg)
+                    endif
+                    cff6=(1-cff5)*tr_el(indx,k-1,i)+cff5*tr_el(indx,k,i) !conc @upper layer
+                  else
+                    cff6=tr_el(indx,k,i)
+                  endif
+
+                  depo_mss=depo_mss+(cff6+tr_el(indx,k-1,i))/2*(min(cff9,cff8)-cff7) !>=0
+                  !depo_mss=depo_mss+cff6*(min(cff9,cff8)-cff7) !>=0 (lower depos. flux)
+                enddo !k
+
+                !Deal with above F.S. case
+                if(Ksed==nvrt+1) then
+                  cff7=(ze(nvrt,i)+ze(nvrt-1,i))/2
+                  depo_mss=depo_mss+(min(ze(nvrt,i),cff9)-cff7)*tr_el(indx,nvrt,i)
+                endif
+
+                depo_mss=(min(cff9,cff8)-ze(kbe(i),i))*tr_el(indx,kbe(i)+1,i)
 
                 !BM: output
                 depflxel(i,ised)=depo_mss/dt ! en kg/m2/s
