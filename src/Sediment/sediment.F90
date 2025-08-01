@@ -723,11 +723,13 @@
 !---------------------------------------------------------------------
 ! - Diffusive fluxes in flow direction (Fortunato et al., 2009; eq 2)
 !---------------------------------------------------------------------
+          if (ielg(i)==13817) write(100,*)it,FX_r(i) 
 
           FX_r(i) = FX_r(i)+bdldiffu*(1.0-bed(top,i,iporo))*ABS(FX_r(i))*dzdx
           FY_r(i) = FY_r(i)+bdldiffu*(1.0-bed(top,i,iporo))*ABS(FY_r(i))*dzdy
-
-
+                
+          if (ielg(i)==13817)write(100,*)it,FX_r(i),bed(top,i,iporo),dzdx,bdldiffu
+              
 !---------------------------------------------------------------------
 ! - Consistency check
 !---------------------------------------------------------------------
