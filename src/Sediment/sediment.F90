@@ -949,7 +949,7 @@
 
             select case(ised_bc_bot)
               case(1) !Warner
-                !XB go back to the original ELM approach of Warner
+                !XB : restore the original ELM approach of Warner
                 !semi-Lagrangian to calculate depo_mss=\int w_s*c^* dt
                 cff=ze(nvrt,i)-ze(kbe(i),i) !total depth
                 cff1=ze(kbe(i)+1,i)-ze(kbe(i),i) !bottom cell thickness
