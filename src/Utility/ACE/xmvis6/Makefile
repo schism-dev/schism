@@ -15,7 +15,7 @@
 
 # xmvis - Motif with X
 
-INSTALLDIR = /usr/local/ace
+INSTALLDIR = ./
 
 ###################################################
 # 'make rcs' to check everything in.
