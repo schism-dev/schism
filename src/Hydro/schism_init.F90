@@ -1794,6 +1794,7 @@
       fluxevp=0.d0; fluxprc=0.d0
       prec_rain=0.d0; prec_snow=0.d0
       rsxx=0.d0; rsxy=0.d0; rsyy=0.d0
+      znl=-1.d20
 
 !     Fort.12 flags
 !      ifort12=0
