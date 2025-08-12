@@ -217,6 +217,7 @@
           do it=1,it_now !iths_main
             if(iof_sta(i)==1.and.mod(it,nspool_sta)==0) then
               read(250+i,*)
+              if(iout_sta==2.and.i>4) read(250+i,*)
             endif
           enddo !it
         enddo !i
