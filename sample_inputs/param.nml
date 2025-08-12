@@ -862,7 +862,7 @@
 ! a station.in. If ics=2, the cordinates in station.in must be in lon., lat,
 ! and z (positive upward; not used for 2D variables). 
 !-----------------------------------------------------------------------
-  iout_sta = 0 !1: no 3D profile output; 2: with 3D profile output in staout_[4-]
+  iout_sta = 0 !1: no 3D profile output; 2: with 3D profile output in staout_[5-]
   nspool_sta = 10 !needed if iout_sta/=0; mod(nhot_write,nspool_sta) must=0
 
 !-----------------------------------------------------------------------
