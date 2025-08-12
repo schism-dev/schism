@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-- `` (12 Aug 2025): add iout_sta=2 option to output 3D profiles in staout_*;
+- `19274083` (12 Aug 2025): add iout_sta=2 option to output 3D profiles in staout_*;
 - `b09c1f4a` (24 July 2025): removed newlayer_thick in sediment.nml after merging with SED3D_cleanup;
 - `2135910d` (23 May 2025): removed 'isconsv' (redundant with PREC_EVAP);
 - `970a5597` (9 May 2025): added new mandatory parameter 'nmarsh_types', and optional: veg_di0,
