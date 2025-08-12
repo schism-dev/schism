@@ -1407,59 +1407,55 @@
 !--------------------------------------------------------------------------
 !     Get new time series values from *.th
       if(nettype>0) then
-        if(time>th_time(1,2,1)) then !not '>=' to avoid last step
-          ath(:,1,1,1)=ath(:,1,2,1)
-          read(50,*) tmp,ath(1:nettype,1,2,1)
-          th_time(1,1,1)=th_time(1,2,1)
-          th_time(1,2,1)=th_time(1,2,1)+th_dt(1,1)
-        endif !time
-!        if(it==iths_main+1.and.abs(tmp-time)>1.e-4) then
-!          write(errmsg,*)'Starting time wrong for eta',it,tmp
-!          call parallel_abort(errmsg)
-!        endif
+         tmp=th_time(1,2,1)
+         do while(time>tmp)
+            ath(:,1,1,1)=ath(:,1,2,1)
+            read(50,*) tmp,ath(1:nettype,1,2,1)
+            th_time(1,1,1)=th_time(1,2,1)
+            th_time(1,2,1)=tmp
+            th_dt(1,1) = th_time(1,2,1)-th_time(1,1,1)
+         end do ! next timestep
       
-        rat=(time-th_time(1,1,1))/th_dt(1,1)
-        if(rat<-small1.or.rat>1.d0+small1) then
-          write(errmsg,*) 'STEP: rat out in elev.th:',rat,time,th_time(1,1:2,1),th_dt(1,1)
-          call parallel_abort(errmsg)
-        endif
-        icount=0
-        do k=1,nope_global
-          if(iettype(k)==1) then
-            icount=icount+1
-            if(icount>nettype) call parallel_abort('Wrong counting 1')
-            eth(1,k)=(1-rat)*ath(icount,1,1,1)+rat*ath(icount,1,2,1)
-          endif
-        enddo 
+         rat=(time-th_time(1,1,1))/th_dt(1,1)
+         if(rat<-small1.or.rat>1.d0+small1) then
+            write(errmsg,*) 'STEP: rat out in elev.th:',rat,time,th_time(1,1:2,1),th_dt(1,1)
+            call parallel_abort(errmsg)
+         endif
+         icount=0
+         do k=1,nope_global
+            if(iettype(k)==1) then
+               icount=icount+1
+               if(icount>nettype) call parallel_abort('Wrong counting 1')
+               eth(1,k)=(1-rat)*ath(icount,1,1,1)+rat*ath(icount,1,2,1)
+            endif
+         enddo 
       endif !nettype
 
       if(nfltype>0) then
-        if(time>th_time(1,2,2)) then
-          ath(:,1,1,2)=ath(:,1,2,2)
-          read(51,*) tmp,ath(1:nfltype,1,2,2)
-          th_time(1,1,2)=th_time(1,2,2)
-          th_time(1,2,2)=th_time(1,2,2)+th_dt(1,2)
-        endif !time
-!        if(it==iths_main+1.and.abs(tmp-time)>1.e-4) then
-!          write(errmsg,*)'Starting time wrong for flux',it,tmp,time
-!          call parallel_abort(errmsg)
-!        endif
+         tmp=th_time(1,2,2)
+         do while(time>tmp)
+            ath(:,1,1,2)=ath(:,1,2,2)
+            read(51,*) tmp,ath(1:nfltype,1,2,2)
+            th_time(1,1,2)=th_time(1,2,2)
+            th_time(1,2,2)=tmp
+            th_dt(1,2) = th_time(1,2,2)-th_time(1,1,2)
+         end do ! next timestep
 
-        rat=(time-th_time(1,1,2))/th_dt(1,2)
-        if(rat<-small1.or.rat>1.d0+small1) then
-          write(errmsg,*) 'STEP: ratio out of range while interpolating &
-     &flux.th. Probably times are not equally spaced or dt has changesd &
-     &from a prior run (ratio, time, th times):',rat,time,th_time(1,1:2,2)
-          call parallel_abort(errmsg)
-        endif
-        icount=0
-        do k=1,nope_global
-          if(ifltype(k)==1) then
-            icount=icount+1
-            if(icount>nfltype) call parallel_abort('STEP: wrong counting 2')
-            qthcon(k)=(1.d0-rat)*ath(icount,1,1,2)+rat*ath(icount,1,2,2)
-          endif
-        enddo !k
+         rat=(time-th_time(1,1,2))/th_dt(1,2)
+         if(rat<-small1.or.rat>1.d0+small1) then
+            write(errmsg,*) 'STEP: ratio out of range while interpolating &
+            &flux.th. Probably times are not equally spaced or dt has changesd &
+            &from a prior run (ratio, time, th times):',rat,time,th_time(1,1:2,2)
+            call parallel_abort(errmsg)
+         endif
+         icount=0
+         do k=1,nope_global
+            if(ifltype(k)==1) then
+               icount=icount+1
+               if(icount>nfltype) call parallel_abort('STEP: wrong counting 2')
+               qthcon(k)=(1.d0-rat)*ath(icount,1,1,2)+rat*ath(icount,1,2,2)
+            endif
+         enddo !k
       endif !nfltype
 
       do i=1,natrm
