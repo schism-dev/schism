@@ -111,7 +111,7 @@ module schism_glbl
                       &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
                       &stemp_stc,stemp_dz(2),ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
                       &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2,ri_st, &
-                      &create_marsh_min,create_marsh_max
+                      &create_marsh_min,create_marsh_max,age_marsh_min
   real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:), &
         &veg_di0(:),veg_h0(:),veg_nv0(:),veg_cd0(:),drown_marsh(:)
 
@@ -681,7 +681,7 @@ module schism_glbl
 
 ! Vegetation
   real(rkind),save,allocatable     :: veg_alpha0(:),veg_h(:),veg_nv(:),veg_di(:),veg_cd(:), &
- &veg_h_unbent(:),veg_nv_unbent(:),veg_di_unbent(:)
+ &veg_h_unbent(:),veg_nv_unbent(:),veg_di_unbent(:),age_marsh(:)
 !Tsinghua group:0825
   REAL(rkind),save :: Cbeta,beta0,c_miu,Cv_max,ecol,ecol1,sigf,sigepsf,Ceps1,Ceps2,Ceps3,Acol,sig_s,fi_c,ksi_c,kpz !1013+kpz
   REAL(rkind),save,ALLOCATABLE :: Dpzz(:,:)     !at nodes & whole levels 

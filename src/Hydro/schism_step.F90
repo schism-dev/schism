@@ -8164,7 +8164,8 @@
 !$OMP do
       do i=1,nea
         if(ibarrier_m(i)==1) imarsh(i)=0
-        nwild(i)=imarsh(i) !save last step
+        nwild(i)=imarsh(i) !save type before update
+        if(imarsh(i)>=0) age_marsh(i)=age_marsh(i)+time/86400.d0 !days
       enddo !i
 !$OMP end do
 
@@ -8178,6 +8179,7 @@
         if(nwild(i)>0) then !marsh elem
           if(smax>drown_marsh(nwild(i))) then !drowned
             imarsh(i)=0
+            age_marsh(i)=0.d0
 !            Cdp(elnode(1:i34(i),i))=0.001d0
 !            Cd(elside(1:i34(i),i))=0.001d0
 !            rough_p(elnode(1:i34(i),i))=1.d-4
@@ -8185,16 +8187,23 @@
         else !non-marsh elem @last step
           if(smax<=create_marsh_max.and.smin>=create_marsh_min) then !create marsh
             ifl=0
+            tmp2=0.d0 !stats of age of surround cells
+            icount2=0 !counter
             loop16: do j=1,i34(i)
               nd=elnode(j,i)
               do m=1,nne(nd)
                 ie=indel(m,nd)
-                if(nwild(ie)>0) then !not barrier
-                  ifl=nwild(ie); exit loop16
+                if(nwild(ie)>0) then !not barrier (but may be newly drowned)
+                  icount2=icount2+1
+                  tmp2=tmp2+age_marsh(ie)
+                  ifl=nwild(ie) !pick type from any cell
                 endif
               enddo !m
             end do loop16
-            if(ifl>0) imarsh(i)=ifl
+            if(icount2>0) then
+              tmp2=tmp2/dble(icount2)
+              if(tmp2>age_marsh_min) imarsh(i)=ifl
+            endif !icount2
           endif !smax
         endif !nwild
       enddo !i=1,ne
@@ -8202,6 +8211,7 @@
 
 !$OMP master
       call exchange_e2di(imarsh)
+      call exchange_e2d(age_marsh)
 !$OMP end master
 
       !Set Cd etc for marsh and also drowned marsh

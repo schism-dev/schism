@@ -751,6 +751,7 @@
   !min/max bottom elev (including SLR) interval favorable for marsh creation/migration
   create_marsh_min = -1. ![m]
   create_marsh_max = 0. ![m] 
+  age_marsh_min = 1. ![days] min marsh age threshold of surrounding cells to allow migration
 
 !----------------------------------------------------------------------
 ! Vegetation model

@@ -215,7 +215,7 @@
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
      &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
-     &drown_marsh,create_marsh_min,create_marsh_max
+     &drown_marsh,create_marsh_min,create_marsh_max,age_marsh_min
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm, &
@@ -523,6 +523,7 @@
       drown_marsh=0.5d0
       create_marsh_min = -1.d0 
       create_marsh_max = 0.d0
+      age_marsh_min=0.d0
 
       !Output elev, hvel by default
       nc_out=1
@@ -1160,11 +1161,13 @@
 
 #ifdef USE_MARSH
       if(iveg==0) call parallel_abort('INIT: marsh needs vegetation option')
-      if(create_marsh_min>create_marsh_max) call parallel_abort('INIT: marsh_min>marsh_max')
+      if(create_marsh_min>create_marsh_max.or.age_marsh_min<0.d0) call parallel_abort('INIT: marsh_min>marsh_max')
       !SLR rate in mm/year
       !Convert to m/s
 !      if(slr_rate<0) call parallel_abort('INIT: slr_rate<0')
       slr_rate=slr_rate*1.d-3/365.d0/86400.d0 !m/s
+      !Marsh age does not work with hotstart!
+      if(myrank==0) write(16,*)'Marsh model does not work when age is enabled; use cold start'
 #endif
 
 !     Ice
@@ -1480,7 +1483,7 @@
 #endif
 
 #ifdef USE_MARSH
-      allocate(imarsh(nea),ibarrier_m(nea),stat=istat)
+      allocate(imarsh(nea),ibarrier_m(nea),age_marsh(ne),stat=istat)
       if(istat/=0) call parallel_abort('INIT: MARSH allocation failure')
 #endif
 
@@ -1759,6 +1762,7 @@
       wwave_force=0.d0
       diffmin=1.d-6; diffmax=1.d0
       deta1_dxy_elem=0.d0
+      age_marsh=0.d0
 
 !Tsinghua group
 #ifdef USE_SED 
