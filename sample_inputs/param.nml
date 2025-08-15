@@ -748,7 +748,7 @@
   veg_nv0 = 0.1,0.1 ![m^-2] density for each marsh type
   veg_cd0 = 1.,1. ![-] form drag coefficients for each marsh type
   drown_marsh = 0.5,0. ![m] depth at which marsh will be drowned
-  !min/max depth interval favorable for marsh creation/migration
+  !min/max bottom elev (including SLR) interval favorable for marsh creation/migration
   create_marsh_min = -1. ![m]
   create_marsh_max = 0. ![m] 
 
@@ -763,7 +763,6 @@
 ! iveg=2: flex vegeation using Ganthy (2011) fomulation
 
 ! If one of these depths=0 at a node, the code will set all to 0. 
-! If USE_MARSH is on and iveg=1, all .gr3 must have constant depths!
 !----------------------------------------------------------------------
   iveg = 0 !on/off flag
   veg_vert_z = 0.,0.5,1. ![m] starting from 0.; used if iveg=1
