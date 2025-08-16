@@ -8121,7 +8121,7 @@
       wtmp1=wtmp2
 #endif
 
-!$OMP parallel default(shared) private(i,dep,swild,n1,n2,smax,smin,ifl,j,ie)
+!$OMP parallel default(shared) private(i,dep,swild,n1,n2,smax,smin,ifl,j,ie,nd,tmp2,icount2,m)
 
 !...  Update bed deformation and depth info
 !$OMP do
