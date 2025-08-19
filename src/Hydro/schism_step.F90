@@ -1667,7 +1667,8 @@
 !     may require different init. T,S: -9999 (junk) so ambient values will be
 !     used to avoid 'ice rain' (if randrop falls on a source_sink.in elem, vsource will be combined and
 !     values in msource.th will be used. If outside, ambient values are used and
-!     note that evap/precip is handled separately for S outside source method).
+!     note that evap/precip is handled separately for S outside source method). later
+!     air T may be used also.
 !     Other tracers: 0 (otherwise additional nutrients from rain will fall onto
 !     water) 
       vsource=0 !init; dimension [m^3/s]; includes sinks as well
@@ -1834,6 +1835,7 @@
         do i=1,nea
           evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
           precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
+          !Error: put evap into vsink 
           vsource(i)=vsource(i)+(precip-evap)/rho0*area(i) !m^3/s
         enddo !i
       endif !isconsv/=0
@@ -7399,11 +7401,10 @@
           do i=1,nea
             if(idry_e(i)==1) cycle
 !           Skip air-sea exchange for certain elements
-            if(i_hmin_airsea_ex==1) then
-              if(dpe(i)<hmin_airsea_ex) cycle
-            elseif(i_hmin_airsea_ex==2) then
-              if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
-            endif
+!            if(i_hmin_airsea_ex==1) then
+!              if(dpe(i)<hmin_airsea_ex) cycle
+!            elseif(i_hmin_airsea_ex==2) then
+            if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
 
 !           Wet element (not shallow)
 !           Surface flux
@@ -7808,25 +7809,43 @@
         endif !if_source
 
 !       Heat exchange between sediment and bottom water
-        if(abs(stemp_stc)>1.d-16) then
+        if(max(stemp_stc1,stemp_stc2)>1.d-16) then
 !$OMP     do
           do i=1,nea
-             if(idry_e(i)==1) cycle
+            if(idry_e(i)==1) then !use air T if available
+              if(nws==2.or.nws==4) then
+                tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
+                tmp1=(tmp2-stemp(i))*dt*stemp_stc2
+                !4.184e6=\rho*C_p is the heat capacity of water (J.m-3/K)
+                stemp(i)=stemp(i)+tmp1/(max(stemp_dz,1.d-2)*4.184d6)
+              endif !nws
+            else !wet
+              tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc1 !heat transfer budget (J.m-2)
+!              if(tmp1>0) then 
+              stemp(i)=stemp(i)+tmp1/(max(stemp_dz,1.d-2)*4.184d6)
+!              else
+!                stemp(i)=stemp(i)+tmp1/(max(stemp_dz(2),1.d-2)*4.184d6)  ! sediment temp. update
+!              endif
+              !Bottom T update
+              tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1/(max((ze(kbe(i)+1,i)-ze(kbe(i),i)),1.d-2)*4.184d6)
 
-             tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc !heat transfer budget (J.m-2)
-             if(tmp1>0) then !sediment temp. update; 4.184e6=\rho*C_p is the heat capacity of water (J.m-3/K)
-               stemp(i)=stemp(i)+tmp1/(max(stemp_dz(1),1.d-2)*4.184d6)
-             else
-               stemp(i)=stemp(i)+tmp1/(max(stemp_dz(2),1.d-2)*4.184d6)  ! sediment temp. update
-             endif
-             !Bottom T update
-             tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1/(max((ze(kbe(i)+1,i)-ze(kbe(i),i)),1.d-2)*4.184d6)
-             do k=1,kbe(i) 
-               tr_el(1,k,i)=tr_el(1,kbe(i)+1,i) 
-             enddo !k
+              do k=1,kbe(i) 
+                tr_el(1,k,i)=tr_el(1,kbe(i)+1,i) 
+              enddo !k
+            endif !idry_e
           enddo !i
 !$OMP     enddo
         endif !abs(stemp_stc)
+
+        !Relax shallow wet T to airt
+        do i=1,nea
+          if(idry_e(i)==1) cycle
+
+          if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) then !shallow wet
+            tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
+            tr_el(1,:,i)=tr_el(1,:,i)*(1-relax_2_airt)+tmp2*relax_2_airt
+          endif !shallow
+        enddo !i
 
 !       Nudging: sum or product of horizontal & vertical relaxations 
 !$OMP   do 

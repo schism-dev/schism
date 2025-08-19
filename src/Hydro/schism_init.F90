@@ -212,7 +212,7 @@
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
-     &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
+     &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc1,stemp_stc2,stemp_dz, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
      &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
      &drown_marsh,create_marsh_min,create_marsh_max,age_marsh_min
@@ -470,7 +470,7 @@
       dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
       nws=0; wtiminc=dt; iwind_form=1; iwindoff=0;
-      drampwind=1._rkind; ihconsv=0; i_hmin_airsea_ex=2; i_hmin_salt_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
+      drampwind=1._rkind; ihconsv=0; i_hmin_airsea_ex=1; i_hmin_salt_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind; icompute_cpsi3=0; ri_st=0.25d0; iscnd_coeff=5
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
@@ -507,7 +507,7 @@
       lev_tr_source=-9 !bottom
       iprecip_off_bnd=0
       model_type_pahm=10
-      stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
+      stemp_dz=1.0 !heat exchange between sediment and bottom water
       RADFLAG='LON' !if WWM is used, this will be overwritten
       niter_hdif=1
       watertype_rr=0.58d0; watertype_d1=0.35d0; watertype_d2=23.d0
@@ -777,7 +777,7 @@
 #endif
 
       if(ihconsv/=0) then
-        if(i_hmin_airsea_ex<0.or.i_hmin_airsea_ex>2) then
+        if(i_hmin_airsea_ex<0) then !.or.i_hmin_airsea_ex>2) then
           write(errmsg,*)'INIT: illegal i_hmin_airsea_ex',i_hmin_airsea_ex
           call parallel_abort(errmsg)
         endif 
@@ -789,6 +789,8 @@
           call parallel_abort(errmsg)
         endif 
       endif
+
+      if(stemp_stc1<0.d0.or.stemp_stc2<0.d0) call parallel_abort('INIT: stemp_stc*')
 
 !...  Turbulence closure options
 !      call get_param('param.in','itur',1,itur,tmp,stringvalue)
@@ -5561,7 +5563,7 @@
               stemp(ie)=buf3(i)
             endif
           enddo !i
-        else !under cold start with ihot=0 or 1, init with bottom water T
+        else !under cold start with ihot=0 or 1, init with bottom water T (but may change to air T later)
           do i=1,nea
             stemp(i)=tr_el(1,1,i) !use level 1
           enddo !i
