@@ -7404,9 +7404,9 @@
 !            if(i_hmin_airsea_ex==1) then
 !              if(dpe(i)<hmin_airsea_ex) cycle
 !            elseif(i_hmin_airsea_ex==2) then
-            if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
+!            if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
 
-!           Wet element (not shallow)
+!           Wet element 
 !           Surface flux
             sflux_e=sum(sflux(elnode(1:i34(i),i)))/real(i34(i),rkind)
             flx_sf(1,i)=sflux_e/rho0/shw
@@ -7779,7 +7779,7 @@
         if(istat/=0) call parallel_abort('STEP: fail to alloc (1.1)')
 
 !$OMP parallel default(shared) private(i,bigv,rat,j,jj,itmp1,itmp2,k,trnu,mm,swild,tmp,zrat, &
-!$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf,htot,top,dzz1,tmp1)
+!$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf,htot,top,dzz1,tmp1,tmp2)
 
 !       Point sources/sinks using operator splitting (that guarentees max.
 !       principle). Do nothing for net sinks
@@ -7812,22 +7812,20 @@
         if(max(stemp_stc1,stemp_stc2)>1.d-16) then
 !$OMP     do
           do i=1,nea
+            tmp0=sum(stemp_dz(elnode(1:i34(i),i)))/i34(i) !SED thickness
+
             if(idry_e(i)==1) then !use air T if available
               if(nws==2.or.nws==4) then
                 tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
-                tmp1=(tmp2-stemp(i))*dt*stemp_stc2
+                tmp1=(tmp2-stemp(i))*dt*stemp_stc2 !heat [J/m^2]
                 !4.184e6=\rho*C_p is the heat capacity of water (J.m-3/K)
-                stemp(i)=stemp(i)+tmp1/(max(stemp_dz,1.d-2)*4.184d6)
+                stemp(i)=stemp(i)+tmp1/max(tmp0,1.d-2)/4.184d6
               endif !nws
             else !wet
               tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc1 !heat transfer budget (J.m-2)
-!              if(tmp1>0) then 
-              stemp(i)=stemp(i)+tmp1/(max(stemp_dz,1.d-2)*4.184d6)
-!              else
-!                stemp(i)=stemp(i)+tmp1/(max(stemp_dz(2),1.d-2)*4.184d6)  ! sediment temp. update
-!              endif
+              stemp(i)=stemp(i)+tmp1/max(tmp0,1.d-2)/4.184d6
               !Bottom T update
-              tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1/(max((ze(kbe(i)+1,i)-ze(kbe(i),i)),1.d-2)*4.184d6)
+              tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1/max((ze(kbe(i)+1,i)-ze(kbe(i),i)),1.d-2)/4.184d6
 
               do k=1,kbe(i) 
                 tr_el(1,k,i)=tr_el(1,kbe(i)+1,i) 
@@ -7837,7 +7835,8 @@
 !$OMP     enddo
         endif !abs(stemp_stc)
 
-        !Relax shallow wet T to airt
+        !Relax shallow wet T to air T
+!$OMP   do
         do i=1,nea
           if(idry_e(i)==1) cycle
 
@@ -7846,6 +7845,7 @@
             tr_el(1,:,i)=tr_el(1,:,i)*(1-relax_2_airt)+tmp2*relax_2_airt
           endif !shallow
         enddo !i
+!$OMP   enddo
 
 !       Nudging: sum or product of horizontal & vertical relaxations 
 !$OMP   do 

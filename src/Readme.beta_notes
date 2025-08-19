@@ -9,6 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `` : removed stemp_dz, and replaced stemp_stc with stemp_stc[1,2]; added relax_2_airt;
 - `536829db` (15 Aug 2025): added optional parameter age_marsh_min;
 - `19274083` (12 Aug 2025): add iout_sta=2 option to output 3D profiles in staout_*;
 - `b09c1f4a` (24 July 2025): removed newlayer_thick in sediment.nml after merging with SED3D_cleanup;
