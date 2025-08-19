@@ -591,8 +591,8 @@
 !  isconsv = 0 !evaporation/precipitation model
   i_hmin_airsea_ex = 2 ! no effect if ihconsv=0 
   hmin_airsea_ex = 0.2 ![m], no effect if ihconsv=0 
-  i_hmin_salt_ex = 2 ! no effect if PREC_EVAP is on
-  hmin_salt_ex = 0.2 ![m], no effect if PREC_EVAP is on
+  i_hmin_salt_ex = 2 ! no effect if PREC_EVAP is off
+  hmin_salt_ex = 0.2 ![m], no effect if PREC_EVAP is off
   iprecip_off_bnd = 0 !if /=0, precip will be turned off near land bnd
   !watertype_* below are used for water type '8'
   watertype_rr = 0.58

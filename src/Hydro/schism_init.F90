@@ -5268,6 +5268,11 @@
 
 !     Store i.c. 
       tr_nd0(3:ntracers,:,:)=tr_nd(3:ntracers,:,:)
+
+      !Init SED T
+      do i=1,nea
+        stemp(i)=tr_el(1,1,i)
+      enddo !i
       
       if(myrank==0) write(16,*)'done init. tracers..'
 !     end user-defined tracer part
@@ -5558,7 +5563,7 @@
           enddo !i
         else !under cold start with ihot=0 or 1, init with bottom water T
           do i=1,nea
-            stemp(i)=tr_el(1,kbe(i)+1,i)
+            stemp(i)=tr_el(1,1,i) !use level 1
           enddo !i
         endif
 
