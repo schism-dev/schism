@@ -7814,7 +7814,7 @@
              if(idry_e(i)==1) cycle
 
              tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc !heat transfer budget (J.m-2)
-             if(tmp1>0) then !sediment temp. update; 4.184e6 is the heat capacity of water (J.m-3/K)
+             if(tmp1>0) then !sediment temp. update; 4.184e6=\rho*C_p is the heat capacity of water (J.m-3/K)
                stemp(i)=stemp(i)+tmp1/(max(stemp_dz(1),1.d-2)*4.184d6)
              else
                stemp(i)=stemp(i)+tmp1/(max(stemp_dz(2),1.d-2)*4.184d6)  ! sediment temp. update
