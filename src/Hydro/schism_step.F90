@@ -7807,14 +7807,14 @@
 !$OMP     end do
         endif !if_source
 
-!       Filter style horizontal diffusion scheme
-
 !       Heat exchange between sediment and bottom water
         if(abs(stemp_stc)>1.d-16) then
 !$OMP     do
           do i=1,nea
+             if(idry_e(i)==1) cycle
+
              tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc !heat transfer budget (J.m-2)
-             if(tmp1>0) then !sediment temp. update; 4.184e6 is the heat capacity of water (J.m-3)
+             if(tmp1>0) then !sediment temp. update; 4.184e6 is the heat capacity of water (J.m-3/K)
                stemp(i)=stemp(i)+tmp1/(max(stemp_dz(1),1.d-2)*4.184d6)
              else
                stemp(i)=stemp(i)+tmp1/(max(stemp_dz(2),1.d-2)*4.184d6)  ! sediment temp. update
@@ -10379,6 +10379,7 @@
 
         var1d_dim(1)=elem_dim
         j=nf90_def_var(ncid_hot,'idry_e',NF90_INT,var1d_dim,nwild(4))
+        j=nf90_def_var(ncid_hot,'sediment_T',NF90_DOUBLE,var1d_dim,nwild(22))
         var1d_dim(1)=side_dim
         j=nf90_def_var(ncid_hot,'idry_s',NF90_INT,var1d_dim,nwild(5))
         var1d_dim(1)=node_dim
@@ -10407,7 +10408,7 @@
         j=nf90_def_var(ncid_hot,'dfq2',NF90_DOUBLE,var2d_dim,nwild(19))
 
         !Deflate some vars
-        do i=4,21
+        do i=4,22
           if(i==20) cycle !skip 20
           j=nf90_def_var_deflate(ncid_hot,nwild(i),0,1,4) 
         enddo !i
@@ -10420,6 +10421,7 @@
         j=nf90_put_var(ncid_hot,nwild(3),ifile) 
         j=nf90_put_var(ncid_hot,nwild(20),nsteps_from_cold) 
         j=nf90_put_var(ncid_hot,nwild(4),idry_e,(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(22),stemp,(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(5),idry_s,(/1/),(/ns/))
         j=nf90_put_var(ncid_hot,nwild(6),idry,(/1/),(/np/))
         j=nf90_put_var(ncid_hot,nwild(7),eta2,(/1/),(/np/))
@@ -10437,7 +10439,7 @@
         j=nf90_put_var(ncid_hot,nwild(18),dfq1(:,1:np),(/1,1/),(/nvrt,np/))
         j=nf90_put_var(ncid_hot,nwild(19),dfq2(:,1:np),(/1,1/),(/nvrt,np/))
 
-        nvars_hot=21 !record # of vars in nwild so far
+        nvars_hot=22 !record # of vars in nwild so far
         !Debug
         !write(12,*)'hotout:',it,time
         !do i=1,np

@@ -1763,6 +1763,7 @@
       diffmin=1.d-6; diffmax=1.d0
       deta1_dxy_elem=0.d0
       age_marsh=0.d0
+      stemp=0.d0 !init for hot output
 
 !Tsinghua group
 #ifdef USE_SED 
@@ -5540,6 +5541,26 @@
           endif
         enddo
 
+        !Init sediment T
+        j=nf90_inq_varid(ncid2,"sediment_T",mm)
+        if(j/=NF90_NOERR) then 
+          if(myrank==0) then
+            j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
+            if(j/=NF90_NOERR) call parallel_abort('init: hot sediment_T ')
+          endif !myrank==0
+          call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+          do i=1,ne_global
+            if(iegl(i)%rank==myrank) then
+              ie=iegl(i)%id
+              stemp(ie)=buf3(i)
+            endif
+          enddo !i
+        else !under cold start with ihot=0 or 1, init with bottom water T
+          do i=1,nea
+            stemp(i)=tr_el(1,kbe(i)+1,i)
+          enddo !i
+        endif
 
         !Debug: dump
 !        if(myrank==0) then
@@ -6210,11 +6231,6 @@
 
 !     end hot start section
       endif !ihot/=0
-
-      !Init sediment temp.
-      do i=1,nea
-         stemp(i)=tr_el(1,kbe(i)+1,i)
-      enddo
 
 ! MP from KM
 #if defined USE_WWM || defined USE_WW3
