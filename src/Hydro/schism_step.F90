@@ -7404,7 +7404,7 @@
 !            if(i_hmin_airsea_ex==1) then
 !              if(dpe(i)<hmin_airsea_ex) cycle
 !            elseif(i_hmin_airsea_ex==2) then
-!            if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
+            if(i_hmin_airsea_ex/=0.and.ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
 
 !           Wet element 
 !           Surface flux
@@ -7825,7 +7825,7 @@
               tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc1 !heat transfer budget (J.m-2)
               stemp(i)=stemp(i)+tmp1/max(tmp0,1.d-2)/4.184d6
               !Bottom T update
-              tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1/max((ze(kbe(i)+1,i)-ze(kbe(i),i)),1.d-2)/4.184d6
+              tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1/max(ze(kbe(i)+1,i)-ze(kbe(i),i),1.d-2)/4.184d6
 
               do k=1,kbe(i) 
                 tr_el(1,k,i)=tr_el(1,kbe(i)+1,i) 
@@ -7836,16 +7836,18 @@
         endif !abs(stemp_stc)
 
         !Relax shallow wet T to air T
-!$OMP   do
-        do i=1,nea
-          if(idry_e(i)==1) cycle
+        if(i_hmin_airsea_ex/=0) then
+!$OMP     do
+          do i=1,nea
+            if(idry_e(i)==1) cycle
 
-          if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) then !shallow wet
-            tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
-            tr_el(1,:,i)=tr_el(1,:,i)*(1-relax_2_airt)+tmp2*relax_2_airt
-          endif !shallow
-        enddo !i
-!$OMP   enddo
+            if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex.and.(nws==2.or.nws==4)) then !shallow wet
+              tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
+              tr_el(1,:,i)=tr_el(1,:,i)*(1-relax_2_airt)+tmp2*relax_2_airt
+            endif !shallow
+          enddo !i
+!$OMP     enddo
+        endif !i_hmin_airsea_ex
 
 !       Nudging: sum or product of horizontal & vertical relaxations 
 !$OMP   do 

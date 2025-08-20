@@ -574,19 +574,15 @@
 
 !-----------------------------------------------------------------------
 ! Heat and salt exchange using Zeng's (default) or Fairall (USE_BULK_FAIRALL) scheme.
-! To enable salt exchange, recompile with precip/evap module turned on.
-! In this case, ihconsv must =1; ihconsv=1 needs nws=2,4.
-! If ihconsv/=0, locally turning off air-sea exchange in shallow waters (<0.25 m) is recommended.
-! Options for locally turning off heat/salt exchange are specified by
-! i_hmin_airsea_ex: option for shallow treatment if total depth <hmin_airsea_ex
+! To enable salt exchange, recompile with precip/evap module turned on and
+! in this case, ihconsv must =1; ihconsv=1 needs nws=2,4.
+! i_hmin_airsea_ex: option for shallow treatment (if total depth <hmin_airsea_ex)
 ! i_hmin_salt_ex:
 !   0: not turned off locally;
 !   1: locally turned off, based on grid depth, i.e.,
 !      off when the local grid depth (z in hgrid) < hmin_salt_ex;
 !   2 (recommended): locally turned off, based on local total water depth, i.e.,
 !      off when the local total water depth < hmin_salt_ex
-! hmin_airsea_ex, hmin_salt_ex:
-!   0.2 m is recommended for both "1" and "2"
 !-----------------------------------------------------------------------
   ihconsv = 0 !heat exchange option
 !  isconsv = 0 !evaporation/precipitation model
@@ -602,12 +598,12 @@
 
 !-----------------------------------------------------------------------
 ! Option to add a sediment layer for the buffer effect on temperature
-! stemp_stc[1,2]=0 would turn off this effect; otherwise, needs stemp_thick.gr3
+! max(stemp_stc[1,2])=0 would turn off this effect; otherwise, needs stemp_thick.gr3
 ! which specifies the sediment thickness (m) for heat transfer
 !-----------------------------------------------------------------------
   stemp_stc1  = 0.0   !heat transfer coefficient for wet location (W.m-2.K-1)
   stemp_stc2  = 0.0   !heat transfer coefficient for dry location (W.m-2.K-1)
-  relax_2_airt = 1.0  ![0,1] relaxation to air T at shallow wet area
+  relax_2_airt = 0.05  ![0,1] relaxation to air T at shallow wet area
 
 !-----------------------------------------------------------------------
 ! Turbulence closure.

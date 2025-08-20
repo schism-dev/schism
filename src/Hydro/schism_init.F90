@@ -523,6 +523,9 @@
       create_marsh_min = -1.d0 
       create_marsh_max = 0.d0
       age_marsh_min=0.d0
+      stemp_stc1=0.d0
+      stemp_stc2=0.d0
+      relax_2_airt=5.d-2
 
       !Output elev, hvel by default
       nc_out=1
