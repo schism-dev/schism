@@ -8965,7 +8965,8 @@
         if(iof_hydro(29)==1) call writeout_nc(id_out_var(32),'temp_elem',6,nvrt,nea,tr_el(1,:,:))
         if(iof_hydro(30)==1) call writeout_nc(id_out_var(33),'salt_elem',6,nvrt,nea,tr_el(2,:,:))
         if(iof_hydro(31)==1) call writeout_nc(id_out_var(34),'pressure_gradient',7,1,nsa,bpgr(:,1),bpgr(:,2))
-        noutput=31 !total # of outputs so far (for dim of id_out_var)
+        if(iof_hydro(32)==1) call writeout_nc(id_out_var(35),'sedTemperature',4,1,nea,stemp)
+        noutput=32 !total # of outputs so far (dim of iof_hydro)
 
         !'Modules
         !'4' in noutput+i+4 due to the first 4 reserved outputs 
@@ -9637,8 +9638,12 @@
 !------------------
 !---    2D elem 
         icount=1 !reset index into varout_2delem
-        if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(2.1)')
         varout_2delem(icount,:)=idry_e(1:ne)
+        if(iof_hydro(32)/=0) then
+          icount=icount+1
+          varout_2delem(icount,:)=stemp(1:ne)
+        endif !iof_hydro
+        if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(2.1)')
 
         !Modules output
 #ifdef USE_SED

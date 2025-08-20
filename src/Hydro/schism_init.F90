@@ -1768,7 +1768,7 @@
       diffmin=1.d-6; diffmax=1.d0
       deta1_dxy_elem=0.d0
       age_marsh=0.d0
-      stemp=0.d0 !init for hot output
+      stemp=0.d0 !init for output
 
 !Tsinghua group
 #ifdef USE_SED 
@@ -6575,6 +6575,12 @@
       counter_out_name=counter_out_name+1
       out_name(counter_out_name)='dryFlagElement'
       iout_23d(counter_out_name)=4
+      if(iof_hydro(32)/=0) then
+        ncount_2delem=ncount_2delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)='sedTemperature'
+        iout_23d(counter_out_name)=4
+      endif !iof_hydro
 
 !     Add module outputs of 2D elem below (scalars&vectors)
 #ifdef USE_SED
