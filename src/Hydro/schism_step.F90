@@ -7372,11 +7372,10 @@
           do i=1,nea
             if(idry_e(i)==1) cycle
 !           Skip air-sea exchange for certain elements
-            if(i_hmin_salt_ex==1) then
-              if(dpe(i)<hmin_salt_ex) cycle
-            elseif(i_hmin_salt_ex==2) then
-              if(ze(nvrt,i)-ze(kbe(i),i)<hmin_salt_ex) cycle
-            endif
+!            if(i_hmin_salt_ex==1) then
+!              if(dpe(i)<hmin_salt_ex) cycle
+!            elseif(i_hmin_salt_ex==2) then
+            if(i_hmin_salt_ex/=0.and.ze(nvrt,i)-ze(kbe(i),i)<hmin_salt_ex) cycle
 
             evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
             precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
@@ -7817,15 +7816,22 @@
             if(idry_e(i)==1) then !use air T if available
               if(nws==2.or.nws==4) then
                 tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
-                tmp1=(tmp2-stemp(i))*dt*stemp_stc2 !heat [J/m^2]
-                !4.184e6=\rho*C_p is the heat capacity of water (J.m-3/K)
-                stemp(i)=stemp(i)+tmp1/max(tmp0,1.d-2)/4.184d6
+                !tmp1=(tmp2-stemp(i))*dt*stemp_stc2 !heat [J/m^2]
+                !4.184e6=\rho*C_p is the heat capacity of water (J.m-3/K), which happens 
+                !to be similar to soil b/c of the differences in density and C_p
+                tmp1=dt*stemp_stc2/max(tmp0,1.d-2)/4.184d6 ![-] like blending factor; >0
+                tmp1=min(tmp1,1.d0) !limit factor at expense of conservation
+                stemp(i)=stemp(i)+tmp1*(tmp2-stemp(i)) !tmp1/max(tmp0,1.d-2)/4.184d6
               endif !nws
             else !wet
-              tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc1 !heat transfer budget (J.m-2)
-              stemp(i)=stemp(i)+tmp1/max(tmp0,1.d-2)/4.184d6
+              !tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc1 !heat transfer budget (J.m-2)
+              tmp1=dt*stemp_stc1/max(tmp0,1.d-2)/4.184d6 ![-] like blending factor
+              tmp1=min(tmp1,1.d0) !limit factor
+              stemp(i)=stemp(i)+tmp1*(tr_el(1,kbe(i)+1,i)-stemp(i)) !tmp1/max(tmp0,1.d-2)/4.184d6
               !Bottom T update
-              tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1/max(ze(kbe(i)+1,i)-ze(kbe(i),i),1.d-2)/4.184d6
+              tmp1=dt*stemp_stc1/max(ze(kbe(i)+1,i)-ze(kbe(i),i),1.d-2)/4.184d6
+              tmp1=min(tmp1,1.d0)
+              tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1*(tr_el(1,kbe(i)+1,i)-stemp(i)) !tmp1/max(ze(kbe(i)+1,i)-ze(kbe(i),i),1.d-2)/4.184d6
 
               do k=1,kbe(i) 
                 tr_el(1,k,i)=tr_el(1,kbe(i)+1,i) 

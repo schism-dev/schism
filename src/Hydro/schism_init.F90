@@ -470,7 +470,7 @@
       dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
       nws=0; wtiminc=dt; iwind_form=1; iwindoff=0;
-      drampwind=1._rkind; ihconsv=0; i_hmin_airsea_ex=1; i_hmin_salt_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
+      drampwind=1._rkind; ihconsv=0; i_hmin_airsea_ex=1; i_hmin_salt_ex=1; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind; icompute_cpsi3=0; ri_st=0.25d0; iscnd_coeff=5
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
@@ -786,7 +786,7 @@
       endif
 
       if(isconsv/=0) then
-        if(i_hmin_salt_ex<0.or.i_hmin_salt_ex>2) then
+        if(i_hmin_salt_ex<0) then
           write(errmsg,*)'INIT: illegal i_hmin_salt_ex',i_hmin_salt_ex
           call parallel_abort(errmsg)
         endif 
