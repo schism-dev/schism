@@ -212,7 +212,7 @@
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
-     &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc1,stemp_stc2,relax_2_airt, &
+     &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_thick,relax_2_airt, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
      &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
      &drown_marsh,create_marsh_min,create_marsh_max,age_marsh_min
@@ -523,8 +523,7 @@
       create_marsh_min = -1.d0 
       create_marsh_max = 0.d0
       age_marsh_min=0.d0
-      stemp_stc1=0.d0
-      stemp_stc2=0.d0
+      stemp_thick=0.d0
       relax_2_airt=5.d-2
 
       !Output elev, hvel by default
@@ -792,7 +791,7 @@
         endif 
       endif
 
-      if(stemp_stc1<0.d0.or.stemp_stc2<0.d0) call parallel_abort('INIT: stemp_stc*')
+      if(stemp_thick<0.d0) call parallel_abort('INIT: stemp_thick')
       if(relax_2_airt<0.d0.or.relax_2_airt>1.d0) call parallel_abort('INIT: relax_2_airt')
 
 !...  Turbulence closure options
@@ -1432,7 +1431,7 @@
          &  veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
          &  veg_h_unbent(npa),veg_nv_unbent(npa),veg_di_unbent(npa), &
          &  wwave_force(2,nvrt,nsa),btaun(npa), &
-         &  rsxx(npa),rsxy(npa),rsyy(npa),deta1_dxy_elem(nea,2),stemp_dz(npa),stat=istat)
+         &  rsxx(npa),rsxy(npa),rsyy(npa),deta1_dxy_elem(nea,2),stemp_stc(npa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -3806,22 +3805,23 @@
 !      endif
 !      if(islip==1) read(15,*) hdrag0
 
-      if(max(stemp_stc1,stemp_stc2)>1.d-16) then
+      if(stemp_thick>1.d-16) then
         if(myrank==0) then
-          open(32,file=in_dir(1:len_in_dir)//'stemp_thick.gr3',status='old')
+          open(32,file=in_dir(1:len_in_dir)//'soil_conductivity.gr3',status='old')
           read(32,*)
           read(32,*) itmp1,itmp2
           if(itmp1/=ne_global.or.itmp2/=np_global) &
-     &call parallel_abort('Check stemp_thick.gr3')
+     &call parallel_abort('Check soil_conductivity.gr3')
           do i=1,np_global
             read(32,*)j,xtmp,ytmp,buf3(i)
+            if(buf3(i)<0.d0) call parallel_abort('INIT: wrong soil_conductivity')
           enddo !i
           close(32)
         endif !myrank
         call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
 
         do i=1,np_global
-          if(ipgl(i)%rank==myrank) stemp_dz(ipgl(i)%id)=buf3(i)
+          if(ipgl(i)%rank==myrank) stemp_stc(ipgl(i)%id)=buf3(i)
         enddo !i
       endif !SED heat
 
