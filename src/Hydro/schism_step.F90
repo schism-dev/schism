@@ -1667,7 +1667,8 @@
 !     may require different init. T,S: -9999 (junk) so ambient values will be
 !     used to avoid 'ice rain' (if randrop falls on a source_sink.in elem, vsource will be combined and
 !     values in msource.th will be used. If outside, ambient values are used and
-!     note that evap/precip is handled separately for S outside source method).
+!     note that evap/precip is handled separately for S outside source method). later
+!     air T may be used also.
 !     Other tracers: 0 (otherwise additional nutrients from rain will fall onto
 !     water) 
       vsource=0 !init; dimension [m^3/s]; includes sinks as well
@@ -1834,6 +1835,7 @@
         do i=1,nea
           evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
           precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
+          !Error: put evap into vsink 
           vsource(i)=vsource(i)+(precip-evap)/rho0*area(i) !m^3/s
         enddo !i
       endif !isconsv/=0
@@ -7370,11 +7372,10 @@
           do i=1,nea
             if(idry_e(i)==1) cycle
 !           Skip air-sea exchange for certain elements
-            if(i_hmin_salt_ex==1) then
-              if(dpe(i)<hmin_salt_ex) cycle
-            elseif(i_hmin_salt_ex==2) then
-              if(ze(nvrt,i)-ze(kbe(i),i)<hmin_salt_ex) cycle
-            endif
+!            if(i_hmin_salt_ex==1) then
+!              if(dpe(i)<hmin_salt_ex) cycle
+!            elseif(i_hmin_salt_ex==2) then
+            if(i_hmin_salt_ex/=0.and.ze(nvrt,i)-ze(kbe(i),i)<hmin_salt_ex) cycle
 
             evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
             precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
@@ -7399,13 +7400,12 @@
           do i=1,nea
             if(idry_e(i)==1) cycle
 !           Skip air-sea exchange for certain elements
-            if(i_hmin_airsea_ex==1) then
-              if(dpe(i)<hmin_airsea_ex) cycle
-            elseif(i_hmin_airsea_ex==2) then
-              if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
-            endif
+!            if(i_hmin_airsea_ex==1) then
+!              if(dpe(i)<hmin_airsea_ex) cycle
+!            elseif(i_hmin_airsea_ex==2) then
+            if(i_hmin_airsea_ex/=0.and.ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
 
-!           Wet element (not shallow)
+!           Wet element 
 !           Surface flux
             sflux_e=sum(sflux(elnode(1:i34(i),i)))/real(i34(i),rkind)
             flx_sf(1,i)=sflux_e/rho0/shw
@@ -7778,7 +7778,7 @@
         if(istat/=0) call parallel_abort('STEP: fail to alloc (1.1)')
 
 !$OMP parallel default(shared) private(i,bigv,rat,j,jj,itmp1,itmp2,k,trnu,mm,swild,tmp,zrat, &
-!$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf,htot,top,dzz1,tmp1)
+!$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf,htot,top,dzz1,tmp1,tmp2)
 
 !       Point sources/sinks using operator splitting (that guarentees max.
 !       principle). Do nothing for net sinks
@@ -7808,25 +7808,53 @@
         endif !if_source
 
 !       Heat exchange between sediment and bottom water
-        if(abs(stemp_stc)>1.d-16) then
+        if(stemp_thick>1.d-16) then
 !$OMP     do
           do i=1,nea
-             if(idry_e(i)==1) cycle
+!            tmp0=sum(stemp_dz(elnode(1:i34(i),i)))/i34(i) !SED thickness
+            tmp0=minval(stemp_stc(elnode(1:i34(i),i))) !min conductivity
 
-             tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc !heat transfer budget (J.m-2)
-             if(tmp1>0) then !sediment temp. update; 4.184e6=\rho*C_p is the heat capacity of water (J.m-3/K)
-               stemp(i)=stemp(i)+tmp1/(max(stemp_dz(1),1.d-2)*4.184d6)
-             else
-               stemp(i)=stemp(i)+tmp1/(max(stemp_dz(2),1.d-2)*4.184d6)  ! sediment temp. update
-             endif
-             !Bottom T update
-             tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1/(max((ze(kbe(i)+1,i)-ze(kbe(i),i)),1.d-2)*4.184d6)
-             do k=1,kbe(i) 
-               tr_el(1,k,i)=tr_el(1,kbe(i)+1,i) 
-             enddo !k
+            if(idry_e(i)==1) then !use air T if available; soil-air exchange
+              if(nws==2.or.nws==4) then
+                tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
+                !tmp1=(tmp2-stemp(i))*dt*stemp_stc2 !heat [J/m^2]
+                !4.184e6=\rho*C_p is the heat capacity of water (J.m-3/K), which happens 
+                !to be similar to soil b/c of the differences in density and C_p
+                tmp1=dt*tmp0/max(stemp_thick,1.d-2)/4.184d6 ![-] like blending factor; >0
+                tmp1=min(tmp1,1.d0) !limit factor at expense of conservation in extreme cases
+                stemp(i)=stemp(i)+tmp1*(tmp2-stemp(i)) !tmp1/max(tmp0,1.d-2)/4.184d6
+              endif !nws
+            else !wet
+              !tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc1 !heat transfer budget (J.m-2)
+              tmp1=dt*tmp0/max(stemp_thick,1.d-2)/4.184d6 ![-] like blending factor
+              tmp1=min(tmp1,1.d0) !limit factor
+              stemp(i)=stemp(i)+tmp1*(tr_el(1,kbe(i)+1,i)-stemp(i)) !tmp1/max(tmp0,1.d-2)/4.184d6
+              !Bottom T update
+              tmp1=dt*tmp0/max(ze(kbe(i)+1,i)-ze(kbe(i),i),1.d-2)/4.184d6
+              tmp1=min(tmp1,1.d0)
+              tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1*(tr_el(1,kbe(i)+1,i)-stemp(i)) !tmp1/max(ze(kbe(i)+1,i)-ze(kbe(i),i),1.d-2)/4.184d6
+
+              do k=1,kbe(i) 
+                tr_el(1,k,i)=tr_el(1,kbe(i)+1,i) 
+              enddo !k
+            endif !idry_e
           enddo !i
 !$OMP     enddo
         endif !abs(stemp_stc)
+
+        !Relax shallow wet T to air T
+        if(i_hmin_airsea_ex/=0) then
+!$OMP     do
+          do i=1,nea
+            if(idry_e(i)==1) cycle
+
+            if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex.and.(nws==2.or.nws==4)) then !shallow wet
+              tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
+              tr_el(1,:,i)=tr_el(1,:,i)*(1-relax_2_airt)+tmp2*relax_2_airt
+            endif !shallow
+          enddo !i
+!$OMP     enddo
+        endif !i_hmin_airsea_ex
 
 !       Nudging: sum or product of horizontal & vertical relaxations 
 !$OMP   do 
@@ -8944,7 +8972,8 @@
         if(iof_hydro(29)==1) call writeout_nc(id_out_var(32),'temp_elem',6,nvrt,nea,tr_el(1,:,:))
         if(iof_hydro(30)==1) call writeout_nc(id_out_var(33),'salt_elem',6,nvrt,nea,tr_el(2,:,:))
         if(iof_hydro(31)==1) call writeout_nc(id_out_var(34),'pressure_gradient',7,1,nsa,bpgr(:,1),bpgr(:,2))
-        noutput=31 !total # of outputs so far (for dim of id_out_var)
+        if(iof_hydro(32)==1) call writeout_nc(id_out_var(35),'sedTemperature',4,1,nea,stemp)
+        noutput=32 !total # of outputs so far (dim of iof_hydro)
 
         !'Modules
         !'4' in noutput+i+4 due to the first 4 reserved outputs 
@@ -9616,8 +9645,12 @@
 !------------------
 !---    2D elem 
         icount=1 !reset index into varout_2delem
-        if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(2.1)')
         varout_2delem(icount,:)=idry_e(1:ne)
+        if(iof_hydro(32)/=0) then
+          icount=icount+1
+          varout_2delem(icount,:)=stemp(1:ne)
+        endif !iof_hydro
+        if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(2.1)')
 
         !Modules output
 #ifdef USE_SED

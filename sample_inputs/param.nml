@@ -574,24 +574,15 @@
 
 !-----------------------------------------------------------------------
 ! Heat and salt exchange using Zeng's (default) or Fairall (USE_BULK_FAIRALL) scheme.
-! To enable salt exchange, recompile with precip/evap module turned on.
-! In this case, ihconsv must =1; ihconsv=1 needs nws=2,4.
-! If ihconsv/=0, locally turning off air-sea exchange in shallow waters (<0.25 m) is recommended.
-! Options for locally turning off heat/salt exchange are specified by
-! i_hmin_airsea_ex, i_hmin_salt_ex respectively:
-!   0: not turned off locally;
-!   1: locally turned off, based on grid depth, i.e.,
-!      off when the local grid depth (z in hgrid) < hmin_airsea_ex or hmin_salt_ex;
-!   2 (recommended): locally turned off, based on local total water depth, i.e.,
-!      off when the local total water depth < hmin_airsea_ex or hmin_salt_ex,
-! hmin_airsea_ex, hmin_salt_ex:
-!   0.2 m is recommended for both "1" and "2"
+! To enable salt exchange, recompile with precip/evap module turned on and
+! in this case, ihconsv must =1; ihconsv=1 needs nws=2,4.
+! i_hmin_airsea_ex, i_hmin_salt_ex: on/off flag for shallow treatment (if total depth <hmin_airsea_ex etc)
 !-----------------------------------------------------------------------
   ihconsv = 0 !heat exchange option
 !  isconsv = 0 !evaporation/precipitation model
-  i_hmin_airsea_ex = 2 ! no effect if ihconsv=0 
+  i_hmin_airsea_ex = 1 ! no effect if ihconsv=0 
   hmin_airsea_ex = 0.2 ![m], no effect if ihconsv=0 
-  i_hmin_salt_ex = 2 ! no effect if PREC_EVAP is off
+  i_hmin_salt_ex = 1 ! no effect if PREC_EVAP is off
   hmin_salt_ex = 0.2 ![m], no effect if PREC_EVAP is off
   iprecip_off_bnd = 0 !if /=0, precip will be turned off near land bnd
   !watertype_* below are used for water type '8'
@@ -601,11 +592,13 @@
 
 !-----------------------------------------------------------------------
 ! Option to add a sediment layer for the buffer effect on temperature
-! stemp_stc=0 would turn off this effect.
+! stemp_thick=0 would turn off this effect; otherwise, needs soil_conductivity.gr3
+! which specifies the soil thermal conductivity in W/m^2/K.
+! The conductivity is on the order of 5, but can be 0 in deep depths to turn off 
+! the effect.
 !-----------------------------------------------------------------------
-  stemp_stc  = 0.0   !heat transfer coefficient W.m-2.K-1
-  stemp_dz(1)= 1.0   !equivalent sediment buffer depth (m) for heat into sediment
-  stemp_dz(2)= 1.0   !equivalent sediment buffer depth (m) for heat out of sediment
+  stemp_thick= 0.0   !soil thickness [m] 
+  relax_2_airt = 0.05  ![0,1] relaxation to air T at shallow wet area
 
 !-----------------------------------------------------------------------
 ! Turbulence closure.
@@ -901,6 +894,7 @@
   iof_hydro(29) = 0 !T @prism centers [C] {temperatureAtElement} 3D
   iof_hydro(30) = 0 !S @prism centers [PSU] {salinityAtElement} 3D
   iof_hydro(31) = 0 !Barotropic pressure gradient force vector (m.s-2) @side centers  {pressure_gradient} 2D vector
+  iof_hydro(32) = 0 !sediment termperature @elem [C] {sedTemperature} 2D 
 
 !-----------------------------------------------------------------------
 ! Outputs from optional modules. Only uncomment these if the USE_* is on

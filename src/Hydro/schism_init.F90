@@ -212,7 +212,7 @@
      &level_age,vclose_surf_frac,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
-     &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_stc,stemp_dz, &
+     &rinflation_icm,iprecip_off_bnd,model_type_pahm,stemp_thick,relax_2_airt, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
      &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
      &drown_marsh,create_marsh_min,create_marsh_max,age_marsh_min
@@ -470,7 +470,7 @@
       dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
       nws=0; wtiminc=dt; iwind_form=1; iwindoff=0;
-      drampwind=1._rkind; ihconsv=0; i_hmin_airsea_ex=2; i_hmin_salt_ex=2; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
+      drampwind=1._rkind; ihconsv=0; i_hmin_airsea_ex=1; i_hmin_salt_ex=1; itur=0; dfv0=0.01_rkind; dfh0=real(1.d-4,rkind); 
       h1_pp=20._rkind; h2_pp=50._rkind; vdmax_pp1=0.01_rkind; vdmax_pp2=0.01_rkind; icompute_cpsi3=0; ri_st=0.25d0; iscnd_coeff=5
       vdmin_pp1=real(1.d-5,rkind); vdmin_pp2=vdmin_pp1; tdmin_pp1=vdmin_pp1; tdmin_pp2=vdmin_pp1
       mid='KL'; stab='KC'; xlsc0=0.1_rkind;  
@@ -507,7 +507,6 @@
       lev_tr_source=-9 !bottom
       iprecip_off_bnd=0
       model_type_pahm=10
-      stemp_stc=0; stemp_dz=1.0 !heat exchange between sediment and bottom water
       RADFLAG='LON' !if WWM is used, this will be overwritten
       niter_hdif=1
       watertype_rr=0.58d0; watertype_d1=0.35d0; watertype_d2=23.d0
@@ -524,6 +523,8 @@
       create_marsh_min = -1.d0 
       create_marsh_max = 0.d0
       age_marsh_min=0.d0
+      stemp_thick=0.d0
+      relax_2_airt=5.d-2
 
       !Output elev, hvel by default
       nc_out=1
@@ -777,18 +778,21 @@
 #endif
 
       if(ihconsv/=0) then
-        if(i_hmin_airsea_ex<0.or.i_hmin_airsea_ex>2) then
+        if(i_hmin_airsea_ex<0) then
           write(errmsg,*)'INIT: illegal i_hmin_airsea_ex',i_hmin_airsea_ex
           call parallel_abort(errmsg)
         endif 
       endif
 
       if(isconsv/=0) then
-        if(i_hmin_salt_ex<0.or.i_hmin_salt_ex>2) then
+        if(i_hmin_salt_ex<0) then
           write(errmsg,*)'INIT: illegal i_hmin_salt_ex',i_hmin_salt_ex
           call parallel_abort(errmsg)
         endif 
       endif
+
+      if(stemp_thick<0.d0) call parallel_abort('INIT: stemp_thick')
+      if(relax_2_airt<0.d0.or.relax_2_airt>1.d0) call parallel_abort('INIT: relax_2_airt')
 
 !...  Turbulence closure options
 !      call get_param('param.in','itur',1,itur,tmp,stringvalue)
@@ -1427,7 +1431,7 @@
          &  veg_h(npa),veg_nv(npa),veg_di(npa),veg_cd(npa), &
          &  veg_h_unbent(npa),veg_nv_unbent(npa),veg_di_unbent(npa), &
          &  wwave_force(2,nvrt,nsa),btaun(npa), &
-         &  rsxx(npa),rsxy(npa),rsyy(npa),deta1_dxy_elem(nea,2),stat=istat)
+         &  rsxx(npa),rsxy(npa),rsyy(npa),deta1_dxy_elem(nea,2),stemp_stc(npa),stat=istat)
       if(istat/=0) call parallel_abort('INIT: other allocation failure')
 
 !     Tracers
@@ -1763,7 +1767,7 @@
       diffmin=1.d-6; diffmax=1.d0
       deta1_dxy_elem=0.d0
       age_marsh=0.d0
-      stemp=0.d0 !init for hot output
+      stemp=0.d0 !init for output
 
 !Tsinghua group
 #ifdef USE_SED 
@@ -3801,6 +3805,27 @@
 !      endif
 !      if(islip==1) read(15,*) hdrag0
 
+      if(stemp_thick>1.d-16) then
+        if(myrank==0) then
+          open(32,file=in_dir(1:len_in_dir)//'soil_conductivity.gr3',status='old')
+          read(32,*)
+          read(32,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
+     &call parallel_abort('Check soil_conductivity.gr3')
+          do i=1,np_global
+            read(32,*)j,xtmp,ytmp,buf3(i)
+            if(buf3(i)<0.d0) call parallel_abort('INIT: wrong soil_conductivity')
+          enddo !i
+          close(32)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) stemp_stc(ipgl(i)%id)=buf3(i)
+        enddo !i
+      endif !SED heat
+
+
 !...  Sponge layer for elev. & vel. (relax. factor applied to 0 elev. or uv -similar to T,S)
       if(inu_elev==1) then
         if(myrank==0) then
@@ -5269,7 +5294,7 @@
 !     Store i.c. 
       tr_nd0(3:ntracers,:,:)=tr_nd(3:ntracers,:,:)
 
-      !Init SED T
+      !Init SED T with bottom water T
       do i=1,nea
         stemp(i)=tr_el(1,1,i)
       enddo !i
@@ -5561,7 +5586,7 @@
               stemp(ie)=buf3(i)
             endif
           enddo !i
-        else !under cold start with ihot=0 or 1, init with bottom water T
+        else !under cold start with ihot=0 or 1, init with bottom water T first
           do i=1,nea
             stemp(i)=tr_el(1,1,i) !use level 1
           enddo !i
@@ -6550,6 +6575,12 @@
       counter_out_name=counter_out_name+1
       out_name(counter_out_name)='dryFlagElement'
       iout_23d(counter_out_name)=4
+      if(iof_hydro(32)/=0) then
+        ncount_2delem=ncount_2delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)='sedTemperature'
+        iout_23d(counter_out_name)=4
+      endif !iof_hydro
 
 !     Add module outputs of 2D elem below (scalars&vectors)
 #ifdef USE_SED
