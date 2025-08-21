@@ -7820,7 +7820,7 @@
                 !4.184e6=\rho*C_p is the heat capacity of water (J.m-3/K), which happens 
                 !to be similar to soil b/c of the differences in density and C_p
                 tmp1=dt*stemp_stc2/max(tmp0,1.d-2)/4.184d6 ![-] like blending factor; >0
-                tmp1=min(tmp1,1.d0) !limit factor at expense of conservation
+                tmp1=min(tmp1,1.d0) !limit factor at expense of conservation in extreme cases
                 stemp(i)=stemp(i)+tmp1*(tmp2-stemp(i)) !tmp1/max(tmp0,1.d-2)/4.184d6
               endif !nws
             else !wet
