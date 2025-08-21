@@ -5125,7 +5125,7 @@
       if(indx==1) then  !analytical
         quad_int=1._rkind/16._rkind*(1._rkind+real(ixi_n(ip)*ixi_n(ll),rkind)/3._rkind)* &
      &(area(ie)*(1._rkind+real(iet_n(ip)*iet_n(ll),rkind)/3._rkind)+ &
-     &coe2/8._rkind*real(iet_n(ip)+iet_n(ll),rkind))+coe1/96._rkind*(1._rkind+ &
+     &coe2/6._rkind*real(iet_n(ip)+iet_n(ll),rkind))+coe1/96._rkind*(1._rkind+ &
      &real(iet_n(ip)*iet_n(ll),rkind)/3._rkind)*real(ixi_n(ip)+ixi_n(ll),rkind)
 
         !Debug
