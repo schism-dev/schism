@@ -1,0 +1,2481 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-8.3.4">
+    
+    
+      
+        <title>Model parameters (param.nml) - SCHISM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.4a0965b7.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cbb835fc.min.css">
+        
+      
+      
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#core-block" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-component="outdated" hidden>
+        <aside class="md-banner md-banner--warning">
+          
+        </aside>
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../index.html" title="SCHISM" class="md-header__button md-logo" aria-label="SCHISM" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCHISM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Model parameters (param.nml)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/schism-dev/schism" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../index.html" title="SCHISM" class="md-nav__button md-logo" aria-label="SCHISM" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    SCHISM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/schism-dev/schism" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../index.html" class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog.html" class="md-nav__link">
+        Changelog
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          Getting started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Getting started" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Getting started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/getting-sourcecode.html" class="md-nav__link">
+        Getting the source code
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/compilation.html" class="md-nav__link">
+        Compilation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/test_suite.html" class="md-nav__link">
+        Test suite
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/typical-workflow.html" class="md-nav__link">
+        Typical workflow (a cheat sheet)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/grid-generation.html" class="md-nav__link">
+        Mesh generation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing.html" class="md-nav__link">
+        Preprocessing
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_8" type="checkbox" id="__nav_3_8" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3_8">
+          Preprocessing with pylib
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Preprocessing with pylib" data-md-level="2">
+        <label class="md-nav__title" for="__nav_3_8">
+          <span class="md-nav__icon md-icon"></span>
+          Preprocessing with pylib
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pylib/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pylib/installation.html" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pylib/schismcheck.html" class="md-nav__link">
+        schismCheck (input visualization)
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_9" type="checkbox" id="__nav_3_9" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3_9">
+          Preprocessing with PySCHISM
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Preprocessing with PySCHISM" data-md-level="2">
+        <label class="md-nav__title" for="__nav_3_9">
+          <span class="md-nav__icon md-icon"></span>
+          Preprocessing with PySCHISM
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pyschism/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pyschism/installation.html" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pyschism/bctides.html" class="md-nav__link">
+        Tides
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pyschism/boundary.html" class="md-nav__link">
+        B.C. from HYCOM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pyschism/atmos.html" class="md-nav__link">
+        Atmospheric forcing
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/pre-processing-with-pyschism/nwm.html" class="md-nav__link">
+        Souce and Sink
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/running-model.html" class="md-nav__link">
+        Running the model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/visualization.html" class="md-nav__link">
+        Visualization
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/post-processing.html" class="md-nav__link">
+        Postprocessing
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          Model formulation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Model formulation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          Model formulation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/physical-formulation.html" class="md-nav__link">
+        Physical formulation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_2" type="checkbox" id="__nav_4_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_2">
+          Numerical formulation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Numerical formulation" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_2">
+          <span class="md-nav__icon md-icon"></span>
+          Numerical formulation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/geometry-discretization.html" class="md-nav__link">
+        Geometry and discretization
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/barotropic-solver.html" class="md-nav__link">
+        Barotropic solver
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/eulerian-lagrangian-method.html" class="md-nav__link">
+        Eulerian-Lagrangian Method
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/momentum-equation.html" class="md-nav__link">
+        Momentum equation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/vertical-velocity.html" class="md-nav__link">
+        Vertical velocity
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/turbulence-closure.html" class="md-nav__link">
+        Turbulence closure
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/transport-equation.html" class="md-nav__link">
+        Transport equation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/updating-levels.html" class="md-nav__link">
+        Updating the levels/Inundation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schism/spherical-coordinates.html" class="md-nav__link">
+        Spherical coordinates
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_5">
+          Input/Output
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Input/Output" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          Input/Output
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="hgrid.html" class="md-nav__link">
+        Horizontal grid (hgrid.gr3)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="vgrid.html" class="md-nav__link">
+        Vertical grid (vgrid.in)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Model parameters (param.nml)
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="param.html" class="md-nav__link md-nav__link--active">
+        Model parameters (param.nml)
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#core-block" class="md-nav__link">
+    CORE block
+  </a>
+  
+    <nav class="md-nav" aria-label="CORE block">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ipre-int" class="md-nav__link">
+    ipre (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ibc-int-ibtp-int" class="md-nav__link">
+    ibc (int), ibtp (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rnday-double" class="md-nav__link">
+    rnday (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dt-double" class="md-nav__link">
+    dt (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#msc2-int-mdc2-int" class="md-nav__link">
+    msc2 (int), mdc2 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eco_class-ntracer_gen-ntracer_age-sed_class-int" class="md-nav__link">
+    eco_class, ntracer_gen, ntracer_age, sed_class (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nspool-ihfskip-int" class="md-nav__link">
+    nspool, ihfskip (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nbins_veg_vert-int" class="md-nav__link">
+    nbins_veg_vert (int)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#opt-block" class="md-nav__link">
+    OPT block
+  </a>
+  
+    <nav class="md-nav" aria-label="OPT block">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dramp1-double-drampbc1-double" class="md-nav__link">
+    dramp=1. (double), drampbc=1. (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flag_ic1-int-array" class="md-nav__link">
+    flag_ic(:)=1 (int array)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#h0001-double" class="md-nav__link">
+    h0=0.01 (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#h12_bcc50100-double-in-meters" class="md-nav__link">
+    h[1,2]_bcc=50,100 (double; in meters)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ibcc_mean0-int" class="md-nav__link">
+    ibcc_mean=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ic_elev0-int-nramp_elev0-int-int" class="md-nav__link">
+    ic_elev=0 (int), nramp_elev=0 (int) (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icou_elfe_wwm0-iwbl0-int" class="md-nav__link">
+    icou_elfe_wwm=0, iwbl=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ics1-int" class="md-nav__link">
+    ics=1 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ielm_transport-0-max_subcyc-10-int" class="md-nav__link">
+    ielm_transport = 0, max_subcyc = 10 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ieos_type0-ieos_pres0-int" class="md-nav__link">
+    ieos_type=0, ieos_pres=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array" class="md-nav__link">
+    if_source=0 (int), dramp_ss=2. (double), lev_tr_source(:)=-9 (int array)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#level_age-999-int-array" class="md-nav__link">
+    level_age(:)=-999 (int array)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iflux0-int" class="md-nav__link">
+    iflux=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iharind0-int" class="md-nav__link">
+    iharind=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ihconsv0-isconsv0-int" class="md-nav__link">
+    ihconsv=0, isconsv=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters" class="md-nav__link">
+    i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#i_hmin_salt_ex-int-hmin_salt_ex-double-in-meters" class="md-nav__link">
+    i_hmin_salt_ex (int), hmin_salt_ex (double; in meters)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iprecip_off_bnd-int" class="md-nav__link">
+    iprecip_off_bnd (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stemp_stc-double-stemp_dz12-double" class="md-nav__link">
+    stemp_stc (double), stemp_dz(1:2) (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ihdif0-int" class="md-nav__link">
+    ihdif=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ihot0-int" class="md-nav__link">
+    ihot=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ihydraulics0-int" class="md-nav__link">
+    ihydraulics=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iloadtide0-int-loadtide_coef-double" class="md-nav__link">
+    iloadtide=0 (int), loadtide_coef (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#imm0-ibdef10-int" class="md-nav__link">
+    imm=0, ibdef=10 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double" class="md-nav__link">
+    indvel=0 (int), ihorcon=0 (int), hvis_coef0=0.025 (double), ishapiro=1, niter_shap=1 (int), shapiro0=0.5 (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inter_mom0-kr_co1-int" class="md-nav__link">
+    inter_mom=0, kr_co=1 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inu_elev0-inu_uv0-int" class="md-nav__link">
+    inu_elev=0, inu_uv=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inu_tr0-int-array-nu_sum_multint-step_nu_tr86400-double" class="md-nav__link">
+    inu_tr(:)=0 (int array), nu_sum_mult(int), step_nu_tr=86400. (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inunfl0-int" class="md-nav__link">
+    inunfl=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iveg0-int" class="md-nav__link">
+    iveg=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#itr_met3-int-h_tvd5-double" class="md-nav__link">
+    itr_met=3 (int), h_tvd=5. (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#itur0-int" class="md-nav__link">
+    itur=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nadv1-int-dtb_min10-dtb_max30-double" class="md-nav__link">
+    nadv=1 (int), dtb_min=10, dtb_max=30 (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nchi0-int" class="md-nav__link">
+    nchi=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ncor0-int" class="md-nav__link">
+    ncor=0 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nws0-int-drampwind1-double-iwind_form1-int-iwindoffint-wtimincdt-double" class="md-nav__link">
+    nws=0 (int), drampwind=1. (double), iwind_form=1 (int), iwindoff(int), wtiminc=dt (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rho01000-shw4184-double" class="md-nav__link">
+    rho0=1000, shw=4184. (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rmaxvel10-double" class="md-nav__link">
+    rmaxvel=10. (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#s1_mxbnt05-s2_mxnbnt35-double" class="md-nav__link">
+    s1_mxbnt=0.5, s2_mxnbnt=3.5 (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slam0-124-sfea045-double" class="md-nav__link">
+    slam0=-124, sfea0=45 (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#start_year2000-start_month1-start_day1-int-start_hour0-utc_start8-double" class="md-nav__link">
+    start_year=2000, start_month=1, start_day=1 (int), start_hour=0, utc_start=8 (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#thetai06-double" class="md-nav__link">
+    thetai=0.6 (double)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schout-block" class="md-nav__link">
+    SCHOUT block
+  </a>
+  
+    <nav class="md-nav" aria-label="SCHOUT block">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#iout_sta0-nspool_sta10-int" class="md-nav__link">
+    iout_sta=0, nspool_sta=10 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iof_ugrid-int" class="md-nav__link">
+    iof_ugrid (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nc_out-1int" class="md-nav__link">
+    nc_out =1(int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nhot0-nhot_write8640-int" class="md-nav__link">
+    nhot=0, nhot_write=8640 (int)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iof_-int" class="md-nav__link">
+    iof_* (int)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="bctides.html" class="md-nav__link">
+        Boundary conditions (bctides.in)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="friction.html" class="md-nav__link">
+        Bottom friction
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sflux.html" class="md-nav__link">
+        Atmospheric flux (/sflux)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="optional-inputs.html" class="md-nav__link">
+        Optional inputs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="outputs.html" class="md-nav__link">
+        Outputs
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6">
+          Mesh generation - advanced topics
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Mesh generation - advanced topics" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          Mesh generation - advanced topics
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/cross_regime.html" class="md-nav__link">
+        Meshing for cross-scale regimes
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_3" type="checkbox" id="__nav_6_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6_3">
+          Meshing for compound floods
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Meshing for compound floods" data-md-level="2">
+        <label class="md-nav__title" for="__nav_6_3">
+          <span class="md-nav__icon md-icon"></span>
+          Meshing for compound floods
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/meshing-for-compound-floods/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/meshing-for-compound-floods/extract-thalweg.html" class="md-nav__link">
+        Extract thalwegs from DEM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/meshing-for-compound-floods/generate-river-map.html" class="md-nav__link">
+        Generate river map
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/meshing-for-compound-floods/special-case-utilizing-nhd.html" class="md-nav__link">
+        Special case utilizing NHD (National Hydrography Dataset)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mesh-generation/meshing-for-compound-floods/meshing-in-SMS.html" class="md-nav__link">
+        Meshing in SMS
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_7" type="checkbox" id="__nav_7" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_7">
+          Modules
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Modules" data-md-level="1">
+        <label class="md-nav__title" for="__nav_7">
+          <span class="md-nav__icon md-icon"></span>
+          Modules
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/overview.html" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/generic-tracer.html" class="md-nav__link">
+        Generic tracer module
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/age.html" class="md-nav__link">
+        AGE
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/sed2d.html" class="md-nav__link">
+        2D Sediment model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/sed3d.html" class="md-nav__link">
+        3D Sediment model
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/icm.html" class="md-nav__link">
+        ICM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/cosine.html" class="md-nav__link">
+        CoSiNe
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/dvd.html" class="md-nav__link">
+        DVD
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/marsh-migration.html" class="md-nav__link">
+        Marsh migration
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/analysis-mode.html" class="md-nav__link">
+        Analysis mode
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/hydraulics.html" class="md-nav__link">
+        Hydraulics
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/particle-tracking.html" class="md-nav__link">
+        Particle tracking
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/wwm.html" class="md-nav__link">
+        WWM (waves)
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/fabm.html" class="md-nav__link">
+        FABM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/pahm.html" class="md-nav__link">
+        PaHM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/single-class-ice.html" class="md-nav__link">
+        Single-class ice module
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/multi-class-ice.html" class="md-nav__link">
+        Multi-class ice module
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/pdaf.html" class="md-nav__link">
+        Data assimilation (PDAF)
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../code-contribution.html" class="md-nav__link">
+        Code structure
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../case-study.html" class="md-nav__link">
+        Case studies
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_10" type="checkbox" id="__nav_10" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_10">
+          SCHISM external coupling
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="SCHISM external coupling" data-md-level="1">
+        <label class="md-nav__title" for="__nav_10">
+          <span class="md-nav__icon md-icon"></span>
+          SCHISM external coupling
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/esmf.html" class="md-nav__link">
+        Earth System Modeling Framework
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/nuopc.html" class="md-nav__link">
+        National Unified Operational Prediction Capability
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/coastalapp.html" class="md-nav__link">
+        NOAA's CoastalApp
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/mossco.html" class="md-nav__link">
+        Modular System for Shelves and Coasts
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/cesm.html" class="md-nav__link">
+        NCAR's Community Earth System Model
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq.html" class="md-nav__link">
+        Frequently Asked Questions
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../known_issues.html" class="md-nav__link">
+        Known issues
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contribute-to-this-online-manual.html" class="md-nav__link">
+        Contribute to this online manual
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+  <a href="https://github.com/schism-dev/schism/edit/master/docs/input-output/param.md" title="Edit this page" class="md-content__button md-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
+
+
+  <h1>Model parameters (param.nml)</h1>
+
+<p>Please refer to sample <a href="https://github.com/schism-dev/schism/blob/master/sample_inputs/param.nml">param.nml</a> in the source code directory (sample_inputs/) while you read the following.</p>
+<p>The file uses the FORTRAN namelist format. The order of input parameters is not important. Governing rules for this file are:</p>
+<ul>
+<li>lines beginning with <code>!</code> are comments; blank lines are ignored;</li>
+<li>the format for each parameter is: <code>keywords=value</code>; keywords are case sensitive; spaces allowed between <code>keywords</code> and <code>=</code> and <code>value</code>; comments starting with <code>!</code> after value are ignored;</li>
+<li><code>value</code> is an integer, double, or 2-char string (use ' ' (single quotes) for this); for double, any of the format is acceptable: 40 or 40. or 4.e1 but the last 2 are preferred. Use of decimal point for integers is discouraged;</li>
+<li>if multiple entries for a parameter are found, the last one wins - please avoid this</li>
+<li>array inputs follow column major (like FORTRAN) and can spill to multiple line.</li>
+</ul>
+<p>The namelist file is divided into 3 major sections: <a href="#core">CORE</a>, <a href="#opt">OPT</a> and <a href="#schout">SCHOUT</a>. <a href="#core">CORE</a> lists out all core parameters that <em>must</em> be specified by the user, i.e., no defaults are provided by the code. <a href="#opt">OPT</a> and <a href="#schout">SCHOUT</a> sections contain optional parameters and I/O flags, all of which have default values so the user does not have to specify any of these (the values shown in the sample are defaults unless otherwise stated). SCHISM will also echo the input values in the output file <code>outputs/param_out.nml</code>.</p>
+<p>Most parameters (and their keywords) are explained as follows; some are ‘developers handles’ that should 
+not be tweaked usually. Also the sample has suggested values for many parameters. Note that you do not 
+have to follow the order below. In many cases we have grouped related parameters 
+for easier explanation, but you should specify them on separate lines. Also you'll find additional useful
+ info in the comments of the sample <code>param.nml</code>. The parameters are listed out below in alphabetic order.</p>
+<h2 id="core-block">CORE block<a class="headerlink" href="#core-block" title="Permanent link">&para;</a></h2>
+<p>The following parameters have to be specified by the user; otherwise you may get a fatal error. The exceptions are
+ those parameters required by optional modules (e.g., WWM), which do not need to be present if the modules are
+ not invoked.</p>
+<h3 id="ipre-int">ipre (int)<a class="headerlink" href="#ipre-int" title="Permanent link">&para;</a></h3>
+<p>Pre-processing flag (1: on; 0: off). <code>ipre=0</code>: normal run. </p>
+<p>Pre-processing flag is very useful for checking integrity of the horizontal grid and some inputs. <code>ipre=1</code>: code will output centers.bp, sidecenters.bp, (centers build point, sidcenters build point), and <code>mirror.out</code> and stop. Check errors in <code>fatal.error</code> or system outputs. </p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p><code>ipre/=0</code> only works for single CPU! If you use scribed I/O (<code>OLDIO</code> off), make sure the number of 'computes' is 1, plus extra for scribes. Also under the scribe mode, the pre-processing run will likely finish without a clean exist (as the scribe world is still initializing). Check <code>outputs/</code> (<code>mirror.out</code> and <code>fatal.error</code>) and system outputs; if the run is finished (e.g., you see 'Pre-processing completed successfully') you can manually kill the run.</p>
+</div>
+<h3 id="ibc-int-ibtp-int">ibc (int), ibtp (int)<a class="headerlink" href="#ibc-int-ibtp-int" title="Permanent link">&para;</a></h3>
+<p>Barotropic/baroclinic flags. </p>
+<p>If <code>ibc=0</code>, a baroclinic model is used and regardless of the value for <code>ibtp</code>, the transport equation is solved. If <code>ibc=1</code>, a barotropic model is used, and the transport equation may (when <code>ibtp=1</code>) or may not (when <code>ibtp=0</code>) be solved; in the former case, S and T are treated as passive tracers.</p>
+<h3 id="rnday-double">rnday (double)<a class="headerlink" href="#rnday-double" title="Permanent link">&para;</a></h3>
+<p>Total simulation time in days.</p>
+<h3 id="dt-double">dt (double)<a class="headerlink" href="#dt-double" title="Permanent link">&para;</a></h3>
+<p>Time step in seconds. This is the main time step in SCHISM. The transport solvers have their own adaptive time step for subcycling to satisfy the stability constraint.</p>
+<h3 id="msc2-int-mdc2-int">msc2 (int), mdc2 (int)<a class="headerlink" href="#msc2-int-mdc2-int" title="Permanent link">&para;</a></h3>
+<p>These two parameters are only used if the wave module WWM is invoked (<code>USE_WWM</code> is on and <code>icou_elfe_wwm=1</code>).
+ The values represent the spectral resolution used in WWM and must match those in 
+<a href="https://github.com/schism-dev/schism/blob/master/sample_inputs/wwminput.nml.WW3">wwminput.nml</a>;</p>
+<h3 id="eco_class-ntracer_gen-ntracer_age-sed_class-int">eco_class, ntracer_gen, ntracer_age, sed_class (int)<a class="headerlink" href="#eco_class-ntracer_gen-ntracer_age-sed_class-int" title="Permanent link">&para;</a></h3>
+<p>These parameters set the # of tracer ‘classes’ for each tracer module (EcoSim, GEN, AGE and SED), and are required if these modules are invoked in makefile. Note that other tracers modules (ICM, CoSiNE) set their own # of classes.</p>
+<h3 id="nspool-ihfskip-int">nspool, ihfskip (int)<a class="headerlink" href="#nspool-ihfskip-int" title="Permanent link">&para;</a></h3>
+<p>These two flags control the global netcdf outputs. Output is done every <code>nspool</code> steps, and a new output stack is opened every <code>ihfskip</code> steps. The code requires that <code>ihfskip</code> is a multiple of <code>nspool</code>, and <code>nhot_write</code> (see SCHOUT section) is a a multiple of <code>ihfskip</code>.</p>
+<h3 id="nbins_veg_vert-int">nbins_veg_vert (int)<a class="headerlink" href="#nbins_veg_vert-int" title="Permanent link">&para;</a></h3>
+<p>Number of vertical bins used in vegetation option <code>iveg=1</code>.</p>
+<h2 id="opt-block">OPT block<a class="headerlink" href="#opt-block" title="Permanent link">&para;</a></h2>
+<p>The optional parameters below are explained in alphabetical order. The default values can be seen below and also in the sample file (sample_inputs/).</p>
+<h3 id="dramp1-double-drampbc1-double">dramp=1. (double), drampbc=1. (double)<a class="headerlink" href="#dramp1-double-drampbc1-double" title="Permanent link">&para;</a></h3>
+<p>Ramp periods in days for the tides, B.C. (boundary condition) or baroclincity. 
+If <code>ibc=0</code>, the ramp-up for baroclinicity is specified with <code>drampbc</code> (in days). 
+Turn off ramp-up by setting the ramp-up period &lt;=0. 
+The ramp function is a hyperbolic tangent function; e.g. <span class="arithmatex">\(f(t) = \tanh(2t/86400/\text{drampbc})\)</span>.</p>
+<h3 id="flag_ic1-int-array">flag_ic(:)=1 (int array)<a class="headerlink" href="#flag_ic1-int-array" title="Permanent link">&para;</a></h3>
+<p>Options for specifying initial tracer fields for cold start, where each array entry corresponds to individual tracer model (e.g. TEM, SAL, SED etc). If <code>flag_ic=1</code>, a vertically homogeneous but horizontally varying initial tracer field is specified in inputs like <code>temp.ic</code>, <code>salt.ic</code>, <code>[MOD]_hvar_[class #].ic</code> etc. If <code>flag_ic=2</code>, a horizontally homogeneous but vertically varying initial tracer field, prescribed in a series of z-levels, is specified in inputs like <code>ts.ic</code>, <code>[MOD]_vvar_[class #].ic</code>. For more general 3D initial tracer fields, use the hot start option. See <code>Optional inputs</code> section for examples of some of these inputs. Note that there is a requirement that <code>flag_ic(1)=flag_ic(2)</code>.</p>
+<h3 id="h0001-double">h0=0.01 (double)<a class="headerlink" href="#h0001-double" title="Permanent link">&para;</a></h3>
+<p>Minimum depth (in m) for wetting and drying (recommended value: <code>1cm</code>). When the total depth is less than <code>h0</code>, the corresponding nodes/sides/elements are marked as dry. It should always be positive.</p>
+<h3 id="h12_bcc50100-double-in-meters">h[1,2]_bcc=50,100 (double; in meters)<a class="headerlink" href="#h12_bcc50100-double-in-meters" title="Permanent link">&para;</a></h3>
+<p>Option on how the baroclinic gradient is calculated below bottom. The 'below-bottom' gradient is zeroed out if <code>h&gt;=h2_bcc</code> (i.e. like Z) or uses constant extrapolation (i.e. like terrain-following) if <code>h&lt;=h1_bcc(&lt;h2_bcc)</code>. A linear transition is used if the local depth <code>h1_bcc&lt;h&lt;h2_bcc</code>.</p>
+<h3 id="ibcc_mean0-int">ibcc_mean=0 (int)<a class="headerlink" href="#ibcc_mean0-int" title="Permanent link">&para;</a></h3>
+<p>Mean T,S profile option. If <code>ibcc_mean=1</code> (or <code>ihot=0</code> and <code>flag_ic(1:2)=2</code>), mean T/S profile is read in from <code>ts.ic</code>, and will be removed when calculating baroclinic force. No <code>ts.ic</code> is needed if <code>ibcc_mean=0</code>.</p>
+<h3 id="ic_elev0-int-nramp_elev0-int-int">ic_elev=0 (int), nramp_elev=0 (int) (int)<a class="headerlink" href="#ic_elev0-int-nramp_elev0-int-int" title="Permanent link">&para;</a></h3>
+<p>Elevation initial condition flag for cold start only (<code>ihot=0</code>). If <code>ic_elev=1</code>, <code>elev.ic</code> (in <code>*.gr3</code> format) 
+is needed to specify the initial condition (I.C.) Otherwise elevation is initialized to 0 everywhere (cold start only) or from the
+ elevation values in <code>hotstart.nc</code> (hotstart option). 
+If <code>ic_elev=1</code>, the user can ramp up the elevation
+ smoothly at the boundary starting from the specified <code>elev.ic</code> or <code>hotstart.nc</code> (if <span class="arithmatex">\(ihot\neq 0\)</span>) by setting <code>nramp_elev=1</code> (and the ramp-up
+ period in this case is <code>dramp</code>). It's usually OK to use <code>nramp_elev=1</code> under either cold or hot start.</p>
+<h3 id="icou_elfe_wwm0-iwbl0-int">icou_elfe_wwm=0, iwbl=0 (int)<a class="headerlink" href="#icou_elfe_wwm0-iwbl0-int" title="Permanent link">&para;</a></h3>
+<p>Coupler flag with WWM; needed if USE_WWM pre-processor is enabled. <code>icou_elfe_wwm = 0</code>: no feedback from WWM to SCHISM (decoupled); <code>1</code>: coupled SCHISM-WWM.</p>
+<p><code>iwbl=1</code>: modified Grant-Madsen formulation for wave enhanced boundary layer; =2: Soulsby (1997) formulation; <code>=0</code>: off.</p>
+<p>If <code>icou_elfe_wwm=1</code>, additional parameters are:</p>
+<ul>
+<li><code>nstep_wwm=1</code> (int): call WWM every <code>nstep_wwm</code> time steps;</li>
+<li><code>hmin_radstress=1.0</code> (double): minimum total water depth in meters used only in radiation stress calculation; the radiation stress is zero if <code>local depth &lt;hmin_radstress</code>.</li>
+</ul>
+<p>In addition, there are parameters related to Vortex Formalism of Bennice and Ardhuin (2008).</p>
+<h3 id="ics1-int">ics=1 (int)<a class="headerlink" href="#ics1-int" title="Permanent link">&para;</a></h3>
+<p>Coordinate frame flag. If <code>ics=1</code>, Cartesian coordinates are used; if <code>ics=2</code>, both <code>hgrid.ll</code> and <code>hgrid.gr3</code> use degrees latitude/longitude (and they should be identical to each other in this case).</p>
+<h3 id="ielm_transport-0-max_subcyc-10-int">ielm_transport = 0, max_subcyc = 10 (int)<a class="headerlink" href="#ielm_transport-0-max_subcyc-10-int" title="Permanent link">&para;</a></h3>
+<p>Hybrid ELM-FV transport for performance. If <code>ielm_transport=1</code>, 
+the hybrid scheme is invoked and <code>max_subcyc</code> represents the max # of subcycling per time step in 
+transport allowed; if the actual # of subcycling in a prism at a time step exceeds this threshold, 
+more efficient ELM transport is used locally (at the expense of mass conservation and accuracy, 
+so make sure this option is used sparingly).</p>
+<h3 id="ieos_type0-ieos_pres0-int">ieos_type=0, ieos_pres=0 (int)<a class="headerlink" href="#ieos_type0-ieos_pres0-int" title="Permanent link">&para;</a></h3>
+<p>By default, use the nonlinear equation of state: <code>ieos_type=0</code>. <code>ieos_pres=0,1</code> will turn on/off hydrostatic pressure effects. If the potential temperature is used, the pressure effect has been accounted for, so <code>ieos_pres=0.</code></p>
+<h3 id="if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array">if_source=0 (int), dramp_ss=2. (double), lev_tr_source(:)=-9 (int array)<a class="headerlink" href="#if_source0-int-dramp_ss2-double-lev_tr_source-9-int-array" title="Permanent link">&para;</a></h3>
+<p>Point sources/sinks option (0: no; 1: on). If <code>if_source=1</code>, needs <code>source_sink.in</code>, <code>vsource.th</code>, <code>vsink.th</code>, 
+and <code>msource.th</code> (see sample files in the source code directory src/ for their formats). 
+If <code>if_source=-1</code>, the input is <code>source.nc</code>, which includes element list inside and allows for different time 
+steps and # of records for volume/mass source/sinks. If <code>if_source/=0</code>, specify ramp-up period (in days) with <code>dramp_ss</code> (no
+ ramp-up if &lt;=0). </p>
+<p>The tracers are injected into an element at a particular level, as specified by <code>lev_tr_source(1:ntr)</code> (where <code>ntr</code> is total
+ # of tracer modules, i.e. 1 input level per module). The code will extrapolate below bottom/above surface if necessary, 
+ so e.g., '-9' means bottom. To inject at all levels, set the level at '0'.</p>
+<div class="admonition note">
+<p class="admonition-title">AGE module</p>
+</div>
+<p>The AGE mpdule has its own way of injecting age tracers (see below), so make sure the age concentrations from all sources are all -9999. in msource.th so as to not interfere.</p>
+<h3 id="level_age-999-int-array">level_age(:)=-999 (int array)<a class="headerlink" href="#level_age-999-int-array" title="Permanent link">&para;</a></h3>
+<p>If <code>USE_AGE</code> is on, this array specifies the vertical level indices used to inject age tracers. You only need to 
+ specify this for the first half of the tracer classes. Use -999 to inject the tracer at all levels.</p>
+<h3 id="iflux0-int">iflux=0 (int)<a class="headerlink" href="#iflux0-int" title="Permanent link">&para;</a></h3>
+<p>Parameter for checking volume and tracer mass conservation. If turned on (<code>=1</code> or <code>2</code>), the 
+conservation will be checked in regions specified by <code>fluxflag.prop</code>. <code>iflux=2</code> would produce mroe detailed volume/mass
+ fluxes outputs.</p>
+<h3 id="iharind0-int">iharind=0 (int)<a class="headerlink" href="#iharind0-int" title="Permanent link">&para;</a></h3>
+<p>Harmonic analysis flag. If <span class="arithmatex">\(iharind \neq 0\)</span>, an input <code>harm.in</code> is needed.</p>
+<h3 id="ihconsv0-isconsv0-int">ihconsv=0, isconsv=0 (int)<a class="headerlink" href="#ihconsv0-isconsv0-int" title="Permanent link">&para;</a></h3>
+<p>Heat budget and salt conservation models flags. If <code>ihconsv=0</code>, the heat budget model is not used. If <code>ihconsv=1</code>, a heat budget model is invoked, and a number of netcdf files for radiation flux input are read in from <code>sflux/sflux_rad*.nc</code>. If <code>isconsv=1</code>, the evaporation and precipitation model is evoked but the user needs to turn on the pre-processing flag <code>PREC_EVAP</code> in makefile and recompile. In this case, <code>ihconsv</code> must be <code>1</code>, and additional netcdf inputs for precipitation (<code>sflux/sflux_prc*.nc</code>) are required. The user can also turn on <code>USE_BULK_FAIRALL</code> in the makefile to use COARE algorithm  instead of the default Zeng's bulk aerodynamic module.</p>
+<p>If <code>ihconsv=1</code>, 2 additional inputs are: <code>albedo.gr3</code> (for surface albedo; usually ~0.1) and <code>watertype.gr3</code> (that specifies the light attenuation coefficients for different water types following Jerlov: a dimensionles ratio <code>R</code>, and two characteristic depth (<code>D1</code> and <code>D2</code>).
+ See <code>schism_step</code> for those values for different types 1-7. If the type is '8', user needs to specify those 3 coefficients in <code>param.nml</code>: <code>watertype_rr, watertype_d1, watertype_d2</code>.</p>
+<h3 id="i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters">i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)<a class="headerlink" href="#i_hmin_airsea_ex-int-hmin_airsea_ex-double-in-meters" title="Permanent link">&para;</a></h3>
+<p>Option to locally turn off heat exchange.</p>
+<ul>
+<li><code>i_hmin_airsea_ex=1</code>: exchange turned off if <code>local grid depth&lt;hmin_airsea_ex</code></li>
+<li><code>i_hmin_airsea_ex=2</code>: exchange turned off if <code>local water depth&lt;hmin_airsea_ex</code></li>
+</ul>
+<h3 id="i_hmin_salt_ex-int-hmin_salt_ex-double-in-meters">i_hmin_salt_ex (int), hmin_salt_ex (double; in meters)<a class="headerlink" href="#i_hmin_salt_ex-int-hmin_salt_ex-double-in-meters" title="Permanent link">&para;</a></h3>
+<p>Similar to <code>i_hmin_airsea_ex</code> and <code>hmin_airsea_ex</code>.</p>
+<h3 id="iprecip_off_bnd-int">iprecip_off_bnd (int)<a class="headerlink" href="#iprecip_off_bnd-int" title="Permanent link">&para;</a></h3>
+<p>If <code>iprecip_off_bnd</code>/=0, preciptation will be turned off near land boundary. This is useful for islands sitting on very steep slopes.</p>
+<h3 id="stemp_stc-double-stemp_dz12-double">stemp_stc (double), stemp_dz(1:2) (double)<a class="headerlink" href="#stemp_stc-double-stemp_dz12-double" title="Permanent link">&para;</a></h3>
+<p>Option to account for sediment-water heat exchange on bottom temperature.
+  <code>stemp_stc</code> is  heat transfer coefficient <span class="arithmatex">\(W/m^2/K\)</span> (so <code>stemp_stc=0</code> would turn this option off).
+  stemp_dz(1) is the equivalent sediment buffer depth (m) for heat into sediment, and
+  stemp_dz(2) is the equivalent sediment buffer depth (m) for heat out of sediment.</p>
+<h3 id="ihdif0-int">ihdif=0 (int)<a class="headerlink" href="#ihdif0-int" title="Permanent link">&para;</a></h3>
+<p>Flag for applying horizontal diffusivity, implemented as a geometric filter. 
+If <code>ihdif=0</code>, it is not used. If <span class="arithmatex">\(ihdif \neq 0\)</span>, input <code>hdif.gr3</code> is used to specify filter strength at each node (which
+ should be &lt;=0.2).</p>
+<h3 id="ihot0-int">ihot=0 (int)<a class="headerlink" href="#ihot0-int" title="Permanent link">&para;</a></h3>
+<p>Hot start flag. If <code>ihot=0</code>, cold start; if <span class="arithmatex">\(ihot \neq 0\)</span>, hot start from <code>hotstart.nc</code>. If <code>ihot=1</code>, the time and time step are reset to zero, and outputs start from <code>t=0</code> accordingly (and you need to adjust other inputs like <code>.th</code> etc). If <code>ihot=2</code>, the run (and outputs) will continue from the time specified in <code>hotstart.nc</code>. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ol>
+<li>With <code>ihot=2</code>,you do not need to adjust other inputs but you do need to make sure <code>flux.out</code> is inside <code>outputs/</code> (even if you used <code>iflux=0</code>). If you used <span class="arithmatex">\(iout\_sta \neq 0\)</span>, make sure <code>staout_*</code> are inside <code>outputs/</code> as well. This is because the code will try to append to these outputs upon restart, and would crash if it cannot find them. On the other hand, you don't need to have the global outputs in <code>outputs/</code> because <code>nhot_write</code> is a multiple of <code>ihfskip</code> so the new outputs will be written into a new stack. In fact, you can change the core count upon hotstart this way.</li>
+<li>Under <code>ihot=1</code>, beware the use of ramps. Since the time origin has been reset, the ramps need to be adjusted accordingly. For example, if the field has been fully warmed up at the hotstart, then set ramps=0.</li>
+</ol>
+</div>
+<h3 id="ihydraulics0-int">ihydraulics=0 (int)<a class="headerlink" href="#ihydraulics0-int" title="Permanent link">&para;</a></h3>
+<p>Hydraulic model option. If <span class="arithmatex">\(ihydraulics \neq 0\)</span>, <code>hydraulics.in</code> is required (cf. hydraulics user manual).</p>
+<h3 id="iloadtide0-int-loadtide_coef-double">iloadtide=0 (int), loadtide_coef (double)<a class="headerlink" href="#iloadtide0-int-loadtide_coef-double" title="Permanent link">&para;</a></h3>
+<p>Option to specify Self Attraction and Loading (SAL) tide, usually used for basin- or global-scale applications. 
+If <code>iloadtide=0</code>, SAL is off. If <code>iloadtide=1</code>, the SAL input is interpolated values from a tide database,
+ e.g., FES2014, given in <code>loadtide_[FREQ].gr3</code>, where <code>[FREQ]</code> are frequency names (shared with 
+tidal potential, in upper cases like M2) and the two 'depths' inside are amplitude (m) 
+and phases (degrees behind GMT). In this option, SAL is
+ lumped into tidal potential so it shares some parameters with tidal potential
+ in <code>bctides.in</code> (cut-off depth, frequencies).</p>
+<p>If iloadtide=2 or 3, use a simple scaling for gravity approach (in this option,
+ SAL is applied everywhere and does not share parameters with tidal potential).
+If <code>iloadtide=2</code>, a simple scaling specified by <code>loadtide_coef</code> is used to reduce 
+the gravity. If <code>iloadtide=3</code>, the scaling is dependent on the local depth <em>a la</em> Stepanov &amp; Hughes (2004),
+ with a maximum value of <code>loadtide_coef</code>.</p>
+<h3 id="imm0-ibdef10-int">imm=0, ibdef=10 (int)<a class="headerlink" href="#imm0-ibdef10-int" title="Permanent link">&para;</a></h3>
+<p>Bed deformation option. Default: <code>0</code> (no bed deformation); <code>1</code>: with bed deformation (needs <code>ibdef</code> (# of steps during which deformation occurs), and <code>bdef.gr3</code>); 2: 3D bottom deformation (need to interact with code).</p>
+<h3 id="indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double">indvel=0 (int), ihorcon=0 (int), hvis_coef0=0.025 (double), ishapiro=1, niter_shap=1 (int), shapiro0=0.5 (double)<a class="headerlink" href="#indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double" title="Permanent link">&para;</a></h3>
+<p>These parameters (and <code>inter_mom</code> below) control the numerical dissipation in momentum solver; see SCHISM paper (Zhang et al. 2016) for details.</p>
+<p><code>indvel</code> determines the method of converting side velocity to node velocity. If <code>indvel=0</code>, the node velocity is allowed to be discontinuous across elements and additional viscosity/filter is needed to filter out grid-scale noises (spurious 'modes'). If <code>indvel=1</code>, an inverse-distance interpolation procedure is used instead and the node velocity is continuous across elements; this method requires no additional viscosity/filter unless kriging ELM is used (<code>inter_mom &gt;0</code>). In general, <code>indvel=0</code> leads to smaller numerical dissipation and better accuracy, but does generally require a velocity B.C.</p>
+<p>Due to spurious modes or dispersion (oscillation), viscosity/filter should be applied. <code>ihorcon=0</code>:no horizontal viscosity;
+ <code>=1</code>: Laplacian (implemented as a filter); <code>=2</code>: bi-harmonic. For <code>ihorcon/=0</code>, <code>hvis_coef0</code> 
+specifies the non-dimensional viscosity. In addition to the viscosity, one can add the Shapiro filter, 
+which is specified by <code>ishapiro</code> =0,±1, 2 (turn off/on Shapiro filter). If <code>ishapiro=1</code>, <code>shapiro0</code> 
+specifies the Shapiro filter strength. If <code>ishapiro=-1</code>, an input called <code>shapiro.gr3</code> is 
+required which specifies the filter strength at each node (there is a pre-proc script <code>gen_slope_filter2.f90</code> 
+for this). If <code>ishapiro=2</code>, a Smagorinsky-like filter is applied and <code>shapiro.gr3</code> specifies the coefficient <span class="arithmatex">\((\gamma_0)\)</span>, 
+which is typically 10-<span class="arithmatex">\(10^3\)</span>:</p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq01}
+\begin{aligned}
+\gamma &amp;= 0.5\tanh (\gamma_0 \Delta t \hat \mu)\\
+\hat\mu &amp;= \sqrt{u_x^2 + v_y^2 + \frac{(u_y + v_x)^2}{2}}
+\end{aligned}
+\end{equation}\]</div>
+<p>If <code>ishapiro/=0</code>, <code>niter_shap</code> specifies the number of times the filter is applied. </p>
+<p>For non-eddying regime applications (nearshore, estuary, river), an easiest option is: <code>indvel=0</code>, <code>ishapiro=1</code> (<code>shapiro0=0.5</code>), <code>ihorcon= inter_mom=0</code>.</p>
+<p>For applications that include the eddying regime, grid resolution in the eddying regime needs to vary smoothly (Zhang et al. 2016), and the user needs to tweak dissipation carefully. A starting point can be: <code>indvel=ishapiro=inter_mom=0</code>, <code>ihorcon=2</code>, <code>hvis_coef0=0.025</code>. If the amount of dissipation is insufficient in the non-eddying regime, consider using <code>ishapiro=-1</code>, with an appropriate <code>shapiro.gr3</code> to turn on Shapiro filter locally to add dissipation, or use <code>ishapiro=2</code> and <code>shapiro.gr3</code> with <span class="arithmatex">\((\gamma_0)\)</span> set to 1000 everywhere.</p>
+<h3 id="inter_mom0-kr_co1-int">inter_mom=0, kr_co=1 (int)<a class="headerlink" href="#inter_mom0-kr_co1-int" title="Permanent link">&para;</a></h3>
+<p>Interpolation method at foot of characteristic line during ELM. <code>inter_mom=0</code>: default linear interpolation; <code>=1</code>: dual kriging method. If <code>inter_mom=-1</code>, the depth in <code>krvel.gr3</code> (0 or 1) will determine the order of interpolation (linear or kriging). If the kriging ELM is used, the general covariance function is specified in <code>kr_co</code>: 1: linear <span class="arithmatex">\(f(h)=-h\)</span>; 2: <span class="arithmatex">\((h^2*log(h))\)</span>; 3: cubic <span class="arithmatex">\((h^3)\)</span>; 4: <span class="arithmatex">\((-h^5)\)</span>.</p>
+<p>In general, <code>indvel=0</code> should be used with <code>inter_mom=0</code> or <code>inter_mom=1, kr_co=1,2</code> to avoid large dispersion (with additional viscosity/filter also). <code>indvel=1</code> can be used with any covariance function without viscosity/filter.</p>
+<h3 id="inu_elev0-inu_uv0-int">inu_elev=0, inu_uv=0 (int)<a class="headerlink" href="#inu_elev0-inu_uv0-int" title="Permanent link">&para;</a></h3>
+<p>Sponge layer for elevation and velocity (which is rarely used in SCHISM). Relaxation/nudging of a generic variable is implemented as:</p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq02}
+\widetilde \varphi = (1-\gamma)\varphi + \gamma\varphi_{target}
+\end{equation}\]</div>
+<p>which is a discrete analogue of the restoration equation:</p>
+<div class="arithmatex">\[\begin{equation}
+\label{eq03}
+\frac{\partial \varphi}{\partial t} = \frac{\gamma}{\Delta t} \left( \varphi_{target} - \varphi \right)
+\end{equation}\]</div>
+<p>If <code>inu_elev=0</code>, no relaxation is applied to elevation. If <code>inu_elev=1</code>, relaxation constants are specified in <code>elev_nudge.gr3</code> (depth=0 means no relaxation, depth=1 means strongest nudging) and the elevations are relaxed toward 0. Similarly for <code>inu_uv</code> (with input <code>uv_nudge.gr3</code>).</p>
+<h3 id="inu_tr0-int-array-nu_sum_multint-step_nu_tr86400-double">inu_tr(:)=0 (int array), nu_sum_mult(int), step_nu_tr=86400. (double)<a class="headerlink" href="#inu_tr0-int-array-nu_sum_multint-step_nu_tr86400-double" title="Permanent link">&para;</a></h3>
+<p>Nudging flag for tracer models (e.g. temperature), and nudging step (in sec). When <code>inu_tr=0</code>, no nudging is done.</p>
+<p>When <code>inu_tr=1</code>, relax back to initial conditions.</p>
+<p>When <code>inu_tr=2</code>, nudge to values specified in <code>[MOD]_nu.nc</code>, which has a time step of <code>step_nu_tr</code> (in sec).</p>
+<p>If <code>inu_tr≠0</code>, the horizontal relaxation factors are specified in <code>[MOD]_nudge.gr3</code> (as depths info), 
+ and the vertical relaxation factors are specified as a linear function of depths with: <code>vnh[1,2]</code> 
+(transitional depths) and <code>vnf[1,2]</code> (relaxation constants at the 2 depths). The final relaxation 
+constant is either the sum (if <code>nu_sum_mult=1</code>) or product (if <code>nu_sum_mult=2</code>) of the two, 
+i.e. (horizontal <code>+ or *</code> vertical relaxation factors) times <code>dt</code>.</p>
+<h3 id="inunfl0-int">inunfl=0 (int)<a class="headerlink" href="#inunfl0-int" title="Permanent link">&para;</a></h3>
+<p>Choice of inundation algorithm. <code>inunfl=1</code> can be used if the horizontal resolution is fine enough, and this is critical for tsunami simulations. Otherwise use <code>inunfl=0</code>.</p>
+<h3 id="iveg0-int">iveg=0 (int)<a class="headerlink" href="#iveg0-int" title="Permanent link">&para;</a></h3>
+<p>Parameters for submerged or emergent vegetation. If <code>iveg/=0</code>, you need to supply 4 extra inputs: 
+<code>veg_cd.gr3</code> (form drag coefficient), <code>veg_D.gr3</code> (depth is stem diameter in meters);
+ <code>veg_N.gr3</code> (depth is # of stems per m2); and <code>veg_h.gr3</code> (height of canopy in meters). These are original, unbent
+  values for the vegetation.</p>
+<p>If <code>iveg=1</code>, the vertical variation/scalings for these parameters are specified for <code>nbins_veg_vert</code> vertical bins, with
+ <code>veg_vert_z(1:nbins_veg_vert+1)</code> specifying the distance from bed (in meters) for each bin 
+ (ascending order starting from 0). The vertical scalings are given by <code>veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1)</code>.</p>
+<p>If <code>iveg=2</code>, flexible vegetation formulation of Ganthy et al. (2011) is used. Parameters needed for this case are:
+  non-dimensional Leaf Area Index <code>veg_lai</code> and <code>veg_cw</code> (a non-dimensional calibration coefficient for diameter of bent leaf).</p>
+<h3 id="itr_met3-int-h_tvd5-double">itr_met=3 (int), h_tvd=5. (double)<a class="headerlink" href="#itr_met3-int-h_tvd5-double" title="Permanent link">&para;</a></h3>
+<p>Transport option for all tracers. <code>itr_met=3</code> for TVD, and <code>itr_met=4</code> for 3rd order WENO. <code>h_tvd</code> specifies the transition depth (in meters) between upwind and higher-order schemes; i.e. more efficient upwind is used when the <code>local depth &lt; h_tvd</code>. 
+Also in this case, you can additionally toggle between upwind and TVD by specifying regions in <code>tvd.prop</code>. The TVD limiter function is specified in <code>TVD_LIM</code> in <code>mk/include_modules</code> (for code efficiency purpose). </p>
+<p>If <code>itr_met=3</code>, 2 tolerances are also required (use recommended values).
+If <code>itr_met=4</code> (WENO), there are several additional parameters. The most important ones are <code>epsilon[12]</code>, which controls the
+ numerical dispersion for the 2nd and 3rd-order WENO respectively (note that the code will decide which order is used at each prism based on geometric constraints).</p>
+<h3 id="itur0-int">itur=0 (int)<a class="headerlink" href="#itur0-int" title="Permanent link">&para;</a></h3>
+<p>Turbulence closure model selection.</p>
+<p>If <code>itur=0</code>, constant diffusivities are used for momentum and transport, and the diffusivities are specified in <code>dfv0</code>, <code>dfh0</code>.</p>
+<p>If <code>itur=-2</code>, vertically homogeneous but horizontally varying diffusivities are used, which are read in from <code>hvd.mom</code> and <code>hvd.tran</code>.</p>
+<p>If <code>itur=-1</code>, horizontally homogeneous but vertically varying diffusivities are used, which are read in from <code>vvd.dat</code>.</p>
+<p>If <code>itur=2</code>, the zero-equation Pacanowski and Philander closure is used. In this case, a few extra parameters are required: <code>h1_pp</code>, <code>vdmax_pp1</code>, <code>vdmin_pp1</code>, <code>tdmin_pp1</code>, <code>h2_pp</code>, <code>vdmax_pp2</code>, <code>vdmin_pp2</code>, <code>tdmin_pp2</code>. Eddy viscosity is computed as: <span class="arithmatex">\(\text{vdiff}=\text{vdiff_max}/(1+\text{rich})^2+\text{vdiff_min}\)</span>, and diffusivity <span class="arithmatex">\(\text{tdiff}=\text{vdiff_max}/(1+\text{rich})^2+\text{tdiff_min}\)</span>, where <span class="arithmatex">\(\text{rich}\)</span> is a Richardson number. The limits (<code>vdiff_max</code>, <code>vdiff_min</code> and <code>tdiff_min</code>) vary linearly with depth between depths <code>h1_pp</code> and <code>h2_pp</code>.</p>
+<p>If <code>itur=3</code>, then the two-equation closure schemes from the GLS model of Umlauf and Burchard (2003) are used. In this case, 2 additional parameters are required: <code>mid</code>, <code>stab</code>, which specify the closure scheme and stability function used: <code>mid=</code> <code>MY</code> is Mellor &amp; Yamada; <code>KL</code> is GLS as k-kl; <code>KE</code> is GLS as <span class="arithmatex">\(k-\varepsilon\)</span>; <code>KW</code> is GLS as <span class="arithmatex">\(k-\omega\)</span>; <code>UB</code> is Umlauf &amp; Burchard's optimal. <code>stab=GA</code> is Galperin's clipping (only for MY); <code>KC</code> is Kantha &amp; Clayson's stability function). Also the user needs to specify max/min diffusivity/viscosity in <code>diffmax.gr3</code> and <code>diffmin.gr3</code>, as well as a surface mixing length scale constant <code>xlsc0</code>.</p>
+<p>If <code>itur=4</code>, GOTM turbulence model is invoked; the user needs to turn on pre-processing flag <code>USE_GOTM</code> in makefile 
+and recompile (GOTM5.2 uses cmake, so does not need to be pre-compiled). In this case, the minimum and maximum 
+viscosity/diffusivity are still specified in <code>diffmin.gr3</code> 
+and <code>diffmax.gr3</code>. There are some 
+ready-made samples for this input in the source code bundle. 
+A key parameter is the steady state Richardson number. If you wish to tune some parameters 
+inside, you may consult <a href="https://gotm.net">gotm.net</a> for more details.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ol>
+<li>GOTM has only been tested up to v5.2, not newer versions of GOTM. Using <code>itur=3</code> generally gave similar results, but GOTM can produce substantially better stratification in some cases.</li>
+</ol>
+</div>
+<h3 id="nadv1-int-dtb_min10-dtb_max30-double">nadv=1 (int), dtb_min=10, dtb_max=30 (double)<a class="headerlink" href="#nadv1-int-dtb_min10-dtb_max30-double" title="Permanent link">&para;</a></h3>
+<p>Advection on/off option. If <code>nadv=0</code>, advection is selectively turned off based on the input file <code>adv.gr3</code>. 
+If <code>nadv=1</code> or <code>2</code>, advection is on for the whole domain, and backtracking is done using either 
+Euler or 2nd-order Runge-Kutta scheme.
+<code>dtb_[min,max]</code> are min/max sub-steps allowed in btrack; actual sub-steps are calculated based on local flow gradients.</p>
+<h3 id="nchi0-int">nchi=0 (int)<a class="headerlink" href="#nchi0-int" title="Permanent link">&para;</a></h3>
+<p>Bottom friction option. If <code>nchi=-1</code>, and Manning's <span class="arithmatex">\(n\)</span> is specified in <code>manning.gr3</code>. If <code>nchi=0</code>, spatially varying drag coefficients are read in from <code>drag.gr3</code> (as depth info). For <code>nchi=1</code>, bottom roughnesses (in meters) are read in from <code>rough.gr3</code>.</p>
+<p>If <code>nchi=-1</code>, an additional parameter is required: <code>hmin_man</code> (in meters) which sets the minimum depth used in the Manning formulation.</p>
+<p>If <code>nchi=1</code>, one additional parameter is required: <code>dzb_min</code> (in meters). In this case the drag coefficients are calculated using the log drag law when the bottom cell thickness <span class="arithmatex">\(\delta_b&gt;=\text{dzb_min}\)</span>; when <span class="arithmatex">\(\delta_b&lt;\text{dzb_min}\)</span>, <span class="arithmatex">\(\text{Cd}=\text{Cdmax}\)</span>, where <span class="arithmatex">\(\text{Cdmax}=\text{Cd}(\delta_b=\text{dzb_min})\)</span>. This is to avoid exaggeration of <span class="arithmatex">\(\text{Cd}\)</span> in very shallow water.</p>
+<h3 id="ncor0-int">ncor=0 (int)<a class="headerlink" href="#ncor0-int" title="Permanent link">&para;</a></h3>
+<p>Coriolis option. If <code>ncor=0</code> or <code>-1</code>, a constant Coriolis parameter is specified. If <code>ncor=0</code>, <code>coricoef</code> specifies the Coriolis factor. If <code>ncor=-1</code>, <code>rlatitude</code> specifies the mean latitude used to calculate the Coriolis factor.</p>
+<p>If <code>ncor=1</code>, a variable Coriolis parameter, based either on a beta-plane approximation (<code>ics=1</code>) or on the latitude-dependent Coriolis (<code>ics=2</code>), is used, with the lat/lon coordinates read in from <code>hgrid.ll</code>. For <code>ics=1</code>, the center of beta-plane approximation must be correctly specified in <code>sfea0</code>.</p>
+<h3 id="nws0-int-drampwind1-double-iwind_form1-int-iwindoffint-wtimincdt-double">nws=0 (int), drampwind=1. (double), iwind_form=1 (int), iwindoff(int), wtiminc=dt (double)<a class="headerlink" href="#nws0-int-drampwind1-double-iwind_form1-int-iwindoffint-wtimincdt-double" title="Permanent link">&para;</a></h3>
+<p>Wind forcing options and the interval (in seconds) with which the wind input is read in. If <code>nws=0</code>, no 
+wind is applied (and <code>wtiminc</code> becomes unused). If <code>nws=1</code>, constant wind is applied to the whole domain 
+at any given time, and the time history of wind is read in from <code>wind.th</code>. If <code>nws=2</code>, spatially 
+and temporally variable wind is applied and the input consists of a number of netcdf files in the directory
+ <code>sflux/</code>. The option <code>nws=3</code> is reserved for coupling with atmospheric model via ESMF caps. If <code>nws=4</code>, 
+the required input <code>atmos.nc</code> specifies wind and pressure at each node and at time of multiple of <code>wtiminc</code>. 
+Additional inputs (e.g. heat fluxes) are needed if heat/salt exchange module is invoked.
+If <code>nws=-1</code> (requires USE_PAHM), use Holland parametric wind model (barotropic only with wind and atmos. pressure).
+ In this case, the Holland model is called every step so wtiminc is not used. An extra
+ input is needed: <code>hurricane-track.dat</code>.</p>
+<p>If <code>nws&gt;0</code>, the ramp-up period (in days) is specified with <code>drampwind</code>. Also
+ the user has the option to scale the wind speed using <code>iwindoff</code>=1 (which requires an additional input <code>windfactor.gr3</code>).</p>
+<p>The wind stress formulation is selected with <code>iwind_form</code>. </p>
+<ul>
+<li>If <code>nws=2, ihconsv=1 &amp;&amp; iwind_form=0</code>, the stress is calculated from heat exchange routine. </li>
+<li>If <code>nws=1</code> or <code>4</code>, or <code>nws=2 &amp;&amp; ihconsv=0</code>, or <code>nws=2 &amp;&amp; iwind_form≠ 0</code>, the stress is calculated from Pond &amp; Pichard formulation (originally from Garret) if <code>iwind_form=-1</code>, or from Hwang (2018) if <code>iwind_form=1</code>.</li>
+<li>If <code>WWM</code> is enabled and <code>icou_elfe_wwm &gt; 0</code> and <code>iwind_form=-2</code>, stress is calculated by WWM.</li>
+</ul>
+<h3 id="rho01000-shw4184-double">rho0=1000, shw=4184. (double)<a class="headerlink" href="#rho01000-shw4184-double" title="Permanent link">&para;</a></h3>
+<p>Reference water density for Boussinesq approximation and specific heat of water in J/kg/K.</p>
+<h3 id="rmaxvel10-double">rmaxvel=10. (double)<a class="headerlink" href="#rmaxvel10-double" title="Permanent link">&para;</a></h3>
+<p>Maximum velocity. This is needed mainly for the air-water exchange as the latter may blow up if the water velocity is above 20m/s.</p>
+<h3 id="s1_mxbnt05-s2_mxnbnt35-double">s1_mxbnt=0.5, s2_mxnbnt=3.5 (double)<a class="headerlink" href="#s1_mxbnt05-s2_mxnbnt35-double" title="Permanent link">&para;</a></h3>
+<p>Dimensioning parameters used in inter-subdomain backtracking. Start from <code>s[12]_mxnbt=0.53</code>, and increase them (gradually) if you get a fatal error like “btrack: overflow”. Accuracy is not affected by the choice of these two parameters; these only affect memory consumption.</p>
+<h3 id="slam0-124-sfea045-double">slam0=-124, sfea0=45 (double)<a class="headerlink" href="#slam0-124-sfea045-double" title="Permanent link">&para;</a></h3>
+<p>Centers of projection used to convert lat/lon to Cartesian coordinates. These are used if a variable Coriolis parameter is employed (ncor=1).</p>
+<h3 id="start_year2000-start_month1-start_day1-int-start_hour0-utc_start8-double">start_year=2000, start_month=1, start_day=1 (int), start_hour=0, utc_start=8 (double)<a class="headerlink" href="#start_year2000-start_month1-start_day1-int-start_hour0-utc_start8-double" title="Permanent link">&para;</a></h3>
+<p>Starting time for simulation. <code>utc_start</code> is hours <strong>behind</strong> the GMT, and is used to adjust time zone. For example, <code>utc_start=5</code> is US Eastern Time, and <code>utc_start= -8</code> is Beijing Time.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ol>
+<li>SCHISM's view of the time origin is relatively simple. The code starts from t=0 and marches with time step <code>dt</code> under cold start. It starts from a specified time upon hot start. </li>
+<li>There are only 2 exceptions: (1) in air-sea exchange (<code>ihconsv=1</code>), the origin info (including <code>utc_start</code>) specified in these parameters will be compared against the time origins in each <code>sflux</code> file to determine the starting stack; (2) WWM manages its own time origins in <code>wwminput.nml</code>; it's advisable to align the latter with SCHISM's origin.</li>
+</ol>
+</div>
+<h3 id="thetai06-double">thetai=0.6 (double)<a class="headerlink" href="#thetai06-double" title="Permanent link">&para;</a></h3>
+<p>Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to get maximum stability for strong wet/dry.</p>
+<h2 id="schout-block">SCHOUT block<a class="headerlink" href="#schout-block" title="Permanent link">&para;</a></h2>
+<h3 id="iout_sta0-nspool_sta10-int">iout_sta=0, nspool_sta=10 (int)<a class="headerlink" href="#iout_sta0-nspool_sta10-int" title="Permanent link">&para;</a></h3>
+<p>Station output flag. If <code>iout_sta≠0</code>, an input <code>station.in</code> is needed. In addition, <code>nspool_sta</code> specifies the spool for station output. In this case, <strong>make sure <code>nhot_write</code> is a multiple of <code>nspool_sta</code></strong>.</p>
+<h3 id="iof_ugrid-int">iof_ugrid (int)<a class="headerlink" href="#iof_ugrid-int" title="Permanent link">&para;</a></h3>
+<p>UGRID option for outputs under scribed IO. If iof_ugrid/=0, outputs will also have UGRID metadata (at
+the expense of file size).</p>
+<h3 id="nc_out-1int">nc_out =1(int)<a class="headerlink" href="#nc_out-1int" title="Permanent link">&para;</a></h3>
+<p>Main switch to turn on/off netcdf outputs, useful for other programs (e.g., ESMF) to control outputs.</p>
+<h3 id="nhot0-nhot_write8640-int">nhot=0, nhot_write=8640 (int)<a class="headerlink" href="#nhot0-nhot_write8640-int" title="Permanent link">&para;</a></h3>
+<p>Hot start output control parameters. If <code>nhot=0</code>, no hot start output is generated. If <code>nhot=1</code>, 
+hotstart output is named <code>outputs/hotstart_[process_id]_[it].nc</code> every <code>nhot_write</code> 
+steps, where <code>it</code> is the corresponding time iteration number. <code>nhot_write</code> must be a multiple of 
+<code>ihfskip</code> and <code>nspool_sta</code>. If you want to hotstart a run from step <code>it</code>, you need to combine all process-specific 
+hotstart outputs into a <code>hotstart.nc</code> using <code>combine_hotstart7.f90</code> (<code>./combine_hotstart7 -h</code> for help).</p>
+<h3 id="iof_-int">iof_* (int)<a class="headerlink" href="#iof_-int" title="Permanent link">&para;</a></h3>
+<p>Global output (in netcdf4 format) options, where <code>*</code> stands for module name (e.g. "hydro", "wwm" etc). 
+The frequency of global outputs is controlled by 2 parameters in <a href="#core">CORE</a>: 
+<a href="#nspool-ihfskip-int"><code>nspool</code></a> and <a href="#nspool-ihfskip-int"><code>ihfskip</code></a>. Output is done every
+ <code>nspool</code> steps, and a new output stack is created every <code>ihfskip</code> steps. </p>
+<p>Under OLDIO, the outputs are named as <code>outputs/schout_[MPI process id]_[1,2,3,...].nc</code> etc. The combine scripts 
+are then used to gather each output variable across all MPI processes into a single output, e.g., <code>schout_[1,2,3…].nc</code>.</p>
+<p>With new scribed I/O, outputs look like <code>out2d_1,2,3…].nc</code> etc (and no combining is necessary). In this mode,
+ all 2D outputs are found in <code>out2d*</code> and each 3D output (note that vector output like horizontal velocity counts as 2
+ outputs) has its own netcdf files, e.g. <code>salinity_[1,2..].nc</code>, <code>horizontalVelX_[1,2..].nc</code> etc.</p>
+<p>Each output variable is controlled by an I/O flag in <code>param.nml</code>. We only show a few examples below; 
+the rest are similar. Note that variables may be centered at nodes/sides/elements horizontally and 
+whole/half levels vertically. However, at the moment most variables are centered at nodes and whole levels,
+ and most post-processing FORTRAN scripts can only handle this type of outputs (while VisIT can handle other types).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>iof_hydro(1) = 1 !global elevation output control. If iof_hydro(1)=0, no global elevation is recorded. 
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                 !If iof_hydro(1)= 1, global elevation for each node is recorded.
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                 !The output is either starting from scratch or appended to existing ones depending
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                 !on ihot.
+</code></pre></div>
+<p>Some outputs are conditional upon you turn on certain module; e.g. <code>iof_sed(7) = 1</code> won’t output 
+the bottom depth change unless you turn on <code>USE_SED</code> in makefile.</p>
+<p>Some ‘native’ variables (e.g., element- or side-centered) are:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>iof_hydro(27) = 1 !horizontal velocity defined at side [m/s]. These are the original velocity inside SCHISM
+</code></pre></div>
+
+              
+            </article>
+            
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
+      
+        
+        <a href="vgrid.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Vertical grid (vgrid.in)" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Vertical grid (vgrid.in)
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="bctides.html" class="md-footer__link md-footer__link--next" aria-label="Next: Boundary conditions (bctides.in)" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              Boundary conditions (bctides.in)
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "..", "features": ["toc.integrate", "toc.follow", "content.code.annotate"], "search": "../assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "stable", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.f758a944.min.js"></script>
+      
+        <script src="../javascripts/mathjax.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
