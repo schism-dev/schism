@@ -5548,7 +5548,7 @@
 
         !Init sediment T
         j=nf90_inq_varid(ncid2,"sediment_T",mm)
-        if(j/=NF90_NOERR) then 
+        if(j==NF90_NOERR) then 
           if(myrank==0) then
             j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
             if(j/=NF90_NOERR) call parallel_abort('init: hot sediment_T ')
