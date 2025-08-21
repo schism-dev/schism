@@ -94,7 +94,7 @@ module schism_glbl
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
                   &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm,iof_icm_ba,&
-                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif,nmarsh_types
+                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif,nmarsh_types,istemp
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_cos,iof_fib, &
@@ -111,7 +111,7 @@ module schism_glbl
                       &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
                       &ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
                       &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2,ri_st, &
-                      &create_marsh_min,create_marsh_max,age_marsh_min,stemp_thick,relax_2_airt
+                      &create_marsh_min,create_marsh_max,age_marsh_min,relax_2_airt
   real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:), &
         &veg_di0(:),veg_h0(:),veg_nv0(:),veg_cd0(:),drown_marsh(:)
 
@@ -469,6 +469,7 @@ module schism_glbl
   real(rkind),save,allocatable :: Cdp(:)         ! drag at node
   real(rkind),save,allocatable :: rmanning(:)         ! Manning's n at node
   real(rkind),save,allocatable :: stemp_stc(:)    !soil thermal conductivity
+  real(rkind),save,allocatable :: stemp_dz(:)    !soil thickness
   real(rkind),save,allocatable,target :: windx(:),windy(:) !wind vector
   real(rkind),save,allocatable,target :: prec_rain(:),prec_snow(:) !precipitation of rain and snow
   real(rkind),save,allocatable,target :: sdbt(:,:,:),shapiro(:),shapiro_smag(:), &

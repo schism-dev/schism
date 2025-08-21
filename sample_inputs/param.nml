@@ -591,13 +591,13 @@
   watertype_d2 = 23.
 
 !-----------------------------------------------------------------------
-! Option to add a sediment layer for the buffer effect on temperature
-! stemp_thick=0 would turn off this effect; otherwise, needs soil_conductivity.gr3
-! which specifies the soil thermal conductivity in W/m^2/K.
+! Option to add a sediment layer for the buffer effect on temperature.
+! istemp=0 would turn off this effect; otherwise, needs soil_conductivity.gr3
+! which specifies the soil thermal conductivity in W/m^2/K, and soil_thick.gr3 (in meters).
 ! The conductivity is on the order of 5, but can be 0 in deep depths to turn off 
-! the effect.
+! the effect
 !-----------------------------------------------------------------------
-  stemp_thick= 0.0   !soil thickness [m] 
+  istemp = 0   !on/off
   relax_2_airt = 0.05  ![0,1] relaxation to air T at shallow wet area
 
 !-----------------------------------------------------------------------

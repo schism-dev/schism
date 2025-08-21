@@ -7808,10 +7808,10 @@
         endif !if_source
 
 !       Heat exchange between sediment and bottom water
-        if(stemp_thick>1.d-16) then
+        if(istemp/=0) then
 !$OMP     do
           do i=1,nea
-!            tmp0=sum(stemp_dz(elnode(1:i34(i),i)))/i34(i) !SED thickness
+            tmp=sum(stemp_dz(elnode(1:i34(i),i)))/i34(i) !SED thickness>0
             tmp0=minval(stemp_stc(elnode(1:i34(i),i))) !min conductivity
 
             if(idry_e(i)==1) then !use air T if available; soil-air exchange
@@ -7820,19 +7820,19 @@
                 !tmp1=(tmp2-stemp(i))*dt*stemp_stc2 !heat [J/m^2]
                 !4.184e6=\rho*C_p is the heat capacity of water (J.m-3/K), which happens 
                 !to be similar to soil b/c of the differences in density and C_p
-                tmp1=dt*tmp0/max(stemp_thick,1.d-2)/4.184d6 ![-] like blending factor; >0
+                tmp1=dt*tmp0/max(tmp,1.d-2)/4.184d6 ![-] like blending factor; >=0
                 tmp1=min(tmp1,1.d0) !limit factor at expense of conservation in extreme cases
-                stemp(i)=stemp(i)+tmp1*(tmp2-stemp(i)) !tmp1/max(tmp0,1.d-2)/4.184d6
+                stemp(i)=stemp(i)+tmp1*(tmp2-stemp(i)) 
               endif !nws
             else !wet
               !tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc1 !heat transfer budget (J.m-2)
-              tmp1=dt*tmp0/max(stemp_thick,1.d-2)/4.184d6 ![-] like blending factor
+              tmp1=dt*tmp0/max(tmp,1.d-2)/4.184d6 ![-] like blending factor
               tmp1=min(tmp1,1.d0) !limit factor
-              stemp(i)=stemp(i)+tmp1*(tr_el(1,kbe(i)+1,i)-stemp(i)) !tmp1/max(tmp0,1.d-2)/4.184d6
+              stemp(i)=stemp(i)+tmp1*(tr_el(1,kbe(i)+1,i)-stemp(i))
               !Bottom T update
               tmp1=dt*tmp0/max(ze(kbe(i)+1,i)-ze(kbe(i),i),1.d-2)/4.184d6
               tmp1=min(tmp1,1.d0)
-              tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1*(tr_el(1,kbe(i)+1,i)-stemp(i)) !tmp1/max(ze(kbe(i)+1,i)-ze(kbe(i),i),1.d-2)/4.184d6
+              tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1*(tr_el(1,kbe(i)+1,i)-stemp(i)) 
 
               do k=1,kbe(i) 
                 tr_el(1,k,i)=tr_el(1,kbe(i)+1,i) 
@@ -7840,7 +7840,7 @@
             endif !idry_e
           enddo !i
 !$OMP     enddo
-        endif !abs(stemp_stc)
+        endif !istemp
 
         !Relax shallow wet T to air T
         if(i_hmin_airsea_ex/=0) then

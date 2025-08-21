@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-- `` (20 Aug 2025): removed stemp_dz and replaced it with stemp_thick, and replaced stemp_stc with soild_conductivity.gr3; added relax_2_airt. Changed i_hmin_airsea_ex and i_hmin_salt_ex to be 0 or 1 only;
+- `5a8af1a` (21 Aug 2025 via shallow_T): removed stemp_dz and replaced it with stemp_thick, and replaced stemp_stc with soild_conductivity.gr3; added relax_2_airt. Changed i_hmin_airsea_ex and i_hmin_salt_ex to be 0 or 1 only;
 - `536829db` (15 Aug 2025): added optional parameter age_marsh_min;
 - `19274083` (12 Aug 2025): add iout_sta=2 option to output 3D profiles in staout_*;
 - `b09c1f4a` (24 July 2025): removed newlayer_thick in sediment.nml after merging with SED3D_cleanup;
@@ -633,6 +633,7 @@ git versions:
 156. `c441ace` (12 Dec 2024): added share memory communicator for efficient bcast for if_source/=0;
 157. `94887bbe` (1 July 2025): JZ fixed a bug in WWM I/O
 158. `b09c1f4a` (24 July 2025): merged with SED3D_cleanup to improve multi bed layer sorting;
+159. `1e2b181209` (21 Aug 2025): merged with sjallow_T, quad_init
 
 ================================================================================================
 (D) Auto-test history:
