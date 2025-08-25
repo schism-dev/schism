@@ -2071,7 +2071,7 @@
 !$OMP MASTER
         IF (WriteOutputProcess_his) THEN
 ! create nc file, vars, and do all time independant job
-          iret = nf90_create(TRIM(FILE_NAME), NF90_CLOBBER, ncid)
+          iret = nf90_create(TRIM(FILE_NAME), OR(NF90_NETCDF4,NF90_CLOBBER), ncid)
           CALL GENERIC_NETCDF_ERROR_WWM(CallFct, 1, iret)
           nbTime=-1
           CALL WRITE_NETCDF_HEADERS_1(ncid, -1, MULTIPLEOUT_HIS, GRIDWRITE, IOBPD_HISTORY, np_write, ne_write)

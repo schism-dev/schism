@@ -1709,7 +1709,7 @@
       character(len=80) :: eStrFullName
       integer iret, ncid, nbstat_dims, ntime_dims, nfreq_dims, ndir_dims
       integer one_dims, three_dims, var_id, I
-      iret = nf90_create(TRIM(FILE_NAME), NF90_CLOBBER, ncid)
+      iret = nf90_create(TRIM(FILE_NAME), OR(NF90_NETCDF4,NF90_CLOBBER), ncid)
       CALL GENERIC_NETCDF_ERROR_WWM(CallFct, 1, iret)
 
       CALL WRITE_NETCDF_HEADERS_STAT_1(ncid, -1, MULTIPLEOUT)

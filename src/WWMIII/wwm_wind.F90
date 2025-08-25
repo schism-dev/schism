@@ -620,7 +620,7 @@
 #ifdef MPI_PARALL_GRID
       IF (myrank .eq. 0) THEN
 #endif
-        iret=nf90_create(TRIM(FileSave), nf90_CLOBBER, ncid)
+        iret=nf90_create(TRIM(FileSave), OR(NF90_NETCDF4,NF90_CLOBBER), ncid)
         CALL GENERIC_NETCDF_ERROR_WWM(CallFct, 1, iret)
         !
         iret = nf90_def_dim(ncid, 'mnp', np_total, mnp_dims)

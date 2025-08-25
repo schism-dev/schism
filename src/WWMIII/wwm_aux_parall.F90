@@ -1464,7 +1464,7 @@
       MSCeffect=LocalColor%MSCeffect
       WRITE (FILE_NAME,10) TRIM(PRE_FILE_NAME),nproc, iSystem, myrank
   10  FORMAT (a,'_np',i2.2,'_syst',i3.3,'_iproc',i4.4, '.nc')
-      iret = nf90_create(TRIM(FILE_NAME), NF90_CLOBBER, ncid)
+      iret = nf90_create(TRIM(FILE_NAME), OR(NF90_NETCDF4,NF90_CLOBBER), ncid)
       iret = nf90_def_dim(ncid, 'iter', NF90_UNLIMITED, iter_dims)
       iret = nf90_def_dim(ncid, 'three', 3, three_dims)
       iret = nf90_def_dim(ncid, 'nfreq', MSCeffect, nfreq_dims)
