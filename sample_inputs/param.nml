@@ -243,35 +243,6 @@
   sfea0 = 45 !lat
 
 !-----------------------------------------------------------------------
-! Option to deal with under resolution near steep slopes in deeper depths
-! 0: use h[12,_bcc below; /=0: use hw_* below
-!-----------------------------------------------------------------------
-  iunder_deep = 0 
-
-!-----------------------------------------------------------------------
-! Baroclinicity calculation in off/nearshore with iunder_deep=ibc=0. 
-! The 'below-bottom' gradient
-! is zeroed out if h>=h2_bcc (i.e. like Z) or uses const extrap
-! (i.e. like terrain-following) if h<=h1_bcc(<h2_bcc) (and linear
-! transition in between based on local depth)
-!-----------------------------------------------------------------------
-  h1_bcc = 50. ![m]
-  h2_bcc = 100. ![m]; >h1_bcc
-
-!-----------------------------------------------------------------------
-! Hannah-Wright-like ratio & depth used to account for under-resolution
-! in a b-clinic model. Used only if ibc=0 and iunder_deep/=0.
-! The b-clinic force at prism centers is calculated with a reconstruction
-! method in horizontal that has a stencil of an element and its adjacent elements.
-! If the depths change is too much between the elem and its adjacent elem
-! the under-resolution occurs (with steep bottom slope) and b-clinic force
-! needs to be zeroed out below the (higher) bottom, specifically, if
-! max(2 depths)>=hw_depth and abs(diff(2 depths))>=hw_ratio*max(2 depths).
-!-----------------------------------------------------------------------
-  hw_depth = 1.e6 !threshold depth in [m]
-  hw_ratio = 0.5 !ratio
-
-!-----------------------------------------------------------------------
 ! Hydraulic model option. If ihydraulics/=0, hydraulics.in 
 ! is required. 
 !-----------------------------------------------------------------------
@@ -692,26 +663,6 @@
   iflux = 0
 
 !-----------------------------------------------------------------------
-! Test flags for debugging. These flags should be turned off normally.
-!-----------------------------------------------------------------------
-! Williamson test #5 (zonal flow over an isolated mount); if
-! on, ics must =2
-!-----------------------------------------------------------------------
-  izonal5 = 0 !"0" - no test; otherwise on
-
-!-----------------------------------------------------------------------
-! Rotating Gausshill test with stratified T,S (1: on; 0: off)
-! Surface T,S read in from *.ic; code generates stratification
-!-----------------------------------------------------------------------
-  ibtrack_test = 0
-
-!-----------------------------------------------------------------------
-! Rouse profile test (1: on; 0: off)
-! If on, must turn on USE_TIMOR
-!-----------------------------------------------------------------------
-  irouse_test = 0
-
-!-----------------------------------------------------------------------
 ! Flag to choose FIB model for bacteria decay (used with USE_FIB)
 ! flag_fib = 1 - Constant decay rate (/day) in .gr3 format
 !                (kkfib_1.gr3 and kkfib_2.gr3)
@@ -785,6 +736,55 @@
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! Advanced options (for developers mostly)
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!-----------------------------------------------------------------------
+! Option to deal with under resolution near steep slopes in deeper depths
+! 0: use h[12],_bcc below; /=0: use hw_* below
+!-----------------------------------------------------------------------
+  iunder_deep = 0 
+
+!-----------------------------------------------------------------------
+! Baroclinicity calculation in off/nearshore with iunder_deep=ibc=0. 
+! The 'below-bottom' gradient
+! is zeroed out if h>=h2_bcc (i.e. like Z) or uses const extrap
+! (i.e. like terrain-following) if h<=h1_bcc(<h2_bcc) (and linear
+! transition in between based on local depth)
+!-----------------------------------------------------------------------
+  h1_bcc = 50. ![m]
+  h2_bcc = 100. ![m]; >h1_bcc
+
+!-----------------------------------------------------------------------
+! Hannah-Wright-like ratio & depth used to account for under-resolution
+! in a b-clinic model. Used only if ibc=0 and iunder_deep/=0.
+! The b-clinic force at prism centers is calculated with a reconstruction
+! method in horizontal that has a stencil of an element and its adjacent elements.
+! If the depths change is too much between the elem and its adjacent elem
+! the under-resolution occurs (with steep bottom slope) and b-clinic force
+! needs to be zeroed out below the (higher) bottom, specifically, if
+! max(2 depths)>=hw_depth and abs(diff(2 depths))>=hw_ratio*max(2 depths).
+!-----------------------------------------------------------------------
+  hw_depth = 1.e6 !threshold depth in [m]
+  hw_ratio = 0.5 !ratio
+
+!-----------------------------------------------------------------------
+! Test flags for debugging. These flags should be turned off normally.
+!-----------------------------------------------------------------------
+! Williamson test #5 (zonal flow over an isolated mount); if
+! on, ics must =2
+!-----------------------------------------------------------------------
+  izonal5 = 0 !"0" - no test; otherwise on
+
+!-----------------------------------------------------------------------
+! Rotating Gausshill test with stratified T,S (1: on; 0: off)
+! Surface T,S read in from *.ic; code generates stratification
+!-----------------------------------------------------------------------
+  ibtrack_test = 0
+
+!-----------------------------------------------------------------------
+! Rouse profile test (1: on; 0: off)
+! If on, must turn on USE_TIMOR
+!-----------------------------------------------------------------------
+  irouse_test = 0
+
 !-----------------------------------------------------------------------
 ! Fraction of vertical flux closure adjustment applied at surface, then subtracted
 ! from all vertical fluxes. This is currently done for T,S only
