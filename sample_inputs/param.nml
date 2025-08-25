@@ -49,11 +49,6 @@
 ! Optional parameters. The values shown below are default unless otherwise noted
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !-----------------------------------------------------------------------
-! Optional offline partitioning using NO_PARMETIS. If on, need partition.prop (like global_to_local.prop).
-!-----------------------------------------------------------------------
-
-
-!-----------------------------------------------------------------------
 ! 2nd pre-proc flag. If ipre2/=0, code will output some diagnotic outputs and stop.
 ! These outputs are: drag coefficients (Cdp)
 !-----------------------------------------------------------------------
@@ -127,7 +122,6 @@
 ! Main ramp option
 !-----------------------------------------------------------------------
   dramp = 1. !ramp-up period in days for b.c. etc (no ramp-up if <=0)
-
   drampbc = 0. !ramp-up period in days for baroclinic force
 
 !-----------------------------------------------------------------------
@@ -279,7 +273,7 @@
 
 !-----------------------------------------------------------------------
 ! Hydraulic model option. If ihydraulics/=0, hydraulics.in 
-! is required. This option cannot be used with non-hydrostatic model.
+! is required. 
 !-----------------------------------------------------------------------
   ihydraulics = 0
 
@@ -370,7 +364,7 @@
 
 !-----------------------------------------------------------------------
 ! Elevation boundary condition ramp-up flag. =0: ramp up from 0; =1: ramp up from
-! elev. values read in from elev.ic or hotstart.nc - if neither is present, from 0.
+! elev values read in from elev.ic or hotstart.nc - if neither is present, from 0.
 ! This flag is mainly used to start the simulation from non-zero elev.
 ! The ramp-up period is 'dramp' (so if dramp=0, full strength is applied).
 !-----------------------------------------------------------------------
@@ -442,12 +436,6 @@
 ! Suggested value: btrack_nudge=9.013e-3
 !-----------------------------------------------------------------------
   btrack_nudge= 9.013e-3 
-
-!-----------------------------------------------------------------------
-! Behavior when trajectory hits open bnd. If ibtrack_openbnd=0, slide with
-! tangential vel; otherwise, stop and exit btrack 
-!-----------------------------------------------------------------------
-!  ibtrack_openbnd = 1 !hardwired
 
 !-----------------------------------------------------------------------
 ! Wetting and drying. 
@@ -566,7 +554,7 @@
 ! In all cases, if USE_ICE the stress in ice-covered portion is calculated by ICE routine.
 !-----------------------------------------------------------------------
   nws = 0 
-  wtiminc = 150. !time step for atmos. forcing. Default: same as dt
+  wtiminc = 150. !time step (sec) for atmos. forcing. Default: same as dt
   drampwind = 1. !ramp-up period in days for wind (no ramp-up if <=0)
   iwindoff = 0 !needed only if nws/=0; '1': needs windfactor.gr3
   iwind_form = 1 !needed if nws/=0
@@ -585,10 +573,10 @@
   i_hmin_salt_ex = 1 ! no effect if PREC_EVAP is off
   hmin_salt_ex = 0.2 ![m], no effect if PREC_EVAP is off
   iprecip_off_bnd = 0 !if /=0, precip will be turned off near land bnd
-  !watertype_* below are used for water type '8'
-  watertype_rr = 0.58
-  watertype_d1 = 0.35 
-  watertype_d2 = 23.
+  !watertype_* below are used for water type '8' in watertype.gr3
+  watertype_rr = 0.58 ![-]
+  watertype_d1 = 0.35 ![m]
+  watertype_d2 = 23. ![m]
 
 !-----------------------------------------------------------------------
 ! Option to add a sediment layer for the buffer effect on temperature.
@@ -733,7 +721,8 @@
   flag_fib = 1
 
 !----------------------------------------------------------------------
-! Marsh model parameters (only if USE_MARSH is on)
+! Marsh model parameters (only if USE_MARSH is on, and in this case
+! iveg must /=0)
 !----------------------------------------------------------------------
   slr_rate = 120. !sea-level rise rate in mm/yr, times morphological acceleration if used
   veg_di0 = 0.1,0.1 !(1:nmarsh_types) [m]; diamters for each marsh type
@@ -752,12 +741,12 @@
 ! If iveg/=0, need 4 extra inputs: (1) veg_D.gr3 (depth is stem diameter in meters);
 ! (2) veg_N.gr3 (depth is # of stems per m^2);
 ! (3) veg_h.gr3 (height of canopy in meters);
-! (4) veg_cd.gr3 (drag coefficient).
-! With iveg=1, the vertical scaling is given by veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1) below.
+! (4) veg_cd.gr3 (form drag coefficient).
+! If one of these depths=0 at a node, the code will set all to 0. 
+
+! With iveg/=0, the vertical scaling is given by veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1) below.
 ! veg_vert_z(:) specify the distance from bed for each bin (ascending order starting from 0).
 ! iveg=2: flex vegeation using Ganthy (2011) fomulation
-
-! If one of these depths=0 at a node, the code will set all to 0. 
 !----------------------------------------------------------------------
   iveg = 0 !on/off flag
   veg_vert_z = 0.,0.5,1. ![m] starting from 0.; used if iveg=1
@@ -793,6 +782,9 @@
 !-----------------------------------------------------------------------
   rho0 = 1000.d0 !kg/m^3
 
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! Advanced options (for developers mostly)
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !-----------------------------------------------------------------------
 ! Fraction of vertical flux closure adjustment applied at surface, then subtracted
 ! from all vertical fluxes. This is currently done for T,S only
