@@ -70,7 +70,7 @@ p.sflux     = p.bdir+'sflux_narr_subdomain'            #sflux database
 p.WW3       = p.bdir+'WW3'                             #WW3 wave forcing
 p.hydro_out = p.bdir+'hydro/RUN11fb/outputs'             #hydro_out for offline ICM model
 p.region    = p.bdir+'region/'                         #region files
-p.outdir    = '/sciclone/scr-lst/{}/CBP'.format(os.environ['USER']) #parental direcotry of outputs
+p.outdir    = '/sciclone/scr10/{}/CBP'.format(os.environ['USER']) #parental direcotry of outputs
 p.dt_offline= 1800 #sec: time step for offline ICM mode
 
 #----------------------------------------------------------------------
