@@ -10197,9 +10197,9 @@
                 sta_out(i,j)=sum(arco_sta(i,1:i34(ie))*swild2(1,1:i34(ie)))
               else !3D var.
                 if(idry_e(ie)==1) then !dry
-                  sta_out(i,j)=-999.d0
-                  sta_out3d(:,i,j)=-999.d0
-                  zta_out3d(:,i,j)=-999.d0
+                  sta_out(i,j)=-1.d7 !-999.d0
+                  sta_out3d(:,i,j)=-1.d7 !-999.d0
+                  zta_out3d(:,i,j)=-1.d7 !-999.d0
                 else !wet
                   do m=1,i34(ie) !wet nodes
                     nd=elnode(m,ie)
@@ -10233,8 +10233,8 @@
                     do m=1,i34(ie)
                       nd=elnode(m,ie)
                       if(k<kbp(nd)) then
-                        swild4(1,m)=-9999.d0 !zcor
-                        swild4(2,m)=-9999.d0 !var
+                        swild4(1,m)=-1.d7 !-9999.d0 !zcor
+                        swild4(2,m)=-1.d7 !-9999.d0 !var
                       else
                         swild4(1,m)=znl(k,nd)
                         swild4(2,m)=swild2(k,m)
@@ -10262,11 +10262,11 @@
           do i=1,nvar_sta
             if(iof_sta(i)==0.or.mod(it,nspool_sta)/=0) cycle
             do j=1,nout_sta
-              if(nwild2(j)==0) then
-                sta_out_gb(j,i)=-9999.d0
+              if(nwild2(j)==0) then !outside domain
+                sta_out_gb(j,i)=1.d7 !-9999.d0
                 if(i>4) then !3D only
-                  sta_out3d_gb(:,j,i)=-9999.d0
-                  zta_out3d_gb(:,j,i)=-9999.d0
+                  sta_out3d_gb(:,j,i)=1.d7 !-9999.d0
+                  zta_out3d_gb(:,j,i)=1.d7 !-9999.d0
                 endif
               else
                 sta_out_gb(j,i)=sta_out_gb(j,i)/dble(nwild2(j))
