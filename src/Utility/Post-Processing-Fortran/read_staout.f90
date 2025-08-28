@@ -1,4 +1,6 @@
 ! Read in 3D station outputs and output profile (at wet instances) 
+! Inputs: screen, vgrid.in,station.in, outputs/staout_*
+! Outputs: staout_*_prof.dat
 ! ifx -O2 -o read_staout read_staout.f90
 
   implicit real*8(a-h,o-z)
@@ -37,7 +39,8 @@
         write(12,*)'Profile @station #= ',i
         do k=1,nvrt
           if(abs(wild(k,i))<5.d6) then
-            write(12,*)k,zcor(k,i),wild(k,i)
+            if(abs(wild(k,i))>1.d2) print*, 'Abnormal values:',zcor(k,i),wild(k,i)
+            write(12,*)k,real(zcor(k,i)),real(wild(k,i))
           endif !abs()
         enddo !k
       enddo !i

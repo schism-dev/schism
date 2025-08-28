@@ -10229,19 +10229,27 @@
                   sta_out(i,j)=sum(arco_sta(i,1:i34(ie))*swild(1:i34(ie)))
 
                   !Vertical profiles
+                  itmp=minval(kbp(elnode(1:i34(ie),ie)))
                   do k=1,nvrt
-                    do m=1,i34(ie)
-                      nd=elnode(m,ie)
-                      if(k<kbp(nd)) then
-                        swild4(1,m)=-1.d7 !-9999.d0 !zcor
-                        swild4(2,m)=-1.d7 !-9999.d0 !var
-                      else
-                        swild4(1,m)=znl(k,nd)
-                        swild4(2,m)=swild2(k,m)
-                      endif
-                    enddo !m
-                    zta_out3d(k,i,j)=sum(arco_sta(i,1:i34(ie))*swild4(1,1:i34(ie)))
-                    sta_out3d(k,i,j)=sum(arco_sta(i,1:i34(ie))*swild4(2,1:i34(ie)))
+                    if(k<itmp) then
+                      zta_out3d(k,i,j)=-1.d7
+                      sta_out3d(k,i,j)=-1.d7
+                    else !at least 1 node has valid value
+                      do m=1,i34(ie)
+                        nd=elnode(m,ie)
+                        swild4(1,m)=znl(max(k,kbp(nd)),nd) !zcor
+                        swild4(2,m)=swild2(max(k,kbp(nd)),m) !var
+!                        if(k<kbp(nd)) then
+!                          swild4(1,m)=-1.d7 !-9999.d0 !zcor
+!                          swild4(2,m)=-1.d7 !-9999.d0 !var
+!                        else
+!                          swild4(1,m)=znl(k,nd)
+!                          swild4(2,m)=swild2(k,m)
+!                        endif
+                      enddo !m
+                      zta_out3d(k,i,j)=sum(arco_sta(i,1:i34(ie))*swild4(1,1:i34(ie)))
+                      sta_out3d(k,i,j)=sum(arco_sta(i,1:i34(ie))*swild4(2,1:i34(ie)))
+                    endif !k
                   enddo !k
                 endif !idry_e
               endif !j
