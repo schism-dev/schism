@@ -3804,7 +3804,10 @@
 !      endif
 !      if(islip==1) read(15,*) hdrag0
 
+!...  Soil heat exchange
       if(istemp/=0) then
+        if(ihconsv==0) call parallel_abort('INIT: ihconsv=0 & istemp/=0')
+
         if(myrank==0) then
           open(10,file=in_dir(1:len_in_dir)//'soil_thick.gr3',status='old')
           open(32,file=in_dir(1:len_in_dir)//'soil_conductivity.gr3',status='old')

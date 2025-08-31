@@ -541,6 +541,8 @@
 !  isconsv = 0 !evaporation/precipitation model
   i_hmin_airsea_ex = 1 ! no effect if ihconsv=0 
   hmin_airsea_ex = 0.2 ![m], no effect if ihconsv=0 
+  relax_2_airt = 0.05  ![0,1] relaxation to air T at shallow wet area if ihconsv/=0 & i_hmin_airsea_ex/=0
+
   i_hmin_salt_ex = 1 ! no effect if PREC_EVAP is off
   hmin_salt_ex = 0.2 ![m], no effect if PREC_EVAP is off
   iprecip_off_bnd = 0 !if /=0, precip will be turned off near land bnd
@@ -551,13 +553,12 @@
 
 !-----------------------------------------------------------------------
 ! Option to add a sediment layer for the buffer effect on temperature.
-! istemp=0 would turn off this effect; otherwise, needs soil_conductivity.gr3
-! which specifies the soil thermal conductivity in W/m^2/K, and soil_thick.gr3 (in meters).
+! istemp=0 would turn off this effect; otherwise, needs ihconsv/=0, soil_conductivity.gr3
+! which specifies the soil thermal conductivity in W/m^2/K, and soil_thick.gr3 (in meters; e.g. 1m).
 ! The conductivity is on the order of 5, but can be 0 in deep depths to turn off 
 ! the effect
 !-----------------------------------------------------------------------
-  istemp = 0   !on/off
-  relax_2_airt = 0.05  ![0,1] relaxation to air T at shallow wet area
+  istemp = 0  !on/off
 
 !-----------------------------------------------------------------------
 ! Turbulence closure.

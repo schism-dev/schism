@@ -7808,7 +7808,7 @@
         endif !if_source
 
 !       Heat exchange between sediment and bottom water
-        if(istemp/=0) then
+        if(istemp/=0) then !ihconsv/=0
 !$OMP     do
           do i=1,nea
             tmp=sum(stemp_dz(elnode(1:i34(i),i)))/i34(i) !SED thickness>0
@@ -7843,7 +7843,7 @@
         endif !istemp
 
         !Relax shallow wet T to air T
-        if(i_hmin_airsea_ex/=0) then
+        if(ihconsv/=0.and.i_hmin_airsea_ex/=0) then
 !$OMP     do
           do i=1,nea
             if(idry_e(i)==1) cycle
