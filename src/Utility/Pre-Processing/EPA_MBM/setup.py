@@ -64,13 +64,13 @@ p.flag['wwmbnd.gr3']           = 0 #WWM
 p.bdir='/sciclone/data10/wangzg/CBP/database/'         #MBM database dir
 p.MBM_init  = p.bdir+'MBM_init.npz'                    #MBM database: multiple datasets
 p.source    = p.bdir+'load_p7_v4.npz'                  #CBP watershed sources
-p.atmdep    = p.bdir+'atm_load.npz'                    #CBP atmospheric deposition
+p.atmdep    = p.bdir+'atm_p7_v1.npz'                   #CBP atmospheric deposition
 p.hycom     = p.bdir+'hycom.nc'                        #HYCOM database
 p.sflux     = p.bdir+'sflux_narr_subdomain'            #sflux database
 p.WW3       = p.bdir+'WW3'                             #WW3 wave forcing
 p.hydro_out = p.bdir+'hydro/RUN11fb/outputs'             #hydro_out for offline ICM model
 p.region    = p.bdir+'region/'                         #region files
-p.outdir    = '/sciclone/scr10/{}/CBP'.format(os.environ['USER']) #parental direcotry of outputs
+p.outdir    = '/sciclone/scr30/{}/CBP'.format(os.environ['USER']) #parental direcotry of outputs
 p.dt_offline= 1800 #sec: time step for offline ICM mode
 
 #----------------------------------------------------------------------
@@ -524,25 +524,52 @@ fname='ICM_sflux.th.nc'
 if p.flag[fname]!=0:
    print('writing '+fname)
 
+   #----------------------------------------------------
+   #code for P7 atm deposition
+   #----------------------------------------------------
    #Input
    svars=['NA','NA','NA','NA','NA','NA','ORGN','ORGN','ORGN','NH4','NO3','ORGP','ORGP','ORGP','PO4','NA','NA', 'NA','ORGN','ORGP','NA']
    srats=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  1.0,   0.0,   0.0,   1.0,  1.0,  1.0,   0.0,   0.0,   1.0,  0.0, 0.0, 0.0,  0.0,   0.0,   0.0]
-   if p.flag['ICM'] in [2,20]: svars,rats=svars[:-4],srats[:-4]
-   S=read(p.atmdep,1); tm=S.time.max(); ym=num2date(tm).year  #atm depostion database
 
-   #interp
-   sindp=read(p.region+'estuary.reg').inside(gd.xy,prj=['epsg:26918','epsg:4326']); sinda=near_pts(gd.xy[sindp],c_[S.x,S.y])
-   mti=arange(p.StartT,p.EndT+2); mti=array([datenum(ym,1,1)+i-datenum(num2date(i).year,1,1) if i>tm else i for i in mti])
-   nt=len(mti); ntr=len(svars); trs=zeros([ntr,gd.np,nt],'float32')
-   for m, [svar,srat] in enumerate(zip(svars,srats)):
+   #read data
+   if p.flag['ICM'] in [2,20]: svars,rats=svars[:-4],srats[:-4]
+   S=read(p.atmdep,1); S.NO3=S.wetno3+S.dryno3; S.NH4=S.wetnh3+S.drynh3; S.PO4=S.wetpo4; S.ORGN=S.wetorn; S.ORGP=S.wetorp
+   fps=S.sind[near_pts(gd.xy,S.xy[:])]; fpt=(S.time>=p.StartT)*(S.time<=(p.EndT+2))
+   nt=sum(fpt); ntr=len(svars); trs=zeros([ntr,gd.np,nt],'float32')
+   for m,[svar,srat] in enumerate(zip(svars,srats)):
        if srat==0: continue
-       trs[m,sindp]=(interp(S.time,S.attr(svar),mti,axis=1)*1e-3*srat/S.area[:,None])[sinda]
+       trs[m]=S.attr(svar)[fps][:,fpt]*srat
 
    #write netcdf
    C=zdata(); C.dimname=['node','time','ntr','one']; C.dims=[gd.np,nt,ntr,1]
    add_var(C,'time_step',('one',),array([86400.0])); 
    add_var(C,'time_series',('time','ntr','node'), trs.transpose([2,0,1]))
    C.save(fname,zlib=True); C,S,trs=None,None,None
+
+   #----------------------------------------------------
+   #code for P6 atm deposition
+   #----------------------------------------------------
+   ##Input
+   #svars=['NA','NA','NA','NA','NA','NA','ORGN','ORGN','ORGN','NH4','NO3','ORGP','ORGP','ORGP','PO4','NA','NA', 'NA','ORGN','ORGP','NA']
+   #srats=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  1.0,   0.0,   0.0,   1.0,  1.0,  1.0,   0.0,   0.0,   1.0,  0.0, 0.0, 0.0,  0.0,   0.0,   0.0]
+   #if p.flag['ICM'] in [2,20]: svars,rats=svars[:-4],srats[:-4]
+   ##S=read(p.atmdep,1); tm=S.time.max(); ym=num2date(tm).year  #atm depostion database
+   #S=read('/sciclone/data10/wangzg/CBP/database/atm_load.npz',1); tm=S.time.max(); ym=num2date(tm).year  #atm depostion database
+
+   ##interp
+   #sindp=read(p.region+'estuary.reg').inside(gd.xy,prj=['epsg:26918','epsg:4326']); sinda=near_pts(gd.xy[sindp],c_[S.x,S.y])
+   #mti=arange(p.StartT,p.EndT+2); mti=array([datenum(ym,1,1)+i-datenum(num2date(i).year,1,1) if i>tm else i for i in mti])
+   #nt=len(mti); ntr=len(svars); trs=zeros([ntr,gd.np,nt],'float32')
+   #for m, [svar,srat] in enumerate(zip(svars,srats)):
+   #    if srat==0: continue
+   #    trs[m,sindp]=(interp(S.time,S.attr(svar),mti,axis=1)*1e3*srat/S.area[:,None])[sinda]
+   #    #trs[m,sindp]=(interp(S.time,S.attr(svar),mti,axis=1)*1e-3*srat/S.area[:,None])[sinda]
+
+   ##write netcdf
+   #C=zdata(); C.dimname=['node','time','ntr','one']; C.dims=[gd.np,nt,ntr,1]
+   #add_var(C,'time_step',('one',),array([86400.0]))
+   #add_var(C,'time_series',('time','ntr','node'), trs.transpose([2,0,1]))
+   #C.save(fname,zlib=True); C,S,trs=None,None,None
  
 #----------------------------------------------------------------------
 #ICM_param.nc: write ICM model spatially varying parameters
