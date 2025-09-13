@@ -697,7 +697,7 @@
 ! If one of these depths=0 at a node, the code will set all to 0. 
 
 ! With iveg/=0, the vertical scaling is given by veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1) below.
-! veg_vert_z(:) specify the distance from bed for each bin (ascending order starting from 0).
+! veg_vert_z(1:nbins_veg_vert+1) specify the distance from bed for each bin (ascending order starting from 0).
 ! iveg=2: flex vegeation using Ganthy (2011) fomulation
 !----------------------------------------------------------------------
   iveg = 0 !on/off flag

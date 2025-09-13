@@ -1486,7 +1486,7 @@
 #endif
 
 #ifdef USE_MARSH
-      allocate(imarsh(nea),ibarrier_m(nea),age_marsh(ne),stat=istat)
+      allocate(imarsh(nea),ibarrier_m(nea),age_marsh(nea),stat=istat)
       if(istat/=0) call parallel_abort('INIT: MARSH allocation failure')
 #endif
 
