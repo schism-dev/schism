@@ -11,7 +11,7 @@ Sd50 = 3.d-3, 3.d-3, 3.d-2, 3.d-1
 !  If ierosion=0, dimension is kg/m/m/s
 !  If ierosion=1, dimension is s/m (see M_E of Table 1 of Winterwerp et al. 2012, JGR, vol 117)
 !------------------------------------------------------------------------------
-Erate = 6.d-5,6.d-5,6.d-5,6.d-5  !ierosion=0
+Erate = 6.d-5, 6.d-5, 6.d-5, 6.d-5  !ierosion=0
 /
 
 !Optional parameters shown below are default values unless otherwise stated
@@ -33,11 +33,11 @@ Erate = 6.d-5,6.d-5,6.d-5,6.d-5  !ierosion=0
 !- (MUD-like or GRAVEL-like) user-defined values (defined below) will be 
 !- applied.
 !------------------------------------------------------------------------------
-!iSedtype= 1, 1, 1, 1, 1 !5 classes
+iSedtype= 1, 1, 1, 1  !5 classes
 
 !- SEDIMENT GRAIN DENSITY (kg/m3) - [1:Ntracers] ------------------------------
 !------------------------------------------------------------------------------
-!Srho = 2650.0d0, 2650.0d0, 2650.0d0, 2650.0d0, 2650.0d0
+Srho = 2650.0d0, 2650.0d0, 2650.0d0, 2650.0d0
 
 !- PATICLES SETTLING VELOCITY (mm/s) - [1:Ntracers] ---------------------------
 ! These will be overwritten if comp_ws=1 & Sedtype(i)=1  (so in that case you can

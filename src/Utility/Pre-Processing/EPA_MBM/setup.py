@@ -4,7 +4,7 @@
 #      When the development is done, we will make it public at approperiate time.
 from pylib import *
 import subprocess as sbp
-from shutil import copyfile
+from shutil import copyfile,copy2
 p=zdata(); p.flag={}
 
 #----------------------------------------------------------------------
@@ -37,6 +37,7 @@ p.flag['TEM_3D.th.nc']         = 0 #hydro
 p.flag['TEM_nu.nc']            = 0 #hydro
 p.flag['SAL_3D.th.nc']         = 0 #hydro
 p.flag['SAL_nu.nc']            = 0 #hydro
+p.flag['uv3D.th.nc']           = 0 #hydro
 p.flag['sflux']                = 0 #hydro
 p.flag['albedo.gr3']           = 0 #hydro
 p.flag['watertype.gr3']        = 0 #hydro (1: max=7; 2: max=8)
@@ -60,13 +61,16 @@ p.flag['bedthick.ic']          = 0 #SED
 p.flag['hgrid_WWM.gr3']        = 0 #WWM
 p.flag['wwmbnd.gr3']           = 0 #WWM
 
+#uncomment to update lastest format of param files from SCHISM, to be consistent with the executable
+p.schism='/sciclone/data10/wangzg/schism'  #SCHISM repository
+
 #databases
 p.bdir='/sciclone/data10/wangzg/CBP/database/'         #MBM database dir
 p.MBM_init  = p.bdir+'MBM_init.npz'                    #MBM database: multiple datasets
 p.source    = p.bdir+'load_p7_v4.npz'                  #CBP watershed sources
 p.atmdep    = p.bdir+'atm_p7_v1.npz'                   #CBP atmospheric deposition
-p.hycom     = p.bdir+'hycom.nc'                        #HYCOM database
-p.sflux     = p.bdir+'sflux_narr_subdomain'            #sflux database
+p.hycom     = p.bdir+'hycom_dist.nc'                   #HYCOM database
+p.sflux     = p.bdir+'sflux_ERA5'                      #sflux database
 p.WW3       = p.bdir+'WW3'                             #WW3 wave forcing
 p.hydro_out = p.bdir+'hydro/RUN11fb/outputs'             #hydro_out for offline ICM model
 p.region    = p.bdir+'region/'                         #region files
@@ -100,6 +104,7 @@ for fname in p.flag:
     if fname.endswith('_nu.nc'): sns.append(sn[:-6]+'_nudge.gr3'); fns.append(fname[:3]+'_nudge.gr3') #nudge.gr3
     [os.symlink(relpath(s),f) for s, f in zip(sns,fns) if (p.base is not None) and p.flag[fname]==0 and fexist(s) and not fexist(f)]
     if p.flag[fname]==1 and fexist(fname): os.remove(fname) if os.path.isfile(fname) else os.system('rm -rf {}'.format(fname)) #remove file
+if p.base is not None: [copy2(i,os.path.basename(i)) for i in glob(p.base+'/run.schism')+glob(p.base+'/pschism_*')]
 
 #add hydro output for ICM offline mode; add istation.in
 if p.flag['ICM'] in [10,20]: fn='hydro_out'; [os.remove(fn) if fexist(fn) else '']; os.symlink(p.hydro_out,fn)
@@ -134,6 +139,14 @@ for fname,module in zip(fnames,modules):
        copyfile(sname,fname); print('copy {} from {}'.format(fname,p.base))
     else:
        copyfile(pname,fname); print('writing {}'.format(fname))
+    if hasattr(p,'schism') and module!='WWM':
+       #rname=fname+'.0'; sname=p.schism+'/sample_inputs/'+('wwminput.nml.WW3' if module=='WWM' else fname)
+       rname=fname+'.0'; sname=p.schism+'/sample_inputs/'+fname
+       os.rename(fname,rname); copyfile(sname,fname); chparam(fname,source=rname); os.remove(rname)
+       if p.flag['SED']==1 and fname=='param.nml': #add sediment output channel
+          P=read(fname,1); nsed=max([i for i in arange(23) if 'iof_sed({})'.format(i) in P])
+          for i in arange(nsed+1,28):
+              chparam(fname,'iof_sed({})'.format(i-1),'1\n   iof_sed({}) = 1'.format(i))
 
 #change parameter values in [param.nml, wwminput.nml,icm.nml]
 fname='param.nml'; sname='{}/{}'.format(p.base,fname); pm={}; pm['ihot']=1; pm['iveg']=p.flag['VEG'] #reset ihot=1
@@ -156,9 +169,10 @@ if p.flag['WWM']==1 and (not fexist(sname)):
    pm['ENDTC_OUT']=num2date(p.EndT).strftime('%Y%m%d.000000');   pm['ENDTC']="'{}'".format(pm['ENDTC_OUT'])
    for i in pm: chparam(fname,i,pm[i]) #update wwminput.nml
 
-fname='icm.nml'; sname='{}/{}'.format(p.base,fname); pm={}; pm0=read(fname,1)
+fname='icm.nml'; sname='{}/{}'.format(p.base,fname); pm={}
 pm['iout_icm']=2; pm['iClam']=0; pm['isav_icm']=0; pm['imarsh_icm']=0
 if p.flag['ICM']!=0: 
+   pm0=read(fname,1)
    if p.flag['ICM'] in [1,10] and (not fexist(sname)): pm['iSRM']=1
    if p.flag['SED']==1: pm['iKe']=1
    if p.flag['ICM_sflux.th.nc']==1: pm['isflux']=1
@@ -179,6 +193,108 @@ if p.flag['ICM']!=0:
 fname='bctides.in'
 if p.flag[fname]==1:
    print('writing '+fname)
+
+   #inputs
+   bdir=p.bdir+'/FES2014'
+   tnames=['O1','K1','Q1','P1','M2','S2','K2','N2']
+   bflag=[4,5,4,4]
+   Z0=0.0
+
+   #-------------------------------------------------
+   #get tidal amplitude and frequency, nodal factor
+   #-------------------------------------------------
+   ts=read('{}/tide_fac_const/tide_fac_const.npz'.format(bdir)); amp=[]; freq=[]
+   for tname in tnames:
+       sind=pindex(ts.name==tname.upper())[0]
+       amp.append(ts.amp[sind]); freq.append(ts.freq[sind])
+   amp=array(amp); freq=array(freq)
+
+   #get nodal factor
+   tdir='{}/tide_fac_improved'.format(bdir); t=num2date(p.StartT); HH,DD,MM,YY=t.hour,t.day,t.month,t.year
+   fid=open('./tide_fac.in','w+'); fid.write('{}\n{} {} {} {}\n0\n'.format(int(p.EndT-p.StartT),HH,DD,MM,YY)); fid.close()
+   os.system('ifx -o tide_fac_improved {}/tf_main.f90 {}/tf_selfe.f90; ./tide_fac_improved <tide_fac.in'.format(tdir,tdir))
+
+   nodal=[]; tear=[]  #read nodal factor
+   for tname in tnames:
+       lines=[i for i in open('./tide_fac.out','r').readlines() if len(i.split())==3]
+       line=[i for i in lines if i.strip().startswith(tname.upper())][0]
+       nodal.append(float(line.strip().split()[1]))
+       tear.append(float(line.strip().split()[2]))
+   os.system('rm tide_fac_improved tide_fac.in tide_fac.out')
+
+   #----------------------------------------------
+   #write bctides with tide info
+   #----------------------------------------------
+   fid=open('./bctides.in','w+')
+   fid.write('{} GMT\n'.format(num2date(p.StartT).strftime('%m/%d/%Y %H:%M:%S')))
+
+   #tidal potential, and frequency
+   fid.write(' {:d}  50.000 !number of earth tidal potential, cut-off depth for applying tidal potential\n'.format(len(tnames)))
+   for i,tname in enumerate(tnames): fid.write('{}\n{} {:<.6f}  {:<.9e}  {:7.5f}  {:.2f}\n'.format(tname,tname[1],amp[i],freq[i],nodal[i],tear[i]))
+   fid.write('{} !nbfr\n'.format(len(tnames)+int(Z0!=0)))
+   if Z0!=0: fid.write('Z0\n  0.0 1.0 0.0\n')
+   for i,tname in enumerate(tnames): fid.write('{}\n  {:<.9e}  {:7.5f}  {:.2f}\n'.format(tname,freq[i],nodal[i],tear[i]))
+   fid.write('{} !nope\n'.format(gd.nob))
+
+   #1st bnd
+   bstr='1.0 !TEM nudge\n1.0 !SAL nudge'
+   if p.flag['SED']==1: bflag.append(3); bstr=bstr+'\n0.1 !SED nudge'
+   if p.flag['ICM']!=0: bflag.append(4); bstr=bstr+'\n1.0 !ICM nudge'
+   fstr='{} '+'{} '*len(bflag)+'!ocean\n'; fid.write(fstr.format(gd.nobn[0],*bflag))
+
+   #harmonics
+   sind=gd.iobn[0]; bxy=gd.lxy[sind]; xi,yi=bxy.T; xi=xi%360; ap=[]
+   for m,tname in enumerate(tnames):
+        print('compute amp. and pha. for tide {}'.format(tname))
+        api=[]
+        for n in arange(3):
+            if n==0: fname='{}/fes2014b_elevations_extrapolated/ocean_tide_extrapolated/{}.nc'.format(bdir,tname.lower()); an,pn='amplitude','phase'
+            if n==1: fname='{}/eastward_velocity/{}.nc'.format(bdir,tname.lower()); an,pn='Ua','Ug'
+            if n==2: fname='{}/northward_velocity/{}.nc'.format(bdir,tname.lower());an,pn='Va','Vg'
+            C=read(fname,1); lon=array(C.variables['lon'][:]); lat=array(C.variables['lat'][:])
+            amp0=array(C.variables[an][:])/100; pha0=array(C.variables[pn][:]); C.close()
+            fpn=pha0<0; pha0[fpn]=pha0[fpn]+360
+            dxs=unique(diff(lon)); dys=unique(diff(lat))
+            if len(dxs)!=1 or len(dys)!=1: sys.exit('{}: lon,lat not uniform specified'.format(fname))
+            dx=dxs[0]; dy=dys[0]
+
+            #get interp index (todo, if lon&lat not uniformal interval, do loop to find the right index)
+            idx=floor((xi-lon[0])/dx).astype('int'); sind=nonzero((lon[idx]-xi)>0)[0]; idx[sind]=idx[sind]-1
+            idy=floor((yi-lat[0])/dy).astype('int'); sind=nonzero((lat[idy]-yi)>0)[0]; idy[sind]=idy[sind]-1
+            xrat=(xi-lon[idx])/(lon[idx+1]-lon[idx]); yrat=(yi-lat[idy])/(lat[idy+1]-lat[idy])
+            if sum((xrat>1)|(xrat<0)|(yrat>1)|(yrat<0))!=0: sys.exit('xrat or yrat >1 or <0')
+
+            #interp for amp,pha
+            apii=[]
+            for k in arange(2):
+                if k==0: v0=c_[amp0[idy,idx],amp0[idy,idx+1],amp0[idy+1,idx],amp0[idy+1,idx+1]].T; vm=100
+                if k==1: v0=c_[pha0[idy,idx],pha0[idy,idx+1],pha0[idy+1,idx],pha0[idy+1,idx+1]].T; vm=370
+                for m,v0i in enumerate(v0): #remove junk value
+                   fpn=abs(v0i)>1e4; sindn=pindex(fpn)
+                   if sindn.size!=0:
+                      sindp=pindex(~fpn); sid=near_pts(bxy[sindn],bxy[sindp])
+                      v0i[sindn]=v0i[sindp[sid]]; v0[m]=v0i
+                vmax=v0.max(axis=0); vmin=v0.min(axis=0)
+                if k==1: #deal with phase jump
+                   for kk in nonzero(abs(vmax-vmin)>180)[0]:
+                       fpn=abs(v0[:,kk]-vmax[kk])>180; v0[fpn,kk]=v0[fpn,kk]+360
+                v1=v0[0]*(1-xrat)+v0[1]*xrat; v2=v0[2]*(1-xrat)+v0[3]*xrat; apiii=v1*(1-yrat)+v2*yrat
+                sind=nonzero((vmax>vm)*(vmin<=vm)*(vmin>=0))[0]; apiii[sind]=vmin[sind]
+                if sum((vmax>vm)*((vmin>vm)|(vmin<0)))!=0: sys.exit('All junks for amp or pha')
+                apii.append(apiii)
+            api.append(apii)
+        ap.append(api)
+   ap=array(ap).transpose([1,0,3,2])
+
+   #write tidal amp and pha for uv
+   if Z0!=0: fid.write('Z0\n'); [fid.write('0.0 0.0 0.0 0.0\n') for i in arange(nobn)]
+   for m,tname in enumerate(tnames):
+       fid.write('{}\n'.format(tname.lower()))
+       for k in arange(gd.nobn[0]):
+           fid.write('{:8.6f} {:.6f} {:8.6f} {:.6f}\n'.format(*ap[1,m,k],*ap[2,m,k]))
+   fid.write(bstr); fid.close() #write nudge
+elif p.flag[fname]==2:
+   print('writing '+fname)
    fid=open('./bctides.in','w+')
    fid.write('{} GMT\n'.format(num2date(p.StartT).strftime('%m/%d/%Y %H:%M:%S')))
    lstr='0 40. ntip\n0 nbfr\n1 nope\n{:d} 4 0 4 4'.format(gd.nobn[0])
@@ -191,7 +307,7 @@ if p.flag[fname]==1:
 #gr3,prop files
 #----------------------------------------------------------------------
 fnames=('albedo.gr3','windrot_geo2proj.gr3','bedthick.ic', 'diffmax.gr3',)
-fvalues=(0.1,          0.0,    5.0,   0.1,)
+fvalues=(0.065,         0.0,    5.0,   0.1,)
 for fname,fvalue in zip(fnames,fvalues):
     if p.flag[fname]==1:
        print('writing '+fname)
@@ -217,8 +333,8 @@ if p.flag[fname]==1:
 fname='shapiro.gr3'
 if p.flag[fname]==1:
    print('writing '+fname)
-   shapiro_max,threshold_slope=0.5,0.5
-   slope=gd.compute_gradient(fmt=2)[2]; vi=shapiro_max*tanh(2*slope/threshold_slope)
+   shapiro_max,threshold_slope=0.22,0.025
+   slope=gd.compute_gradient(fmt=2)[2]; vi=shapiro_max*tanh(2*slope/threshold_slope); vi[slope<0.005]=0
    gd.save('shapiro.gr3',value=vi)
 
 fname='veg_*.gr3'
@@ -329,10 +445,11 @@ if p.flag[fname]==1:
 #----------------------------------------------------------------------
 #TEM_3D.th.nc,  TEM_nu.nc, TEM_nudge.gr3
 #----------------------------------------------------------------------
-for fname in ['TEM_3D.th.nc','TEM_nu.nc']:
+for fname in ['TEM_3D.th.nc','TEM_nu.nc','uv3D.th.nc']:
     if p.flag[fname]==0: continue
     print('writing '+fname)
     nn,ne,ns,nvrt=gd.np,gd.ne,gd.ns,vd.nvrt; fmt=0 if fname.endswith('th.nc') else 1
+    dt=0.25 if fname.startswith('uv3D') else 1.0
 
     #write TEM_nudge.gr3
     if fname=='TEM_nu.nc':
@@ -340,54 +457,45 @@ for fname in ['TEM_3D.th.nc','TEM_nu.nc']:
        vi=1.15740741e-05*((dist-x2)/(x1-x2)).clip(0,1); gd.save('TEM_nudge.gr3',value=vi,outfmt='{:16.8e}') 
    
     #read hycom database
-    C=read(p.hycom,1); ct=C.time/24+datenum(2000,1,1); cvar=C.water_temp
+    C=read(p.hycom,1); ct=C.time/24+datenum(2000,1,1); nrec=C.dims[C.dimname.index('nrec')]
     clon=C.lon[:]; clat=C.lat[:]; cdepth=C.depth[:]; cxy=(clon[None,:]+1j*clat[:,None]).ravel()
 
     #get node xyz, and get interp indices
     bind=gd.iobn[0] if fmt==0 else pindex(read(fname[:4]+'nudge.gr3').z!=0)
     lx,ly=gd.lxy[bind].T; lz=abs(compute_zcor(vd.sigma[bind],gd.dp[bind])).T; nobn=bind.size
-    idx=(lx[:,None]>clon[None,:]).sum(axis=1)-1; ratx=(lx-clon[idx])/(clon[idx+1]-clon[idx]); ratx=ratx[None,:]
-    idy=(ly[:,None]>clat[None,:]).sum(axis=1)-1; raty=(ly-clat[idy])/(clat[idy+1]-clat[idy]); raty=raty[None,:]
-    mti=arange(p.StartT,p.EndT+2.0); dt=90; irec=0 #each time, do interplation for 30 days
+    idx=(lx[:,None]>clon[None,:]).sum(axis=1)-1; ratx=(lx-clon[idx])/(clon[idx+1]-clon[idx]); ratx=ratx[:,None,None]
+    idy=(ly[:,None]>clat[None,:]).sum(axis=1)-1; raty=(ly-clat[idy])/(clat[idy+1]-clat[idy]); raty=raty[:,None,None]
+    mti=arange(p.StartT,p.EndT+2.0,dt)
 
     #do interpolation and write netcdf file
     dns=['nOpenBndNodes' if fmt==0 else 'node','nLevels','one','time']; dms=[nobn,nvrt,1,None]
+    if fmt==0: dns.append('nComponents'); dms.append(2 if fname.startswith('uv3D') else 1)
     from netCDF4 import Dataset
     fid=Dataset(fname,'w',format='NETCDF4'); fvar=fid.variables
     for i,k in zip(dns,dms): fid.createDimension(i,k)   #define dimension
-    if fmt==0: fid.createDimension('nComponents',1)
     mvar='time_series' if fmt==0 else 'tracer_concentration' 
     fid.createVariable('time','float64',('time',)); fvar['time'][:]=(mti-mti[0])*86400.0
     if fmt==0:
-       fid.createVariable('time_step','float64',('one',)); fvar['time_step'][0]=86400.0 
+       fid.createVariable('time_step','float64',('one',)); fvar['time_step'][0]=dt*86400.0
        fid.createVariable(mvar,'float32',('time','nOpenBndNodes','nLevels','nComponents'),zlib=True) 
     else:
        fid.createVariable('map_to_global_node','int',('node',)); fvar['map_to_global_node'][:]=bind+1 
        fid.createVariable(mvar,'float32',('time','node','nLevels','one'),zlib=True)
 
-    #interp
-    while(irec<mti.size):
-         it1=irec; it2=min(it1+dt,mti.size); irec=irec+dt; its=arange(pindex(ct<mti[it1]).max(),pindex(ct>mti[it2-1]).min()+1)
-         vs=cvar[its]; temp=[]; print('  {}: {}'.format(fname,num2date(mti[it2-1]))) #get temp data 
-         for i, v in enumerate(vs): #fix nan
-             if it1==0 and i==0: #compute interp indices for nan
-                ins,ips=[],[]; fps=[abs(m.ravel())>1e3 for m in v]; [[ins.append(pindex(m)),ips.append(pindex(~m))] for m in fps]  
-                sindns=ins; sindps=[n if n.size==0 else n[near_pts(cxy[m],cxy[n])] for m,n in zip(ins,ips)] 
-             for k,cv in enumerate(v): #fix nan 
-                 sindn,sindp=sindns[k],sindps[k]; cv=cv.ravel()
-                 if sindp.size!=0: fp0=(abs(cv[sindn])>1e3)*(abs(cv[sindp])<1e3); cv[sindn[fp0]]=cv[sindp[fp0]] #init fix
-                 fpn=abs(cv)>1e3
-                 if sum(~fpn)==0:
-                    v[k]=v[k-1]
-                 else: 
-                    fn=pindex(fpn); ip=pindex(~fpn); fp=ip[near_pts(cxy[fn],cxy[ip])]; cv[fn]=cv[fp]  #final fix
-
-             #interp in space 
-             v11=v[:,idy,idx]; v12=v[:,idy,idx+1]; v21=v[:,idy+1,idx]; v22=v[:,idy+1,idx+1]
-             vi=(v11*(1-ratx)+v12*ratx)*(1-raty)+(v21*(1-ratx)+v22*ratx)*raty 
-             fv=interpv(vi,cdepth,lz).astype('float32'); temp.append(fv)
-         fvar[mvar][it1:it2]=interp(ct[its],array(temp),mti[it1:it2],axis=0).transpose([0,2,1])[...,None]
-    fid.close(); C.close(); temp=None
+    #find stacks and interp
+    cvars=['water_temp',] if fname.startswith('TEM') else ['water_u','water_v']
+    for it in arange(int(pindex(ct<mti[0]).max()/nrec),int(pindex(ct>mti[-1]).min()/nrec)+1):
+        cti=ct[(it*nrec):((it+1)*nrec)]; its=pindex((mti>=cti[0])*(mti<=cti[-1])); i1=its.min(); i2=its.max()+1
+        for n,cvar in enumerate(cvars):
+            v=C.attr('{}_{}'.format(cvar,it))[:].transpose([2,3,0,1]) #(lat,lon,time,depth)
+            print('{}, {}'.format(cvar,num2date(cti[-1])))
+            #interp in horizontal
+            v=(v[idy,idx]*(1-ratx)+v[idy,idx+1]*ratx)*(1-raty)+(v[idy+1,idx]*(1-ratx)+v[idy+1,idx+1]*ratx)*raty #(node,time,depth)
+            v=interpv(v.transpose([2,0,1]),cdepth,lz).transpose([2,1,0]) #(time,node,depth)
+            v=interp(cti,v,mti[i1:i2],axis=0) #(time,node,depth)
+            if fname.startswith('uv3D'): v=lpfilt(v,dt,0.2) #lpfilter for velocity
+            fvar[mvar][i1:i2,:,:,n]=v; fid.sync()
+    fid.close(); C.close(); v=None
 
 #----------------------------------------------------------------------
 #SAL_3D.th.nc, SAL_nu.nc, SAL_nudge.gr3
@@ -643,7 +751,7 @@ if p.flag[fname]==1:
    tdir='./sflux'; os.rmdir(tdir) if fexist(tdir) else None; os.mkdir(tdir) #mkdir sflux dir.
 
    #make links 
-   mts=arange(max(tm[0],p.StartT-2),min(tm[1],p.EndT+2)); svars=['air','rad','prc']
+   mts=arange(max([tm[0],p.StartT-2]),min([tm[1],p.EndT+2])); svars=['air','rad','prc']
    for irec,mt in enumerate(mts):
        for m,svar in enumerate(svars):
            t=num2date(mt); fname='{}/sflux_{}.{:04d}_{:02d}_{:02d}.nc'.format(p.sflux,svar,t.year,t.month,t.day)
