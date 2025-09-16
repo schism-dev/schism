@@ -880,7 +880,7 @@
   iof_hydro(22) = 0 !vertical eddy viscosity [m^2/s] {viscosity}  3D
   iof_hydro(23) = 0 !turbulent kinetic energy {turbulentKineticEner}   3D
   iof_hydro(24) = 0 !turbulent mixing length [m] {mixingLength}  3D
-!  iof_hydro(25) = 1 !z-coord {zCoordinates} 3D - this flag should be on for visIT etc
+  iof_hydro(25) = 1 !z-coord {zCoordinates} 3D - should be on if using visIT 
   iof_hydro(26) = 1 !horizontal vel vector [m/s] {horizontalVelX,Y} 3D vector
   iof_hydro(27) = 0 !horizontal vel vector defined @side [m/s] {horizontalSideVelX,Y} 3D vector
   iof_hydro(28) = 0 !vertical vel. @elem [m/s] {verticalVelAtElement} 3D
@@ -1070,7 +1070,7 @@
 ! Ice module outputs (if USE_ICE is on)
 !-----------------------------------------------------------------------
 !  iof_ice(1)= 0 !divergence @ elem ('Delta') [1/sec] {iceStrainRate}  2D
-!  iof_ice(2)= 0 !ice advective velcoity vector [m/s] {iceVelocityX,Y}  2D vector
+!  iof_ice(2)= 0 !ice advective velocity vector [m/s] {iceVelocityX,Y}  2D vector
 !  iof_ice(3)= 0 !net heat flux to ocean (>0 warm up SST) [W/m/m] {iceNetHeatFlux}  2D
 !  iof_ice(4)= 0 !net fresh water flux to ocean (>0 freshens up SSS) [kg/s/m/m] {iceFreshwaterFlux}  2D
 !  iof_ice(5)= 0 !ice temperature [C] at air-ice interface {iceTopTemperature}  2D

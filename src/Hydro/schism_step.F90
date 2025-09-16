@@ -5797,6 +5797,7 @@
           ie=indel(j,i)
           id=iself(j,i)
 
+          !Impossible for a node surrounded by all active blocks, so matrix is well conditioned
           if(ihydraulics/=0.and.nhtblocks>0) then
             if(isblock_el(ie)>0) cycle !active block
           endif
