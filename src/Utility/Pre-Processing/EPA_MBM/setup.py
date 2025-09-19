@@ -432,7 +432,7 @@ if p.flag[fname]==1:
    print('writing '+fname)
   
    #get elev data (do not change boundary) 
-   i1=abs(M.elev_time-p.StartT).argmin(); i2=abs(M.elev_time-p.EndT+2).argmin()
+   i1=abs(M.elev_time-p.StartT).argmin(); i2=abs(M.elev_time-p.EndT-2).argmin()
    sindp=near_pts(gd.xy[gd.iobn[0]],M.elev_xy[:])
    mti=M.elev_time[i1:i2]; elev=M.elev_data[:,i1:i2][sindp].T
 
