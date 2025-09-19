@@ -432,9 +432,9 @@ if p.flag[fname]==1:
    print('writing '+fname)
   
    #get elev data (do not change boundary) 
-   fpt=(M.elev_time>=p.StartT)*(M.elev_time<=(p.EndT+2)); mti=M.elev_time[fpt]
+   i1=abs(M.elev_time-p.StartT).argmin(); i2=abs(M.elev_time-p.EndT+2).argmin()
    sindp=near_pts(gd.xy[gd.iobn[0]],M.elev_xy[:])
-   elev=M.elev_data[:,fpt][sindp].T
+   mti=M.elev_time[i1:i2]; elev=M.elev_data[:,i1:i2][sindp].T
 
    #write elev2D.th.nc
    C=zdata(); C.dimname=['nOpenBndNodes','nLevels','nComponents','one','time']; C.dims=[gd.nobn[0],1,1,1,len(mti)]
