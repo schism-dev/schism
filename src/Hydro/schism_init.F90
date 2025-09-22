@@ -1765,8 +1765,10 @@
       wwave_force=0.d0
       diffmin=1.d-6; diffmax=1.d0
       deta1_dxy_elem=0.d0
-      age_marsh=0.d0
       stemp=0.d0 !init for output
+#ifdef USE_MARSH
+      age_marsh=0.d0
+#endif
 
 !Tsinghua group
 #ifdef USE_SED 
