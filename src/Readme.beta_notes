@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-- ``: vclose_surf_frac renamed as vclose_surf_frac0. If vclose_surf_frac0<0, needs vclose.gr3 (depth in [0,1]);
+- `8e0b1477`: vclose_surf_frac renamed as vclose_surf_frac0. If vclose_surf_frac0<0, needs vclose.gr3 (depth in [0,1]);
 
 Tag stofs3d-atl.v3.1.0 (from v5.14): Sept 17, 2025
 - `b3644238` (21 Aug 2025): added istemp as on/off and removed stemp_thick; restored soil_thick.gr3;
