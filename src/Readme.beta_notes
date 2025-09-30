@@ -9,6 +9,9 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- ``: vclose_surf_frac renamed as vclose_surf_frac0. If vclose_surf_frac0<0, needs vclose.gr3 (depth in [0,1]);
+
+Tag stofs3d-atl.v3.1.0 (from v5.14): Sept 17, 2025
 - `b3644238` (21 Aug 2025): added istemp as on/off and removed stemp_thick; restored soil_thick.gr3;
 - `5a8af1a` (21 Aug 2025 via shallow_T): removed stemp_dz and replaced it with stemp_thick, and replaced stemp_stc with soild_conductivity.gr3; added relax_2_airt. Added 'sediment_T' in hotstart.nc as an optional input. Changed i_hmin_airsea_ex and i_hmin_salt_ex to be 0 or 1 only;
 - `536829db` (15 Aug 2025): added optional parameter age_marsh_min;

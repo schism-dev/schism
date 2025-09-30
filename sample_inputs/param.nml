@@ -709,6 +709,16 @@
   veg_lai = 1. !Leaf Area Index [-]; used if iveg=2. Ganthy suggests 0-10?
   veg_cw = 1.5 !calibration coefficient in diameter of bent leaf [-]; used if iveg=2. Ganthy suggests 0-25?
 
+!-----------------------------------------------------------------------
+! Fraction of vertical flux closure adjustment applied at surface, then subtracted
+! from all vertical fluxes. This is currently done for T,S only
+! 0.0 <= vclose_surf_frac(1:nea) < 1.0
+! 1: fully from surface (i.e. no correction as before); 0: fully from bottom 
+! vclose_surf_frac(:)=vclose_surf_frac0 if the latter is in [0,1]. If vclose_surf_frac0<0,
+! needs vclose.gr3 (depths in [0,1]).
+!-----------------------------------------------------------------------
+  vclose_surf_frac0 = 1.0
+
 !----------------------------------------------------------------------
 ! Coupling step with ICE module.
 !----------------------------------------------------------------------
@@ -785,14 +795,6 @@
 ! If on, must turn on USE_TIMOR
 !-----------------------------------------------------------------------
   irouse_test = 0
-
-!-----------------------------------------------------------------------
-! Fraction of vertical flux closure adjustment applied at surface, then subtracted
-! from all vertical fluxes. This is currently done for T,S only
-! 0.0 <= vclose_surf_frac < 1.0
-! 1: fully from surface (i.e. no correction as before); 0: fully from bottom 
-!-----------------------------------------------------------------------
-  vclose_surf_frac=1.0
 
 !-----------------------------------------------------------------------
 ! Option to enforce strict mass conservation for each tracer model (only works with itr_met=3,4)

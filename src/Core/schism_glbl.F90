@@ -107,7 +107,7 @@ module schism_glbl
                       &vnh1,vnh2,vnf1,vnf2,rnday,btrack_nudge,hmin_man, &
                       &prmsl_ref,hmin_radstress,eos_a,eos_b,eps1_tvd_imp,eps2_tvd_imp, &
                       &xlsc0,rearth_pole,rearth_eq,hvis_coef0,disch_coef(10),hw_depth,hw_ratio, &
-                      &slr_rate,rho0,shw,gen_wsett,turbinj,turbinjds,alphaw,h1_bcc,h2_bcc,vclose_surf_frac, &
+                      &slr_rate,rho0,shw,gen_wsett,turbinj,turbinjds,alphaw,h1_bcc,h2_bcc,vclose_surf_frac0, &
                       &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
                       &ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
                       &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2,ri_st, &
@@ -273,6 +273,7 @@ module schism_glbl
   integer,save,allocatable :: ielg2(:)      ! Local-to-global element index table (2-tier augmented)
   integer,save,allocatable :: iegl2(:,:)      ! Global-to-local element index table (2-tier augmented)
   real(rkind),save,allocatable :: stemp(:)
+  real(rkind),save,allocatable :: vclose_surf_frac(:) !vertical flux correction
 
   ! Node geometry data
   integer,save :: mnei  ! Max number of neighboring elements surrounding a node
@@ -605,9 +606,6 @@ module schism_glbl
   !Declarations for other modules
 ! ANALYSIS
   real(rkind),save,allocatable :: dtbe(:)
-
-! vertical flux diversion closure fraction applied at surface
-!  real(rkind) :: vclose_surf_frac   ! 1.0:flux applied at surface, 0.5:half at top half at bottom
 
 ! WWM & WW3
   character(len=3) :: RADFLAG

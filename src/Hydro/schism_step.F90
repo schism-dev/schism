@@ -7218,8 +7218,10 @@
         enddo !l=kbe(i),nvrt-1
 
         !Optionally correct w and vertical flux according to the flux across free surface for T,S only
-        if(vclose_surf_frac.ge.0.0d0.and.vclose_surf_frac.lt.1.0d0) then 
-          surface_flux_ratio = 1.d0-vclose_surf_frac 
+!        if(vclose_surf_frac(i)>=0.0d0.and.vclose_surf_frac(i)<1.0d0) then 
+        !vclose_surf_frac(:) \in [0,1] checked
+        if(abs(vclose_surf_frac(i)-1.0d0)>1.d-4) then 
+          surface_flux_ratio = 1.d0-vclose_surf_frac(i)
           wflux_correct = 0.d0
           l=nvrt
           ubar=0.d0
