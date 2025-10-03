@@ -35,7 +35,7 @@
 #SBATCH -o myjob.o%j       # Name of stdout output file
 #SBATCH -e myjob.e%j       # Name of stderr error file
 #SBATCH -p icx             # Queue (partition) name
-##Max 32 nodes (80cores/node), 48hrs
+##Max 32 nodes (80cores/node; 256GB/node), 48hrs
 #SBATCH -N 6               # Total # of nodes 
 #SBATCH -n 480             # Total # of mpi tasks 
 #SBATCH -t 24:00:00        # Run time (hh:mm:ss)
