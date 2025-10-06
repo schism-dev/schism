@@ -53,8 +53,8 @@ static char RCSid_defines[] = "$Id: defines.h,v 1.28 2007/01/13 21:48:46 pturner
 /* data object limits */
 #define MAXGRIDS 5		/* max number of grids */
 #define MAXGRIDTS 5		/* max number of grids */
-#define MAXGRIDBOUNDS 10000        /* max number of bnd segments*/
-#define MAXBOUNDS 20000		/* max number of nodes on each boundary segment*/
+#define MAXGRIDBOUNDS 20000        /* max number of bnd segments*/
+#define MAXBOUNDS 100000		/* max number of nodes on each boundary segment*/
 #define MAXTEANL 5
 #define MAXFREQ 65		/* max number of frequencies for TEANL */
 #define MAXADCIRC 5		/* max number of ADCIRC flows */

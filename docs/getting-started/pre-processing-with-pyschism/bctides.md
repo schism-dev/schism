@@ -68,7 +68,7 @@ if __name__ == '__main__':
     bctides.write(
         outdir, 
         start_date=start_date, 
-        end_date=rnday, 
+        rnday=rnday, 
         overwrite=True,
     )
 ```

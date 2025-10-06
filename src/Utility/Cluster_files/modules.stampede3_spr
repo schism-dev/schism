@@ -1,2 +1,5 @@
 module load netcdf/4.9.2
+#cmake 4* threw an error
+module unload cmake
+module load cmake/3.31.5
 ###Use defaults for others

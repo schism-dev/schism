@@ -94,7 +94,7 @@ module schism_glbl
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
                   &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm,iof_icm_ba,&
-                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif,nmarsh_types
+                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif,nmarsh_types,istemp
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_cos,iof_fib, &
@@ -107,11 +107,11 @@ module schism_glbl
                       &vnh1,vnh2,vnf1,vnf2,rnday,btrack_nudge,hmin_man, &
                       &prmsl_ref,hmin_radstress,eos_a,eos_b,eps1_tvd_imp,eps2_tvd_imp, &
                       &xlsc0,rearth_pole,rearth_eq,hvis_coef0,disch_coef(10),hw_depth,hw_ratio, &
-                      &slr_rate,rho0,shw,gen_wsett,turbinj,turbinjds,alphaw,h1_bcc,h2_bcc,vclose_surf_frac, &
+                      &slr_rate,rho0,shw,gen_wsett,turbinj,turbinjds,alphaw,h1_bcc,h2_bcc,vclose_surf_frac0, &
                       &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
-                      &stemp_stc,stemp_dz(2),ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
+                      &ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
                       &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2,ri_st, &
-                      &create_marsh_min,create_marsh_max
+                      &create_marsh_min,create_marsh_max,age_marsh_min,relax_2_airt
   real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:), &
         &veg_di0(:),veg_h0(:),veg_nv0(:),veg_cd0(:),drown_marsh(:)
 
@@ -273,6 +273,7 @@ module schism_glbl
   integer,save,allocatable :: ielg2(:)      ! Local-to-global element index table (2-tier augmented)
   integer,save,allocatable :: iegl2(:,:)      ! Global-to-local element index table (2-tier augmented)
   real(rkind),save,allocatable :: stemp(:)
+  real(rkind),save,allocatable :: vclose_surf_frac(:) !vertical flux correction
 
   ! Node geometry data
   integer,save :: mnei  ! Max number of neighboring elements surrounding a node
@@ -468,7 +469,8 @@ module schism_glbl
   real(rkind),save,allocatable :: rho_mean(:,:)         ! mean density
   real(rkind),save,allocatable :: Cdp(:)         ! drag at node
   real(rkind),save,allocatable :: rmanning(:)         ! Manning's n at node
-!  real(rkind),save,allocatable :: shapiro_min(:)      !min of Shapiro filter strength (used with some ishapiro options)
+  real(rkind),save,allocatable :: stemp_stc(:)    !soil thermal conductivity
+  real(rkind),save,allocatable :: stemp_dz(:)    !soil thickness
   real(rkind),save,allocatable,target :: windx(:),windy(:) !wind vector
   real(rkind),save,allocatable,target :: prec_rain(:),prec_snow(:) !precipitation of rain and snow
   real(rkind),save,allocatable,target :: sdbt(:,:,:),shapiro(:),shapiro_smag(:), &
@@ -605,9 +607,6 @@ module schism_glbl
 ! ANALYSIS
   real(rkind),save,allocatable :: dtbe(:)
 
-! vertical flux diversion closure fraction applied at surface
-!  real(rkind) :: vclose_surf_frac   ! 1.0:flux applied at surface, 0.5:half at top half at bottom
-
 ! WWM & WW3
   character(len=3) :: RADFLAG
   integer,save :: msc2,mdc2
@@ -681,7 +680,7 @@ module schism_glbl
 
 ! Vegetation
   real(rkind),save,allocatable     :: veg_alpha0(:),veg_h(:),veg_nv(:),veg_di(:),veg_cd(:), &
- &veg_h_unbent(:),veg_nv_unbent(:),veg_di_unbent(:)
+ &veg_h_unbent(:),veg_nv_unbent(:),veg_di_unbent(:),age_marsh(:)
 !Tsinghua group:0825
   REAL(rkind),save :: Cbeta,beta0,c_miu,Cv_max,ecol,ecol1,sigf,sigepsf,Ceps1,Ceps2,Ceps3,Acol,sig_s,fi_c,ksi_c,kpz !1013+kpz
   REAL(rkind),save,ALLOCATABLE :: Dpzz(:,:)     !at nodes & whole levels 

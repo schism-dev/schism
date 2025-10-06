@@ -944,7 +944,7 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight0)
   integer :: i,k
   real(rkind) :: drat,srat,leafC,stemC,xT,mLight,rIK,Ns,Ps,fT,fI,fN,fP,zm,rm,sFCPm(4)
   real(rkind) :: sfPN,sfPNb,sfPPb,leaf0,stem0,TB,MT0(4),BM,BMb,sfT,sfI,sfN,sfP,s
-  real(rkind) :: efT,eKd,efI,efN,efP,efEP,eGP,eMT,ePR,efPN,zEP0,eMT0
+  real(rkind) :: efT,eKd,efI,efN,efP,efEP,eGP,eMT,ePR,efPN,zEP0,eMT0,DOsat,T,tmp
   real(rkind),dimension(nvrt) :: sLight,dz,zleaf,zstem,GP,MT1,MT2,zEP
   real(rkind),pointer :: sleaf,sstem,sroot,tuber,Hs
 
@@ -1075,6 +1075,8 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight0)
     sfPN =(NH4(k)/(sKhN(1)+NO3(k)))*(NO3(k)/(sKhN(1)+NH4(k))+sKhN(1)/(NH4(k)+NO3(k)))
     sfPNb=(bNH4(id)/sKhN(2))/(bNH4(id)/sKhN(2)+drat*(NH4(k)+NO3(k)/sKhN(1)))
     sfPPb=(bPO4(id)/sKhP(2))/(bPO4(id)/sKhP(2)+drat*PO4d(k)/sKhP(1))
+    T=temp(k)+273.15d0; tmp=exp(-salt(k)*(0.017674d0-10.754d0/T+2140.7d0/T**2.d0))
+    DOsat=exp(-139.34411d0+1.575701d5/T-6.642308d7/T**2.d0+1.2438d10/T**3.d0-8.621949d11/T**4.d0)*tmp
 
     !interaction with water column: nutrient uptake and metabolism from/to water
     sdwqc(iRPOC,k)= sFc*sFCM(1)*BM
@@ -1091,6 +1093,7 @@ subroutine sav_calc(id,kb,zid,shtz,tdep,sLight0)
     sdwqc(iDOP,k) = sFc*sp2c*sFPM(3)*BM
     sdwqc(iPO4,k) = sFc*sp2c*(sFPM(4)*BM-(1.0-sfPPb)*GP(k))
     if(idry_e(id)==1) sdwqc=0 !reset to zero for dry condition
+    if(sdwqc(iDOX,k)>0.d0.and.DOX(k)>DOsat) sdwqc(iDOX,k)=0.d0 !oxygen escapes as gas form
 
     !interaction with sediment
     if(k==(kb+1)) then

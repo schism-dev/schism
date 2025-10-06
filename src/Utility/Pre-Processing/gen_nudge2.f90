@@ -2,11 +2,11 @@
 !     segments
 !     Works for mixed grids
 !     Input: 
-!           (1) hgrid.gr3 (with bnd part)
+!           (1) hgrid.gr3 (with bnd part; map proj or lon/lat)
 !           (2) screen
 !     Output: nudge.gr3 (edit out unwanted portions in gredit)
 
-!     ifort -mcmodel=medium -O2 -o gen_nudge2 gen_nudge2.f90
+!     ifx -mcmodel=medium -O2 -o gen_nudge2 gen_nudge2.f90
 
       implicit real*8(a-h,o-z)
       parameter(nbyte=4)
@@ -24,13 +24,25 @@
       print*, 'Input max relax distance in m or degr:'
       !Can also adjust this for individual segments
       read*, rlmax
-      print*, 'Input max relax strength in days:'
-      read*, rnu_day
+
+      print*, 'Output *nudge.gr3 (0) or other generic output (1)?'
+      read*, ioutput
+
+      if(ioutput==0) then !nudge.gr3
+        print*, 'Input max relax strength in days:'
+        read*, rnu_day
+      else !generic, linear transition btw rlmin and rlmax
+        print*, 'Input min distance in m or degr:'
+        read*, rlmin
+        if(rlmin>=rlmax.or.rlmin<0.) stop 'rlmin>=rlmax || rlmin<0'
+        print*, 'Input 2 values @min and max distances:'
+        read*, vout1,vout2
+      endif !ioutput
   
       open(14,file='hgrid.gr3',status='old')
       open(12,file='nudge.gr3',status='replace')
       read(14,*); read(14,*)ne,np
-      allocate(xnd(np),ynd(np),dp(np),i34(ne),elnode(4,ne),xctr(ne),yctr(ne), &
+      allocate(xnd(np),ynd(np),dp(np),i34(ne),elnode(4,ne), & !xctr(ne),yctr(ne), &
      &icolor(np),stat=istat)
       if(istat/=0) stop 'Failed to alloc (1)'
       do i=1,np
@@ -39,8 +51,8 @@
       do i=1,ne
         read(14,*)j,k,elnode(1:k,i)
         i34(i)=k
-        xctr(i)=sum(xnd(elnode(1:k,i)))/k
-        yctr(i)=sum(ynd(elnode(1:k,i)))/k
+!        xctr(i)=sum(xnd(elnode(1:k,i)))/k
+!        yctr(i)=sum(ynd(elnode(1:k,i)))/k
       enddo !i
       read(14,*)nope
       read(14,*)neta
@@ -95,14 +107,22 @@
 
       !Generate nudging zones; adjust here to use different values for
       !each seg
-      write(12,*)rlmax,rnu_day
+      if(ioutput==0) then
+        write(12,*)rlmax,rnu_day
+      else
+        write(12,*)real(rlmin),real(rlmax),real(vout1),real(vout2)
+      endif 
       write(12,*)ne,np
       rnu_max=1./rnu_day/86400.
 
       do id=1,np
         if(icolor(id)==1) then
-          rnu=rnu_max
           distmin=0; in0=id 
+          if(ioutput==0) then !nudge.gr3
+            rnu=rnu_max
+          else
+            rnu=vout1
+          endif !ioutput
         else !not on open seg's
           distmin=huge(1.d0) !min distance
           in0=0 !node index for min distance
@@ -118,13 +138,20 @@
             enddo !j
           enddo !i2
 
-          rnu=0
-          if(distmin<=rlmax) rnu=(1-distmin/rlmax)*rnu_max !\in [0,1]
+          if(ioutput==0) then !nudge.gr3
+            rnu=0
+            if(distmin<=rlmax) rnu=(1-distmin/rlmax)*rnu_max !\in [0,1]
+          else !generic
+            tmpmin=min(vout1,vout2)
+            tmpmax=max(vout1,vout2)
+            rnu=vout1+(vout2-vout1)*(distmin-rlmin)/(rlmax-rlmin)
+            rnu=max(tmpmin,min(tmpmax,rnu))
+          endif !ioutput
         endif !icolor
 
         !if(mod(id,100)==0) print*, 'done node ',id
         write(12,*)id,real(xnd(id)),real(ynd(id)),real(rnu),in0 !real(distmin),in0
-      enddo !id
+      enddo !id=1,np
 
       do i=1,ne
         write(12,*)i,i34(i),elnode(1:i34(i),i) 

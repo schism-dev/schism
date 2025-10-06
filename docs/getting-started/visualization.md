@@ -4,7 +4,7 @@ The directory Utility/Vis_Matlab/ has matlab scripts that can visualize outputs 
  the new scribed outputs, while `SCHISM_SLAB.m` and `SCHISM_TRANSECT.m` are for the old outputs (schout*.nc).
 
 ## Visualization with pylib
-pylib provides `schismview` to visualize outputs (scribed outputs, OLDIO not supported yet). `schismview` will collect all the available variables from your outputs. For each variable, you can do 1). contour plot, 2). animation, 3). extract time series, and 4) query, etc. This is a lightweight app, and please report bug to SCHISM maillist or wzhengui@gmail.com.
+pylib provides `schismview` to visualize outputs (scribed outputs only). `schismview` will collect all the available variables from your outputs. For each variable, you can do 1). contour plot, 2). transect plot; 3) animation, 4). extract time series, and 5) query, etc. Please report bug to SCHISM maillist or wzhengui@gmail.com.
 
 ### **[Installation of pylib](./pre-processing-with-pylib/installation.md)**
 

@@ -753,7 +753,7 @@ MODULE wwm_hotfile_mod
       integer iret, ncid
       integer nboned_dims, nfreq_dims, ndir_dims, ntime_dims, mnp_dims
       integer ac_id
-      iret = nf90_create(FILERET, NF90_CLOBBER, ncid)
+      iret = nf90_create(FILERET, OR(NF90_NETCDF4,NF90_CLOBBER), ncid)
       CALL GENERIC_NETCDF_ERROR_WWM(CallFct, 1, iret)
 
       CALL WRITE_NETCDF_HEADERS_1(ncid, nbTime, MULTIPLEOUT_W, GRIDWRITE_W, IOBPD_HISTORY_W, np_write, ne_write)

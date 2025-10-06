@@ -14,7 +14,7 @@
 !     Output: tvd.prop.0 (may be further edited, e.g. look for very skew elem nearby,
 !              and connectivity)
 
-!     ifort -O2 -o gen_WENO_zone ../UtilLib/schism_geometry.f90 ../UtilLib/pt_in_poly_test.f90 gen_WENO_zone.f90
+!     ifx -O2 -o gen_WENO_zone ../UtilLib/schism_geometry.f90 ../UtilLib/pt_in_poly_test.f90 gen_WENO_zone.f90
 
       use schism_geometry_mod
       use pt_in_poly_test
@@ -73,8 +73,8 @@
 
       do irgn=1,nreg
         open(10,file=trim(adjustl(file_reg(irgn))),status='old')
-        read(10,*); read(10,*)npoly
-        if(npoly/=1) then
+        read(10,*); read(10,*)npoly0
+        if(npoly0/=1) then
           print*, 'Can only have 1 poly in .rgn:',irgn
           stop 
         endif
@@ -86,7 +86,7 @@
         enddo !i
         close(10)
       
-        !Check if the region is closed
+        !Make sure the region is closed
         rl=(poly(irgn)%xy(1,1)-poly(irgn)%xy(nvertices(irgn),1))**2+ &
          &+(poly(irgn)%xy(1,2)-poly(irgn)%xy(nvertices(irgn),2))**2
         if(rl>1.d-14) then

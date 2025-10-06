@@ -45,6 +45,8 @@
 #SBATCH -n 2560            # Total # of mpi tasks (80 cores/nd to free up more memory)
 #SBATCH -t 01:00:00        # Run time (hh:mm:ss); max 48 hrs
 #SBATCH -A OCE24002
+##My own project
+##SBATCH -A TG-EES250042
 #SBATCH --mail-user=yjzhang@vims.edu
 #SBATCH --mail-type=all    # Send email at begin and end of job
 

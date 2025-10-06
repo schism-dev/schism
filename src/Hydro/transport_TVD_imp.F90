@@ -1918,7 +1918,7 @@
             bigv=area(i)*(ze(k,i)-ze(k-1,i)) !volume
             dt_by_bigv = dt/bigv
   
-            if(k<nvrt) then
+            if(k<nvrt) then !diffusion & settling terms @ k
               if(itur==5.and.m>=irange_tr(1,5).and.m<=irange_tr(1,5)) then !1018:itur==5
                 av_df=sum(dfhm(k,m-irange_tr(1,5)+1,elnode(1:i34(i),i)))/real(i34(i),rkind) !1007
               else
@@ -1929,7 +1929,6 @@
               cupp(kin)=cupp(kin)-tmp
               bdia(kin)=bdia(kin)+tmp
 
-              !if(wsett(m,k,i)<=0.0d0) then !upwinding for conc
               if(swild(k)<=0.0d0) then !upwinding for conc
                 bdia(kin) = bdia(kin) - area(i)*dt_by_bigv*swild(k) !wsett(m,k,i)
               else
@@ -1937,7 +1936,7 @@
               endif
             endif !k<nvrt
 
-            if(k>kbe(i)+1) then
+            if(k>kbe(i)+1) then !diffusion & settling terms @ k-1
               if(itur==5.and.m>=irange_tr(1,5).and.m<=irange_tr(1,5)) then !1018:itur==5
                 av_df=sum(dfhm(k-1,m-irange_tr(1,5)+1,elnode(1:i34(i),i)))/real(i34(i),rkind) !1007
               else
@@ -1948,17 +1947,15 @@
               alow(kin)=alow(kin)-tmp
               bdia(kin)=bdia(kin)+tmp
 
-              !if(wsett(m,k-1,i)<=0.0d0) then
               if(swild(k-1)<=0.0d0) then
                 alow(kin) = alow(kin) + area(i)*dt_by_bigv*swild(k-1) !wsett(m,k-1,i)
               else
                 bdia(kin) = bdia(kin) + area(i)*dt_by_bigv*swild(k-1) !wsett(m,k-1,i)
               endif
-            endif !k>
+            endif !k>kbe(i)+1
 
-            !Extra terms for sediment at bottom
+            !Extra terms for sediment at bottom b.c.: \kapp*dT/dz+w_s*T=w_s*T-E
             if(iwsett(m)==1.and.k==kbe(i)+1) then
-              !if(wsett(m,k-1,i)<0.0d0) then
               if(swild(k-1)<0.0d0) then
                 write(errmsg,*)'TRAN_IMP: wsett<0,',m,k,ielg(i),swild(k-1) !wsett(m,k-1,i)
                 call parallel_abort(errmsg)   
