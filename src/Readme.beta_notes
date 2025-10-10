@@ -639,7 +639,7 @@ git versions:
 158. `b09c1f4a` (24 July 2025): merged with SED3D_cleanup to improve multi bed layer sorting;
 159. `1e2b181209` (21 Aug 2025): merged with shallow_T, quad_init (fixed a bug in quad_int() c/o Jose O.)
 160. `6c2ef8f3` (25 Aug 2025): updated WWM nc outputs to use OR(NF90_NETCDF4,NF90_CLOBBER) (as in hydro)
-161. ``: changed soil conductivity in a cell from min to mean;
+161. `b2c4d490`: changed soil conductivity in a cell from min to mean;
 
 ================================================================================================
 (D) Auto-test history:
