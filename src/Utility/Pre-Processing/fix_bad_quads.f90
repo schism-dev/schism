@@ -70,7 +70,7 @@
         if(i34(i)/=4) cycle
 
         !Quads: calc min/max side for aspect ratio later
-        sdmin=huge(1.d0); sdmax=-armin
+        sdmin=huge(1.d0); sdmax=-sdmin
         do j=1,4
           n1=elnode(j,i) 
           j1=j+1
