@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-- `8e0b1477`: vclose_surf_frac renamed as vclose_surf_frac0. If vclose_surf_frac0<0, needs vclose.gr3 (depth in [0,1]);
+- `8e0b1477`: removed/renamed vclose_surf_frac as vclose_surf_frac0. If vclose_surf_frac0<0, needs vclose.gr3 (depth in [0,1]);
 
 Tag stofs3d-atl.v3.1.0 (from v5.14): Sept 17, 2025
 - `b3644238` (21 Aug 2025): added istemp as on/off and removed stemp_thick; restored soil_thick.gr3;
@@ -639,6 +639,7 @@ git versions:
 158. `b09c1f4a` (24 July 2025): merged with SED3D_cleanup to improve multi bed layer sorting;
 159. `1e2b181209` (21 Aug 2025): merged with shallow_T, quad_init (fixed a bug in quad_int() c/o Jose O.)
 160. `6c2ef8f3` (25 Aug 2025): updated WWM nc outputs to use OR(NF90_NETCDF4,NF90_CLOBBER) (as in hydro)
+161. `b2c4d490`: changed soil conductivity in a cell from min to mean;
 
 ================================================================================================
 (D) Auto-test history:

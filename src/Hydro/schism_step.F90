@@ -7815,7 +7815,8 @@
 !$OMP     do
           do i=1,nea
             tmp=sum(stemp_dz(elnode(1:i34(i),i)))/i34(i) !SED thickness>0
-            tmp0=minval(stemp_stc(elnode(1:i34(i),i))) !min conductivity
+            !tmp0=minval(stemp_stc(elnode(1:i34(i),i))) !min conductivity
+            tmp0=sum(stemp_stc(elnode(1:i34(i),i)))/i34(i) !av conductivity
 
             if(idry_e(i)==1) then !use air T if available; soil-air exchange
               if(nws==2.or.nws==4) then
