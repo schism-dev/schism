@@ -80,7 +80,8 @@
 
 #ifdef USE_FABM
 #include "fabm_version.h"
-      USE fabm_schism, only: fabm_schism_init_model, fabm_schism_init_stage2, fabm_schism_init_concentrations, fabm_istart=>istart, fs, fabm_schism_read_horizontal_state_from_netcdf
+      USE fabm_schism, only: fabm_schism_init_model, fabm_schism_init_stage2,  &
+    & fabm_schism_init_concentrations, fabm_istart=>istart, fs, fabm_schism_read_horizontal_state_from_netcdf
       USE fabm_schism, only: fabm_schism_create_output_netcdf
 #endif
 

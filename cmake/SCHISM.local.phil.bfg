@@ -59,17 +59,19 @@ set(CMAKE_Fortran_FLAGS_RELEASE "-g " CACHE STRING "Fortran flags" FORCE)
 ###MPI_VERSION cannot be set here; use -DMPIVERSION=XX in cmake cmd instead
 #set(MPI_VERSION CACHE STRING  "1")
 
-###FABM usage
-set( USE_FABM ON   CACHE BOOLEAN "FABM BGC model interface")
+###FABM usage ### nimmt er irgendwie nicht ???
+#set( USE_FABM ON   CACHE BOOLEAN "FABM BGC model interface")
 #If FABM is on, need to set FABM_BASE
-set(FABM_BASE /beegfs/home/Wyrwa/FABM/fabm4schism)
+#set(FABM_BASE /beegfs/home/Wyrwa/FABM/fabm4schism)
+#set(FABM_EXTRA_INSTITUTES uzweijens)
+#set(FABM_UZWEIJENS_BASE ../src/QSim)
+# does not work # cmake -C ../cmake/SCHISM.local.phil.bfg -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
+# cmake -C ../cmake/SCHISM.local.phil.bfg ../src/ # does not work ???
+# cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg ../src/ # does not work ???
 
 ################################################################################################# notes
+# clean: Wyrwa@phil-hpc.hpc:~/SCHISM/github_schism17okt25/cmake> rm CMakeCache.txt
 # Wyrwa@phil-hpc.hpc:~/SCHISM/github_schism17okt25/entwicklung> rsync -va . /beegfs/home/Wyrwa/SCHISM/github_schism17okt25
-# cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg ../src/
+# cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
 # cmake --build .
 #
-# previously:
-# Wyrwa@phil-hpc.hpc:~/SCHISM/github_schism17okt25/entwicklung> rsync -va ./src /beegfs/home/Wyrwa/SCHISM/github_schism17okt25/src
-# cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
-# 

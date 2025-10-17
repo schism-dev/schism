@@ -298,15 +298,26 @@ subroutine fabm_schism_init_model(ntracers)
   do i=1,fs%ndiag
 
 #if _FABM_API_VERSION_ < 1
-    fs%interior_diagnostic_variables(i)%short_name = fs%model%diagnostic_variables(i)%name(1:min(256,len_trim(fs%model%diagnostic_variables(i)%name)))
-    fs%interior_diagnostic_variables(i)%long_name = fs%model%diagnostic_variables(i)%long_name(1:min(256,len_trim(fs%model%diagnostic_variables(i)%long_name)))
-    fs%interior_diagnostic_variables(i)%units = fs%model%diagnostic_variables(i)%units(1:min(256,len_trim(fs%model%diagnostic_variables(i)%units)))
-    fs%interior_diagnostic_variables(i)%do_output = fs%model%diagnostic_variables(i)%output /= output_none
+    fs%interior_diagnostic_variables(i)%short_name &
+    & = fs%model%diagnostic_variables(i)%name(1:min(256,len_trim(fs%model%diagnostic_variables(i)%name)))
+    fs%interior_diagnostic_variables(i)%long_name &
+    & = fs%model%diagnostic_variables(i)%long_name(1:min(256,len_trim(fs%model%diagnostic_variables(i)%long_name)))
+    fs%interior_diagnostic_variables(i)%units &
+    & = fs%model%diagnostic_variables(i)%units(1:min(256,len_trim(fs%model%diagnostic_variables(i)%units)))
+    fs%interior_diagnostic_variables(i)%do_output &
+    & = fs%model%diagnostic_variables(i)%output /= output_none
 #else
-    fs%interior_diagnostic_variables(i)%short_name = fs%model%interior_diagnostic_variables(i)%name(1:min(256,len_trim(fs%model%interior_diagnostic_variables(i)%name)))
-    fs%interior_diagnostic_variables(i)%long_name = fs%model%interior_diagnostic_variables(i)%long_name(1:min(256,len_trim(fs%model%interior_diagnostic_variables(i)%long_name)))
-    fs%interior_diagnostic_variables(i)%units = fs%model%interior_diagnostic_variables(i)%units(1:min(256,len_trim(fs%model%interior_diagnostic_variables(i)%units)))
-    fs%interior_diagnostic_variables(i)%do_output = fs%model%interior_diagnostic_variables(i)%output /= output_none
+    fs%interior_diagnostic_variables(i)%short_name &
+    & = fs%model%interior_diagnostic_variables(i)%name(1:min(256, &
+    & len_trim(fs%model%interior_diagnostic_variables(i)%name)))
+    fs%interior_diagnostic_variables(i)%long_name &
+    & = fs%model%interior_diagnostic_variables(i)%long_name(1:min(256, &
+    & len_trim(fs%model%interior_diagnostic_variables(i)%long_name)))
+    fs%interior_diagnostic_variables(i)%units &
+    & = fs%model%interior_diagnostic_variables(i)%units(1:min(256, &
+    & len_trim(fs%model%interior_diagnostic_variables(i)%units)))
+    fs%interior_diagnostic_variables(i)%do_output &
+    & = fs%model%interior_diagnostic_variables(i)%output /= output_none
 #endif
     fs%interior_diagnostic_variables(i)%data=>null()
 
@@ -315,10 +326,17 @@ subroutine fabm_schism_init_model(ntracers)
   if (fs%ndiag_hor > 0) allocate(fs%horizontal_diagnostic_variables(1:fs%ndiag_hor))
   
   do i=1,fs%ndiag_hor
-    fs%horizontal_diagnostic_variables(i)%short_name = fs%model%horizontal_diagnostic_variables(i)%name(1:min(256,len_trim(fs%model%horizontal_diagnostic_variables(i)%name)))
-    fs%horizontal_diagnostic_variables(i)%long_name = fs%model%horizontal_diagnostic_variables(i)%long_name(1:min(256,len_trim(fs%model%horizontal_diagnostic_variables(i)%long_name)))
-    fs%horizontal_diagnostic_variables(i)%units = fs%model%horizontal_diagnostic_variables(i)%units(1:min(256,len_trim(fs%model%horizontal_diagnostic_variables(i)%units)))
-    fs%horizontal_diagnostic_variables(i)%do_output = fs%model%horizontal_diagnostic_variables(i)%output /= output_none
+    fs%horizontal_diagnostic_variables(i)%short_name &
+    & = fs%model%horizontal_diagnostic_variables(i)%name(1:min(256, &
+    & len_trim(fs%model%horizontal_diagnostic_variables(i)%name)))
+    fs%horizontal_diagnostic_variables(i)%long_name &
+    & = fs%model%horizontal_diagnostic_variables(i)%long_name(1:min(256, &
+    & len_trim(fs%model%horizontal_diagnostic_variables(i)%long_name)))
+    fs%horizontal_diagnostic_variables(i)%units &
+    & = fs%model%horizontal_diagnostic_variables(i)%units(1:min(256, &
+    & len_trim(fs%model%horizontal_diagnostic_variables(i)%units)))
+    fs%horizontal_diagnostic_variables(i)%do_output &
+    & = fs%model%horizontal_diagnostic_variables(i)%output /= output_none
     fs%horizontal_diagnostic_variables(i)%data=>null()
   end do
 
@@ -1539,58 +1557,74 @@ subroutine fabm_schism_create_output_netcdf()
   call nccheck( nf90_put_att(ncid, y_id, 'long_name', 'node y-coordinate') )
 
   do n=1,fs%nvar_bot
-    call nccheck( nf90_def_var(ncid, trim(fs%model%bottom_state_variables(n)%name), nf90_float, (/elements_dim_id , time_dim_id/), var_id) )
+    call nccheck( nf90_def_var(ncid, trim(fs%model%bottom_state_variables(n)%name), nf90_float, &
+    &  (/elements_dim_id , time_dim_id/), var_id) )
     call nccheck( nf90_put_att(ncid, var_id, 'units', trim(fs%model%bottom_state_variables(n)%units)) )
-    call nccheck( nf90_put_att(ncid, var_id, 'long_name', trim(fs%model%bottom_state_variables(n)%long_name)) )
+    call nccheck( nf90_put_att(ncid, var_id, 'long_name', &
+    &  trim(fs%model%bottom_state_variables(n)%long_name)) )
     call nccheck( nf90_put_att(ncid, var_id, 'missing_value', missing_value),'set missing value' )
 
     if (fs%model%bottom_state_variables(n)%minimum /= missing_value) then
-      call nccheck( nf90_put_att(ncid, var_id, 'valid_min', fs%model%bottom_state_variables(n)%minimum),'set min value' )
+      call nccheck( nf90_put_att(ncid, var_id, 'valid_min', &
+    &  fs%model%bottom_state_variables(n)%minimum),'set min value' )
     endif
     if (fs%model%bottom_state_variables(n)%maximum /= missing_value) then
-      call nccheck( nf90_put_att(ncid, var_id, 'valid_max', fs%model%bottom_state_variables(n)%maximum),'set max value' )
+      call nccheck( nf90_put_att(ncid, var_id, 'valid_max', &
+    &  fs%model%bottom_state_variables(n)%maximum),'set max value' )
     endif
     if (fs%model%bottom_state_variables(n)%initial_value /= missing_value) then
-      call nccheck( nf90_put_att(ncid, var_id, 'initial_value', fs%model%bottom_state_variables(n)%initial_value),'set initial value' )
+      call nccheck( nf90_put_att(ncid, var_id, 'initial_value', &
+    &  fs%model%bottom_state_variables(n)%initial_value),'set initial value' )
     endif
   end do
 
   do n=1,fs%nvar_sf
-    call nccheck( nf90_def_var(ncid, trim(fs%model%surface_state_variables(n)%name), nf90_float, (/elements_dim_id , time_dim_id/), var_id) )
+    call nccheck( nf90_def_var(ncid, trim(fs%model%surface_state_variables(n)%name), &
+    &  nf90_float, (/elements_dim_id , time_dim_id/), var_id) )
     call nccheck( nf90_put_att(ncid, var_id, 'units', trim(fs%model%surface_state_variables(n)%units)) )
     call nccheck( nf90_put_att(ncid, var_id, 'long_name', trim(fs%model%surface_state_variables(n)%long_name)) )
     call nccheck( nf90_put_att(ncid, var_id, 'missing_value', missing_value),'set missing value' )
 
     if (fs%model%surface_state_variables(n)%minimum /= missing_value) then
-      call nccheck( nf90_put_att(ncid, var_id, 'valid_min', fs%model%surface_state_variables(n)%minimum),'set min value' )
+      call nccheck( nf90_put_att(ncid, var_id, 'valid_min', &
+    &  fs%model%surface_state_variables(n)%minimum),'set min value' )
     endif
     if (fs%model%surface_state_variables(n)%maximum /= missing_value) then
-      call nccheck( nf90_put_att(ncid, var_id, 'valid_max', fs%model%surface_state_variables(n)%maximum),'set max value' )
+      call nccheck( nf90_put_att(ncid, var_id, 'valid_max', &
+    &  fs%model%surface_state_variables(n)%maximum),'set max value' )
     endif
     if (fs%model%surface_state_variables(n)%initial_value /= missing_value) then
-      call nccheck( nf90_put_att(ncid, var_id, 'initial_value', fs%model%surface_state_variables(n)%initial_value),'set initial value' )
+      call nccheck( nf90_put_att(ncid, var_id, 'initial_value', &
+    &  fs%model%surface_state_variables(n)%initial_value),'set initial value' )
     endif
 
   end do
 
   do n=1,fs%ndiag_hor
     if (.not.(fs%horizontal_diagnostic_variables(n)%do_output)) cycle
-    call nccheck( nf90_def_var(ncid, trim(fs%model%horizontal_diagnostic_variables(n)%name), nf90_float, (/elements_dim_id , time_dim_id/), var_id) )
-    call nccheck( nf90_put_att(ncid, var_id, 'units', trim(fs%model%horizontal_diagnostic_variables(n)%units)) )
-    call nccheck( nf90_put_att(ncid, var_id, 'long_name', trim(fs%model%horizontal_diagnostic_variables(n)%long_name)) )
+    call nccheck( nf90_def_var(ncid, trim(fs%model%horizontal_diagnostic_variables(n)%name), &
+    &  nf90_float, (/elements_dim_id , time_dim_id/), var_id) )
+    call nccheck( nf90_put_att(ncid, var_id, 'units', &
+    &  trim(fs%model%horizontal_diagnostic_variables(n)%units)) )
+    call nccheck( nf90_put_att(ncid, var_id, 'long_name', &
+    &  trim(fs%model%horizontal_diagnostic_variables(n)%long_name)) )
     call nccheck( nf90_put_att(ncid, var_id, 'missing_value', missing_value),'set missing value' )
   end do
 
   do n=1,fs%ndiag
     if (.not.(fs%interior_diagnostic_variables(n)%do_output)) cycle
 #if _FABM_API_VERSION_ < 1
-    call nccheck( nf90_def_var(ncid, trim(fs%model%diagnostic_variables(n)%name), nf90_float, (/nvrt_dim_id, elements_dim_id, time_dim_id/), var_id) )
+    call nccheck( nf90_def_var(ncid, trim(fs%model%diagnostic_variables(n)%name), &
+    &  nf90_float, (/nvrt_dim_id, elements_dim_id, time_dim_id/), var_id) )
     call nccheck( nf90_put_att(ncid, var_id, 'units', trim(fs%model%diagnostic_variables(n)%units)) )
     call nccheck( nf90_put_att(ncid, var_id, 'long_name', trim(fs%model%diagnostic_variables(n)%long_name)) )
 #else
-    call nccheck( nf90_def_var(ncid, trim(fs%model%interior_diagnostic_variables(n)%name), nf90_float, (/nvrt_dim_id, elements_dim_id, time_dim_id/), var_id) )
-    call nccheck( nf90_put_att(ncid, var_id, 'units', trim(fs%model%interior_diagnostic_variables(n)%units)) )
-    call nccheck( nf90_put_att(ncid, var_id, 'long_name', trim(fs%model%interior_diagnostic_variables(n)%long_name)) )
+    call nccheck( nf90_def_var(ncid, trim(fs%model%interior_diagnostic_variables(n)%name), &
+    &  nf90_float, (/nvrt_dim_id, elements_dim_id, time_dim_id/), var_id) )
+    call nccheck( nf90_put_att(ncid, var_id, 'units', &
+    &  trim(fs%model%interior_diagnostic_variables(n)%units)) )
+    call nccheck( nf90_put_att(ncid, var_id, 'long_name', &
+    &  trim(fs%model%interior_diagnostic_variables(n)%long_name)) )
 #endif
     call nccheck( nf90_put_att(ncid, var_id, 'missing_value', missing_value),'set missing value' )
   end do
@@ -1670,7 +1704,8 @@ subroutine fabm_schism_write_output_netcdf(time)
 #else
     call nccheck( nf90_inq_varid(ncid, trim(fs%model%interior_diagnostic_variables(n)%name), var_id) )
 #endif
-    call nccheck( nf90_put_var(ncid, var_id, fs%interior_diagnostic_variables(n)%data(1:nvrt,1:ne), start=(/1,1,next_time_index/),count=(/nvrt,ne,1/)) )
+    call nccheck( nf90_put_var(ncid, var_id, fs%interior_diagnostic_variables(n)%data(1:nvrt,1:ne), &
+    &  start=(/1,1,next_time_index/),count=(/nvrt,ne,1/)) )
   end do
 
   ! write horizontal diagnostic variables
@@ -1679,7 +1714,8 @@ subroutine fabm_schism_write_output_netcdf(time)
     if (.not.(fs%horizontal_diagnostic_variables(n)%do_output)) cycle
     call mask_nan1d(fs%horizontal_diagnostic_variables(n)%data)
     call nccheck( nf90_inq_varid(ncid, trim(fs%model%horizontal_diagnostic_variables(n)%name), var_id) )
-    call nccheck( nf90_put_var(ncid, var_id, fs%horizontal_diagnostic_variables(n)%data(1:ne), start=(/1,next_time_index,1/),count=(/ne,1/)) )
+    call nccheck( nf90_put_var(ncid, var_id, fs%horizontal_diagnostic_variables(n)%data(1:ne), &
+    &  start=(/1,next_time_index,1/),count=(/ne,1/)) )
   end do
   next_time_index = next_time_index+1
   status = nf90_sync(ncid)
@@ -1719,7 +1755,8 @@ subroutine link_environmental_data(self, rc)
 
   if (nws == 2 .and. ihconsv == 1) then
     call fabm_link_bulk_data(self%model,standard_variables%downwelling_photosynthetic_radiative_flux,self%par)
-    call fabm_link_horizontal_data(self%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
+    call fabm_link_horizontal_data(self%model, &
+    & standard_variables%surface_downwelling_photosynthetic_radiative_flux,self%par0)
     call driver%log_message('linked surface shortwave radiation and PAR, bulk PAR')
   endif
   call fabm_link_bulk_data(self%model,standard_variables%density,erho)
