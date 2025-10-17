@@ -445,13 +445,15 @@
       !just add the output statements in _step and flags in param.nml (same
       !order). Flags for modules other than hydro are only used inside USE_*
       if(iorder==0) then
-        allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
-     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), &
-     &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_mice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
-      !dim of srqst7 increased to account for 2D elem/side etc
-     &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
-     &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1), &
-     &veg_di0(nmarsh_types),veg_h0(nmarsh_types),veg_nv0(nmarsh_types),veg_cd0(nmarsh_types),drown_marsh(nmarsh_types),stat=istat)
+        allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),    &
+        &level_age(ntracer_age/2), iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm_core(17), &
+        &iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), iof_icm_srm(4),iof_cos(20),iof_fib(5),         &
+        &iof_sed2d(14),iof_ice(10),iof_mice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))),     &
+        &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1),         &
+        &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1), veg_di0(nmarsh_types), &
+        &veg_h0(nmarsh_types),veg_nv0(nmarsh_types),veg_cd0(nmarsh_types),drown_marsh(nmarsh_types),   &
+        &stat=istat)
+        !dim of srqst7 increased to account for 2D elem/side etc
         if(istat/=0) call parallel_abort('INIT: iof failure')
         srqst7(:)=MPI_REQUEST_NULL
         !Global output on/off flags
