@@ -2141,7 +2141,8 @@
         irec2(2)=(it+1)*nstride_schout+irec0_schout-(istack(2)-1)*nrec_schout !->time step n+1 (new)
         if(istack(2)>istack(1)) then !if istack(2) not exisit (last record), use previous stack
           write(it_char,'(i72)')istack(2)
-          inquire(file=in_dir(1:len_in_dir)//'hydro_out/'//trim(adjustl(snames_schout(1)))//'_'//trim(adjustl(it_char))//'.nc',exist=ltmp)
+          inquire(file=  & 
+&in_dir(1:len_in_dir)//'hydro_out/'//trim(adjustl(snames_schout(1)))//'_'//trim(adjustl(it_char))//'.nc',exist=ltmp)
           if(.not.ltmp) then !not exist; use same stack and reset record #
             istack(2)=istack(1); irec2(2)=irec2(1)
           endif

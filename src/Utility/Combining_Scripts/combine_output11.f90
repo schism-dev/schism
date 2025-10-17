@@ -12,7 +12,8 @@
 ! Output: combined nc file
 !
 
-!  ifort -cpp -O2 -assume byterecl -o combine_output11.exe ../UtilLib/argparse.f90 ../UtilLib/schism_geometry.f90 combine_output11.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
+!  ifort -cpp -O2 -assume byterecl -o combine_output11.exe ../UtilLib/argparse.f90 ../UtilLib/schism_geometry.f90 & 
+!  & combine_output11.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
 !  History: 
 !          2018-1      Richard Hofmeister changed the combine method (all vars read in at a
@@ -989,7 +990,8 @@ cfile = ""
 !files=""
 
 cmd_name = "combine_output11"
-call cla_init(cmd_name,"Combine time blocked per-processor binary outputs (e.g. 'schout_000000_1.nc') into time blocked global outputs ('schout_1.nc')")
+call cla_init(cmd_name,"Combine time blocked per-processor binary outputs (e.g. 'schout_000000_1.nc') &
+&into time blocked global outputs ('schout_1.nc')")
 
 !call cla_register('-i','--in', 'input file (e.g. combine_input.in) containing options (overridden by command line specs)', cla_char,'')
 call cla_register('-b','--begin', 'start day', cla_int,'-1')
