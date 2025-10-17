@@ -217,6 +217,7 @@
           do it=1,it_now !iths_main
             if(iof_sta(i)==1.and.mod(it,nspool_sta)==0) then
               read(250+i,*)
+              if(iout_sta==2.and.i>4) read(250+i,*)
             endif
           enddo !it
         enddo !i
@@ -551,11 +552,11 @@
         deallocate(swild9)
       endif !iref_ts/=0
 
-!     The following to init th_dt*, th_time* and ath* is only done by
+!     The following to init th_dt[-,2], th_time[-,2] and ath[-,2] is only done by
 !     rank 0, not bcast'ed, b/c in _step we'll continue the reading
 !     by rank 0 and only bcast the final
 !     products of eth, trth (since they use global indices) etc, 
-!     and the th_dt[-,12], th_time[-,12] and ath[-,12] are not used further 
+!     and the th_dt[-,2], th_time[-,2] and ath[-,2] are not used further 
       if(myrank==0) then
 !-----------------------------------------------------------------------------
 !...  Init reading t.h. files 
@@ -5124,7 +5125,7 @@
       if(indx==1) then  !analytical
         quad_int=1._rkind/16._rkind*(1._rkind+real(ixi_n(ip)*ixi_n(ll),rkind)/3._rkind)* &
      &(area(ie)*(1._rkind+real(iet_n(ip)*iet_n(ll),rkind)/3._rkind)+ &
-     &coe2/8._rkind*real(iet_n(ip)+iet_n(ll),rkind))+coe1/96._rkind*(1._rkind+ &
+     &coe2/6._rkind*real(iet_n(ip)+iet_n(ll),rkind))+coe1/96._rkind*(1._rkind+ &
      &real(iet_n(ip)*iet_n(ll),rkind)/3._rkind)*real(ixi_n(ip)+ixi_n(ll),rkind)
 
         !Debug

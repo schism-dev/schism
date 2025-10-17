@@ -1663,7 +1663,8 @@
 !     may require different init. T,S: -9999 (junk) so ambient values will be
 !     used to avoid 'ice rain' (if randrop falls on a source_sink.in elem, vsource will be combined and
 !     values in msource.th will be used. If outside, ambient values are used and
-!     note that evap/precip is handled separately for S outside source method).
+!     note that evap/precip is handled separately for S outside source method). later
+!     air T may be used also.
 !     Other tracers: 0 (otherwise additional nutrients from rain will fall onto
 !     water) 
       vsource=0 !init; dimension [m^3/s]; includes sinks as well
@@ -1830,6 +1831,7 @@
         do i=1,nea
           evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
           precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
+          !Error: put evap into vsink 
           vsource(i)=vsource(i)+(precip-evap)/rho0*area(i) !m^3/s
         enddo !i
       endif !isconsv/=0
@@ -5791,6 +5793,7 @@
           ie=indel(j,i)
           id=iself(j,i)
 
+          !Impossible for a node surrounded by all active blocks, so matrix is well conditioned
           if(ihydraulics/=0.and.nhtblocks>0) then
             if(isblock_el(ie)>0) cycle !active block
           endif
@@ -7211,8 +7214,10 @@
         enddo !l=kbe(i),nvrt-1
 
         !Optionally correct w and vertical flux according to the flux across free surface for T,S only
-        if(vclose_surf_frac.ge.0.0d0.and.vclose_surf_frac.lt.1.0d0) then 
-          surface_flux_ratio = 1.d0-vclose_surf_frac 
+!        if(vclose_surf_frac(i)>=0.0d0.and.vclose_surf_frac(i)<1.0d0) then 
+        !vclose_surf_frac(:) \in [0,1] checked
+        if(abs(vclose_surf_frac(i)-1.0d0)>1.d-4) then 
+          surface_flux_ratio = 1.d0-vclose_surf_frac(i)
           wflux_correct = 0.d0
           l=nvrt
           ubar=0.d0
@@ -7366,11 +7371,10 @@
           do i=1,nea
             if(idry_e(i)==1) cycle
 !           Skip air-sea exchange for certain elements
-            if(i_hmin_salt_ex==1) then
-              if(dpe(i)<hmin_salt_ex) cycle
-            elseif(i_hmin_salt_ex==2) then
-              if(ze(nvrt,i)-ze(kbe(i),i)<hmin_salt_ex) cycle
-            endif
+!            if(i_hmin_salt_ex==1) then
+!              if(dpe(i)<hmin_salt_ex) cycle
+!            elseif(i_hmin_salt_ex==2) then
+            if(i_hmin_salt_ex/=0.and.ze(nvrt,i)-ze(kbe(i),i)<hmin_salt_ex) cycle
 
             evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
             precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
@@ -7395,13 +7399,12 @@
           do i=1,nea
             if(idry_e(i)==1) cycle
 !           Skip air-sea exchange for certain elements
-            if(i_hmin_airsea_ex==1) then
-              if(dpe(i)<hmin_airsea_ex) cycle
-            elseif(i_hmin_airsea_ex==2) then
-              if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
-            endif
+!            if(i_hmin_airsea_ex==1) then
+!              if(dpe(i)<hmin_airsea_ex) cycle
+!            elseif(i_hmin_airsea_ex==2) then
+            if(i_hmin_airsea_ex/=0.and.ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex) cycle
 
-!           Wet element (not shallow)
+!           Wet element 
 !           Surface flux
             sflux_e=sum(sflux(elnode(1:i34(i),i)))/real(i34(i),rkind)
             flx_sf(1,i)=sflux_e/rho0/shw
@@ -7774,7 +7777,7 @@
         if(istat/=0) call parallel_abort('STEP: fail to alloc (1.1)')
 
 !$OMP parallel default(shared) private(i,bigv,rat,j,jj,itmp1,itmp2,k,trnu,mm,swild,tmp,zrat, &
-!$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf,htot,top,dzz1,tmp1)
+!$OMP ta,ie,kin,swild_m,swild_w,tmp0,vnf,htot,top,dzz1,tmp1,tmp2)
 
 !       Point sources/sinks using operator splitting (that guarentees max.
 !       principle). Do nothing for net sinks
@@ -7803,26 +7806,55 @@
 !$OMP     end do
         endif !if_source
 
-!       Filter style horizontal diffusion scheme
-
 !       Heat exchange between sediment and bottom water
-        if(abs(stemp_stc)>1.d-16) then
+        if(istemp/=0) then !ihconsv/=0
 !$OMP     do
           do i=1,nea
-             tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc !heat transfer budget (J.m-2)
-             if(tmp1>0) then !sediment temp. update; 4.184e6 is the heat capacity of water (J.m-3)
-               stemp(i)=stemp(i)+tmp1/(max(stemp_dz(1),1.d-2)*4.184d6)
-             else
-               stemp(i)=stemp(i)+tmp1/(max(stemp_dz(2),1.d-2)*4.184d6)  ! sediment temp. update
-             endif
-             !Bottom T update
-             tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1/(max((ze(kbe(i)+1,i)-ze(kbe(i),i)),1.d-2)*4.184d6)
-             do k=1,kbe(i) 
-               tr_el(1,k,i)=tr_el(1,kbe(i)+1,i) 
-             enddo !k
+            tmp=sum(stemp_dz(elnode(1:i34(i),i)))/i34(i) !SED thickness>0
+            !tmp0=minval(stemp_stc(elnode(1:i34(i),i))) !min conductivity
+            tmp0=sum(stemp_stc(elnode(1:i34(i),i)))/i34(i) !av conductivity
+
+            if(idry_e(i)==1) then !use air T if available; soil-air exchange
+              if(nws==2.or.nws==4) then
+                tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
+                !tmp1=(tmp2-stemp(i))*dt*stemp_stc2 !heat [J/m^2]
+                !4.184e6=\rho*C_p is the heat capacity of water (J.m-3/K), which happens 
+                !to be similar to soil b/c of the differences in density and C_p
+                tmp1=dt*tmp0/max(tmp,1.d-2)/4.184d6 ![-] like blending factor; >=0
+                tmp1=min(tmp1,1.d0) !limit factor at expense of conservation in extreme cases
+                stemp(i)=stemp(i)+tmp1*(tmp2-stemp(i)) 
+              endif !nws
+            else !wet
+              !tmp1=(tr_el(1,kbe(i)+1,i)-stemp(i))*dt*stemp_stc1 !heat transfer budget (J.m-2)
+              tmp1=dt*tmp0/max(tmp,1.d-2)/4.184d6 ![-] like blending factor
+              tmp1=min(tmp1,1.d0) !limit factor
+              stemp(i)=stemp(i)+tmp1*(tr_el(1,kbe(i)+1,i)-stemp(i))
+              !Bottom T update
+              tmp1=dt*tmp0/max(ze(kbe(i)+1,i)-ze(kbe(i),i),1.d-2)/4.184d6
+              tmp1=min(tmp1,1.d0)
+              tr_el(1,kbe(i)+1,i)=tr_el(1,kbe(i)+1,i)-tmp1*(tr_el(1,kbe(i)+1,i)-stemp(i)) 
+
+              do k=1,kbe(i) 
+                tr_el(1,k,i)=tr_el(1,kbe(i)+1,i) 
+              enddo !k
+            endif !idry_e
           enddo !i
 !$OMP     enddo
-        endif !abs(stemp_stc)
+        endif !istemp
+
+        !Relax shallow wet T to air T
+        if(ihconsv/=0.and.i_hmin_airsea_ex/=0) then
+!$OMP     do
+          do i=1,nea
+            if(idry_e(i)==1) cycle
+
+            if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex.and.(nws==2.or.nws==4)) then !shallow wet
+              tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
+              tr_el(1,:,i)=tr_el(1,:,i)*(1-relax_2_airt)+tmp2*relax_2_airt
+            endif !shallow
+          enddo !i
+!$OMP     enddo
+        endif !i_hmin_airsea_ex
 
 !       Nudging: sum or product of horizontal & vertical relaxations 
 !$OMP   do 
@@ -8117,7 +8149,7 @@
       wtmp1=wtmp2
 #endif
 
-!$OMP parallel default(shared) private(i,dep,swild,n1,n2,smax,smin,ifl,j,ie)
+!$OMP parallel default(shared) private(i,dep,swild,n1,n2,smax,smin,ifl,j,ie,nd,tmp2,icount2,m)
 
 !...  Update bed deformation and depth info
 !$OMP do
@@ -8160,7 +8192,8 @@
 !$OMP do
       do i=1,nea
         if(ibarrier_m(i)==1) imarsh(i)=0
-        nwild(i)=imarsh(i) !save last step
+        nwild(i)=imarsh(i) !save type before update
+        if(imarsh(i)>=0) age_marsh(i)=age_marsh(i)+time/86400.d0 !days
       enddo !i
 !$OMP end do
 
@@ -8174,6 +8207,7 @@
         if(nwild(i)>0) then !marsh elem
           if(smax>drown_marsh(nwild(i))) then !drowned
             imarsh(i)=0
+            age_marsh(i)=0.d0
 !            Cdp(elnode(1:i34(i),i))=0.001d0
 !            Cd(elside(1:i34(i),i))=0.001d0
 !            rough_p(elnode(1:i34(i),i))=1.d-4
@@ -8181,16 +8215,23 @@
         else !non-marsh elem @last step
           if(smax<=create_marsh_max.and.smin>=create_marsh_min) then !create marsh
             ifl=0
+            tmp2=0.d0 !stats of age of surround cells
+            icount2=0 !counter
             loop16: do j=1,i34(i)
               nd=elnode(j,i)
               do m=1,nne(nd)
                 ie=indel(m,nd)
-                if(nwild(ie)>0) then !not barrier
-                  ifl=nwild(ie); exit loop16
+                if(nwild(ie)>0) then !not barrier (but may be newly drowned)
+                  icount2=icount2+1
+                  tmp2=tmp2+age_marsh(ie)
+                  ifl=nwild(ie) !pick type from any cell
                 endif
               enddo !m
             end do loop16
-            if(ifl>0) imarsh(i)=ifl
+            if(icount2>0) then
+              tmp2=tmp2/dble(icount2)
+              if(tmp2>age_marsh_min) imarsh(i)=ifl
+            endif !icount2
           endif !smax
         endif !nwild
       enddo !i=1,ne
@@ -8198,6 +8239,7 @@
 
 !$OMP master
       call exchange_e2di(imarsh)
+      call exchange_e2d(age_marsh)
 !$OMP end master
 
       !Set Cd etc for marsh and also drowned marsh
@@ -8930,7 +8972,8 @@
         if(iof_hydro(29)==1) call writeout_nc(id_out_var(32),'temp_elem',6,nvrt,nea,tr_el(1,:,:))
         if(iof_hydro(30)==1) call writeout_nc(id_out_var(33),'salt_elem',6,nvrt,nea,tr_el(2,:,:))
         if(iof_hydro(31)==1) call writeout_nc(id_out_var(34),'pressure_gradient',7,1,nsa,bpgr(:,1),bpgr(:,2))
-        noutput=31 !total # of outputs so far (for dim of id_out_var)
+        if(iof_hydro(32)==1) call writeout_nc(id_out_var(35),'sedTemperature',4,1,nea,stemp)
+        noutput=32 !total # of outputs so far (dim of iof_hydro)
 
         !'Modules
         !'4' in noutput+i+4 due to the first 4 reserved outputs 
@@ -9602,8 +9645,12 @@
 !------------------
 !---    2D elem 
         icount=1 !reset index into varout_2delem
-        if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(2.1)')
         varout_2delem(icount,:)=idry_e(1:ne)
+        if(iof_hydro(32)/=0) then
+          icount=icount+1
+          varout_2delem(icount,:)=stemp(1:ne)
+        endif !iof_hydro
+        if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(2.1)')
 
         !Modules output
 #ifdef USE_SED
@@ -10183,9 +10230,9 @@
                 sta_out(i,j)=sum(arco_sta(i,1:i34(ie))*swild2(1,1:i34(ie)))
               else !3D var.
                 if(idry_e(ie)==1) then !dry
-                  sta_out(i,j)=-999.d0
-                  sta_out3d(:,i,j)=-999.d0
-                  zta_out3d(:,i,j)=-999.d0
+                  sta_out(i,j)=-1.d7 !-999.d0
+                  sta_out3d(:,i,j)=-1.d7 !-999.d0
+                  zta_out3d(:,i,j)=-1.d7 !-999.d0
                 else !wet
                   do m=1,i34(ie) !wet nodes
                     nd=elnode(m,ie)
@@ -10215,19 +10262,27 @@
                   sta_out(i,j)=sum(arco_sta(i,1:i34(ie))*swild(1:i34(ie)))
 
                   !Vertical profiles
+                  itmp=minval(kbp(elnode(1:i34(ie),ie)))
                   do k=1,nvrt
-                    do m=1,i34(ie)
-                      nd=elnode(m,ie)
-                      if(k<kbp(nd)) then
-                        swild4(1,m)=-9999.d0 !zcor
-                        swild4(2,m)=-9999.d0 !var
-                      else
-                        swild4(1,m)=znl(k,nd)
-                        swild4(2,m)=swild2(k,m)
-                      endif
-                    enddo !m
-                    zta_out3d(k,i,j)=sum(arco_sta(i,1:i34(ie))*swild4(1,1:i34(ie)))
-                    sta_out3d(k,i,j)=sum(arco_sta(i,1:i34(ie))*swild4(2,1:i34(ie)))
+                    if(k<itmp) then
+                      zta_out3d(k,i,j)=-1.d7
+                      sta_out3d(k,i,j)=-1.d7
+                    else !at least 1 node has valid value
+                      do m=1,i34(ie)
+                        nd=elnode(m,ie)
+                        swild4(1,m)=znl(max(k,kbp(nd)),nd) !zcor
+                        swild4(2,m)=swild2(max(k,kbp(nd)),m) !var
+!                        if(k<kbp(nd)) then
+!                          swild4(1,m)=-1.d7 !-9999.d0 !zcor
+!                          swild4(2,m)=-1.d7 !-9999.d0 !var
+!                        else
+!                          swild4(1,m)=znl(k,nd)
+!                          swild4(2,m)=swild2(k,m)
+!                        endif
+                      enddo !m
+                      zta_out3d(k,i,j)=sum(arco_sta(i,1:i34(ie))*swild4(1,1:i34(ie)))
+                      sta_out3d(k,i,j)=sum(arco_sta(i,1:i34(ie))*swild4(2,1:i34(ie)))
+                    endif !k
                   enddo !k
                 endif !idry_e
               endif !j
@@ -10248,11 +10303,11 @@
           do i=1,nvar_sta
             if(iof_sta(i)==0.or.mod(it,nspool_sta)/=0) cycle
             do j=1,nout_sta
-              if(nwild2(j)==0) then
-                sta_out_gb(j,i)=-9999.d0
+              if(nwild2(j)==0) then !outside domain
+                sta_out_gb(j,i)=1.d7 !-9999.d0
                 if(i>4) then !3D only
-                  sta_out3d_gb(:,j,i)=-9999.d0
-                  zta_out3d_gb(:,j,i)=-9999.d0
+                  sta_out3d_gb(:,j,i)=1.d7 !-9999.d0
+                  zta_out3d_gb(:,j,i)=1.d7 !-9999.d0
                 endif
               else
                 sta_out_gb(j,i)=sta_out_gb(j,i)/dble(nwild2(j))
@@ -10262,8 +10317,8 @@
                 endif
               endif
             enddo !j
-            write(250+i,'(e24.16,6000(1x,e14.6e3))')time,sta_out_gb(:,i)
-!            if(i>4) write(250+i,'(e14.6,100000(1x,e14.6))')time,sta_out3d_gb(:,:,i),zta_out3d_gb(:,:,i)
+            write(250+i,'(e24.16,6000(1x,e14.6))')time,sta_out_gb(:,i)
+            if(iout_sta==2.and.i>4) write(250+i,'(e24.16,300000(1x,e14.6))')time,sta_out3d_gb(:,:,i),zta_out3d_gb(:,:,i)
           enddo !i
           write(16,*)'done station outputs...'
         endif !myrank
@@ -10365,6 +10420,7 @@
 
         var1d_dim(1)=elem_dim
         j=nf90_def_var(ncid_hot,'idry_e',NF90_INT,var1d_dim,nwild(4))
+        j=nf90_def_var(ncid_hot,'sediment_T',NF90_DOUBLE,var1d_dim,nwild(22))
         var1d_dim(1)=side_dim
         j=nf90_def_var(ncid_hot,'idry_s',NF90_INT,var1d_dim,nwild(5))
         var1d_dim(1)=node_dim
@@ -10393,7 +10449,7 @@
         j=nf90_def_var(ncid_hot,'dfq2',NF90_DOUBLE,var2d_dim,nwild(19))
 
         !Deflate some vars
-        do i=4,21
+        do i=4,22
           if(i==20) cycle !skip 20
           j=nf90_def_var_deflate(ncid_hot,nwild(i),0,1,4) 
         enddo !i
@@ -10406,6 +10462,7 @@
         j=nf90_put_var(ncid_hot,nwild(3),ifile) 
         j=nf90_put_var(ncid_hot,nwild(20),nsteps_from_cold) 
         j=nf90_put_var(ncid_hot,nwild(4),idry_e,(/1/),(/ne/))
+        j=nf90_put_var(ncid_hot,nwild(22),stemp,(/1/),(/ne/))
         j=nf90_put_var(ncid_hot,nwild(5),idry_s,(/1/),(/ns/))
         j=nf90_put_var(ncid_hot,nwild(6),idry,(/1/),(/np/))
         j=nf90_put_var(ncid_hot,nwild(7),eta2,(/1/),(/np/))
@@ -10423,7 +10480,7 @@
         j=nf90_put_var(ncid_hot,nwild(18),dfq1(:,1:np),(/1,1/),(/nvrt,np/))
         j=nf90_put_var(ncid_hot,nwild(19),dfq2(:,1:np),(/1,1/),(/nvrt,np/))
 
-        nvars_hot=21 !record # of vars in nwild so far
+        nvars_hot=22 !record # of vars in nwild so far
         !Debug
         !write(12,*)'hotout:',it,time
         !do i=1,np

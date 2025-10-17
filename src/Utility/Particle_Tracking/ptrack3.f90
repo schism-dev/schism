@@ -83,6 +83,7 @@
       	real(kind=dbl_kind), parameter :: zero=1.e-5 !small postive number in lieu of 0; usually used to check areas 
         real(kind=dbl_kind), parameter :: small1=1.e-6 !small non-negative number; must be identical to that in kind_par
         real(kind=dbl_kind), parameter :: pi=3.1415926d0 
+        real(kind=dbl_kind), parameter :: rho_w=1025.d0 !kg/m^3
 
 !...  	Important variables
         integer, save :: np,ne,ns,nvrt,mnei,mod_part,ibf,istiff,ivcor,kz,nsig,ibnd_beh
@@ -271,7 +272,7 @@
           !compute the rising velocity(m/s) based on Proctor et al., 1994
           gr=9.8               ! m/s^2
           rho_o=900.0d0        ! kg/m^3 (oil)
-          rho_w=1025.0d0       ! kg/m^3
+          !rho_w=1025.0d0       ! kg/m^3
           di=500.0d-6          ! m
           smu=1.05d-6          ! m^2/s
 ! ... critical diameter, dc

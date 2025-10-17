@@ -9,6 +9,13 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `8e0b1477`: removed/renamed vclose_surf_frac as vclose_surf_frac0. If vclose_surf_frac0<0, needs vclose.gr3 (depth in [0,1]);
+
+Tag stofs3d-atl.v3.1.0 (from v5.14): Sept 17, 2025
+- `b3644238` (21 Aug 2025): added istemp as on/off and removed stemp_thick; restored soil_thick.gr3;
+- `5a8af1a` (21 Aug 2025 via shallow_T): removed stemp_dz and replaced it with stemp_thick, and replaced stemp_stc with soild_conductivity.gr3; added relax_2_airt. Added 'sediment_T' in hotstart.nc as an optional input. Changed i_hmin_airsea_ex and i_hmin_salt_ex to be 0 or 1 only;
+- `536829db` (15 Aug 2025): added optional parameter age_marsh_min;
+- `19274083` (12 Aug 2025): add iout_sta=2 option to output 3D profiles in staout_*;
 - `b09c1f4a` (24 July 2025): removed newlayer_thick in sediment.nml after merging with SED3D_cleanup;
 - `2135910d` (23 May 2025): removed 'isconsv' (redundant with PREC_EVAP);
 - `970a5597` (9 May 2025): added new mandatory parameter 'nmarsh_types', and optional: veg_di0,
@@ -630,6 +637,9 @@ git versions:
 156. `c441ace` (12 Dec 2024): added share memory communicator for efficient bcast for if_source/=0;
 157. `94887bbe` (1 July 2025): JZ fixed a bug in WWM I/O
 158. `b09c1f4a` (24 July 2025): merged with SED3D_cleanup to improve multi bed layer sorting;
+159. `1e2b181209` (21 Aug 2025): merged with shallow_T, quad_init (fixed a bug in quad_int() c/o Jose O.)
+160. `6c2ef8f3` (25 Aug 2025): updated WWM nc outputs to use OR(NF90_NETCDF4,NF90_CLOBBER) (as in hydro)
+161. `b2c4d490`: changed soil conductivity in a cell from min to mean;
 
 ================================================================================================
 (D) Auto-test history:

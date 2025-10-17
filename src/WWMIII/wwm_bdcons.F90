@@ -2796,7 +2796,7 @@
       integer iret, var_id, ncid
       integer ntime_dims, iwbmnpgl_dims
       character (len = *), parameter :: CallFct="WRITE_NETCDF_BOUND_HEADERS_1"
-      iret = nf90_create(TRIM(FILE_NAME), NF90_CLOBBER, ncid)
+      iret = nf90_create(TRIM(FILE_NAME), OR(NF90_NETCDF4,NF90_CLOBBER), ncid)
       CALL GENERIC_NETCDF_ERROR_WWM(CallFct, 1, iret)
       iret = nf90_def_dim(ncid, 'one', 1, one_dims)
       CALL GENERIC_NETCDF_ERROR_WWM(CallFct, 2, iret)
