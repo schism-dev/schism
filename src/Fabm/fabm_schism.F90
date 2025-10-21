@@ -96,6 +96,7 @@ module fabm_schism
 
   integer :: i
   integer :: namlst_unit=53
+  character(len=256)                 :: message
 
   !> FABM is module 11 in the schism-internal counting of subsidiary models.
   !> Therefore the start index for fabm tracers is the sum of all tracers from models
@@ -236,8 +237,11 @@ subroutine fabm_schism_init_model(ntracers)
   call fabm_get_version(fs%version)
 #if _FABM_API_VERSION_ < 1
   fs%version = 'API 0 '//trim(fs%version)
+#endif
+#if _FABM_API_VERSION_ > 1
+   fs%version = 'API 2 '//trim(fs%version)
 #else
-  fs%version = 'API 1 '//trim(fs%version)
+   fs%version = 'API 1 '//trim(fs%version)
 #endif
   call driver%log_message('version '//trim(fs%version))
 
@@ -288,10 +292,14 @@ subroutine fabm_schism_init_model(ntracers)
   fs%nvar  = size(fs%model%interior_state_variables)
   fs%ndiag = size(fs%model%interior_diagnostic_variables)
 #endif
+  write(message,*)'fabm_schism_init_model: model created for ',fs%nvar,' state_variables'
+  call driver%log_message(message)
 
   fs%nvar_bot  = size(fs%model%bottom_state_variables)
   fs%nvar_sf   = size(fs%model%surface_state_variables)
   fs%ndiag_hor = size(fs%model%horizontal_diagnostic_variables)
+  write(message,*)'fabm_schism_init_model: model created for ',fs%nvar_bot,' bottom_state_variables'
+  call driver%log_message(message)
 
   !> @todo check real kind
   !write(0,*) 'fabm realkind=',rk,', schism realkind=',rkind
@@ -374,7 +382,6 @@ subroutine fabm_schism_init_stage2
   real(rkind) :: pvari
   integer, save, allocatable, target :: bottom_idx(:)
   integer, save, allocatable, target :: surface_idx(:)
-  character(len=256)                 :: message
 
   ! FABM is the model number 11, its number of tracers are in ntrs(11)
   istart = irange_tr(1,11)
@@ -457,9 +464,14 @@ subroutine fabm_schism_init_stage2
       fs%model%state_variables(i)%initial_value
 #else
     call fs%model%link_interior_state_data(i,tr_el(istart+i-1,:,:))
+    call driver%log_message('fabm_schism_init_stage2 link_interior_state_data tr_el')
     tr_el(istart+i-1,:,:) = fs%model%interior_state_variables(i)%initial_value
     fs%interior_initial_concentration(i,:,:) = &
       fs%model%interior_state_variables(i)%initial_value
+    write(message,*) i,' - ',trim(fs%model%interior_state_variables(i)%name),' - ',  &
+                     ' fabm_schism_init_stage2 link_interior_state_data to tr_el() initial_value=',  &
+                     fs%model%interior_state_variables(i)%initial_value 
+    call driver%log_message(message)
 #endif
 
     !> @todo Check that the schism mechanism for initialization via .ic files
@@ -494,9 +506,16 @@ subroutine fabm_schism_init_stage2
     call driver%log_message('Linked bottom state data 0')
 #else
     call fs%model%link_bottom_state_data(i,fs%bottom_state(:,i))
-    call driver%log_message('Linked bottom state data 1')
+    write(message,*)i,'-th bottom_state_variable: ',trim(fs%model%bottom_state_variables(i)%name)
+    call driver%log_message(message)
+    write(message,*)' long_name: ',trim(fs%model%bottom_state_variables(i)%long_name)
+    call driver%log_message(message)
+    write(message,*)' initial_values=',fs%model%bottom_state_variables(i)%initial_value
+    call driver%log_message(message)
 #endif
   end do
+  write(message,*)'Linked ', fs%nvar_bot,' bottom state data  '
+  call driver%log_message(message)
 
   ! get zones !!wy
   if(.not. allocated(zone))allocate(zone(ne))
@@ -807,7 +826,6 @@ subroutine integrate_diagnostics(fs, timestep)
   integer                  :: n
   real(rk),optional        :: timestep
   real(rk)                 :: eff_timestep
-  character(len=256)                 :: message
 
   if (present(timestep)) then
     eff_timestep = timestep
@@ -910,6 +928,15 @@ subroutine fabm_schism_init_concentrations()
     tr_nd(istart+n-1,:,:) = fs%model%state_variables(n)%initial_value
 #else
     tr_nd(istart+n-1,:,:) = fs%model%interior_state_variables(n)%initial_value
+    write(message,*)n,istart+n-1,' tr_nd initial_value=',fs%model%interior_state_variables(n)%initial_value
+    call driver%log_message(message)
+    tr_el(istart+n-1,:,:) = fs%model%interior_state_variables(n)%initial_value
+    fs%interior_initial_concentration(n,:,:) = &
+      fs%model%interior_state_variables(n)%initial_value
+    write(message,*) n,istart+n-1,' - ',trim(fs%model%interior_state_variables(n)%name),' - ',  &
+                     ' fabm_schism_init_concentrations tr_el() initial_value=',  &
+                     fs%model%interior_state_variables(n)%initial_value 
+    call driver%log_message(message)
 #endif
   end do
 
@@ -1042,7 +1069,7 @@ end subroutine
 !> do FABM timestep
 subroutine fabm_schism_do()
 
-  use schism_glbl, only : uu2, vv2, rough_p
+  use schism_glbl, only : uu2, vv2, rough_p, dt
 
   real(rk),dimension(:,:),pointer,save :: rhs => null()
   real(rk),dimension(:,:),pointer,save :: w => null()
@@ -1087,6 +1114,8 @@ subroutine fabm_schism_do()
   if (fs%day_of_year > 365) then
     fs%day_of_year = 1
   endif
+  write(message,*)fs%tidx,dt,' fs%seconds_of_day=',fs%seconds_of_day,' fs%day_of_year=',fs%day_of_year
+  call driver%log_message(message)
 
 #if _FABM_API_VERSION_ < 1
   call fabm_update_time(fs%model, fs%tidx)
@@ -1294,6 +1323,10 @@ subroutine fabm_schism_do()
         fs%bottom_state(i,:) = fs%bottom_state(i,:) + dt*rhs_bt
       end if
     end if
+    
+    !!wy use first bottom state variable to store zone number (bottom_source needs to be zero !!)
+    fs%bottom_state(i,1)=zone(i)
+    
     flx_bt(istart:istart+fs%nvar-1,i) = -rhs2d ! positive into sediment
 #endif
 
@@ -1383,7 +1416,6 @@ subroutine fabm_schism_read_horizontal_state_from_netcdf(ncfilename, time)
   real(rk)                        :: tmp, time_eff
   real(rk),allocatable            :: time_vector(:)
   integer                         :: time_dimid,time_id,ntime,time_index
-  character(len=256)              :: message
 
   ! Try to open netcdf file with forcing for horizontal states.  This is
   ! optional and the routine returns on file not found or error.
