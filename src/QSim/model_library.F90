@@ -3,6 +3,7 @@ module uzweijens_model_library
    use fabm_types, only: type_base_model_factory, type_base_model
 
    use uzweijens_qsim_age
+   use uzweijens_qsim_tracerzone
    ! Add use statements for new models here
 
    implicit none
@@ -26,6 +27,7 @@ contains
 
       select case (name)
       case ('qsim_age'); allocate (type_uzweijens_qsim_age::model)
+      case ('qsim_tracerzone'); allocate (type_uzweijens_qsim_tracerzone::model)
       ! Add case statements for new models here
       end select
 

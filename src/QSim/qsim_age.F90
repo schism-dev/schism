@@ -83,9 +83,9 @@ contains
          !write(message,*) it_main,' uzweijens_qsim_age do bottom_tke=',bottom_tke,' | ',time_stamp,'sec.'
          !call driver%log_message(message)
          zonen_alterung=self%age_rate
-         zonen_alterung=0.0_rk
-         if((time_stamp.ge.86399.0_rk) .and. (time_stamp.le.86401.0_rk))zonen_alterung=1/dt !! hop concentration to 1 in one timestep
-         if(abs(bottom_variable-7.0_rk) .gt. 0.1_rk) zonen_alterung=0.0_rk !! growth only in zone 7
+         !! zonen_alterung=0.0_rk
+         !! if((time_stamp.ge.86399.0_rk) .and. (time_stamp.le.86401.0_rk))zonen_alterung=1/dt !! hop concentration to 1 in one timestep
+         !! if(abs(bottom_variable-7.0_rk) .gt. 0.1_rk) zonen_alterung=0.0_rk !! growth only in zone 7
          !if(bottom_variable- .le. 86400.0_rk) zonen_alterung=0.0_rk !!sohlvariable kann im volumen verwenden geht
          !zonen_alterung=0.0_rk
          !if(abs(ddr-7.0_rk).lt. 0.1_rk) zonen_alterung=self%age_rate
