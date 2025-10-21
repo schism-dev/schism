@@ -218,8 +218,6 @@ macro( add_module name option_name  default)
 endmacro(add_module)
 
 
-
-
 # Create list of modules
 add_module(WWMIII    USE_WWM   OFF)
 add_module(WW3    USE_WW3   OFF)

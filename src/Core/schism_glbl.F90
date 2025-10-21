@@ -246,6 +246,7 @@ module schism_glbl
   integer,save,allocatable :: kbe(:)       ! Element bottom vertical indices
   integer,save,allocatable,target :: idry_e(:)       ! wet/dry flag
   integer,save,allocatable :: idry_e_2t(:)       ! wet/dry flag including 2-tier ghost zone
+  real(rkind),save,allocatable :: zone(:)       ! QSim zone
   integer,save,allocatable :: interpol(:)       ! interpolation mode
 !  integer,save,allocatable :: lqk(:)       ! interpolation for S,T in btrack
   integer,save,allocatable :: ie_kr(:)       ! used in Kriging

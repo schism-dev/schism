@@ -45,7 +45,8 @@ module fabm_schism
   use schism_glbl,  only: rho0, grav ! for calculating internal pressure
   use schism_glbl,  only: xlon_el, ylat_el
   use schism_glbl,  only: nws, ihconsv ! for checking that light is available
-  use schism_msgp,  only: myrank, parallel_abort
+  use schism_glbl,  only: time_stamp,it_main, zone , ns_global
+  use schism_msgp,  only: myrank, parallel_abort, comm
 
 #ifdef USE_ICEBGC
   use ice_module,  only: dh_growth, ice_tr ! Needed for icealgae model, but requires
@@ -72,6 +73,9 @@ module fabm_schism
 
   implicit none
   private
+  
+  include 'mpif.h'
+  integer,public,save :: rtype = MPI_REAL8       ! MPI Real Type -- to match rkind
 
   public :: fabm_schism_init_stage2, fabm_schism_init_model
   public :: fabm_schism_do
@@ -367,6 +371,7 @@ subroutine fabm_schism_init_stage2
   use schism_glbl, only: start_day, start_year, start_month, start_hour
 
   integer :: n, i
+  real(rkind) :: pvari
   integer, save, allocatable, target :: bottom_idx(:)
   integer, save, allocatable, target :: surface_idx(:)
   character(len=256)                 :: message
@@ -485,13 +490,26 @@ subroutine fabm_schism_init_stage2
   do i=1,fs%nvar_bot
     fs%bottom_state(:,i) = fs%model%bottom_state_variables(i)%initial_value
 #if _FABM_API_VERSION_ < 1
-     call fabm_link_bottom_state_data(fs%model,i,fs%bottom_state(:,i))
+    call fabm_link_bottom_state_data(fs%model,i,fs%bottom_state(:,i))
+    call driver%log_message('Linked bottom state data 0')
 #else
     call fs%model%link_bottom_state_data(i,fs%bottom_state(:,i))
+    call driver%log_message('Linked bottom state data 1')
 #endif
   end do
 
-  call driver%log_message('Linked bottom state data')
+  ! get zones !!wy
+  if(.not. allocated(zone))allocate(zone(ne))
+  ! subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
+  pvari=-999.0_rk
+  !print*,'going to read zone.gr3',myrank
+  call fabm_schism_read_param_2d('zone',zone,pvari)
+  ! zone(:)=myrank
+  print*,'zone(1),myrank=',zone(1),myrank
+  do i=1,ne
+    fs%bottom_state(i,1)=zone(i)
+  end do ! all elements on this processor
+  call driver%log_message('got zone.gr3') 
 
   allocate(fs%surface_state(ne,fs%nvar_sf))
   do i=1,fs%nvar_sf
@@ -1947,37 +1965,56 @@ subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
 !    2). pvalue=-9999: read values in "varname.prop", and assign to pvar
 !    3). pvalue=other const: assign const value (pvalue) to pvar
 !---------------------------------------------------------------------
-  implicit none
-  character(len=*),intent(in) :: varname
-  real(rkind),intent(in) :: pvalue
-  real(rkind),dimension(ne),intent(out) :: pvar
+   implicit none
+   character(len=*),intent(in) :: varname
+   real(rkind),intent(in) :: pvalue
+   real(rkind),dimension(ne),intent(out) :: pvar
 
-  !local variables
-  integer :: i,j,k,negb,npgb,ip,ie,nd
-  real(rkind) :: xtmp,ytmp,rtmp
-  real(rkind),dimension(np) :: tvar
+   !local variables
+   integer :: i,j,k,negb,npgb,ip,ie,nd,istat
+   real(rkind) :: xtmp,ytmp,rtmp
+   real(rkind),dimension(np) :: tvar
+   real(rkind),dimension(ns_global) :: buffer
+   character(len=256)                 :: gr3file
 
   !read spatailly varying parameter values
   if(int(pvalue)==-999) then  !*.gr3
-    open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.gr3',status='old')
-    read(31,*); read(31,*)negb,npgb
-    if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check: '//trim(adjustl(varname))//'.gr3')
-    do i=1,np_global
-      read(31,*)ip,xtmp,ytmp,rtmp
-      if(ipgl(ip)%rank==myrank) then
-        tvar(ipgl(ip)%id)=rtmp
-      endif
-    enddo
-    close(31)
-
-    !interp from node to element
-    pvar=0.0
-    do i=1,ne
-      do j=1,i34(i)
-        nd=elnode(j,i)
-        pvar(i)=pvar(i)+tvar(nd)/i34(i)
-      enddo!j
-    enddo!i
+      !print*,myrank,' fabm_schism_read_param_2d going to read .gr3 ',  &
+      !      ' np,ne,np_global,ns_global=',np,npg,npa,ne,np_global,ns_global
+      if(myrank==0) then
+      write(gr3file,*)in_dir(1:len_in_dir)//trim(adjustl(varname))//'.gr3'
+         !open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.gr3',status='old')
+         open(31,file=trim(adjustl(gr3file)),status='old',iostat=istat)
+         if(istat/=0) call parallel_abort('fabm_schism_read_param_2d cannot open .gr3')
+         read(31,*); read(31,*)negb,npgb
+         print*,'fabm_schism_read_param_2d reading ',trim(adjustl(gr3file)),' negb,npgb=',negb,npgb
+         if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check: '//trim(adjustl(varname))//'.gr3')
+         do i=1,np_global
+            read(31,*,iostat=istat)ip,xtmp,ytmp,buffer(i)
+            if(istat/=0) call parallel_abort('fabm_schism_read_param_2d cannot read node values')
+         enddo
+         close(31)
+      endif !myrank
+      call mpi_bcast(buffer,ns_global,rtype,0,comm,istat) 
+      !print*,myrank,'fabm_schism_read_param_2d buffer(2)=', buffer(2)
+      ! extract process-local nodes
+      if(.not.associated(ipgl))call parallel_abort('fabm_schism_read_param_2d .not.associated(ipgl)')
+      do i=1,np_global
+         if(ipgl(i)%rank==myrank)then
+            if(ipgl(i)%id.le.np)then
+               tvar(ipgl(i)%id)=buffer(i) !tmp
+            endif ! .le.np
+         endif ! ==myrank
+      enddo !i
+      ! interpolate from node to element
+      pvar=0.0
+      do i=1,ne
+         do j=1,i34(i)
+            nd=elnode(j,i)
+            pvar(i)=pvar(i)+tvar(nd)/i34(i)
+         enddo!j
+      enddo!i
+      if(myrank==0)print*,'successfully read from ',trim(adjustl(gr3file))
 
   else if(int(pvalue)==-9999) then !*.prop
     open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.prop',status='old')
