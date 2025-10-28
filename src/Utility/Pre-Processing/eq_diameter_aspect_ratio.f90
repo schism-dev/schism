@@ -1,6 +1,6 @@
 !     Compute equivalent diameter/radius of a tri-quad grid, and dx/dz (aspect ratio; dx is eq. diameter)
 !     Input: hgrid.gr3 (projection)
-!     Output: fort.12 (*.prop format, eq. radius) and asrat.gr3 (aspect ratio for h>5m; -9999 otherwise)
+!     Output: fort.12 (*.prop format, eq. radius) and asrat.gr3 (aspect ratio for h>5m; 9999 otherwise. A.R.<1 indicates problem)
 !     ifx -Bstatic -O3 -o eq_diameter_aspect_ratio eq_diameter_aspect_ratio.f90
 !
 !     Below is matlab code for plotting histogram for radii
@@ -78,7 +78,7 @@
       write(13,*); write(13,*)ne,np
       do i=1,np
         if(dp(i)<=5.) then
-          ar=-9999.
+          ar=9999.
         else
           ar=rad_node(i)*2/dp(i)
         endif
