@@ -9,13 +9,13 @@
 !            (3) transect.bp (depths denote seg #)
 !    Outputs: vgrid.in; vgrid_master.out;  transect*.out; debug outputs (fort*)
 !    Use plot_VQS.m to viz vgrid_master.out; transect*.out
-!    ifort -O2 -mcmodel=medium -CB -Bstatic -o gen_vqs_1.exe ../UtilLib/schism_geometry.f90 gen_vqs_1.f90
+!    ifx -O2 -mcmodel=medium -CB -Bstatic -o gen_vqs_1.exe ../UtilLib/schism_geometry.f90 gen_vqs_1.f90
 
       use schism_geometry_mod
       implicit real*8(a-h,o-z)
       integer, allocatable :: elnode(:,:),elside(:,:),kbp0(:),kbp(:),ic3(:,:),isdel(:,:),isidenode(:,:),m0(:)
       allocatable :: xnd(:),ynd(:),dp(:),xcj(:,:),ycj(:,:),eta2(:),znd(:,:),z1tmp(:),z2tmp(:)
-      allocatable :: hsm(:),nv_vqs(:),z_mas(:,:),a_vqs(:)
+      allocatable :: hsm(:),nv_vqs(:),z_mas(:,:),a_vqs(:),theta_b(:),theta_f(:)
       allocatable :: xybp(:,:),dpbp(:),imap(:),transect_len(:),sigma_vqs(:,:),i34(:)
 
 !      print*, 'Want to output along a transect? (0: no; 1:yes)'
@@ -25,11 +25,25 @@
       !m_vqs: # of master grids
       m_vqs=39
       dz_bot_min=1 !min. bottom layer thickness [m]
-      allocate(hsm(m_vqs),nv_vqs(m_vqs),a_vqs(m_vqs))
+      allocate(hsm(m_vqs),nv_vqs(m_vqs),a_vqs(m_vqs),theta_b(m_vqs),theta_f(m_vqs))
       hsm=(/50,60,80,110,150,200,260,330,410,500,600,710,830,960,1100,1250,1410, & !m_vqs=39
           &1580,1760,1950,2150,2360,2580,2810,3050,3300,3560,3830,4110,4400,4700,5010,5330, &
           &5660,6000,6350,6710,7080,7460/)
       nv_vqs(1:m_vqs)=(/(21+1*(i-1),i=1,m_vqs)/) !# of levels for each master grid (increasing with depth)
+      !S stretching constants for each depth
+      theta_b=0 !\in [0,1]
+      theta_f=(/(3+0.0*(m-1),m=1,m_vqs)/) !>0
+
+!     Other consts.
+!     Stretching const. for the 1st master grid and also for depth <= hsm(1)
+!     |a_vqs0|<=1 (1: skew toward bottom; -1: toward surface; 0: no bias)
+      a_vqs0=-0.3 
+
+      etal=0 !elevation (const)
+      if(etal<=-hsm(1)) then
+        write(*,*)'elev<hsm:',etal
+        stop
+      endif
 
       if(m_vqs<2) then 
         write(*,*)'Check vgrid.in:',m_vqs
@@ -43,18 +57,7 @@
         endif
       enddo !m
 
-!     Other consts.
-!     Stretching const. for the 1st master grid and also for depth <= hsm(1)
-!     |a_vqs0|<=1 (1: skew toward bottom; -1: toward surface; 0: no bias)
-      a_vqs0=-0.3 
-
 !     Generate a master vgrid (z_mas)
-      etal=0 !used in master grid only; elev.
-      if(etal<=-hsm(1)) then
-        write(*,*)'elev<hsm:',etal
-        stop
-      endif
-
       nvrt_m=nv_vqs(m_vqs)
       print*, 'nvrt in master vgrid=',nvrt_m
       allocate(z_mas(nvrt_m,m_vqs))
@@ -70,10 +73,10 @@
 !          z_mas(k,m)=tmp*(etal+hsm(m))+etal
 
 !          Option 2: S
-          theta_b=0
-          theta_f=3+0.0*(m-1)
-          cs=(1-theta_b)*sinh(theta_f*sigma)/sinh(theta_f)+ &
-     &theta_b*(tanh(theta_f*(sigma+0.5))-tanh(theta_f*0.5))/2/tanh(theta_f*0.5)
+!          theta_b=0
+!          theta_f=3+0.0*(m-1)
+          cs=(1-theta_b(m))*sinh(theta_f(m)*sigma)/sinh(theta_f(m))+ &
+     &theta_b(m)*(tanh(theta_f(m)*(sigma+0.5))-tanh(theta_f(m)*0.5))/2/tanh(theta_f(m)*0.5)
           !Note that the 1st master grid is actually sigma not S
           z_mas(k,m)=etal*(1+sigma)+hsm(1)*sigma+(hsm(m)-hsm(1))*cs
         enddo !k
