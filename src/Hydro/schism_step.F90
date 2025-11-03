@@ -871,8 +871,6 @@
 !       out_wwm(npa,35): output variables from WWM (all 2D); see OUTPAR(:) in routine INTPAR in wwm_output.F90, and
 !                        names in NVARS() in the routine BASIC_PARAMETER() in wwm_initio.F90
 
-        if(myrank==0) write(16,*)'WWM-RS part took (sec) ',mpi_wtime()-wtmp1
-
         ! Ramp for the wave forces (Under energetic conditions, the ramp avoid the generation of oscillations at the shoreline)
         wwave_force = rampwafo*wwave_force
 
@@ -880,6 +878,9 @@
         sum1=sum(out_wwm_windpar(1:npa,1:10))
         sum2=sum(wwave_force)
         sum3=sum(out_wwm(:,1:35))
+
+        if(myrank==0) write(16,*)'WWM-RS part took (sec) ',mpi_wtime()-wtmp1,sum1,sum2,sum3
+
         if(sum1/=sum1.or.sum2/=sum2.or.sum3/=sum3) then
           if(sum1/=sum1) then
             do i=1,9
