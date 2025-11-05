@@ -1677,9 +1677,9 @@
 <p>The sflux/ directory is required if nws=2 in <em>param.nml</em>. </p>
 <p>There are four types of files needed:</p>
 <p>sflux_input.txt (<font color="red">required</font>): a namelist file</p>
-<p>sflux_air_1.[XXXX].nc (<font color="red">required</font>): NetCDF files that have time (in days), wind speed at 10m above MSL (u, v), air temperatue and spedific humidity at 2m above MSL, sea level pressure;</p>
-<p>sflux_prc_1.[XXXX].nc (<font color="blue">needed</font> if isconsv=1): NetCDF files that have time and precipitation rate;</p>
-<p>sflux_rad_1.[XXXX].nc (<font color="blue">needed</font> if ihconsv=1): NetCDF files that have time, downward longwave and shortwave radiation fluxes.</p>
+<p>sflux_air_1.[1-].nc (<font color="red">required</font>): NetCDF files that have time (in days), wind speed at 10m above MSL (u, v), air temperatue and spedific humidity at 2m above MSL, sea level pressure;</p>
+<p>sflux_prc_1.[1-]nc (<font color="blue">needed</font> if isconsv=1): NetCDF files that have time and precipitation rate;</p>
+<p>sflux_rad_1.[1-].nc (<font color="blue">needed</font> if ihconsv=1): NetCDF files that have time, downward longwave and shortwave radiation fluxes.</p>
 <p>PySCHISM supports three types of atmpsheric datasets.</p>
 <p>Notes: startdate should be one day earlier than the actual run startdate, because there is no data at t00z. Acoordingly, add two more extra days for rnday in the following scripts.</p>
 <h2 id="ecmwf-era5"><strong>ECMWF ERA5</strong><a class="headerlink" href="#ecmwf-era5" title="Permanent link">&para;</a></h2>
