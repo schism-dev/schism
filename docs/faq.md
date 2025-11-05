@@ -44,5 +44,5 @@ Besides the following info, you may also search archived messages from the SCHIS
     This can be caused by a number of reasons, but a common one is that when user switches from 2D to 3D, they forgot to set itur=3 to use turbulence closure.
 
 ???faq "fatal.error indicates “Could not find suitable element in input”"
-    This is likely because your `sflux*.nc` is not prepared properly: either the grid in `.nc` does not cover `hgrid.ll`, or the structured grid in `.nc` is not ordered counter-clockwise.
+    This is likely because your `sflux*.nc` is not prepared properly: either the grid in `.nc` does not cover `hgrid.ll`, or the structured grid in `.nc` has a mixture of clockwise and counter-clockwise orientations.
 
