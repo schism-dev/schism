@@ -1124,8 +1124,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#stemp_stc-double-stemp_dz12-double" class="md-nav__link">
-    stemp_stc (double), stemp_dz(1:2) (double)
+  <a href="#istemp-int" class="md-nav__link">
+    istemp (int)
   </a>
   
 </li>
@@ -1294,6 +1294,13 @@
           <li class="md-nav__item">
   <a href="#thetai06-double" class="md-nav__link">
     thetai=0.6 (double)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vclose_surf_frac01-double" class="md-nav__link">
+    vclose_surf_frac0=1 (double)
   </a>
   
 </li>
@@ -2210,11 +2217,11 @@ The evaporation and precipitation model is evoked by the pre-processing flag <co
 <p>Similar to <code>i_hmin_airsea_ex</code> and <code>hmin_airsea_ex</code>.</p>
 <h3 id="iprecip_off_bnd-int">iprecip_off_bnd (int)<a class="headerlink" href="#iprecip_off_bnd-int" title="Permanent link">&para;</a></h3>
 <p>If <code>iprecip_off_bnd</code>/=0, preciptation will be turned off near land boundary. This is useful for islands sitting on very steep slopes.</p>
-<h3 id="stemp_stc-double-stemp_dz12-double">stemp_stc (double), stemp_dz(1:2) (double)<a class="headerlink" href="#stemp_stc-double-stemp_dz12-double" title="Permanent link">&para;</a></h3>
-<p>Option to account for sediment-water heat exchange on bottom temperature.
-  <code>stemp_stc</code> is  heat transfer coefficient <span class="arithmatex">\(W/m^2/K\)</span> (so <code>stemp_stc=0</code> would turn this option off).
-  stemp_dz(1) is the equivalent sediment buffer depth (m) for heat into sediment, and
-  stemp_dz(2) is the equivalent sediment buffer depth (m) for heat out of sediment.</p>
+<h3 id="istemp-int">istemp (int)<a class="headerlink" href="#istemp-int" title="Permanent link">&para;</a></h3>
+<p>Option to add a sediment layer for the buffer effect on temperature. <code>istemp=0</code> would turn off this effect; 
+ otherwise, needs <code>ihconsv/=0</code>, and a few additional inputs: <code>soil_conductivity.gr3</code>
+ which specifies the soil thermal conductivity in W/m^2/K, and <code>soil_thick.gr3</code> (soil thickness in meters; e.g. 1m).
+ The conductivity is on the order of 5, but can be 0 in deep depths to turn off the effect.</p>
 <h3 id="ihdif0-int">ihdif=0 (int)<a class="headerlink" href="#ihdif0-int" title="Permanent link">&para;</a></h3>
 <p>Flag for applying horizontal diffusivity, implemented as a geometric filter. 
 If <code>ihdif=0</code>, it is not used. If <span class="arithmatex">\(ihdif \neq 0\)</span>, input <code>hdif.gr3</code> is used to specify filter strength at each node (which
@@ -2392,10 +2399,15 @@ If <code>nws=-1</code> (requires USE_PAHM), use Holland parametric wind model (b
 </div>
 <h3 id="thetai06-double">thetai=0.6 (double)<a class="headerlink" href="#thetai06-double" title="Permanent link">&para;</a></h3>
 <p>Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to get maximum stability for strong wet/dry.</p>
+<h3 id="vclose_surf_frac01-double">vclose_surf_frac0=1 (double)<a class="headerlink" href="#vclose_surf_frac01-double" title="Permanent link">&para;</a></h3>
+<p>Coefficient to adjust the vertical velocity. <code>1</code> would keep the orignal value, while &lt;1 would reduce the surface value, 
+ keeping the conservation. If <code>vclose_surf_frac0&lt;0</code>, needs vclose.gr3 (depth in [0,1]).</p>
 <h2 id="schout-block">SCHOUT block<a class="headerlink" href="#schout-block" title="Permanent link">&para;</a></h2>
 <h3 id="iout_sta0-nspool_sta10-int">iout_sta=0, nspool_sta=10 (int)<a class="headerlink" href="#iout_sta0-nspool_sta10-int" title="Permanent link">&para;</a></h3>
-<p>Station output flag. If <code>iout_sta≠0</code>, an input <code>station.in</code> is needed. In addition, <code>nspool_sta</code> specifies the spool for station output. In this case, <strong>make sure <code>nhot_write</code> is a multiple of <code>nspool_sta</code></strong>.
-If iout_sta=1, each line of outputs <code>staout_[1-]</code></p>
+<p>Station output flag. If <code>iout_sta≠0</code>, an input <a href="optional-inputs.html#stationin-bp-format">station.in</a> is needed. In addition, <code>nspool_sta</code> specifies the spool for station output. In this case, <strong>make sure <code>nhot_write</code> is a multiple of <code>nspool_sta</code></strong>.
+If <code>iout_sta=1</code>, each line of outputs <code>staout_[1-]</code> represents time series of the variable at each station location (and vertical 
+ location for 3D variables). If <code>iout_sta=2</code>, 2 lines of outputs are produced at each time step: the odd lines are same as <code>iout_sta=1</code>,
+ and the even lines are 3D profiles - see <code>Utility/Post-Processing-Fortran/read_staout.f90</code> for the profile format.</p>
 <h3 id="iof_ugrid-int">iof_ugrid (int)<a class="headerlink" href="#iof_ugrid-int" title="Permanent link">&para;</a></h3>
 <p>UGRID option for outputs under scribed IO. If iof_ugrid/=0, outputs will also have UGRID metadata (at
 the expense of file size).</p>
