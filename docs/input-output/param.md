@@ -159,12 +159,11 @@ Similar to `i_hmin_airsea_ex` and `hmin_airsea_ex`.
 ### iprecip_off_bnd (int)
 If `iprecip_off_bnd`/=0, preciptation will be turned off near land boundary. This is useful for islands sitting on very steep slopes.
 
-### stemp_stc (double), stemp_dz(1:2) (double)
- Option to account for sediment-water heat exchange on bottom temperature.
-  `stemp_stc` is  heat transfer coefficient $W/m^2/K$ (so `stemp_stc=0` would turn this option off).
-  stemp_dz(1) is the equivalent sediment buffer depth (m) for heat into sediment, and
-  stemp_dz(2) is the equivalent sediment buffer depth (m) for heat out of sediment.
-
+### istemp (int)
+ Option to add a sediment layer for the buffer effect on temperature. `istemp=0` would turn off this effect; 
+ otherwise, needs `ihconsv/=0`, and a few additional inputs: `soil_conductivity.gr3`
+ which specifies the soil thermal conductivity in W/m^2/K, and `soil_thick.gr3` (soil thickness in meters; e.g. 1m).
+ The conductivity is on the order of 5, but can be 0 in deep depths to turn off the effect.
 
 ### ihdif=0 (int)
 Flag for applying horizontal diffusivity, implemented as a geometric filter. 
@@ -390,10 +389,16 @@ Starting time for simulation. `utc_start` is hours **behind** the GMT, and is us
 ### thetai=0.6 (double)
 Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to get maximum stability for strong wet/dry.
 
+### vclose_surf_frac0=1 (double)
+Coefficient to adjust the vertical velocity. `1` would keep the orignal value, while <1 would reduce the surface value, 
+ keeping the conservation. If `vclose_surf_frac0<0`, needs vclose.gr3 (depth in [0,1]).
+
 ## SCHOUT block
 ### iout_sta=0, nspool_sta=10 (int)
-Station output flag. If `iout_sta≠0`, an input `station.in` is needed. In addition, `nspool_sta` specifies the spool for station output. In this case, **make sure `nhot_write` is a multiple of `nspool_sta`**.
-If iout_sta=1, each line of outputs `staout_[1-]`
+Station output flag. If `iout_sta≠0`, an input [station.in](optional-inputs.html#stationin-bp-format) is needed. In addition, `nspool_sta` specifies the spool for station output. In this case, **make sure `nhot_write` is a multiple of `nspool_sta`**.
+If `iout_sta=1`, each line of outputs `staout_[1-]` represents time series of the variable at each station location (and vertical 
+ location for 3D variables). If `iout_sta=2`, 2 lines of outputs are produced at each time step: the odd lines are same as `iout_sta=1`,
+ and the even lines are 3D profiles - see `Utility/Post-Processing-Fortran/read_staout.f90` for the profile format.
 
 ### iof_ugrid (int)
 UGRID option for outputs under scribed IO. If iof_ugrid/=0, outputs will also have UGRID metadata (at
