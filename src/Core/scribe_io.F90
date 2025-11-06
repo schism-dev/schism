@@ -877,7 +877,7 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i),'i23d',i23da(i)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i),0,1,4)
-          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i))
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i), iof_ugrid)
           call add_cf_attributes(ncid_schism_2d,ivar_id2(i))
         enddo !i
 
@@ -887,7 +887,7 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims(2)')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p),'i23d',i23da(i+ncount_p)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i+ncount_p),0,1,4)
-          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p))
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p), iof_ugrid)
           call add_cf_attributes(ncid_schism_2d,ivar_id2(i+ncount_p))
         enddo !i
 
@@ -899,7 +899,7 @@
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),'i23d', &
      &i23da(i+ncount_p+ncount_e)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),0,1,4)
-          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e), iof_ugrid)
           call add_cf_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
         enddo !i
 
@@ -1001,7 +1001,7 @@
         !function nf90_def_var_deflate(ncid, varid, shuffle, deflate, deflate_level)
         !where deflate_level\in[0,9] with 9 being most compression
         iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
-        call add_mesh_attributes(ncid_schism_3d, ivar_id)
+        call add_mesh_attributes(ncid_schism_3d, ivar_id, iof_ugrid)
         call add_cf_attributes(ncid_schism_3d, ivar_id)
         iret=nf90_enddef(ncid_schism_3d)
       endif !mod(it-
@@ -1199,12 +1199,12 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp(3)')
         iret=nf90_put_att(ncid_schism0,ih_id2,'positive','down')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp(4)')
-        call add_mesh_attributes(ncid_schism0,ih_id2)
+        call add_mesh_attributes(ncid_schism0,ih_id2, iof_ugrid)
         call add_cf_attributes(ncid_schism0, ih_id2)
   
         iret=nf90_def_var(ncid_schism0,'bottom_index_node',NF90_INT,time_dims,ikbp_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: kbp')
-        call add_mesh_attributes(ncid_schism0,ikbp_id2)
+        call add_mesh_attributes(ncid_schism0,ikbp_id2, iof_ugrid)
         call add_cf_attributes(ncid_schism0, ikbp_id2)
   
         ! Switch dimension to elements
@@ -1416,9 +1416,9 @@
       end subroutine scribe_recv_write
 
 !===============================================================================
-      subroutine add_mesh_attributes(ncid, varid)
+      subroutine add_mesh_attributes(ncid, varid, iheader)
         implicit none
-        integer, intent(in) :: ncid, varid
+        integer, intent(in) :: ncid, varid, iheader
 
         integer :: iret, ndims, i
         character(len=4)     :: location
@@ -1439,12 +1439,13 @@
           if (trim(dimname) == 'nSCHISM_hgrid_edge') location = 'edge'
         enddo
         deallocate(dimids)
-        write(coordinates,'(6A)') 'SCHISM_hgrid_', location, '_x ', &
-          'SCHISM_hgrid_', location, '_y'
 
-        write(varname, '(A,A)') 'add_mesh_attributes: ', trim(varname)
-        iret=nf90_put_att(ncid,varid,'coordinates',trim(coordinates))
-        if(iret.ne.NF90_NOERR) call parallel_abort(varname)
+        if (iheader > 0) then 
+          write(coordinates,'(6A)') 'SCHISM_hgrid_', location, '_x ', &
+            'SCHISM_hgrid_', location, '_y'
+          iret=nf90_put_att(ncid,varid,'coordinates',trim(coordinates))
+          if(iret.ne.NF90_NOERR) call parallel_abort(varname)
+        endif
         iret=nf90_put_att(ncid,varid,'location',trim(location))
         if(iret.ne.NF90_NOERR) call parallel_abort(varname//'(2)')
         if (ics > 1) then 
@@ -1504,13 +1505,58 @@
           units = 'm s-1'
           valid_min = -1000.0
           valid_max = 1000.0
-          cell_methods = 'depth: average'
+          cell_methods = 'nSCHISM_vgrid_layers: mean'
         case ('depthAverageVelX')
           long_name = 'Depth-average x velocity'
           standard_name = 'sea_water_x_velocity'
           units = 'm s-1'
           valid_min = -1000.0
           valid_max = 1000.0
+          cell_methods = 'nSCHISM_vgrid_layers: mean'
+        case ('zCoordinates')
+          standard_name = 'depth'
+          long_name = 'Layer interface depth'
+          units = 'm'
+        case ('waterDensity')
+          standard_name = 'sea_water_density'
+          units = 'kg m-3'
+        case ('barotropicPresGradX')
+          long_name = 'Eastward barotropic pressure gradient'
+          units = 'Pa m-1'
+        case ('barotropicPresGradY')
+          long_name = 'Northward barotropic pressure gradient'
+          units = 'Pa m-1'
+        case ('temperatureAtElement')
+          standard_name = 'sea_water_temperature'
+          units = 'degree_C'
+        case ('salinityAtElement')
+          standard_name = 'sea_water_salinity'
+          units = 'g kg-1'
+        case ('verticalVelAtElement')
+          standard_name = 'upward_sea_water_velocity'
+          units = 'm s-1'
+        case ('turbulentKineticEner')
+          standard_name = 'specific_turbulent_kinetic_energy_of_sea_water '
+          units = 'm2 s-2'
+        case ('mixingLength')
+          standard_name = 'turbulent_mixing_length_of_sea_water'
+          units = 'm'
+        case ('verticalVelocity')
+          ! Check this one
+          standard_name = 'upward_sea_water_velocity'
+          units = 'm s-1'
+        case ('temperature')
+          standard_name = 'sea_water_temperature'
+          units = 'degree_C'
+        case ('salinity')
+          standard_name = 'sea_water_salinity'
+          units = 'g kg-1'
+        case ('diffusivity')
+          standard_name = 'ocean_vertical_diffusivity'
+          units = 'm2 s-1'
+        case ('viscosity')
+          long_name = 'Viscosity'
+          units = 'N s m-2'
         case ('elevation')
           standard_name = 'sea_surface_height_above_geoid'
           units = 'm'
@@ -1549,6 +1595,12 @@
           standard_name = 'sea_floor_horizontal_stress'
           long_name = 'Bottom stress in y direction'
           units = 'N m-2'
+        case ('horizontalSideVelX')
+          standard_name = 'sea_water_x_velocity'
+          units = 'm s-1'
+        case ('horizontalSideVelY')
+          standard_name = 'sea_water_y_velocity'
+          units = 'm s-1'
         case ('windSpeedX')
           standard_name = 'eastward_wind'
           units = 'm s-1'
@@ -1579,8 +1631,6 @@
           valid_min = 0
           valid_max = 1
         endif 
-
-
 
         iret = NF90_NOERR
         if (trim(long_name) /= '')  iret=nf90_put_att(ncid,varid,'long_name',trim(long_name))
