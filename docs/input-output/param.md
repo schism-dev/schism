@@ -401,8 +401,7 @@ If `iout_sta=1`, each line of outputs `staout_[1-]` represents time series of th
  and the even lines are 3D profiles - see `Utility/Post-Processing-Fortran/read_staout.f90` for the profile format.
 
 ### iof_ugrid (int)
-UGRID option for outputs under scribed IO. If iof_ugrid/=0, outputs will also have UGRID metadata (at
-the expense of file size).
+UGRID option for outputs under scribed IO. If iof_ugrid/=0, outputs will also have UGRID metadata (at the expense of file size), either only the 2D output (iof_ugrid=1) or also the 3D output (iof_ugrid=2).
 
 ### nc_out =1(int)
 Main switch to turn on/off netcdf outputs, useful for other programs (e.g., ESMF) to control outputs.
