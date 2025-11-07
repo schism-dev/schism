@@ -903,7 +903,7 @@
           call add_cf_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
         enddo !i
 
-        call add_user_attributes(ncid_schism_2d)
+        if (iof_ugrid > 0) call add_user_attributes(ncid_schism_2d)
         iret=nf90_enddef(ncid_schism_2d)
       endif !mod(it-
 
@@ -1004,7 +1004,7 @@
         iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
         call add_mesh_attributes(ncid_schism_3d, ivar_id, iof_ugrid)
         call add_cf_attributes(ncid_schism_3d, ivar_id)
-        call add_user_attributes(ncid_schism_3d)
+        if (iof_ugrid > 0) call add_user_attributes(ncid_schism_3d)
 
         iret=nf90_enddef(ncid_schism_3d)
       endif !mod(it-
@@ -1132,11 +1132,6 @@
         iret=nf90_put_att(ncid_schism0,ivarid,'units',"1")
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: SCHISM_hgrid(11)')
 
-
-        !> The UGRID conventions requires a crs for mapping data that needs to be 
-        ! projected (e.g. on UTM32). For simple lat_lon unprojected (ics=2), this can be automated:
-        !> @todo implement this for ics = 1 (but we would need more meta info)
-        !> consider for these cases ncor, coricoef, rlatitude
         if (ics > 1) then 
           iret=nf90_def_var(ncid_schism0,'crs',NF90_INT,time_dims,ivarid)
           if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: crs')
@@ -1328,8 +1323,6 @@
         iret=nf90_put_att(ncid_schism0,iside_id2,'long_name','Edge-node connectivity table')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: iside(6)')
       endif !iheader/=0
-
-      ! Todo: read a template file and copy global attributes and variable attributes
 
       iret=nf90_enddef(ncid_schism0)
 
@@ -1669,9 +1662,9 @@
         implicit none
         integer, intent(in) :: ncid
 
-        integer :: iret, varid, ncin, nvar, ivar, natt
+        integer :: iret, varid, ncin, nvar, ivar, natt, dimid, iatt
         character(len=11), parameter :: infilename = 'metadata.nc'
-        character(len=NF90_MAX_NAME) :: varname
+        character(len=NF90_MAX_NAME) :: varname, attname
         logical :: file_exists
 
         inquire(file=infilename, exist=file_exists)
@@ -1684,7 +1677,6 @@
         if (iret /= NF90_NOERR) call parallel_abort('add_user_attributes: nf90_inquire nvar')
 
         do varid = 1, nvar
-
           iret = nf90_inquire_variable(ncid, varid, name=varname)
           if (iret /= NF90_NOERR) call parallel_abort('add_user_attributes: nf90_inquire variable')
 
@@ -1693,6 +1685,33 @@
 
           call netcdf_copy_attributes(ncin, ivar, ncid, varid)
         end do
+
+        ! The variable crs does not exist in SCHISM output if ics==1, so it needs
+        ! to be copied unconditionally
+        iret = nf90_inq_varid(ncid, 'crs', varid)
+        if (iret /= NF90_NOERR) then
+          iret = nf90_inq_varid(ncin, 'crs', ivar)
+          if (iret == NF90_NOERR) then
+            iret=nf90_inq_dimid(ncid, 'one', dimid)
+            if(iret.ne.NF90_NOERR) call parallel_abort('add_user_attributes: inq_dimid one')
+            iret=nf90_def_var(ncid,'crs',NF90_INT,(/dimid/),varid)
+            if(iret.ne.NF90_NOERR) call parallel_abort('add_user_attributes: def_var crs')
+            call netcdf_copy_attributes(ncin, ivar, ncid, varid)
+
+            do varid =1, nvar
+              iret = nf90_inquire_variable(ncid, varid, natts=natt)
+              if (iret == NF90_NOERR .and. natt > 0) then
+                do iatt = 1, natt
+                  iret = nf90_inq_attname(ncid, varid, iatt, attname)
+                  if (iret == NF90_NOERR .and. trim(attname) == 'coordinates') then
+                    iret = nf90_put_att(ncid, varid, 'grid_mapping', 'crs')
+                    exit
+                  end if
+                end do
+              end if
+            enddo  
+          end if
+        end if
         
         call netcdf_copy_attributes(ncin, NF90_GLOBAL, ncid, NF90_GLOBAL)
 
