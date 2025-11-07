@@ -1060,7 +1060,8 @@
       iret=nf90_put_att(ncid_schism0,itime_id0,'axis','T') 
       iret=nf90_put_att(ncid_schism0,itime_id0,'calendar','proleptic_gregorian') 
 
-      ! Additional information for CF compliance 
+      ! Additional information for CF compliance, this can be enabled by 
+      ! setting iof_ugrid > 0
       if (iheader /= 0) then 
         ! UGRID does not need to be specified as it is included in CF-1.12
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'Conventions', 'CF-1.12')
@@ -1082,13 +1083,13 @@
       endif 
       
       if (iheader == 1) then 
-        ! The UGRID information is only available in out_2d files for iheader == 1
-        ! The global external_variables attribute is a blank-separated list of the names of variables 
+        ! The UGRID information is only available in out_2d files for iheader == 1, but it is not 
+        ! written to the 3D output files. There, it is referenced by the external_variables attribute.
+        ! This global external_variables attribute is a blank-separated list of the names of variables 
         ! which are named by attributes in the file but which are not present in the file. 
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'external_variables', 'SCHISM_hgrid_node_x SCHISM_hgrid_node_y &
           SCHISM_hgrid_face_x SCHISM_hgrid_face_y SCHISM_hgrid_edge_x SCHISM_hgrid_edge_y SCHISM_hgrid_edge_nodes &
           SCHISM_hgrid_face_nodes')
-        ! Read a template file and copy global attributes and variable attributes
       endif  
 
       if(iheader > 1) then
@@ -1099,6 +1100,9 @@
         iret=nf90_put_att(ncid_schism0,ih0_id2,'units','m')         
         iret=nf90_put_att(ncid_schism0,ih0_id2,'long_name','Minimum depth at which water column is considered wet')         
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: h0')
+      endif 
+
+      if(iheader > 1) then
   
         ! The CF convention requires for unstructured data a dimensionless 
         ! field with the cf_role "mesh_topology", with pointers to the node/face/edge information
@@ -1199,12 +1203,12 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp(3)')
         iret=nf90_put_att(ncid_schism0,ih_id2,'positive','down')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp(4)')
-        call add_mesh_attributes(ncid_schism0,ih_id2, iof_ugrid)
+        call add_mesh_attributes(ncid_schism0,ih_id2, iheader)
         call add_cf_attributes(ncid_schism0, ih_id2)
   
         iret=nf90_def_var(ncid_schism0,'bottom_index_node',NF90_INT,time_dims,ikbp_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: kbp')
-        call add_mesh_attributes(ncid_schism0,ikbp_id2, iof_ugrid)
+        call add_mesh_attributes(ncid_schism0,ikbp_id2, iheader)
         call add_cf_attributes(ncid_schism0, ikbp_id2)
   
         ! Switch dimension to elements
@@ -1322,10 +1326,12 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: iside(6)')
       endif !iheader/=0
 
+      ! Todo: read a template file and copy global attributes and variable attributes
+
       iret=nf90_enddef(ncid_schism0)
 
       !> @todo write these variables only for iheader > 1
-      if(iheader/=0) then
+      if(iheader>1) then
         !Write static info (x,y...)
         iret=nf90_put_var(ncid_schism0,ih0_id2,h0)
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static:put h0')
