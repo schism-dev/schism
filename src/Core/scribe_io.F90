@@ -903,6 +903,7 @@
           call add_cf_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
         enddo !i
 
+        call add_user_attributes(ncid_schism_2d)
         iret=nf90_enddef(ncid_schism_2d)
       endif !mod(it-
 
@@ -1003,6 +1004,8 @@
         iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
         call add_mesh_attributes(ncid_schism_3d, ivar_id, iof_ugrid)
         call add_cf_attributes(ncid_schism_3d, ivar_id)
+        call add_user_attributes(ncid_schism_3d)
+
         iret=nf90_enddef(ncid_schism_3d)
       endif !mod(it-
 
@@ -1675,7 +1678,7 @@
         if (.not. file_exists) return
 
         iret = nf90_open(trim(infilename), NF90_NOWRITE, ncin)
-        if(iret.ne.NF90_NOERR) call parallel_abort('add_user_attributes: nf90_open metadata.nc')
+        if(iret.ne.NF90_NOERR) call parallel_abort('add_user_attributes: nf90_open '//trim(infilename))
 
         iret = nf90_inquire(ncid, nvariables=nvar)
         if (iret /= NF90_NOERR) call parallel_abort('add_user_attributes: nf90_inquire nvar')
@@ -1686,10 +1689,7 @@
           if (iret /= NF90_NOERR) call parallel_abort('add_user_attributes: nf90_inquire variable')
 
           iret = nf90_inq_varid(ncin, trim(varname), ivar)
-          if (iret /= NF90_NOERR) call parallel_abort('add_user_attributes: nf90_inquire varid')
-
-          iret = nf90_inquire_variable(ncin, ivar, natts=natt)
-          if (iret /= NF90_NOERR) call parallel_abort('add_user_attributes: inquire_variable natts')
+          if (iret /= NF90_NOERR) cycle ! skipt to next
 
           call netcdf_copy_attributes(ncin, ivar, ncid, varid)
         end do
@@ -1702,7 +1702,7 @@
         implicit none
         integer, intent(in) :: ncin, varid_in, ncout, varid_out
 
-        integer :: iret, natt, attnum
+        integer :: iret, natt, attnum, ndim, nvar
         character(len=NF90_MAX_NAME) :: attname
         integer :: xtype, attlen
         integer :: attval_int
@@ -1710,8 +1710,17 @@
         real :: attval_real
         double precision :: attval_double
 
-        iret = nf90_inquire_variable(ncin, varid_in, natts=natt)
-        if (iret /= NF90_NOERR) call parallel_abort('netcdf_copy_attributes: inquire_variable natts')
+        if (varid_in == NF90_GLOBAL .and. varid_out == NF90_GLOBAL) then
+          iret = nf90_inquire(ncin, ndim, nvar, natt)
+          if (iret /= NF90_NOERR) call parallel_abort('netcdf_copy_attributes: inquire_global natts')
+      elseif (varid_in /= NF90_GLOBAL .and. varid_out /= NF90_GLOBAL) then
+          iret = nf90_inquire_variable(ncin, varid_in, natts=natt)
+          if (iret /= NF90_NOERR) call parallel_abort('netcdf_copy_attributes: inquire_variable natts')
+        else
+          call parallel_abort('netcdf_copy_attributes: cannot mix global and variable attributes')
+        end if
+        !ierr = nf90_inquire(ncid_src, ndims, nvars, ngatts, unlimdimid)
+
 
         do attnum = 1, natt
           iret = nf90_inq_attname(ncin, varid_in, attnum, attname)
