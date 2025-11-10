@@ -1006,6 +1006,18 @@
         call add_cf_attributes(ncid_schism_3d, ivar_id)
         call add_user_attributes(ncid_schism_3d)
 
+        if (iof_ugrid == 0) then 
+          ! The UGRID information is only available in out_2d files for iof_ugrid == 0, but it is not 
+          ! written to the 3D output files. There, it is referenced by the external_variables attribute.
+          ! This global external_variables attribute is a blank-separated list of the names of variables 
+          ! which are named by attributes in the file but which are not present in the file. 
+          iret = nf90_put_att(ncid_schism_3d, NF90_GLOBAL, 'external_variables', 'SCHISM_hgrid_node_x SCHISM_hgrid_node_y')
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: external_variables')
+          iret = nf90_put_att(ncid_schism_3d, NF90_GLOBAL, 'external_variables_location', &
+            & 'out2d_'//trim(adjustl(ifile_char))//'.nc')
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: external_variables_location')
+        endif !iof_ugrid == 0
+
         iret=nf90_enddef(ncid_schism_3d)
       endif !mod(it-
 
@@ -1067,16 +1079,16 @@
       ! UGRID does not need to be specified as it is included in CF-1.12
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'Conventions', 'CF-1.12')
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'title', 'SCHISM unstructured grid output')
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'institution', '')
+      !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'institution', '')
       
       ! If it was model-generated, source should name the model and its version, as specifically as could be useful. 
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'source', 'SCHISM')
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'references', 'Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016) Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81; http://schism.wiki/')
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'history', 'Created ' // trim(iso8601_now()))
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'creation_date', trim(iso8601_now()))
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'license', '')
+      !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'license', '')
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'comment', 'SCHISM model output file')
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'originator', '')
+      !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'originator', '')
       
       if (ics > 1) then 
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'crs', 'EPSG:4326') !WGS84
@@ -1085,16 +1097,6 @@
       ! For OpenDAP retrieval of time axis there should be StartTime/StopTime/StartLatitude etc.
       !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'StartTime', trim(isotimestring))
       
-      if (iheader == 0) then 
-        ! The UGRID information is only available in out_2d files for iheader == 0, but it is not 
-        ! written to the 3D output files. There, it is referenced by the external_variables attribute.
-        ! This global external_variables attribute is a blank-separated list of the names of variables 
-        ! which are named by attributes in the file but which are not present in the file. 
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'external_variables', 'SCHISM_hgrid_node_x SCHISM_hgrid_node_y &
-          SCHISM_hgrid_face_x SCHISM_hgrid_face_y SCHISM_hgrid_edge_x SCHISM_hgrid_edge_y SCHISM_hgrid_edge_nodes &
-          SCHISM_hgrid_face_nodes')
-      endif  
-
       if(iheader > 0) then
         ! Metadata that is dimension "one" should come here
         time_dims(1)=one_dim0
@@ -1322,7 +1324,7 @@
         iret=nf90_put_att(ncid_schism0,iside_id2,'long_name','Edge-node connectivity table')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: iside(6)')
       endif !iheader > 0
-
+ 
       iret=nf90_enddef(ncid_schism0)
 
       !> @todo write these variables only for iheader > 0
@@ -1441,12 +1443,11 @@
         enddo
         deallocate(dimids)
 
-        if (iheader > 0) then 
-          write(coordinates,'(6A)') 'SCHISM_hgrid_', location, '_x ', &
-            'SCHISM_hgrid_', location, '_y'
-          iret=nf90_put_att(ncid,varid,'coordinates',trim(coordinates))
-          if(iret.ne.NF90_NOERR) call parallel_abort(varname)
-        endif
+        write(coordinates,'(6A)') 'SCHISM_hgrid_', location, '_x ', &
+          'SCHISM_hgrid_', location, '_y'
+        iret=nf90_put_att(ncid,varid,'coordinates',trim(coordinates))
+        if(iret.ne.NF90_NOERR) call parallel_abort(varname)
+
         iret=nf90_put_att(ncid,varid,'location',trim(location))
         if(iret.ne.NF90_NOERR) call parallel_abort(varname//'(2)')
         if (ics > 1) then 
