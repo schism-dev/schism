@@ -27,7 +27,7 @@ set (OLDIO OFF CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
 set (USE_ATMOS OFF CACHE BOOLEAN "Coupling with atmospheric model via ESMF")
 set (USE_BMI OFF CACHE BOOLEAN "Build a library that can be used from BMI, with sources and some b.c. provided by BMI")
 set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
-set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
+set (USE_BULK_FAIRALL ON CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
 ## GOTM5.2 is installed by default, and has been tested successfully, defined GOTM_BASE to use a non-standard GOTM source 
 ## Note that source code of GOTM5.2 is from GOTM web so make sure to use recursive clone (to get the submodule)
 ##set( GOTM_BASE /work2/03473/seatonc/frontera/GOTM5.2/code CACHE STRING "Path to non-standard GOTM base directory")
