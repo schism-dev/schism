@@ -865,7 +865,7 @@
         iret=nf90_create(trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_CLOBBER),ncid_schism_2d)
 
         !Fill in header and static info
-        call fill_header_static(2,ncid_schism_2d,itime_id2,node_dim2, &
+        call fill_header_static(1,ncid_schism_2d,itime_id2,node_dim2, &
      &nele_dim2,nedge_dim2,four_dim2,nv_dim2,one_dim2,two_dim2,time_dim2)
 
         iret=nf90_redef(ncid_schism_2d)
@@ -903,7 +903,7 @@
           call add_cf_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
         enddo !i
 
-        if (iof_ugrid > 0) call add_user_attributes(ncid_schism_2d)
+        call add_user_attributes(ncid_schism_2d)
         iret=nf90_enddef(ncid_schism_2d)
       endif !mod(it-
 
@@ -1004,7 +1004,7 @@
         iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
         call add_mesh_attributes(ncid_schism_3d, ivar_id, iof_ugrid)
         call add_cf_attributes(ncid_schism_3d, ivar_id)
-        if (iof_ugrid > 0) call add_user_attributes(ncid_schism_3d)
+        call add_user_attributes(ncid_schism_3d)
 
         iret=nf90_enddef(ncid_schism_3d)
       endif !mod(it-
@@ -1064,29 +1064,29 @@
       iret=nf90_put_att(ncid_schism0,itime_id0,'calendar','proleptic_gregorian') 
 
       ! Additional information for CF compliance, this can be enabled by 
-      ! setting iof_ugrid > 0
-      if (iheader /= 0) then 
-        ! UGRID does not need to be specified as it is included in CF-1.12
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'Conventions', 'CF-1.12')
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'title', 'SCHISM unstructured grid output')
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'institution', 'VIMS ')
-        ! If it was model-generated, source should name the model and its version, as specifically as could be useful. 
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'source', 'SCHISM')
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'references', 'http://schism.wiki/')
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'history', 'Created ' // trim(iso8601_now()))
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'creation_date', trim(iso8601_now()))
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'license', 'CC0-1.0')
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'comment', 'SCHISM model output file')
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'originator', '')
-        if (ics > 1) then 
+      ! UGRID does not need to be specified as it is included in CF-1.12
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'Conventions', 'CF-1.12')
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'title', 'SCHISM unstructured grid output')
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'institution', 'VIMS ')
+      
+      ! If it was model-generated, source should name the model and its version, as specifically as could be useful. 
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'source', 'SCHISM')
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'references', 'http://schism.wiki/')
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'history', 'Created ' // trim(iso8601_now()))
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'creation_date', trim(iso8601_now()))
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'license', 'CC0-1.0')
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'comment', 'SCHISM model output file')
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'originator', '')
+      
+      if (ics > 1) then 
           iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'crs', 'EPSG:4326') !WGS84
         endif
-        ! For OpenDAP retrieval of time axis there should be StartTime/StopTime/StartLatitude etc.
-        !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'StartTime', trim(isotimestring))
-      endif 
       
-      if (iheader == 1) then 
-        ! The UGRID information is only available in out_2d files for iheader == 1, but it is not 
+      ! For OpenDAP retrieval of time axis there should be StartTime/StopTime/StartLatitude etc.
+      !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'StartTime', trim(isotimestring))
+      
+      if (iheader == 0) then 
+        ! The UGRID information is only available in out_2d files for iheader == 0, but it is not 
         ! written to the 3D output files. There, it is referenced by the external_variables attribute.
         ! This global external_variables attribute is a blank-separated list of the names of variables 
         ! which are named by attributes in the file but which are not present in the file. 
@@ -1095,7 +1095,7 @@
           SCHISM_hgrid_face_nodes')
       endif  
 
-      if(iheader > 1) then
+      if(iheader > 0) then
         ! Metadata that is dimension "one" should come here
         time_dims(1)=one_dim0
         iret=nf90_def_var(ncid_schism0,'minimum_depth',NF90_DOUBLE,time_dims,ih0_id2)
@@ -1105,7 +1105,7 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: h0')
       endif 
 
-      if(iheader > 1) then
+      if(iheader > 0) then
   
         ! The CF convention requires for unstructured data a dimensionless 
         ! field with the cf_role "mesh_topology", with pointers to the node/face/edge information
@@ -1189,7 +1189,6 @@
           iret=nf90_put_att(ncid_schism0,iy_id2,'standard_name','projection_y_coordinate')
           if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: ynd(8)')
         endif 
-  
 
         iret=nf90_def_var(ncid_schism0,'depth',NF90_FLOAT,time_dims,ih_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp')
@@ -1322,12 +1321,12 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: iside(5)')
         iret=nf90_put_att(ncid_schism0,iside_id2,'long_name','Edge-node connectivity table')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: iside(6)')
-      endif !iheader/=0
+      endif !iheader > 0
 
       iret=nf90_enddef(ncid_schism0)
 
-      !> @todo write these variables only for iheader > 1
-      if(iheader>1) then
+      !> @todo write these variables only for iheader > 0
+      if(iheader > 0 ) then
         !Write static info (x,y...)
         iret=nf90_put_var(ncid_schism0,ih0_id2,h0)
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static:put h0')
@@ -1351,7 +1350,7 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: put elnode')
         iret=nf90_put_var(ncid_schism0,iside_id2,isidenode,(/1,1/),(/2,ns_global/)) 
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: put sidenode')
-      endif !iheader/=0
+      endif !iheader > 0
 
       end subroutine fill_header_static
 
@@ -1474,7 +1473,7 @@
         iret = nf90_inquire_variable(ncid, varid, name=varname, ndims=ndims)
         if(iret.ne.NF90_NOERR) call parallel_abort('add_cf_attributes: inquire_variable')
 
-        write(16, '(A,A)') 'add_cf_attributes: ', trim(varname)
+        !write(16, '(A,A)') 'add_cf_attributes: ', trim(varname)
 
         long_name = ''
         standard_name = ''
