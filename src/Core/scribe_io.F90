@@ -1067,20 +1067,20 @@
       ! UGRID does not need to be specified as it is included in CF-1.12
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'Conventions', 'CF-1.12')
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'title', 'SCHISM unstructured grid output')
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'institution', 'VIMS ')
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'institution', '')
       
       ! If it was model-generated, source should name the model and its version, as specifically as could be useful. 
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'source', 'SCHISM')
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'references', 'http://schism.wiki/')
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'references', 'Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016) Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81; http://schism.wiki/')
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'history', 'Created ' // trim(iso8601_now()))
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'creation_date', trim(iso8601_now()))
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'license', 'CC0-1.0')
+      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'license', '')
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'comment', 'SCHISM model output file')
       iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'originator', '')
       
       if (ics > 1) then 
-          iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'crs', 'EPSG:4326') !WGS84
-        endif
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'crs', 'EPSG:4326') !WGS84
+      endif
       
       ! For OpenDAP retrieval of time axis there should be StartTime/StopTime/StartLatitude etc.
       !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'StartTime', trim(isotimestring))
