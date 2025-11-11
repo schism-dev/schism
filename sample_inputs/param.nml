@@ -835,8 +835,10 @@
 
 !-----------------------------------------------------------------------
 ! UGRID option for _3D_ outputs under scribed IO (out2d*.nc always has meta
-! data info). If iof_ugrid/=0, 3D outputs will also have UGRID metadata (at
-! the expense of file size). 
+! data info). If iof_ugrid > 0, 3D outputs will also have UGRID metadata.  
+! if iof_ugrid == 1 3D output will contain UGRID mesh data (at the expense
+! of file size); if iof_ugrid == 2, 3D output references mesh data in the 
+! 2D output.
 !-----------------------------------------------------------------------
   iof_ugrid = 0
 

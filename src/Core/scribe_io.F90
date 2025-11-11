@@ -24,6 +24,7 @@
 ! subroutine fill_header_static
 ! subroutine scribe_recv_write
 ! subroutine add_mesh_attributes
+! subroutine add_cf_variable_attributes
 
 !===============================================================================
 !===============================================================================
@@ -174,6 +175,7 @@
       else
         write(isotimestring,'(A,A,I2.2)') trim(isotimestring),'+', int(utc_start)
       endif
+
 
       iths0=iths !save to global var
    
@@ -876,7 +878,8 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i),'i23d',i23da(i)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i),0,1,4)
-          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i))
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i), iof_ugrid)
+          call add_cf_variable_attributes(ncid_schism_2d,ivar_id2(i))
         enddo !i
 
         do i=1,ncount_e
@@ -885,7 +888,8 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims(2)')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p),'i23d',i23da(i+ncount_p)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i+ncount_p),0,1,4)
-          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p))
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p), iof_ugrid)
+          call add_cf_variable_attributes(ncid_schism_2d,ivar_id2(i+ncount_p))
         enddo !i
 
         do i=1,ncount_s
@@ -896,9 +900,11 @@
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),'i23d', &
      &i23da(i+ncount_p+ncount_e)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),0,1,4)
-          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e), iof_ugrid)
+          call add_cf_variable_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
         enddo !i
 
+        call add_user_attributes(ncid_schism_2d)
         iret=nf90_enddef(ncid_schism_2d)
       endif !mod(it-
 
@@ -997,7 +1003,29 @@
         !function nf90_def_var_deflate(ncid, varid, shuffle, deflate, deflate_level)
         !where deflate_level\in[0,9] with 9 being most compression
         iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
-        call add_mesh_attributes(ncid_schism_3d, ivar_id)
+
+
+        call add_mesh_attributes(ncid_schism_3d, ivar_id, iof_ugrid)
+        if (iof_ugrid > 0) then 
+          ! We write CF metadata for iof_ugrid > 0.  In the case of iof_ugrid ==2, we do not 
+          ! duplicate the mesh information in the 3D output files
+          call add_cf_variable_attributes(ncid_schism_3d, ivar_id)
+        endif
+
+        if (iof_ugrid == 2) then 
+          ! The UGRID information is only available in out_2d files for iof_ugrid == 2, but it is not 
+          ! written to the 3D output files. There, it is referenced by the external_variables attribute.
+          ! This global external_variables attribute is a blank-separated list of the names of variables 
+          ! which are named by attributes in the file but which are not present in the file. 
+          iret = nf90_put_att(ncid_schism_3d, NF90_GLOBAL, 'external_variables', 'SCHISM_hgrid_node_x SCHISM_hgrid_node_y')
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: external_variables')
+          iret = nf90_put_att(ncid_schism_3d, NF90_GLOBAL, 'external_variables_location', &
+            & 'out2d_'//trim(adjustl(ifile_char))//'.nc')
+          if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: external_variables_location')
+        endif !iof_ugrid == 2
+
+        call add_user_attributes(ncid_schism_3d)
+
         iret=nf90_enddef(ncid_schism_3d)
       endif !mod(it-
 
@@ -1034,6 +1062,7 @@
       integer :: ix_id2,iy_id2,ih_id2,ixel_id2,iyel_id2,ixsd_id2,iysd_id2,elnode_id2,iside_id2
 
       !Header
+      ! CF recommends that dimensions appear in the order T Z, X/Y, in the CDL description.
       iret=nf90_def_dim(ncid_schism0,'nSCHISM_hgrid_node',np_global,node_dim0)
       iret=nf90_def_dim(ncid_schism0,'nSCHISM_hgrid_face',ne_global,nele_dim0)
       iret=nf90_def_dim(ncid_schism0,'nSCHISM_hgrid_edge',ns_global,nedge_dim0)
@@ -1052,15 +1081,41 @@
       iret=nf90_put_att(ncid_schism0,itime_id0,'units',trim(isotimestring)) 
       iret=nf90_put_att(ncid_schism0,itime_id0,'standard_name','time') 
       iret=nf90_put_att(ncid_schism0,itime_id0,'axis','T') 
-
-      if(iheader/=0) then
+      if (iheader > 0) then   
+        iret=nf90_put_att(ncid_schism0,itime_id0,'calendar','proleptic_gregorian') 
+ 
+        ! UGRID does not need to be specified as it is included in CF-1.12
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'Conventions', 'CF-1.12')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'title', 'SCHISM unstructured grid output')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'institution', 'anonymous')
+      
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'source', 'SCHISM')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'references', 'Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016) Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81; http://schism.wiki/')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'history', 'Created ' // trim(iso8601_now()))
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'creation_date', trim(iso8601_now()))
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'license', 'unspecified')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'comment', 'SCHISM model output file')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'originator', 'anonymous')
+      
+        if (ics > 1) then 
+          iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'crs', 'EPSG:4326') !WGS84
+        endif
+      
+        ! For OpenDAP retrieval of time axis there should be StartTime/StopTime/StartLatitude etc.
+        !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'StartTime', trim(isotimestring))
+      
         ! Metadata that is dimension "one" should come here
         time_dims(1)=one_dim0
         iret=nf90_def_var(ncid_schism0,'minimum_depth',NF90_DOUBLE,time_dims,ih0_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: h0')
         iret=nf90_put_att(ncid_schism0,ih0_id2,'units','m')         
+        iret=nf90_put_att(ncid_schism0,ih0_id2,'long_name','Minimum depth at which water column is considered wet')         
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: h0')
-  
+      endif 
+
+      if(iheader == 1) then
+        ! Do not write the UGRID information for iheader == 2 or iheader == 0
+
         ! The CF convention requires for unstructured data a dimensionless 
         ! field with the cf_role "mesh_topology", with pointers to the node/face/edge information
         iret=nf90_def_var(ncid_schism0,'SCHISM_hgrid',NF90_CHAR,time_dims,ivarid)
@@ -1081,11 +1136,11 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: SCHISM_hgrid(8)')
         iret=nf90_put_att(ncid_schism0,ivarid,'face_node_connectivity',"SCHISM_hgrid_face_nodes")
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: SCHISM_hgrid(9)')
-        
-        !> The UGRID conventions requires a crs for mapping data that needs to be 
-        ! projected (e.g. on UTM32). For simple lat_lon unprojected (ics=2), this can be automated:
-        !> @todo implement this for ics = 1 (but we would need more meta info)
-        !> consider for these cases ncor, coricoef, rlatitude
+        iret=nf90_put_att(ncid_schism0,ivarid,'long_name',"SCHISM unstructured grid topology")
+        if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: SCHISM_hgrid(10)')
+        iret=nf90_put_att(ncid_schism0,ivarid,'units',"1")
+        if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: SCHISM_hgrid(11)')
+
         if (ics > 1) then 
           iret=nf90_def_var(ncid_schism0,'crs',NF90_INT,time_dims,ivarid)
           if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: crs')
@@ -1143,21 +1198,24 @@
           iret=nf90_put_att(ncid_schism0,iy_id2,'standard_name','projection_y_coordinate')
           if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: ynd(8)')
         endif 
-  
-         !> @todo add standard_name
+
         iret=nf90_def_var(ncid_schism0,'depth',NF90_FLOAT,time_dims,ih_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp')
+        iret=nf90_put_att(ncid_schism0,ih_id2,'standard_name','depth')
+        if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp(1)')
         iret=nf90_put_att(ncid_schism0,ih_id2,'units','m')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp(2)')
         iret=nf90_put_att(ncid_schism0,ih_id2,'axis','Z')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp(3)')
         iret=nf90_put_att(ncid_schism0,ih_id2,'positive','down')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp(4)')
-        call add_mesh_attributes(ncid_schism0,ih_id2)
+        call add_mesh_attributes(ncid_schism0,ih_id2, iheader)
+        call add_cf_variable_attributes(ncid_schism0, ih_id2)
   
         iret=nf90_def_var(ncid_schism0,'bottom_index_node',NF90_INT,time_dims,ikbp_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: kbp')
-        call add_mesh_attributes(ncid_schism0,ikbp_id2)
+        call add_mesh_attributes(ncid_schism0,ikbp_id2, iheader)
+        call add_cf_variable_attributes(ncid_schism0, ikbp_id2)
   
         ! Switch dimension to elements
         time_dims(1)=nele_dim0
@@ -1253,6 +1311,10 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: elnode(3)')
         iret=nf90_put_att(ncid_schism0,elnode_id2,'cf_role','face_node_connectivity')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: elnode(4)')
+        iret=nf90_put_att(ncid_schism0,elnode_id2,'units','1')
+        if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: elnode(5)')
+        iret=nf90_put_att(ncid_schism0,elnode_id2,'long_name','Face-node connectivity table')
+        if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: elnode(6)')
   
         var2d_dims(1)=two_dim0
         var2d_dims(2)=nedge_dim0
@@ -1264,11 +1326,16 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: iside(3)')
         iret=nf90_put_att(ncid_schism0,iside_id2,'cf_role','edge_node_connectivity')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: iside(4)')
-      endif !iheader/=0
-
+        iret=nf90_put_att(ncid_schism0,iside_id2,'units','1')
+        if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: iside(5)')
+        iret=nf90_put_att(ncid_schism0,iside_id2,'long_name','Edge-node connectivity table')
+        if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: iside(6)')
+      endif !iheader > 0
+ 
       iret=nf90_enddef(ncid_schism0)
 
-      if(iheader/=0) then
+      !> @todo write these variables only for iheader == 1
+      if(iheader == 1) then
         !Write static info (x,y...)
         iret=nf90_put_var(ncid_schism0,ih0_id2,h0)
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static:put h0')
@@ -1292,7 +1359,7 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: put elnode')
         iret=nf90_put_var(ncid_schism0,iside_id2,isidenode,(/1,1/),(/2,ns_global/)) 
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: put sidenode')
-      endif !iheader/=0
+      endif !iheader == 1
 
       end subroutine fill_header_static
 
@@ -1359,9 +1426,9 @@
       end subroutine scribe_recv_write
 
 !===============================================================================
-      subroutine add_mesh_attributes(ncid, varid)
+      subroutine add_mesh_attributes(ncid, varid, iheader)
         implicit none
-        integer, intent(in) :: ncid, varid
+        integer, intent(in) :: ncid, varid, iheader
 
         integer :: iret, ndims, i
         character(len=4)     :: location
@@ -1382,16 +1449,18 @@
           if (trim(dimname) == 'nSCHISM_hgrid_edge') location = 'edge'
         enddo
         deallocate(dimids)
+
         write(coordinates,'(6A)') 'SCHISM_hgrid_', location, '_x ', &
           'SCHISM_hgrid_', location, '_y'
-
-        write(varname, '(A,A)') 'add_mesh_attributes: ', trim(varname)
         iret=nf90_put_att(ncid,varid,'coordinates',trim(coordinates))
         if(iret.ne.NF90_NOERR) call parallel_abort(varname)
+
         iret=nf90_put_att(ncid,varid,'location',trim(location))
         if(iret.ne.NF90_NOERR) call parallel_abort(varname//'(2)')
-        iret=nf90_put_att(ncid,varid,'grid_mapping','crs')
-        if(iret.ne.NF90_NOERR) call parallel_abort(varname//'(3)')
+        if (ics > 1) then 
+          iret=nf90_put_att(ncid,varid,'grid_mapping','crs')
+          if(iret.ne.NF90_NOERR) call parallel_abort(varname//'(3)')
+        endif
         iret=nf90_put_att(ncid,varid,'mesh','SCHISM_hgrid')
         if(iret.ne.NF90_NOERR) call parallel_abort(varname//'(4)')
         ! todo add xtype-dependent fill value
@@ -1401,11 +1470,339 @@
       end subroutine add_mesh_attributes
 
 !===============================================================================
+      subroutine add_cf_variable_attributes(ncid, varid)
+        implicit none
+        integer, intent(in) :: ncid, varid
+
+        integer :: iret, ndims, i
+        character(len=255)   :: varname, long_name, standard_name, units, comment, cell_methods
+        real :: valid_min, valid_max
+
+        iret = nf90_inquire_variable(ncid, varid, name=varname, ndims=ndims)
+        if(iret.ne.NF90_NOERR) call parallel_abort('add_cf_variable_attributes: inquire_variable')
+
+        !write(16, '(A,A)') 'add_cf_variable_attributes: ', trim(varname)
+
+        long_name = ''
+        standard_name = ''
+        comment = ''
+        units = ''
+        valid_min = NF90_FILL_FLOAT
+        valid_max = NF90_FILL_FLOAT
+
+        select case (trim(varname))
+        case ('airPressure')
+          long_name = 'Surface air pressure'
+          standard_name = 'surface_air_pressure'
+          units = 'Pa'
+        case ('airTemperature')
+          long_name = 'Surface air temperature'
+          standard_name = 'air_temperature'
+          units = 'degree_Celsius'
+          ! units_metadata = 'on_scale'
+        case ('depth')
+          long_name = 'Depth below sea surface'
+          standard_name = 'depth'
+          units = 'm'
+          !positive = 'down'
+          comment = 'Positive downward'
+          valid_min = -500000.0
+          valid_max = 20000.0
+        case ('depthAverageVelY')
+          long_name = 'Depth-average y velocity'
+          standard_name = 'sea_water_y_velocity'
+          units = 'm s-1'
+          valid_min = -1000.0
+          valid_max = 1000.0
+          cell_methods = 'nSCHISM_vgrid_layers: mean'
+        case ('depthAverageVelX')
+          long_name = 'Depth-average x velocity'
+          standard_name = 'sea_water_x_velocity'
+          units = 'm s-1'
+          valid_min = -1000.0
+          valid_max = 1000.0
+          cell_methods = 'nSCHISM_vgrid_layers: mean'
+        case ('zCoordinates')
+          standard_name = 'depth'
+          long_name = 'Layer interface depth'
+          units = 'm'
+        case ('waterDensity')
+          standard_name = 'sea_water_density'
+          units = 'kg m-3'
+        case ('barotropicPresGradX')
+          long_name = 'Eastward barotropic pressure gradient'
+          units = 'Pa m-1'
+        case ('barotropicPresGradY')
+          long_name = 'Northward barotropic pressure gradient'
+          units = 'Pa m-1'
+        case ('temperatureAtElement')
+          standard_name = 'sea_water_temperature'
+          units = 'degree_C'
+        case ('salinityAtElement')
+          standard_name = 'sea_water_salinity'
+          units = 'g kg-1'
+        case ('verticalVelAtElement')
+          standard_name = 'upward_sea_water_velocity'
+          units = 'm s-1'
+        case ('turbulentKineticEner')
+          standard_name = 'specific_turbulent_kinetic_energy_of_sea_water '
+          units = 'm2 s-2'
+        case ('mixingLength')
+          standard_name = 'turbulent_mixing_length_of_sea_water'
+          units = 'm'
+        case ('verticalVelocity')
+          ! Check this one
+          standard_name = 'upward_sea_water_velocity'
+          units = 'm s-1'
+        case ('temperature')
+          standard_name = 'sea_water_temperature'
+          units = 'degree_C'
+        case ('salinity')
+          standard_name = 'sea_water_salinity'
+          units = 'g kg-1'
+        case ('diffusivity')
+          standard_name = 'ocean_vertical_diffusivity'
+          units = 'm2 s-1'
+        case ('viscosity')
+          long_name = 'Viscosity'
+          units = 'N s m-2'
+        case ('elevation')
+          standard_name = 'sea_surface_height_above_geoid'
+          units = 'm'
+        case ('specificHumidity')
+          standard_name = 'specific_humidity'
+          units = 'kg kg-1'
+        case ('solarRadiation')
+          standard_name = 'net_downward_shortwave_flux_at_sea_water_surface'
+          units = 'W m-2'
+        case ('latentHeat')
+          standard_name = 'surface_downward_latent_heat_flux'
+          units = 'W m-2'
+        case ('sensibleHeat')
+          standard_name = 'surface_downward_sensible_heat_flux'
+          units = 'W m-2'
+        case ('totalHeat')
+          standard_name = 'surface_downward_heat_flux_in_sea_water'
+          units = 'W m-2'
+        case ('evaporationRate')
+          standard_name = 'water_evapotranspiration_flux'
+          units = 'kg m-2 s-1'
+        case ('precipitationRate')
+          standard_name = 'precipitation_flux'
+          units = 'kg m-2 s-1'
+        case ('upwardLongwave')
+          standard_name = 'upwelling_longwave_flux_in_air'
+          units = 'W m-2'
+        case ('downwardLongwave')
+          standard_name = 'downwelling_longwave_flux_in_air'
+          units = 'W m-2'
+        case ('bottomStressX')
+          standard_name = 'sea_floor_horizontal_stress'
+          long_name = 'Bottom stress in x direction'
+          units = 'N m-2'
+        case ('bottomStressY')
+          standard_name = 'sea_floor_horizontal_stress'
+          long_name = 'Bottom stress in y direction'
+          units = 'N m-2'
+        case ('horizontalSideVelX')
+          standard_name = 'sea_water_x_velocity'
+          units = 'm s-1'
+        case ('horizontalSideVelY')
+          standard_name = 'sea_water_y_velocity'
+          units = 'm s-1'
+        case ('windSpeedX')
+          standard_name = 'eastward_wind'
+          units = 'm s-1'
+        case ('windSpeedY')
+          standard_name = 'northward_wind'
+          units = 'm s-1'
+        case ('windStressX')
+          standard_name = 'downward_x_stress_at_sea_water_surface'
+          units = 'N m-2'
+        case ('windStressY')
+          standard_name = 'downward_y_stress_at_sea_water_surface'
+          units = 'N m-2'
+        case ('bottom_index_node')
+          long_name = 'Bottom index at node'
+          standard_name = 'model_level_number_at_sea_floor'
+          units = '1'
+          !positive = 'up'
+          comment = 'Index of lowermost model level'
+          valid_min = 1
+        case default
+        end select
+
+        if (index(trim(varname), 'dry') > 0 .and. index(trim(varname), 'Flag') > 0) then
+          standard_name = 'quality_flag'
+          long_name = 'Dry flag'
+          comment = '1: dry, 0: wet'
+          units = '1'
+          valid_min = 0
+          valid_max = 1
+        endif 
+
+        iret = NF90_NOERR
+        if (trim(long_name) /= '')  iret=nf90_put_att(ncid,varid,'long_name',trim(long_name))
+        if(iret.ne.NF90_NOERR) call parallel_abort(varname//' long_name')
+
+        if (trim(standard_name) /= '')  iret=nf90_put_att(ncid,varid,'standard_name',trim(standard_name))
+        if(iret.ne.NF90_NOERR) call parallel_abort(varname//' standard_name')
+
+        if (trim(units) /= '')  iret=nf90_put_att(ncid,varid,'units',trim(units))
+        if(iret.ne.NF90_NOERR) call parallel_abort(varname//' units')
+
+        if (trim(comment) /= '')  iret=nf90_put_att(ncid,varid,'comment',trim(comment))
+        if(iret.ne.NF90_NOERR) call parallel_abort(varname//' comment')
+
+        if (valid_min /= NF90_FILL_FLOAT)  iret=nf90_put_att(ncid,varid,'valid_min',valid_min)
+        if(iret.ne.NF90_NOERR) call parallel_abort(varname//' valid_min')
+
+        if (valid_max /= NF90_FILL_FLOAT)  iret=nf90_put_att(ncid,varid,'valid_max',valid_max)
+        if(iret.ne.NF90_NOERR) call parallel_abort(varname//' valid_max')
+
+      end subroutine add_cf_variable_attributes
+
+      subroutine add_user_attributes(ncid)
+        implicit none
+        integer, intent(in) :: ncid
+
+        integer :: iret, varid, ncin, nvar, ivar, natt, dimid, iatt
+        character(len=11), parameter :: infilename = 'metadata.nc'
+        character(len=NF90_MAX_NAME) :: varname, attname
+        logical :: file_exists
+
+        inquire(file=infilename, exist=file_exists)
+        if (.not. file_exists) return
+
+        iret = nf90_open(trim(infilename), NF90_NOWRITE, ncin)
+        if(iret.ne.NF90_NOERR) call parallel_abort('add_user_attributes: nf90_open '//trim(infilename))
+
+        iret = nf90_inquire(ncid, nvariables=nvar)
+        if (iret /= NF90_NOERR) call parallel_abort('add_user_attributes: nf90_inquire nvar')
+
+        do varid = 1, nvar
+          iret = nf90_inquire_variable(ncid, varid, name=varname)
+          if (iret /= NF90_NOERR) call parallel_abort('add_user_attributes: nf90_inquire variable')
+
+          iret = nf90_inq_varid(ncin, trim(varname), ivar)
+          if (iret /= NF90_NOERR) cycle ! skipt to next
+
+          call netcdf_copy_attributes(ncin, ivar, ncid, varid)
+        end do
+
+        ! The variable crs does not exist in SCHISM output if ics==1, so it needs
+        ! to be copied unconditionally
+        iret = nf90_inq_varid(ncid, 'crs', varid)
+        if (iret /= NF90_NOERR) then
+          iret = nf90_inq_varid(ncin, 'crs', ivar)
+          if (iret == NF90_NOERR) then
+            iret=nf90_inq_dimid(ncid, 'one', dimid)
+            if(iret.ne.NF90_NOERR) call parallel_abort('add_user_attributes: inq_dimid one')
+            iret=nf90_def_var(ncid,'crs',NF90_INT,(/dimid/),varid)
+            if(iret.ne.NF90_NOERR) call parallel_abort('add_user_attributes: def_var crs')
+            call netcdf_copy_attributes(ncin, ivar, ncid, varid)
+
+            do varid =1, nvar
+              iret = nf90_inquire_variable(ncid, varid, natts=natt)
+              if (iret == NF90_NOERR .and. natt > 0) then
+                do iatt = 1, natt
+                  iret = nf90_inq_attname(ncid, varid, iatt, attname)
+                  if (iret == NF90_NOERR .and. trim(attname) == 'coordinates') then
+                    iret = nf90_put_att(ncid, varid, 'grid_mapping', 'crs')
+                    exit
+                  end if
+                end do
+              end if
+            enddo  
+          end if
+        end if
+        
+        call netcdf_copy_attributes(ncin, NF90_GLOBAL, ncid, NF90_GLOBAL)
+
+      end subroutine add_user_attributes
+
+      subroutine netcdf_copy_attributes(ncin, varid_in, ncout, varid_out)
+        implicit none
+        integer, intent(in) :: ncin, varid_in, ncout, varid_out
+
+        integer :: iret, natt, attnum, ndim, nvar
+        character(len=NF90_MAX_NAME) :: attname
+        integer :: xtype, attlen
+        integer :: attval_int
+        character(len=:), allocatable :: attval_char
+        real :: attval_real
+        double precision :: attval_double
+
+        if (varid_in == NF90_GLOBAL .and. varid_out == NF90_GLOBAL) then
+          iret = nf90_inquire(ncin, ndim, nvar, natt)
+          if (iret /= NF90_NOERR) call parallel_abort('netcdf_copy_attributes: inquire_global natts')
+      elseif (varid_in /= NF90_GLOBAL .and. varid_out /= NF90_GLOBAL) then
+          iret = nf90_inquire_variable(ncin, varid_in, natts=natt)
+          if (iret /= NF90_NOERR) call parallel_abort('netcdf_copy_attributes: inquire_variable natts')
+        else
+          call parallel_abort('netcdf_copy_attributes: cannot mix global and variable attributes')
+        end if
+        !ierr = nf90_inquire(ncid_src, ndims, nvars, ngatts, unlimdimid)
+
+
+        do attnum = 1, natt
+          iret = nf90_inq_attname(ncin, varid_in, attnum, attname)
+          if (iret /= NF90_NOERR) cycle
+
+          iret = nf90_inquire_attribute(ncin, varid_in, attname, xtype=xtype, len=attlen)
+          if (iret /= NF90_NOERR) cycle
+
+          select case (xtype)
+          case (NF90_CHAR)
+            allocate(character(len=attlen) :: attval_char)
+            iret = nf90_get_att(ncin, varid_in, attname, attval_char)
+            if (iret == NF90_NOERR) iret = nf90_put_att(ncout, varid_out, attname, attval_char)
+            deallocate(attval_char)
+          case (NF90_INT)
+            iret = nf90_get_att(ncin, varid_in, attname, attval_int)
+            if (iret == NF90_NOERR) iret = nf90_put_att(ncout, varid_out, attname, attval_int)
+          case (NF90_FLOAT)
+            iret = nf90_get_att(ncin, varid_in, attname, attval_real)
+            if (iret == NF90_NOERR) iret = nf90_put_att(ncout, varid_out, attname, attval_real)
+          case (NF90_DOUBLE)
+            iret = nf90_get_att(ncin, varid_in, attname, attval_double)
+            if (iret == NF90_NOERR) iret = nf90_put_att(ncout, varid_out, attname, attval_double)
+          case default
+          end select
+        end do
+
+      end subroutine netcdf_copy_attributes
+
+!===============================================================================
       subroutine scribe_finalize
       implicit none
 
       end subroutine scribe_finalize
 
+!===============================================================================
+
+      function iso8601_now() result(s)
+      ! Returns local time in ISO 8601: YYYY-MM-DDThh:mm:ss±HH:MM
+    
+        implicit none 
+
+        character(len=32) :: s
+        integer :: v(8)              ! (YYYY,MM,DD,zone?,hh,mm,ss,ms)
+        character(len=5) :: zone_str ! minutes offset from UTC, signed
+        integer :: zmin, zh, zm
+        character(len=1) :: sgn
+
+        call date_and_time(values=v, zone=zone_str)
+        read(zone_str,'(I5)') zmin
+        sgn = '+'
+        if (zmin < 0) sgn = '-'
+
+        zh = abs(zmin)/60
+        zm = mod(abs(zmin),60)
+
+        write(s,'(I4.4,"-",I2.2,"-",I2.2,"T",I2.2,":",I2.2,":",I2.2,A1,I2.2,":",I2.2)') &
+           v(1), v(2), v(3), v(5), v(6), v(7), sgn, zh, zm
+    end function iso8601_now
 !===============================================================================
 ! END FILE I/O module
 !===============================================================================
