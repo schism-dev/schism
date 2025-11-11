@@ -23,8 +23,8 @@
 ! subroutine nc_writeout3D
 ! subroutine fill_header_static
 ! subroutine scribe_recv_write
-! subroutine var_add_ugrid_attributes
-! subroutine var_add_cf_attributes
+! subroutine add_mesh_attributes
+! subroutine add_cf_variable_attributes
 
 !===============================================================================
 !===============================================================================
@@ -878,8 +878,8 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i),'i23d',i23da(i)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i),0,1,4)
-          call var_add_ugrid_attributes(ncid_schism_2d,ivar_id2(i), iof_ugrid)
-          call var_add_cf_attributes(ncid_schism_2d,ivar_id2(i))
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i), iof_ugrid)
+          call add_cf_variable_attributes(ncid_schism_2d,ivar_id2(i))
         enddo !i
 
         do i=1,ncount_e
@@ -888,8 +888,8 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims(2)')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p),'i23d',i23da(i+ncount_p)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i+ncount_p),0,1,4)
-          call var_add_ugrid_attributes(ncid_schism_2d,ivar_id2(i+ncount_p), iof_ugrid)
-          call var_add_cf_attributes(ncid_schism_2d,ivar_id2(i+ncount_p))
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p), iof_ugrid)
+          call add_cf_variable_attributes(ncid_schism_2d,ivar_id2(i+ncount_p))
         enddo !i
 
         do i=1,ncount_s
@@ -900,8 +900,8 @@
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),'i23d', &
      &i23da(i+ncount_p+ncount_e)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),0,1,4)
-          call var_add_ugrid_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e), iof_ugrid)
-          call var_add_cf_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
+          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e), iof_ugrid)
+          call add_cf_variable_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
         enddo !i
 
         call add_user_attributes(ncid_schism_2d)
@@ -1005,11 +1005,11 @@
         iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
 
 
-        call var_add_ugrid_attributes(ncid_schism_3d, ivar_id, iof_ugrid)
+        call add_mesh_attributes(ncid_schism_3d, ivar_id, iof_ugrid)
         if (iof_ugrid > 0) then 
           ! We write CF metadata for iof_ugrid > 0.  In the case of iof_ugrid ==2, we do not 
           ! duplicate the mesh information in the 3D output files
-          call var_add_cf_attributes(ncid_schism_3d, ivar_id)
+          call add_cf_variable_attributes(ncid_schism_3d, ivar_id)
         endif
 
         if (iof_ugrid == 2) then 
@@ -1209,13 +1209,13 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp(3)')
         iret=nf90_put_att(ncid_schism0,ih_id2,'positive','down')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp(4)')
-        call var_add_ugrid_attributes(ncid_schism0,ih_id2, iheader)
-        call var_add_cf_attributes(ncid_schism0, ih_id2)
+        call add_mesh_attributes(ncid_schism0,ih_id2, iheader)
+        call add_cf_variable_attributes(ncid_schism0, ih_id2)
   
         iret=nf90_def_var(ncid_schism0,'bottom_index_node',NF90_INT,time_dims,ikbp_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: kbp')
-        call var_add_ugrid_attributes(ncid_schism0,ikbp_id2, iheader)
-        call var_add_cf_attributes(ncid_schism0, ikbp_id2)
+        call add_mesh_attributes(ncid_schism0,ikbp_id2, iheader)
+        call add_cf_variable_attributes(ncid_schism0, ikbp_id2)
   
         ! Switch dimension to elements
         time_dims(1)=nele_dim0
@@ -1426,7 +1426,7 @@
       end subroutine scribe_recv_write
 
 !===============================================================================
-      subroutine var_add_ugrid_attributes(ncid, varid, iheader)
+      subroutine add_mesh_attributes(ncid, varid, iheader)
         implicit none
         integer, intent(in) :: ncid, varid, iheader
 
@@ -1437,11 +1437,11 @@
         integer, allocatable :: dimids(:)
 
         iret = nf90_inquire_variable(ncid, varid, name=varname, ndims=ndims)
-        if(iret.ne.NF90_NOERR) call parallel_abort('var_add_ugrid_attributes: inquire_variable')
+        if(iret.ne.NF90_NOERR) call parallel_abort('add_mesh_attributes: inquire_variable')
 
         allocate(dimids(ndims))
         iret = nf90_inquire_variable(ncid, varid, dimids=dimids)
-        if(iret.ne.NF90_NOERR) call parallel_abort('var_add_ugrid_attributes: inquire_variable')
+        if(iret.ne.NF90_NOERR) call parallel_abort('add_mesh_attributes: inquire_variable')
         do i = 1, ndims
           iret = nf90_inquire_dimension(ncid, dimids(i), name=dimname)
           if (trim(dimname) == 'nSCHISM_hgrid_node') location = 'node'
@@ -1467,10 +1467,10 @@
         !iret=nf90_put_att(ncid,varid,'_FillValue',NF90_FILL_FLOAT)
         !if(iret.ne.NF90_NOERR) call parallel_abort(varname)
 
-      end subroutine var_add_ugrid_attributes
+      end subroutine add_mesh_attributes
 
 !===============================================================================
-      subroutine var_add_cf_attributes(ncid, varid)
+      subroutine add_cf_variable_attributes(ncid, varid)
         implicit none
         integer, intent(in) :: ncid, varid
 
@@ -1479,9 +1479,9 @@
         real :: valid_min, valid_max
 
         iret = nf90_inquire_variable(ncid, varid, name=varname, ndims=ndims)
-        if(iret.ne.NF90_NOERR) call parallel_abort('var_add_cf_attributes: inquire_variable')
+        if(iret.ne.NF90_NOERR) call parallel_abort('add_cf_variable_attributes: inquire_variable')
 
-        !write(16, '(A,A)') 'var_add_cf_attributes: ', trim(varname)
+        !write(16, '(A,A)') 'add_cf_variable_attributes: ', trim(varname)
 
         long_name = ''
         standard_name = ''
@@ -1660,7 +1660,7 @@
         if (valid_max /= NF90_FILL_FLOAT)  iret=nf90_put_att(ncid,varid,'valid_max',valid_max)
         if(iret.ne.NF90_NOERR) call parallel_abort(varname//' valid_max')
 
-      end subroutine var_add_cf_attributes
+      end subroutine add_cf_variable_attributes
 
       subroutine add_user_attributes(ncid)
         implicit none
