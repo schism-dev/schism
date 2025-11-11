@@ -25,6 +25,9 @@
 ! subroutine scribe_recv_write
 ! subroutine add_mesh_attributes
 ! subroutine add_cf_variable_attributes
+! subroutine add_user_attributes
+! subroutine netcdf_copy_attributes
+! function iso8601_now
 
 !===============================================================================
 !===============================================================================
@@ -879,7 +882,7 @@
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i),'i23d',i23da(i)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i),0,1,4)
           call add_mesh_attributes(ncid_schism_2d,ivar_id2(i), iof_ugrid)
-          call add_cf_variable_attributes(ncid_schism_2d,ivar_id2(i))
+          if(iof_ugrid/=0) call add_cf_variable_attributes(ncid_schism_2d,ivar_id2(i))
         enddo !i
 
         do i=1,ncount_e
@@ -889,7 +892,7 @@
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p),'i23d',i23da(i+ncount_p)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i+ncount_p),0,1,4)
           call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p), iof_ugrid)
-          call add_cf_variable_attributes(ncid_schism_2d,ivar_id2(i+ncount_p))
+          if(iof_ugrid/=0) call add_cf_variable_attributes(ncid_schism_2d,ivar_id2(i+ncount_p))
         enddo !i
 
         do i=1,ncount_s
@@ -901,7 +904,7 @@
      &i23da(i+ncount_p+ncount_e)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),0,1,4)
           call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e), iof_ugrid)
-          call add_cf_variable_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
+          if(iof_ugrid/=0) call add_cf_variable_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
         enddo !i
 
         call add_user_attributes(ncid_schism_2d)
@@ -1111,7 +1114,7 @@
         iret=nf90_put_att(ncid_schism0,ih0_id2,'units','m')         
         iret=nf90_put_att(ncid_schism0,ih0_id2,'long_name','Minimum depth at which water column is considered wet')         
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: h0')
-      endif 
+      endif !iheader > 0
 
       if(iheader == 1) then
         ! Do not write the UGRID information for iheader == 2 or iheader == 0
@@ -1330,7 +1333,7 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: iside(5)')
         iret=nf90_put_att(ncid_schism0,iside_id2,'long_name','Edge-node connectivity table')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: iside(6)')
-      endif !iheader > 0
+      endif !iheader=1
  
       iret=nf90_enddef(ncid_schism0)
 
