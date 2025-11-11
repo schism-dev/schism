@@ -23,7 +23,8 @@
 ! subroutine nc_writeout3D
 ! subroutine fill_header_static
 ! subroutine scribe_recv_write
-! subroutine add_mesh_attributes
+! subroutine var_add_ugrid_attributes
+! subroutine var_add_cf_attributes
 
 !===============================================================================
 !===============================================================================
@@ -877,8 +878,8 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i),'i23d',i23da(i)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i),0,1,4)
-          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i), iof_ugrid)
-          call add_cf_attributes(ncid_schism_2d,ivar_id2(i))
+          call var_add_ugrid_attributes(ncid_schism_2d,ivar_id2(i), iof_ugrid)
+          call var_add_cf_attributes(ncid_schism_2d,ivar_id2(i))
         enddo !i
 
         do i=1,ncount_e
@@ -887,8 +888,8 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout2D: var_dims(2)')
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p),'i23d',i23da(i+ncount_p)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i+ncount_p),0,1,4)
-          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p), iof_ugrid)
-          call add_cf_attributes(ncid_schism_2d,ivar_id2(i+ncount_p))
+          call var_add_ugrid_attributes(ncid_schism_2d,ivar_id2(i+ncount_p), iof_ugrid)
+          call var_add_cf_attributes(ncid_schism_2d,ivar_id2(i+ncount_p))
         enddo !i
 
         do i=1,ncount_s
@@ -899,8 +900,8 @@
           iret=nf90_put_att(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),'i23d', &
      &i23da(i+ncount_p+ncount_e)) !set i23d flag
           iret=nf90_def_var_deflate(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e),0,1,4)
-          call add_mesh_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e), iof_ugrid)
-          call add_cf_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
+          call var_add_ugrid_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e), iof_ugrid)
+          call var_add_cf_attributes(ncid_schism_2d,ivar_id2(i+ncount_p+ncount_e))
         enddo !i
 
         call add_user_attributes(ncid_schism_2d)
@@ -1002,12 +1003,17 @@
         !function nf90_def_var_deflate(ncid, varid, shuffle, deflate, deflate_level)
         !where deflate_level\in[0,9] with 9 being most compression
         iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id,0,1,4)
-        call add_mesh_attributes(ncid_schism_3d, ivar_id, iof_ugrid)
-        call add_cf_attributes(ncid_schism_3d, ivar_id)
-        call add_user_attributes(ncid_schism_3d)
 
-        if (iof_ugrid == 0) then 
-          ! The UGRID information is only available in out_2d files for iof_ugrid == 0, but it is not 
+
+        call var_add_ugrid_attributes(ncid_schism_3d, ivar_id, iof_ugrid)
+        if (iof_ugrid > 0) then 
+          ! We write CF metadata for iof_ugrid > 0.  In the case of iof_ugrid ==2, we do not 
+          ! duplicate the mesh information in the 3D output files
+          call var_add_cf_attributes(ncid_schism_3d, ivar_id)
+        endif
+
+        if (iof_ugrid == 2) then 
+          ! The UGRID information is only available in out_2d files for iof_ugrid == 2, but it is not 
           ! written to the 3D output files. There, it is referenced by the external_variables attribute.
           ! This global external_variables attribute is a blank-separated list of the names of variables 
           ! which are named by attributes in the file but which are not present in the file. 
@@ -1016,7 +1022,9 @@
           iret = nf90_put_att(ncid_schism_3d, NF90_GLOBAL, 'external_variables_location', &
             & 'out2d_'//trim(adjustl(ifile_char))//'.nc')
           if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D: external_variables_location')
-        endif !iof_ugrid == 0
+        endif !iof_ugrid == 2
+
+        call add_user_attributes(ncid_schism_3d)
 
         iret=nf90_enddef(ncid_schism_3d)
       endif !mod(it-
@@ -1073,31 +1081,29 @@
       iret=nf90_put_att(ncid_schism0,itime_id0,'units',trim(isotimestring)) 
       iret=nf90_put_att(ncid_schism0,itime_id0,'standard_name','time') 
       iret=nf90_put_att(ncid_schism0,itime_id0,'axis','T') 
-      iret=nf90_put_att(ncid_schism0,itime_id0,'calendar','proleptic_gregorian') 
-
-      ! Additional information for CF compliance, this can be enabled by 
-      ! UGRID does not need to be specified as it is included in CF-1.12
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'Conventions', 'CF-1.12')
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'title', 'SCHISM unstructured grid output')
-      !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'institution', '')
+      if (iheader > 0) then   
+        iret=nf90_put_att(ncid_schism0,itime_id0,'calendar','proleptic_gregorian') 
+ 
+        ! UGRID does not need to be specified as it is included in CF-1.12
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'Conventions', 'CF-1.12')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'title', 'SCHISM unstructured grid output')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'institution', 'anonymous')
       
-      ! If it was model-generated, source should name the model and its version, as specifically as could be useful. 
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'source', 'SCHISM')
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'references', 'Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016) Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81; http://schism.wiki/')
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'history', 'Created ' // trim(iso8601_now()))
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'creation_date', trim(iso8601_now()))
-      !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'license', '')
-      iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'comment', 'SCHISM model output file')
-      !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'originator', '')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'source', 'SCHISM')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'references', 'Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016) Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81; http://schism.wiki/')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'history', 'Created ' // trim(iso8601_now()))
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'creation_date', trim(iso8601_now()))
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'license', 'unspecified')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'comment', 'SCHISM model output file')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'originator', 'anonymous')
       
-      if (ics > 1) then 
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'crs', 'EPSG:4326') !WGS84
-      endif
+        if (ics > 1) then 
+          iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'crs', 'EPSG:4326') !WGS84
+        endif
       
-      ! For OpenDAP retrieval of time axis there should be StartTime/StopTime/StartLatitude etc.
-      !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'StartTime', trim(isotimestring))
+        ! For OpenDAP retrieval of time axis there should be StartTime/StopTime/StartLatitude etc.
+        !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'StartTime', trim(isotimestring))
       
-      if(iheader > 0) then
         ! Metadata that is dimension "one" should come here
         time_dims(1)=one_dim0
         iret=nf90_def_var(ncid_schism0,'minimum_depth',NF90_DOUBLE,time_dims,ih0_id2)
@@ -1107,8 +1113,9 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: h0')
       endif 
 
-      if(iheader > 0) then
-  
+      if(iheader == 1) then
+        ! Do not write the UGRID information for iheader == 2 or iheader == 0
+
         ! The CF convention requires for unstructured data a dimensionless 
         ! field with the cf_role "mesh_topology", with pointers to the node/face/edge information
         iret=nf90_def_var(ncid_schism0,'SCHISM_hgrid',NF90_CHAR,time_dims,ivarid)
@@ -1202,13 +1209,13 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp(3)')
         iret=nf90_put_att(ncid_schism0,ih_id2,'positive','down')
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: dp(4)')
-        call add_mesh_attributes(ncid_schism0,ih_id2, iheader)
-        call add_cf_attributes(ncid_schism0, ih_id2)
+        call var_add_ugrid_attributes(ncid_schism0,ih_id2, iheader)
+        call var_add_cf_attributes(ncid_schism0, ih_id2)
   
         iret=nf90_def_var(ncid_schism0,'bottom_index_node',NF90_INT,time_dims,ikbp_id2)
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: kbp')
-        call add_mesh_attributes(ncid_schism0,ikbp_id2, iheader)
-        call add_cf_attributes(ncid_schism0, ikbp_id2)
+        call var_add_ugrid_attributes(ncid_schism0,ikbp_id2, iheader)
+        call var_add_cf_attributes(ncid_schism0, ikbp_id2)
   
         ! Switch dimension to elements
         time_dims(1)=nele_dim0
@@ -1327,8 +1334,8 @@
  
       iret=nf90_enddef(ncid_schism0)
 
-      !> @todo write these variables only for iheader > 0
-      if(iheader > 0 ) then
+      !> @todo write these variables only for iheader == 1
+      if(iheader == 1) then
         !Write static info (x,y...)
         iret=nf90_put_var(ncid_schism0,ih0_id2,h0)
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static:put h0')
@@ -1352,7 +1359,7 @@
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: put elnode')
         iret=nf90_put_var(ncid_schism0,iside_id2,isidenode,(/1,1/),(/2,ns_global/)) 
         if(iret.ne.NF90_NOERR) call parallel_abort('fill_header_static: put sidenode')
-      endif !iheader > 0
+      endif !iheader == 1
 
       end subroutine fill_header_static
 
@@ -1419,7 +1426,7 @@
       end subroutine scribe_recv_write
 
 !===============================================================================
-      subroutine add_mesh_attributes(ncid, varid, iheader)
+      subroutine var_add_ugrid_attributes(ncid, varid, iheader)
         implicit none
         integer, intent(in) :: ncid, varid, iheader
 
@@ -1430,11 +1437,11 @@
         integer, allocatable :: dimids(:)
 
         iret = nf90_inquire_variable(ncid, varid, name=varname, ndims=ndims)
-        if(iret.ne.NF90_NOERR) call parallel_abort('add_mesh_attributes: inquire_variable')
+        if(iret.ne.NF90_NOERR) call parallel_abort('var_add_ugrid_attributes: inquire_variable')
 
         allocate(dimids(ndims))
         iret = nf90_inquire_variable(ncid, varid, dimids=dimids)
-        if(iret.ne.NF90_NOERR) call parallel_abort('add_mesh_attributes: inquire_variable')
+        if(iret.ne.NF90_NOERR) call parallel_abort('var_add_ugrid_attributes: inquire_variable')
         do i = 1, ndims
           iret = nf90_inquire_dimension(ncid, dimids(i), name=dimname)
           if (trim(dimname) == 'nSCHISM_hgrid_node') location = 'node'
@@ -1460,10 +1467,10 @@
         !iret=nf90_put_att(ncid,varid,'_FillValue',NF90_FILL_FLOAT)
         !if(iret.ne.NF90_NOERR) call parallel_abort(varname)
 
-      end subroutine add_mesh_attributes
+      end subroutine var_add_ugrid_attributes
 
 !===============================================================================
-      subroutine add_cf_attributes(ncid, varid)
+      subroutine var_add_cf_attributes(ncid, varid)
         implicit none
         integer, intent(in) :: ncid, varid
 
@@ -1472,9 +1479,9 @@
         real :: valid_min, valid_max
 
         iret = nf90_inquire_variable(ncid, varid, name=varname, ndims=ndims)
-        if(iret.ne.NF90_NOERR) call parallel_abort('add_cf_attributes: inquire_variable')
+        if(iret.ne.NF90_NOERR) call parallel_abort('var_add_cf_attributes: inquire_variable')
 
-        !write(16, '(A,A)') 'add_cf_attributes: ', trim(varname)
+        !write(16, '(A,A)') 'var_add_cf_attributes: ', trim(varname)
 
         long_name = ''
         standard_name = ''
@@ -1653,10 +1660,7 @@
         if (valid_max /= NF90_FILL_FLOAT)  iret=nf90_put_att(ncid,varid,'valid_max',valid_max)
         if(iret.ne.NF90_NOERR) call parallel_abort(varname//' valid_max')
 
-        !iret = nf90_put_att(ncid, varid, 'creation_date', trim(iso8601_now()))
-        !if(iret.ne.NF90_NOERR) call parallel_abort(varname//' creation_date')
-
-      end subroutine add_cf_attributes
+      end subroutine var_add_cf_attributes
 
       subroutine add_user_attributes(ncid)
         implicit none
