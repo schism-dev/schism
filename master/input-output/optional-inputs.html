@@ -1054,6 +1054,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#metadatanc" class="md-nav__link">
+    metadata.nc
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1975,6 +1982,8 @@
 <li>NHAGV: NHAGV is for velocity which is not active right now.</li>
 </ul>
 </div>
+<h3 id="metadatanc">metadata.nc<a class="headerlink" href="#metadatanc" title="Permanent link">&para;</a></h3>
+<p>This optional file can contain global and variable metadata in the form of NetCDF attributes that will be copied over to the SCHISM output NetCDF files.  This file is useful for adding project- or institution-specific metadata.   In particular, you should use it to fill the contact and institution information required by CF, and to add a coordinate reference system to SCHISM output on projected coordinates (<code>ics = 1</code>) if you add a grid mapping variable called <code>crs</code> with appropriate attributes.  See the CF conventions for details on required and recommended metadata: https://cfconventions.org/.</p>
 
               
             </article>

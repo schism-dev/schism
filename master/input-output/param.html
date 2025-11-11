@@ -1326,8 +1326,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#iof_ugrid-int" class="md-nav__link">
-    iof_ugrid (int)
+  <a href="#iof_ugrid-0-int" class="md-nav__link">
+    iof_ugrid = 0 (int)
   </a>
   
 </li>
@@ -2408,9 +2408,12 @@ If <code>nws=-1</code> (requires USE_PAHM), use Holland parametric wind model (b
 If <code>iout_sta=1</code>, each line of outputs <code>staout_[1-]</code> represents time series of the variable at each station location (and vertical 
  location for 3D variables). If <code>iout_sta=2</code>, 2 lines of outputs are produced at each time step: the odd lines are same as <code>iout_sta=1</code>,
  and the even lines are 3D profiles - see <code>Utility/Post-Processing-Fortran/read_staout.f90</code> for the profile format.</p>
-<h3 id="iof_ugrid-int">iof_ugrid (int)<a class="headerlink" href="#iof_ugrid-int" title="Permanent link">&para;</a></h3>
-<p>UGRID option for outputs under scribed IO. If iof_ugrid/=0, outputs will also have UGRID metadata (at
-the expense of file size).</p>
+<h3 id="iof_ugrid-0-int">iof_ugrid = 0 (int)<a class="headerlink" href="#iof_ugrid-0-int" title="Permanent link">&para;</a></h3>
+<p>UGRID option for 3D outputs under scribed IO (<code>out2d_*.nc</code> always has metadata
+info). If <code>iof_ugrid &gt; 0</code>, 3D outputs will contain UGRID and CF metadata.<br />
+if <code>iof_ugrid == 1</code>,  3D output contains UGRID mesh data at the expense
+of file size; if <code>iof_ugrid == 2</code>, 3D output references mesh data in the
+2D output.</p>
 <h3 id="nc_out-1int">nc_out =1(int)<a class="headerlink" href="#nc_out-1int" title="Permanent link">&para;</a></h3>
 <p>Main switch to turn on/off netcdf outputs, useful for other programs (e.g., ESMF) to control outputs.</p>
 <h3 id="nhot0-nhot_write8640-int">nhot=0, nhot_write=8640 (int)<a class="headerlink" href="#nhot0-nhot_write8640-int" title="Permanent link">&para;</a></h3>
