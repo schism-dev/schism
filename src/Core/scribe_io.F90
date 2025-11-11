@@ -1653,8 +1653,8 @@
         if (valid_max /= NF90_FILL_FLOAT)  iret=nf90_put_att(ncid,varid,'valid_max',valid_max)
         if(iret.ne.NF90_NOERR) call parallel_abort(varname//' valid_max')
 
-        iret = nf90_put_att(ncid, varid, 'creation_date', trim(iso8601_now()))
-        if(iret.ne.NF90_NOERR) call parallel_abort(varname//' creation_date')
+        !iret = nf90_put_att(ncid, varid, 'creation_date', trim(iso8601_now()))
+        !if(iret.ne.NF90_NOERR) call parallel_abort(varname//' creation_date')
 
       end subroutine add_cf_attributes
 
