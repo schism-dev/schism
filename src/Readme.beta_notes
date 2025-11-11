@@ -641,6 +641,7 @@ git versions:
 160. `6c2ef8f3` (25 Aug 2025): updated WWM nc outputs to use OR(NF90_NETCDF4,NF90_CLOBBER) (as in hydro)
 161. `b2c4d490`: changed soil conductivity in a cell from min to mean;
 162. `8f61b12e` (10 Oct 2025): fixed a bug (uninit'ed var) in fix_bad_quads.f90
+162. `57f824d` (10 Nov 2025): changed default air-sea option to Fairall in make;
 
 ================================================================================================
 (D) Auto-test history:
