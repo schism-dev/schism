@@ -21,7 +21,7 @@ class ConfigStofs3dAtlantic():
         self,
         startdate=datetime(2017, 12, 1),  # start date of the model
         rnday=60,  # number of days to run the model
-        ocean_bnd_ids=[0],  # list of open boundary ids for *D.th.nc
+        ocean_bnd_ids=[0,1],  # list of open boundary ids for *D.th.nc
         elev2d_uniform_shift=0.0,  # add a uniform shift to elev2D
         nudging_zone_width=1.5,  # in degrees
         nudging_day=1.0,  # in days
@@ -335,6 +335,7 @@ class ConfigStofs3dAtlantic():
     def v8_Hercules(cls):
         '''Factory method to create a configuration for STOFS3D-v8 3D setup'''
         return cls(
+            ocean_bnd_ids=[0, 1],
             elev2d_uniform_shift=-0.42,  # add a uniform shift to elev2D
             nudging_zone_width=7.3,  # default nudging zone
             shapiro_zone_width=11.5,  # default shapiro zone

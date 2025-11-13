@@ -9,9 +9,9 @@ The command to checkout the tests is:
 
 `svn co https://columbia.vims.edu/schism/schism_verification_tests`
 
-(You can also simply use wget to download)
+(You can also simply use wget to download, but using svn allows easy updates later)
 
-Note that the test suite is kept up to date with the latest master branch on the [SCHISM's git repo](https://github.com/schism-dev/schism/tree/master).
+Note that the test suite is kept up to date with the latest `master branch` on the [SCHISM's git repo](https://github.com/schism-dev/schism/tree/master).
 As a result, there may be some differences (some parameters may have been removed or added) between the param.nml you are using and the one from the verification tests (master branch).
  It's important to use a correct `param.nml` corresponding to the version of SCHISM you are using. A sample param.nml is always provided under your SCHISM source code directory:
 

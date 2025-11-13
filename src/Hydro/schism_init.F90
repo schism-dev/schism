@@ -4082,7 +4082,7 @@
 
 #ifdef USE_MARSH
         !Reset
-        veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha0=0.d0; veg_cd=0.d0
+        !veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha0=0.d0; veg_cd=0.d0
         do i=1,nea
           if(imarsh(i)>0) then !imarsh<=nmarsh_types
             veg_di(elnode(1:i34(i),i))=veg_di0(imarsh(i)) 

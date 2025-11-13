@@ -3241,7 +3241,7 @@
 
         use schism_glbl, only : rkind, uu2, vv2,tr_nd, & !tnd, snd, &
      &                     idry, nvrt, ivcor,errmsg
-        use schism_glbl, only : grav
+        use schism_glbl, only : grav !GRAV
 !       use schism_glbl, only : rho0
         use schism_msgp, only : myrank,parallel_abort
 
@@ -3249,6 +3249,7 @@
 !  Copyright (c) 2002-2007 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
+!   Edited by Jerome Lefevre and Joseph Zhang
 !=======================================================================
 !  This routine computes the bulk parameterization of surface wind     !
 !  stress and surface net heat fluxes.                                 !
@@ -3354,7 +3355,7 @@
 ! 4000, and varies only slightly (see Gill, 1982, Appendix 3).
       REAL(rkind),parameter :: Cp=3985.0d0
 ! Functions:
-      REAL(rkind) :: bulk_psit,bulk_psiu
+      REAL(rkind) :: bulk_psit,bulk_psiu,tmp1,tmp2,tmp3
 
 
 #ifdef DEBUG
@@ -3366,7 +3367,7 @@
 
 !  set inverse of specific heat for seawater (kg-degC/Joule).
 !  cp is defined in scalars.h
-      cpi=1.0d0/cp
+      cpi=1.0d0/Cp
 !
 !  Input bulk parameterization fields
 !
@@ -3383,7 +3384,7 @@
 !$OMP rho0i,cpi,patmb,rhoSea,Qsea,TseaK,TseaC,TairC,TairK,rhoAir,Qair,Q, &      
 !$OMP VisAir,Hlv,delW,delT,delQ,u10,Zo10,Cd10,Ch10,Ct10,Cd,Ct,CC,Ri,Ribcu, &      
 !$OMP Zetu,L10,Wstar,Tstar,Qstar,ZoW,ZoT,ZoT10,ZoQ,ZoL,L,Rr,Bf,Wpsi,Tpsi, &
-!$OMP Qpsi,Wgus,charn,upvel,evap,wspd0,dry,i_node, sfc_lev)
+!$OMP Qpsi,Wgus,charn,upvel,evap,wspd0,dry,i_node, sfc_lev,tmp1,tmp2,tmp3)
         do i_node = 1, num_nodes !=npa
 !=================================================================
 #ifdef DEBUG
@@ -3457,10 +3458,11 @@
 !  Compute air saturation vapor pressure (mb), using Teten formula.
 !
           cff=(1.0007d0+3.46d-6*patmb)*6.1121d0*&
-     &         exp(17.502d0*TairC/(240.97d0+TairC))
+     &         exp(17.502d0*TairC/(240.97d0+TairC)) !check?
 !
 !  Compute specific humidity at Saturation, Qair (kg/kg).
 !
+          if(patmb-0.378d0*cff==0.d0) call parallel_abort('FAIRALL: Qair')
           Qair=0.62197d0*(cff/(patmb-0.378d0*cff))
 !
 !  Compute specific humidity, Q (kg/kg).
@@ -3478,7 +3480,7 @@
 !  Compute water saturation vapor pressure (mb), using Teten formula.
 !
           cff=(1.0007d0+3.46d-6*patmb)*6.1121d0*&
-     &         exp(17.502d0*TseaC/(240.97d0+TseaC))
+     &         exp(17.502d0*TseaC/(240.97d0+TseaC)) !check?
 !
 !  Vapor Pressure reduced for salinity (Kraus & Businger, 1994, pp 42).
 !
@@ -3486,6 +3488,7 @@
 !
 !  Compute Qsea (kg/kg) from vapor pressure.
 !
+          if(patmb-0.378d0*cff==0.d0) call parallel_abort('FAIRALL: Qsea')
           Qsea=0.62197d0*(cff/(patmb-0.378d0*cff))
 !
 !-----------------------------------------------------------------------
@@ -3495,8 +3498,7 @@
 !
 !  Moist air density (kg/m3).
 !
-          rhoAir=patmb*100.0d0/(blk_Rgas*TairK*&
-     &                             (1.0d0+0.61d0*Q))
+          rhoAir=patmb*100.0d0/(blk_Rgas*TairK*(1.0d0+0.61d0*Q)) !Q>=0?
 !
 !  Kinematic viscosity of dry air (m2/s), Andreas (1989).
 !
@@ -3513,7 +3515,7 @@
      &                  v_air(i_node)*v_air(i_node) )
 !
           Wgus=0.5d0
-          delW=SQRT(wspd0*wspd0+Wgus*Wgus)
+          delW=SQRT(wspd0*wspd0+Wgus*Wgus) !>0
           delQ=Qsea-Q
           delT=TseaC-TairC
 
@@ -3529,27 +3531,32 @@
 !  Neutral coefficients.
 !
           ZoW=1.0d-4
-          u10=delW*LOG(10.0d0/ZoW)/LOG(blk_ZW/ZoW)
-          Wstar=0.035d0*u10
+          u10=delW*LOG(10.0d0/ZoW)/LOG(blk_ZW/ZoW) !>0; actually blk_ZW=10
+          Wstar=0.035d0*u10 !>0
           Zo10=0.011d0*Wstar*Wstar/GRAV+0.11d0*VisAir/Wstar
-          Cd10=(vonKar/LOG(10.0d0/Zo10))**2.d0
+          if(Zo10<=0.d0.or.Zo10==10.d0) call parallel_abort('FAIRALL: Zo10')
+          Cd10=(vonKar/LOG(10.0d0/Zo10))**2.d0 !>0; Zo10>0
           Ch10=0.00115d0
-          Ct10=Ch10/sqrt(Cd10)
-          ZoT10=10.0d0/exp(vonKar/Ct10)
-          Cd=(vonKar/LOG(blk_ZW/Zo10))**2.d0
+          Ct10=Ch10/sqrt(Cd10) !>0
+          if(vonKar/Ct10>500.d0) call parallel_abort('FAIRALL: overflow, vonKar/Ct10>500')
+          ZoT10=10.0d0/exp(vonKar/Ct10) !>0
+          if(blk_ZW/Zo10<=0.d0.or.blk_ZW==Zo10.or.blk_ZT==ZoT10) call parallel_abort('FAIRALL: Zo10')
+          Cd=(vonKar/LOG(blk_ZW/Zo10))**2.d0 !>0
 !
 !  Compute Richardson number.
-!
-          Ct=vonKar/LOG(blk_ZT/ZoT10)  ! T transfer coefficient
-          CC=vonKar*Ct/Cd
-          Ribcu=-blk_ZW/(blk_Zabl*0.004d0*blk_beta**3.d0)
-          Ri=-GRAV*blk_ZW*(delT+0.61d0*TairK*delQ)/&
-               (TairK*delW*delW)
+!         blk_ZT/ZoT10 checked above
+          Ct=vonKar/LOG(blk_ZT/ZoT10)  ! T transfer coefficient; /=0
+          CC=vonKar*Ct/Cd !/=0
+          Ribcu=-blk_ZW/(blk_Zabl*0.004d0*blk_beta**3.d0) !/=0
+          Ri=-GRAV*blk_ZW*(delT+0.61d0*TairK*delQ)/(TairK*delW*delW) !delW>0
           if (Ri.lt.0.0d0) then
+            if(1.0d0+Ri/Ribcu==0.d0) call parallel_abort('FAIRALL: Ri<0')
             Zetu=CC*Ri/(1.0d0+Ri/Ribcu)         ! Unstable
           else
+            if(1.0d0+3.0d0*Ri/CC==0.d0) call parallel_abort('FAIRALL: Ri>=0')
             Zetu=CC*Ri/(1.0d0+3.0d0*Ri/CC)      ! Stable
           endif
+          if(Zetu==0.d0) call parallel_abort('FAIRALL: Zetu=0')
           L10=blk_ZW/Zetu
           if (Zetu.gt.50.0d0) then
             IterMax=1
@@ -3559,12 +3566,14 @@
 !
 !  First guesses for Monon-Obukhov similarity scales.
 !
-          Wstar= delW*vonKar/(LOG(blk_ZW/Zo10)-&
-     &                        bulk_psiu(blk_ZW/L10))
-          Tstar=-delT*vonKar/(LOG(blk_ZT/ZoT10)-&
-     &                        bulk_psit(blk_ZT/L10))
-          Qstar=-delQ*vonKar/(LOG(blk_ZQ/ZoT10)-&
-     &                        bulk_psit(blk_ZQ/L10))
+          !Zo10>0
+          tmp1=LOG(blk_ZW/Zo10)-bulk_psiu(blk_ZW/L10)
+          tmp2=LOG(blk_ZT/ZoT10)-bulk_psit(blk_ZT/L10)
+          tmp3=LOG(blk_ZQ/ZoT10)-bulk_psit(blk_ZQ/L10)
+          if(tmp1==0.d0.or.tmp2==0.d0.or.tmp3==0.d0) call parallel_abort('FAIRALL: tmp=0(0)')
+          Wstar= delW*vonKar/tmp1 !(LOG(blk_ZW/Zo10)-bulk_psiu(blk_ZW/L10))
+          Tstar=-delT*vonKar/tmp2 !(LOG(blk_ZT/ZoT10)-bulk_psit(blk_ZT/L10))
+          Qstar=-delQ*vonKar/tmp3 !(LOG(blk_ZQ/ZoT10)-bulk_psit(blk_ZQ/L10))
 !
 !  Modify Charnock for high wind speeds. The 0.125 factor below is for
 !  1.0/(18.0-10.0).
@@ -3580,6 +3589,7 @@
 !  Iterate until convergence. It usually converges within four
 !  iterations.
 !
+        if(VisAir==0.d0) call parallel_abort('FAIRALL: VisAir=0')
         do Iter=1,IterMax
           ZoW=charn*Wstar*Wstar/GRAV+0.11d0*VisAir/(Wstar+eps)
           Rr=ZoW*Wstar/VisAir
@@ -3591,7 +3601,8 @@
           ZoL=vonKar*GRAV*blk_ZW*&
      &        (Tstar*(1.0d0+0.61d0*Q)+0.61d0*TairK*Qstar)/&
      &        (TairK*Wstar*Wstar*(1.0d0+0.61d0*Q)+eps)
-          L=blk_ZW/(ZoL+eps)
+          if(ZoL+eps==0.d0) call parallel_abort('FAIRALL: ZoL+eps=0')
+          L=blk_ZW/(ZoL+eps) !/=0
 !
 !  Evaluate stability functions at Z/L.
 !
@@ -3601,20 +3612,25 @@
 !
 !  Compute wind scaling parameters, Wstar.
 !
-          Wstar=MAX(eps,delW*vonKar/(LOG(blk_ZW/ZoW)-Wpsi))
-          Tstar=-delT*vonKar/(LOG(blk_ZT/ZoT)-Tpsi)
-          Qstar=-delQ*vonKar/(LOG(blk_ZQ/ZoQ)-Qpsi)
+          if(ZoW<=0.d0) call parallel_abort('FAIRALL: ZoW<=0')
+          tmp1=LOG(blk_ZW/ZoW)-Wpsi
+          tmp2=LOG(blk_ZT/ZoT)-Tpsi
+          tmp3=LOG(blk_ZQ/ZoQ)-Qpsi
+          if(tmp1==0.d0.or.tmp2==0.d0.or.tmp3==0.d0) call parallel_abort('FAIRALL: tmp=0')
+          Wstar=MAX(eps,delW*vonKar/tmp1) !(LOG(blk_ZW/ZoW)-Wpsi)) !>0
+          Tstar=-delT*vonKar/tmp2 !(LOG(blk_ZT/ZoT)-Tpsi)
+          Qstar=-delQ*vonKar/tmp3 !(LOG(blk_ZQ/ZoQ)-Qpsi)
 !
 !  Compute gustiness in wind speed.
 !
           Bf=-GRAV/TairK*Wstar*(Tstar+0.61d0*TairK*Qstar)
           if (Bf.gt.0.0d0) then
-            Wgus=blk_beta*(Bf*blk_Zabl)**r3
+            Wgus=blk_beta*(Bf*blk_Zabl)**r3 !>0
           else
             Wgus=0.2d0
           endif
-          delW=SQRT(wspd0*wspd0+Wgus*Wgus)
-        enddo
+          delW=SQRT(wspd0*wspd0+Wgus*Wgus) !>0
+        enddo !Iter
 !
 !-----------------------------------------------------------------------
 !  Compute Atmosphere/Ocean fluxes.
@@ -3623,8 +3639,8 @@
 !
 !  Compute transfer coefficients for momentum (Cd).
 !
-          wspd=SQRT(wspd0*wspd0+Wgus*Wgus)
-          Cd=Wstar*Wstar/(wspd*wspd+eps)
+          wspd=SQRT(wspd0*wspd0+Wgus*Wgus) !>0
+          Cd=Wstar*Wstar/(wspd*wspd+eps) !>0
 !
 !  Compute turbulent sensible heat flux (W/m2), Hs.
 !
@@ -3712,6 +3728,7 @@
       REAL(rkind) FUNCTION bulk_psiu(ZoL)
 
       use schism_glbl, only : rkind
+      use schism_msgp, only : myrank,parallel_abort
 
       IMPLICIT NONE
 !
@@ -3749,29 +3766,28 @@
 !  Unstable conditions.
 !
       if (ZoL.lt.0.0d0) then
-        x=(1.0d0-15.0d0*ZoL)**0.25d0
+        x=(1.0d0-15.0d0*ZoL)**0.25d0 !>0
         psik=2.0d0*LOG(0.5d0*(1.0d0+x))+ &
      &       LOG(0.5d0*(1.0d0+x*x))-2.0d0*ATAN(x)+0.5d0*PI
 !
 !  For very unstable conditions, use free-convection (Fairall).
 !
         cff=SQRT(3.0d0)
-        y=(1.0d0-10.15d0*ZoL)**r3
+        y=(1.0d0-10.15d0*ZoL)**r3 !>0
         psic=1.5d0*LOG(r3*(1.0d0+y+y*y))- &
      &       cff*ATAN((1.0d0+2.0d0*y)/cff)+PI/cff
 !
 !  Match Kansas and free-convection forms with weighting Fw.
 !
-        cff=ZoL*ZoL
-        Fw=cff/(1.0d0+cff)
+        cff=ZoL*ZoL !>0
+        Fw=cff/(1.0d0+cff) !\in (0,1)
         bulk_psiu=(1.0d0-Fw)*psik+Fw*psic
 !
 !  Stable conditions.
 !
-      else
-        cff=MIN(50.0d0,0.35d0*ZoL)
-        bulk_psiu=-((1.0d0+ZoL)+ &
-     &              0.6667d0*(ZoL-14.28d0)/EXP(cff)+8.525d0)
+      else !ZoL>=0
+        cff=MIN(50.0d0,0.35d0*ZoL) !>=0
+        bulk_psiu=-((1.0d0+ZoL)+0.6667d0*(ZoL-14.28d0)/EXP(cff)+8.525d0)
       endif
       return
       END FUNCTION bulk_psiu
@@ -3813,26 +3829,26 @@
 !  Unstable conditions.
 !
       if (ZoL.lt.0.0d0) then
-        x=(1.0d0-15.0d0*ZoL)**0.5d0
+        x=(1.0d0-15.0d0*ZoL)**0.5d0 !>0
         psik=2.0d0*LOG(0.5d0*(1.0d0+x))
 !
 !  For very unstable conditions, use free-convection (Fairall).
 !
         cff=SQRT(3.0d0)
-        y=(1.0-34.15*ZoL)**r3
+        y=(1.0-34.15*ZoL)**r3 !>0
         psic=1.5d0*LOG(r3*(1.0d0+y+y*y))- &
      &       cff*ATAN((1.0d0+2.0d0*y)/cff)+PI/cff
 !
 !  Match Kansas and free-convection forms with weighting Fw.
 !
-        cff=ZoL*ZoL
-        Fw=cff/(1.0d0+cff)
+        cff=ZoL*ZoL !>0
+        Fw=cff/(1.0d0+cff) !\in (0,1)
         bulk_psit=(1.0d0-Fw)*psik+Fw*psic
 !
 !  Stable conditions.
 !
-      else
-        cff=MIN(50.0d0,0.35d0*ZoL)
+      else !ZoL>=0
+        cff=MIN(50.0d0,0.35d0*ZoL) !>=0
         bulk_psit=-((1.0d0+2.0d0*ZoL)**1.5d0+ & 
      &              0.6667d0*(ZoL-14.28d0)/EXP(cff)+8.525d0)
       endif

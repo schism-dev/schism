@@ -1,6 +1,6 @@
-!     Compute equivalent diameter/radius of a tri-quad grid, and dx/dz (aspect ratio; dx is eq. diameter)
+!     Compute equivalent diameter/radius of a tri-quad grid, and dx/dz (aspect ratio; dx is min edge length @ node)
 !     Input: hgrid.gr3 (projection)
-!     Output: fort.12 (*.prop format, eq. radius) and asrat.gr3 (aspect ratio for h>5m; -9999 otherwise)
+!     Output: fort.12 (*.prop format, eq. radius) and asrat.gr3 (aspect ratio for h>5m; 9999 otherwise. A.R.<1 indicates problem)
 !     ifx -Bstatic -O3 -o eq_diameter_aspect_ratio eq_diameter_aspect_ratio.f90
 !
 !     Below is matlab code for plotting histogram for radii
@@ -34,7 +34,7 @@
 
       do i=1,np
         read(14,*) j,x(i),y(i),dp(i)
-        rad_node(i)=0 !initialize
+        rad_node(i)=huge(1.d0) !initialize min edge length @node
       enddo
       av_rad=0
       rad_max=0 !max. radius
@@ -64,25 +64,33 @@
           write(11,*)'Negative area at',i
           stop
         endif
-        rad=dsqrt(area/pi)
+        rad=sqrt(area/pi)
         av_rad=av_rad+rad/ne
         if(rad.gt.rad_max) rad_max=rad
         if(rad.lt.rad_min) rad_min=rad
         write(12,*)i,real(rad)
-        rad_node(n1)=rad
-        rad_node(n2)=rad
-        rad_node(n3)=rad
+   
+        !Edge length
+        do j=1,i34(i)
+          n1=nm(i,j)
+          j2=j+1
+          if(j2>i34(i)) j2=j2-i34(i)
+          n2=nm(i,j2)
+          rl=sqrt((x(n1)-x(n2))**2+(y(n1)-y(n2))**2)
+          rad_node(n1)=min(rad_node(n1),rl)
+          rad_node(n2)=min(rad_node(n2),rl)
+        enddo !j
       enddo !i=1,ne
 
       open(13,file='asrat.gr3',status='replace')
       write(13,*); write(13,*)ne,np
       do i=1,np
         if(dp(i)<=5.) then
-          ar=-9999.
+          ar=9999.
         else
-          ar=rad_node(i)*2/dp(i)
+          ar=rad_node(i)/dp(i)
         endif
-        write(13,*)i,real(x(i)),real(y(i)),ar !real(rad_node(i)*2)
+        write(13,*)i,real(x(i)),real(y(i)),ar 
       enddo !i
       do i=1,ne
         write(13,*) i,i34(i),(nm(i,k),k=1,i34(i))

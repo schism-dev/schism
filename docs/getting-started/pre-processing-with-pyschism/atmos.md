@@ -5,11 +5,11 @@ There are four types of files needed:
 
 sflux_input.txt (<font color="red">required</font>): a namelist file
 
-sflux_air_1.[XXXX].nc (<font color="red">required</font>): NetCDF files that have time (in days), wind speed at 10m above MSL (u, v), air temperatue and spedific humidity at 2m above MSL, sea level pressure;
+sflux_air_1.[1-].nc (<font color="red">required</font>): NetCDF files that have time (in days), wind speed at 10m above MSL (u, v), air temperatue and spedific humidity at 2m above MSL, sea level pressure;
 
-sflux_prc_1.[XXXX].nc (<font color="blue">needed</font> if isconsv=1): NetCDF files that have time and precipitation rate;
+sflux_prc_1.[1-]nc (<font color="blue">needed</font> if isconsv=1): NetCDF files that have time and precipitation rate;
 
-sflux_rad_1.[XXXX].nc (<font color="blue">needed</font> if ihconsv=1): NetCDF files that have time, downward longwave and shortwave radiation fluxes.
+sflux_rad_1.[1-].nc (<font color="blue">needed</font> if ihconsv=1): NetCDF files that have time, downward longwave and shortwave radiation fluxes.
 
 PySCHISM supports three types of atmpsheric datasets.
 

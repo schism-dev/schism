@@ -54,6 +54,9 @@ These two flags control the global netcdf outputs. Output is done every `nspool`
 ### nbins_veg_vert (int)
 Number of vertical bins used in vegetation option `iveg=1`.
 
+### nmarsh_types (int)
+Number of marsh types (needed by USE_MARSH).
+
 ## OPT block
 The optional parameters below are explained in alphabetical order. The default values can be seen below and also in the sample file (sample_inputs/).
 
@@ -136,8 +139,11 @@ conservation will be checked in regions specified by `fluxflag.prop`. `iflux=2` 
 ### iharind=0 (int)
 Harmonic analysis flag. If $iharind \neq 0$, an input `harm.in` is needed.
 
-### ihconsv=0, isconsv=0 (int)
-Heat budget and salt conservation models flags. If `ihconsv=0`, the heat budget model is not used. If `ihconsv=1`, a heat budget model is invoked, and a number of netcdf files for radiation flux input are read in from `sflux/sflux_rad*.nc`. If `isconsv=1`, the evaporation and precipitation model is evoked but the user needs to turn on the pre-processing flag `PREC_EVAP` in makefile and recompile. In this case, `ihconsv` must be `1`, and additional netcdf inputs for precipitation (`sflux/sflux_prc*.nc`) are required. The user can also turn on `USE_BULK_FAIRALL` in the makefile to use COARE algorithm  instead of the default Zeng's bulk aerodynamic module.
+### ihconsv=0 (int)
+Heat budget (air-sea exchange) model flag. If `ihconsv=0`, the heat budget model is not used. If `ihconsv=1`, a heat 
+budget model is invoked, and a number of netcdf files for radiation flux input are read in from `sflux/sflux_rad*.nc`. 
+The evaporation and precipitation model is evoked by the pre-processing flag `PREC_EVAP` in makefile 
+(old flag `isconsv` has been removed). In this case, `ihconsv` must be `1`, and additional netcdf inputs for precipitation (`sflux/sflux_prc*.nc`) are required. The user can also turn on `USE_BULK_FAIRALL` in the makefile to use COARE algorithm  instead of the default Zeng's bulk aerodynamic module.
 
 If `ihconsv=1`, 2 additional inputs are: `albedo.gr3` (for surface albedo; usually ~0.1) and `watertype.gr3` (that specifies the light attenuation coefficients for different water types following Jerlov: a dimensionles ratio `R`, and two characteristic depth (`D1` and `D2`).
  See `schism_step` for those values for different types 1-7. If the type is '8', user needs to specify those 3 coefficients in `param.nml`: `watertype_rr, watertype_d1, watertype_d2`.
@@ -145,8 +151,7 @@ If `ihconsv=1`, 2 additional inputs are: `albedo.gr3` (for surface albedo; usual
 ### i_hmin_airsea_ex (int), hmin_airsea_ex (double; in meters)
 Option to locally turn off heat exchange.
 
-- `i_hmin_airsea_ex=1`: exchange turned off if `local grid depth<hmin_airsea_ex`
-- `i_hmin_airsea_ex=2`: exchange turned off if `local water depth<hmin_airsea_ex`
+- `i_hmin_airsea_ex=1`: exchange turned off if `local water depth<hmin_airsea_ex`
 
 ### i_hmin_salt_ex (int), hmin_salt_ex (double; in meters)
 Similar to `i_hmin_airsea_ex` and `hmin_airsea_ex`.
@@ -154,17 +159,23 @@ Similar to `i_hmin_airsea_ex` and `hmin_airsea_ex`.
 ### iprecip_off_bnd (int)
 If `iprecip_off_bnd`/=0, preciptation will be turned off near land boundary. This is useful for islands sitting on very steep slopes.
 
-### stemp_stc (double), stemp_dz(1:2) (double)
- Option to account for sediment-water heat exchange on bottom temperature.
-  `stemp_stc` is  heat transfer coefficient $W/m^2/K$ (so `stemp_stc=0` would turn this option off).
-  stemp_dz(1) is the equivalent sediment buffer depth (m) for heat into sediment, and
-  stemp_dz(2) is the equivalent sediment buffer depth (m) for heat out of sediment.
-
+### istemp (int)
+ Option to add a sediment layer for the buffer effect on temperature. `istemp=0` would turn off this effect; 
+ otherwise, needs `ihconsv/=0`, and a few additional inputs: `soil_conductivity.gr3`
+ which specifies the soil thermal conductivity in W/m^2/K, and `soil_thick.gr3` (soil thickness in meters; e.g. 1m).
+ The conductivity is on the order of 5, but can be 0 in deep depths to turn off the effect.
 
 ### ihdif=0 (int)
 Flag for applying horizontal diffusivity, implemented as a geometric filter. 
 If `ihdif=0`, it is not used. If $ihdif \neq 0$, input `hdif.gr3` is used to specify filter strength at each node (which
  should be <=0.2).
+
+### iref_ts =0 (int)
+Surface restoration for T,S to a reference state (e.g., observaion, global model etc). If `iref_ts=1`, requires 
+`ref_ts_restore_depth,ref_ts_tscale,ref_ts_h1,ref_ts_h2,ref_ts_dt` (respectively, piston depth in meters, restoration 
+ time scale in days, 2 ramp-down depths in meters, and time step used in `surface_restore.nc`); 
+the input for reference T,S is `surface_restore.nc`. The 2 ramp-down depths (`ref_ts_h1>ref_ts_h2`) are used to zero out
+ the restoration in shallow depths (with a linear transitioni of restoration strength in between).
 
 ### ihot=0 (int)
 Hot start flag. If `ihot=0`, cold start; if $ihot \neq 0$, hot start from `hotstart.nc`. If `ihot=1`, the time and time step are reset to zero, and outputs start from `t=0` accordingly (and you need to adjust other inputs like `.th` etc). If `ihot=2`, the run (and outputs) will continue from the time specified in `hotstart.nc`. 
@@ -272,7 +283,7 @@ If `iveg=1`, the vertical variation/scalings for these parameters are specified 
  `veg_vert_z(1:nbins_veg_vert+1)` specifying the distance from bed (in meters) for each bin 
  (ascending order starting from 0). The vertical scalings are given by `veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1)`.
 
-If `iveg=2`, flexible vegetation formulation of Ganthy et al. (2011) is used. Parameters needed for this case are:
+If `iveg=2`, flexible vegetation formulation of Ganthy et al. (2011) is used (under active development). Parameters needed for this case are:
   non-dimensional Leaf Area Index `veg_lai` and `veg_cw` (a non-dimensional calibration coefficient for diameter of bent leaf).
 
 ### itr_met=3 (int), h_tvd=5. (double)
@@ -294,7 +305,15 @@ If `itur=-1`, horizontally homogeneous but vertically varying diffusivities are 
 
 If `itur=2`, the zero-equation Pacanowski and Philander closure is used. In this case, a few extra parameters are required: `h1_pp`, `vdmax_pp1`, `vdmin_pp1`, `tdmin_pp1`, `h2_pp`, `vdmax_pp2`, `vdmin_pp2`, `tdmin_pp2`. Eddy viscosity is computed as: $\text{vdiff}=\text{vdiff_max}/(1+\text{rich})^2+\text{vdiff_min}$, and diffusivity $\text{tdiff}=\text{vdiff_max}/(1+\text{rich})^2+\text{tdiff_min}$, where $\text{rich}$ is a Richardson number. The limits (`vdiff_max`, `vdiff_min` and `tdiff_min`) vary linearly with depth between depths `h1_pp` and `h2_pp`.
 
-If `itur=3`, then the two-equation closure schemes from the GLS model of Umlauf and Burchard (2003) are used. In this case, 2 additional parameters are required: `mid`, `stab`, which specify the closure scheme and stability function used: `mid=` `MY` is Mellor & Yamada; `KL` is GLS as k-kl; `KE` is GLS as $k-\varepsilon$; `KW` is GLS as $k-\omega$; `UB` is Umlauf & Burchard's optimal. `stab=GA` is Galperin's clipping (only for MY); `KC` is Kantha & Clayson's stability function). Also the user needs to specify max/min diffusivity/viscosity in `diffmax.gr3` and `diffmin.gr3`, as well as a surface mixing length scale constant `xlsc0`.
+If `itur=3`, then the two-equation closure schemes from the GLS model of Umlauf and Burchard (2003) are used. 
+In this case, 2 additional parameters are required: `mid`, `stab`, which specify the closure scheme and stability 
+function used: `mid=` `MY` is Mellor & Yamada; `KL` is GLS as k-kl; `KE` is GLS as $k-\varepsilon$; 
+`KW` is GLS as $k-\omega$; `UB` is Umlauf & Burchard's optimal. `stab=GA` is Galperin's clipping (only for MY); 
+`KC` is Kantha & Clayson's stability function). Also the user needs to specify max/min diffusivity/viscosity 
+in `diffmax.gr3` and `diffmin.gr3`, as well as a surface mixing length scale constant `xlsc0`. Additional parameters
+ can be used to compute the coefficient `c_psi3` in the GOTM equations: if `icompute_cpsi3/=0`, `iscnd_coeff=1 to 7` specifies 
+ 2nd-order stability function coefficient options (e.g., 5 for Canuto A; 6 for Canuto B). `ri_st` specifies
+ steady-state critical Richarson number.
 
 If `itur=4`, GOTM turbulence model is invoked; the user needs to turn on pre-processing flag `USE_GOTM` in makefile 
 and recompile (GOTM5.2 uses cmake, so does not need to be pre-compiled). In this case, the minimum and maximum 
@@ -331,7 +350,7 @@ Wind forcing options and the interval (in seconds) with which the wind input is 
 wind is applied (and `wtiminc` becomes unused). If `nws=1`, constant wind is applied to the whole domain 
 at any given time, and the time history of wind is read in from `wind.th`. If `nws=2`, spatially 
 and temporally variable wind is applied and the input consists of a number of netcdf files in the directory
- `sflux/`. The option `nws=3` is reserved for coupling with atmospheric model via ESMF caps. If `nws=4`, 
+ [sflux/](sflux.md). The option `nws=3` is reserved for coupling with atmospheric model via ESMF caps. If `nws=4`, 
 the required input `atmos.nc` specifies wind and pressure at each node and at time of multiple of `wtiminc`. 
 Additional inputs (e.g. heat fluxes) are needed if heat/salt exchange module is invoked.
 If `nws=-1` (requires USE_PAHM), use Holland parametric wind model (barotropic only with wind and atmos. pressure).
@@ -370,13 +389,23 @@ Starting time for simulation. `utc_start` is hours **behind** the GMT, and is us
 ### thetai=0.6 (double)
 Implicitness parameter (between 0.5 and 1). Recommended value: 0.6. Use '1' to get maximum stability for strong wet/dry.
 
+### vclose_surf_frac0=1 (double)
+Coefficient to adjust the vertical velocity. `1` would keep the orignal value, while <1 would reduce the surface value, 
+ keeping the conservation. If `vclose_surf_frac0<0`, needs vclose.gr3 (depth in [0,1]).
+
 ## SCHOUT block
 ### iout_sta=0, nspool_sta=10 (int)
-Station output flag. If `iout_sta≠0`, an input `station.in` is needed. In addition, `nspool_sta` specifies the spool for station output. In this case, **make sure `nhot_write` is a multiple of `nspool_sta`**.
+Station output flag. If `iout_sta≠0`, an input [station.in](optional-inputs.html#stationin-bp-format) is needed. In addition, `nspool_sta` specifies the spool for station output. In this case, **make sure `nhot_write` is a multiple of `nspool_sta`**.
+If `iout_sta=1`, each line of outputs `staout_[1-]` represents time series of the variable at each station location (and vertical 
+ location for 3D variables). If `iout_sta=2`, 2 lines of outputs are produced at each time step: the odd lines are same as `iout_sta=1`,
+ and the even lines are 3D profiles - see `Utility/Post-Processing-Fortran/read_staout.f90` for the profile format.
 
-### iof_ugrid (int)
-UGRID option for outputs under scribed IO. If iof_ugrid/=0, outputs will also have UGRID metadata (at
-the expense of file size).
+### iof_ugrid = 0 (int)
+UGRID option for 3D outputs under scribed IO (`out2d_*.nc` always has metadata
+info). If `iof_ugrid > 0`, 3D outputs will contain UGRID and CF metadata.  
+if `iof_ugrid == 1`,  3D output contains UGRID mesh data at the expense
+of file size; if `iof_ugrid == 2`, 3D output references mesh data in the
+2D output.
 
 ### nc_out =1(int)
 Main switch to turn on/off netcdf outputs, useful for other programs (e.g., ESMF) to control outputs.
