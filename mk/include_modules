@@ -118,6 +118,11 @@
 # USE_DVD = yes
 # EXEC := $(EXEC)_DVD
 
+# special input for BGC-model QSim (zones ...)
+# USE_OLDIO needs to be chosen too, to make QSim work
+USE_QSIM = yes
+EXEC := $(EXEC)_QSIM
+
 ####End of tracer models
 
 # Ice module

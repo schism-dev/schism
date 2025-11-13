@@ -45,7 +45,10 @@ module fabm_schism
   use schism_glbl,  only: rho0, grav ! for calculating internal pressure
   use schism_glbl,  only: xlon_el, ylat_el
   use schism_glbl,  only: nws, ihconsv ! for checking that light is available
-  use schism_glbl,  only: time_stamp,it_main, zone , ns_global
+  use schism_glbl,  only: time_stamp,it_main, ns_global
+#ifdef USE_QSIM
+  use schism_glbl,  only: zone
+#endif
   use schism_msgp,  only: myrank, parallel_abort, comm
 
 #ifdef USE_ICEBGC
@@ -517,6 +520,7 @@ subroutine fabm_schism_init_stage2
   write(message,*)'Linked ', fs%nvar_bot,' bottom state data  '
   call driver%log_message(message)
 
+#ifdef USE_QSIM
   ! get zones !!wy
   if(.not. allocated(zone))allocate(zone(ne))
   ! subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
@@ -529,6 +533,7 @@ subroutine fabm_schism_init_stage2
     fs%bottom_state(i,1)=zone(i)
   end do ! all elements on this processor
   call driver%log_message('got zone.gr3') 
+#endif
 
   allocate(fs%surface_state(ne,fs%nvar_sf))
   do i=1,fs%nvar_sf
@@ -1324,8 +1329,10 @@ subroutine fabm_schism_do()
       end if
     end if
     
+#ifdef USE_QSIM
     !!wy use first bottom state variable to store zone number (bottom_source needs to be zero !!)
     fs%bottom_state(i,1)=zone(i)
+#endif
     
     flx_bt(istart:istart+fs%nvar-1,i) = -rhs2d ! positive into sediment
 #endif
