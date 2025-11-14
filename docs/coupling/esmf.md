@@ -2,7 +2,7 @@ The Earth System Modeling Framework (ESMF) is a suite of software tools for deve
 
 SCHISM can be such a model component within an ESMF-coupled system.  A so-called "cap" wraps SCHISM and exposes it via the ESMF Application Programming Interface (API).  The interfaces exposed through the API are (1) import of fields, (2) export of fields, and (3) control structure.
 
-A live manual can be found [https://schism-esmf.readthedocs.io/en/latest/](here).
+A live manual can be found [here](https://schism-esmf.readthedocs.io/en/latest/).
 
 ## Obtaining and building the cap
 
