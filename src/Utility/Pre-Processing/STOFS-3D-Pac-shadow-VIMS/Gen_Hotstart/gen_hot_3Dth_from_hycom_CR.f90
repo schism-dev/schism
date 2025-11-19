@@ -31,7 +31,8 @@
 !     (1) hgrid.gr3;
 !     (2) hgrid.ll;
 !     (3) vgrid.in (SCHISM R1703 and up);
-!     (4) estuary.gr3 (flags for extrapolating S,T, vel.): depth=0: outside; =1: inside
+!     (4) estuary.gr3 (flags for extrapolating S,T, vel.): depth=0: outside; =1: inside; =-1,-2 define endpoints of estuary gradient
+!     (-1 ocean end, -2 fresh end)
 !     (5) gen_hot_3Dth_from_nc.in:
 !                     1st line: 1: include vel and elev. in hotstart.nc (and *[23D].th will start from non-0 values); 0: only T,S
 !                     2nd line: T,S values for estuary points defined in estuary.gr3
