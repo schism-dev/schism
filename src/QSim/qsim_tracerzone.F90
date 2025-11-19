@@ -4,8 +4,12 @@ module uzweijens_qsim_tracerzone
 !
    use fabm_types
    use fabm_driver, only: type_base_driver, driver
-   use schism_glbl, only: time_stamp,it_main, ne, dt ! , zone
-!a
+   use schism_glbl, only: time_stamp,it_main, dt
+!#ifdef USE_QSIM
+!   use schism_glbl, only: zone
+!#endif
+
+
    implicit none
    private
 
@@ -14,14 +18,17 @@ module uzweijens_qsim_tracerzone
       type(type_state_variable_id) :: id_tracer
       type(type_bottom_state_variable_id) :: id_bottom_variable
       type(type_global_dependency_id) :: id_day_of_year, id_seconds_of_day
-      !type (type_horizontal_dependency_id) :: id_zone , id_tke_bott
+      type(type_bottom_dependency_id) :: id_zone
+
       real(rk) :: tracer_zone, tracer_time
       contains
          ! Reference model procedures here.
          procedure :: initialize
          procedure :: do
          procedure :: do_bottom
-   end type
+   end type type_uzweijens_qsim_tracerzone
+   
+   !type (type_bottom_standard_variable), parameter :: zone_number   = type_bottom_standard_variable(name='number_of_zone',units='-',aggregate_variable=.false.)
    
 contains
 
@@ -41,6 +48,11 @@ contains
       call driver%log_message('initialize - get_parameter(self%tracer_time')
       
       call self%register_dependency(self%id_day_of_year, standard_variables%number_of_days_since_start_of_the_year)
+      
+      ! tranmit Zone number via dependency
+      call self%register_dependency(self%id_zone, 'zone_number','-', 'number of the zone')
+      !call self%register_dependency(self%id_zone,zone_number)
+      !call self%register_dependency(self%id_total_pmpool,total_bedpool)
 
       write(message,*) 'initialized - uzweijens_qsim_tracerzone'
       call driver%log_message(message)
@@ -52,7 +64,7 @@ contains
    subroutine do(self, _ARGUMENTS_DO_)
       class (type_uzweijens_qsim_tracerzone), intent(in)   :: self
       _DECLARE_ARGUMENTS_DO_
-      real(rk) :: tracer, zone_hop , bottom_variable
+      real(rk) :: tracer, zone_hop , bottom_variable, zone
       real(rk) :: day_of_year!, seconds_of_day
       character(len=256)                 :: message
       
@@ -64,11 +76,13 @@ contains
 
       _LOOP_BEGIN_
          _GET_(self%id_tracer,tracer)
-         _GET_HORIZONTAL_(self%id_bottom_variable, bottom_variable)
+         _GET_BOTTOM_(self%id_zone,zone) ! zone number
+         !_GET_HORIZONTAL_(self%id_bottom_variable, bottom_variable)
 
          zone_hop=0.0_rk
          if((time_stamp.ge.(self%tracer_time-1)) .and. (time_stamp.le.(self%tracer_time+1)))zone_hop=1/dt !! hop concentration to 1 in one timestep
-         if(abs(bottom_variable-self%tracer_zone) .gt. 0.1_rk) zone_hop=0.0_rk !! hops only in tracered_zone
+         !if(abs(bottom_variable-self%tracer_zone) .gt. 0.1_rk) zone_hop=0.0_rk !! hops only in tracered_zone
+         if(abs(zone-self%tracer_zone) .gt. 0.1_rk) zone_hop=0.0_rk !! hops only in tracered_zone
          _ADD_SOURCE_(self%id_tracer, zone_hop)
          
       _LOOP_END_

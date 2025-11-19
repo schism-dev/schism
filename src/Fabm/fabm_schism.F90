@@ -173,6 +173,9 @@ module fabm_schism
     real(rk), dimension(:), pointer     :: tau_bottom => null()
     real(rk), dimension(:), pointer     :: bottom_speed => null()
     real(rk), dimension(:), pointer     :: bottom_roughness => null()
+#ifdef USE_QSIM
+    real(rk), dimension(:), pointer     :: zone_number => null()
+#endif
 
 #ifndef _FABM_HORIZONTAL_MASK_
     integer, dimension(:,:), pointer   :: mask => null()
@@ -1893,6 +1896,15 @@ subroutine link_environmental_data(self, rc)
   !call self%model%link_horizontal_data(fabm_standard_variables%bottom_turbulent_kinetic_energy, self%eps(1,:))
   call self%model%link_scalar(fabm_standard_variables%number_of_days_since_start_of_the_year,self%day_of_year)
   call driver%log_message('linked scalar standard variable "number_of_days_since_start_of_the_year"')
+
+#ifdef USE_QSIM
+  ! link zone info
+  !call self%model%link_horizontal_data(type_bottom_standard_variable(name='number_of_zone',units='-'),zone(:))
+  call self%model%link_horizontal_data(zone_number,zone(:))
+#endif
+
+
+
 #endif
 
 end subroutine link_environmental_data
