@@ -1090,21 +1090,31 @@
         ! UGRID does not need to be specified as it is included in CF-1.12
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'Conventions', 'CF-1.12')
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'title', 'SCHISM unstructured grid output')
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'institution', 'anonymous')
       
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'source', 'SCHISM')
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'references', 'Zhang, Y., Ye, F., Stanev, E.V., Grashorn, S. (2016) Seamless cross-scale modeling with SCHISM, Ocean Modelling, 102, 64-81; http://schism.wiki/')
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'history', 'Created ' // trim(iso8601_now()))
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'creation_date', trim(iso8601_now()))
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'license', 'unspecified')
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'comment', 'SCHISM model output file')
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'originator', 'anonymous')
       
+        ! CF, UGRID, ACDD and HMG mandatory attributes, all with the aim to 
+        ! improve data discoverability and usability in the World Data Center for Climate (WDCC)
+        ! 
+        ! Attributes below need to be filled by the user in the metadata.nc template, which 
+        ! will then be copied to all SCHISM output files
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'institution', 'mandatory, please specify in metadata.nc, should be a ROR')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'publisher_name', 'mandatory, please specify in metadata.nc')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'publisher_identifier', 'mandatory, please specify in metadata.nc, should be a ROR')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'creator_name', 'mandatory, please specify in metadata.nc')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'creator_affiliation', 'mandatory, please specify in metadata.nc')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'creator_id', 'recommended, please specify in metadata.nc, should be an ORCID or similar')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'license', 'recommended, please specify in metadata.nc')
+
         if (ics > 1) then 
           iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'crs', 'EPSG:4326') !WGS84
         endif
       
-        ! For OpenDAP retrieval of time axis there should be StartTime/StopTime/StartLatitude etc.
+        ! For OpenDAP retrieval there should be bounds on the axes
         !iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'StartTime', trim(isotimestring))
       
         ! Metadata that is dimension "one" should come here
