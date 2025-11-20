@@ -1,0 +1,23 @@
+netcdf metadata {
+variables:
+
+	float solarRadiation ;
+		solarRadiation:forcing = "shortwave flux from DWD weather station data" ;
+
+// global attributes:
+	:publisher_name = "Helmholtz-Zentrum hereon GmbH" ;
+	:publisher_identifier = "https://ror.org/03qjp1d79" ;
+	:creator_name = "Carsten Lemmen" ;
+	:creator_affiliation = "Helmholtz-Zentrum hereon GmbH" ;
+	:creator_id = "https://orcid.org/0000-0003-3483-6036" ;
+  :contact = "carsten.lemmen@hereon.de";
+  :institution = "Helmholtz-Zentrum Hereon, Institute of Coastal Systems, Germany";
+  :institution_id = "https://ror.org/03qjp1d79";
+  :license = "CC-BY-SA-4.0";
+  :title = "AGRIO SCHISM-FABM hindcast simulation for the Elbe estuary";
+  :source = "Hydrodynamic-biogeochemical coupled system.  SCHISM v5.14 coupled to OxyPOM v1.0 and NOPE v1.0 via  FABM v3.0";
+  :forcing = "Gauge data from German Federal Waterways and Shipping Administration (WSV); biogeochemistry from FGG Elbe project";
+  :comment = "This simulation was performed in the context of the AGRIO Helmholtz Innovation Pool project.  The setup is freely available at https://codebase.helmholtz.cloud/agrio/elbe-schism-50627";
+
+
+}
