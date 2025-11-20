@@ -1064,8 +1064,8 @@
       integer :: irec,iret,i,j,k,ih0_id2,ikbp_id2, ivarid,time_dims(1)
       integer :: ix_id2,iy_id2,ih_id2,ixel_id2,iyel_id2,ixsd_id2,iysd_id2,elnode_id2,iside_id2
       real(rkind) :: lat_min, lat_max, lon_min, lon_max, depth_min, depth_max
-      real(rkind) :: time_end, duration_seconds
-      character(len=48) :: time_end_string, duration_string, resolution_string
+      real(rkind) :: time_end, duration_seconds, time_start
+      character(len=48) :: time_string, duration_string, resolution_string
 
       !Header
       ! CF recommends that dimensions appear in the order T Z, X/Y, in the CDL description.
@@ -1087,6 +1087,7 @@
       iret=nf90_put_att(ncid_schism0,itime_id0,'units',trim(isotimestring)) 
       iret=nf90_put_att(ncid_schism0,itime_id0,'standard_name','time') 
       iret=nf90_put_att(ncid_schism0,itime_id0,'axis','T') 
+      
       if (iheader > 0) then   
         iret=nf90_put_att(ncid_schism0,itime_id0,'calendar','proleptic_gregorian') 
  
@@ -1113,21 +1114,26 @@
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'creator_id', 'recommended, please specify in metadata.nc, should be an ORCID or similar')
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'license', 'recommended, please specify in metadata.nc')
 
-        ! For OpenDAP retrieval, we add bound information
+        ! For OpenDAP retrieval, we add bounds information on the axes
+
+        time_start = iths0 * 1.0
+        call iso8601_from_seconds(time_start, start_year, start_month, start_day, start_hour, time_string)
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'time_coverage_start', trim(isotimestring))
+        
         time_end = iths0 + ntime_global * dt
-        call iso8601_from_seconds(time_end, start_year, start_month, start_day, start_hour, time_end_string)
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'time_coverage_end', trim(time_end_string))
+        call iso8601_from_seconds(time_end, start_year, start_month, start_day, start_hour, time_string)
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'time_coverage_end', trim(time_string))
+        
         duration_seconds = ntime_global * dt
         call iso8601_duration(duration_seconds, duration_string)
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'time_coverage_duration', trim(duration_string))
         call iso8601_duration(dt * nspool, resolution_string)
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'time_coverage_resolution', trim(resolution_string))
 
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'geospatial_vertical_min', depth_min)
+        depth_max = maxval(dp)
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'geospatial_vertical_max', depth_max)
         iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'geospatial_vertical_units', 'm')
-        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'geospatial_vertical_positive', 'up')
+        iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'geospatial_vertical_positive', 'down')
 
         if (ics > 1) then 
           ! Geographic coordinates
@@ -1135,8 +1141,6 @@
           lon_max = maxval(xnd)
           lat_min = minval(ynd)
           lat_max = maxval(ynd)
-          depth_min = minval(dp)
-          depth_max = maxval(dp)
           
           iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'geospatial_lon_min', lon_min)
           iret = nf90_put_att(ncid_schism0, NF90_GLOBAL, 'geospatial_lon_max', lon_max)
