@@ -69,6 +69,9 @@ set(CMAKE_Fortran_FLAGS_RELEASE "-g " CACHE STRING "Fortran flags" FORCE)
 # cmake -C ../cmake/SCHISM.local.phil.bfg ../src/ # does not work ???
 # cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg ../src/ # does not work ???
 
+### QSim
+set (USE_QSIM OFF CACHE BOOLEAN "BfG water quality model")
+
 ################################################################################################# notes
 # FABM: Revision: 8df724dd9ce99ce26b8a229503bfe8a3906f03ee
 # Author: Jorn Bruggeman <jorn@bolding-bruggeman.com>
@@ -79,6 +82,7 @@ set(CMAKE_Fortran_FLAGS_RELEASE "-g " CACHE STRING "Fortran flags" FORCE)
 # clean: Wyrwa@phil-hpc.hpc:~/SCHISM/github_schism17okt25/cmake> rm CMakeCache.txt
 # sync:  Wyrwa@phil-hpc.hpc:~/SCHISM/github_schism17okt25/entwicklung> rsync -va . /beegfs/home/Wyrwa/SCHISM/github_schism17okt25
 # cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
+# cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_QSIM=ON -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
 # cmake --build .
 #
 # USE_QSIM geht nicht ??? # cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_QSIM=ON -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/

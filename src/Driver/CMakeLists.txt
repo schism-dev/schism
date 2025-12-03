@@ -1,5 +1,10 @@
 #####  Main Driver CMake File
 
+######## QSim ########
+if (USE_QSIM)
+  message(STATUS "\n### USE_QSIM in src/Driver/CMakeList.txt")
+endif()
+
 #####  Dependencies
 list(APPEND schism_libs ${NetCDFLIBS})
 
@@ -21,7 +26,8 @@ endif(USE_GOTM)
 
 add_executable ( pschism schism_driver.F90 )
 add_dependencies( pschism ${schismmodlibs})
-message("Using schism module libraries ${schismmodlibs}")
+message(STATUS "Using schismmodlibs: ${schismmodlibs}")
+message(STATUS "Using schism_libs: ${schism_libs}")
 target_link_libraries (pschism ${schismmodlibs} ${schism_libs} )
 mpi_wrap( pschism )
 
@@ -39,6 +45,7 @@ set(exe_name "${SCHISM_EXE_BASENAME}${mod_tag_rev}${def_tag_rev}")
 message(STATUS "Executable name with this configuration will be ${exe_name}")
 set_target_properties(pschism PROPERTIES OUTPUT_NAME ${exe_name})
 
-
-
-
+######## QSim ########
+if (USE_QSIM)
+  message(STATUS "\n### USEd_QSIM in src/Driver/CMakeList.txt")
+endif()

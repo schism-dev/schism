@@ -47,7 +47,7 @@ module fabm_schism
   use schism_glbl,  only: nws, ihconsv ! for checking that light is available
   use schism_glbl,  only: time_stamp,it_main, ns_global
 #ifdef USE_QSIM
-  use schism_glbl,  only: zone
+  use qsim_standard_variables
 #endif
   use schism_msgp,  only: myrank, parallel_abort, comm
 
@@ -105,6 +105,10 @@ module fabm_schism
   !> Therefore the start index for fabm tracers is the sum of all tracers from models
   !> 1 to 10.  Without any other models, it should be 3 after temperature and salinity.
   integer, public :: istart=3 ! set later: sum(ntrs(1:10))+1
+  
+#ifdef USE_QSIM
+    real(rk), allocatable, dimension(:)     :: zone
+#endif
 
   type, extends(type_base_driver) :: type_schism_driver
     contains
@@ -142,6 +146,10 @@ module fabm_schism
     type(type_model), pointer      :: model => null()
 #endif
 
+#ifdef USE_QSIM
+    real(rk), allocatable, dimension(:)   :: shear_velocity
+#endif
+
     character(len=1024)           :: version = 'unknown'
     real(rk)                      :: day_of_year, seconds_of_day
     logical                       :: fabm_ready
@@ -163,7 +171,6 @@ module fabm_schism
     real(rk), dimension(:,:), pointer   :: layer_depth => null()
     real(rk), dimension(:,:), pointer   :: spm => null()
     real(rk), dimension(:), pointer     :: bottom_tke => null()
-    !real(rk), dimension(:), pointer     :: bottom_num => null()
     real(rk), dimension(:,:), pointer   :: par => null()
     real(rk), dimension(:,:), pointer   :: pres => null() !ADDED
     real(rk), dimension(:), pointer     :: I_0 => null()
@@ -173,9 +180,6 @@ module fabm_schism
     real(rk), dimension(:), pointer     :: tau_bottom => null()
     real(rk), dimension(:), pointer     :: bottom_speed => null()
     real(rk), dimension(:), pointer     :: bottom_roughness => null()
-#ifdef USE_QSIM
-    real(rk), dimension(:), pointer     :: zone_number => null()
-#endif
 
 #ifndef _FABM_HORIZONTAL_MASK_
     integer, dimension(:,:), pointer   :: mask => null()
@@ -389,6 +393,20 @@ subroutine fabm_schism_init_stage2
   integer, save, allocatable, target :: bottom_idx(:)
   integer, save, allocatable, target :: surface_idx(:)
 
+  call driver%log_message('fabm_schism_init_stage2 starting')
+  print*,'fabm_schism_init_stage2 printing ne=',ne
+#ifdef USE_FABM
+  call driver%log_message('fabm_schism_init_stage2 USE_FABM')
+  print*,'fabm_schism_init_stage2 USE_FABM'
+#endif
+#ifdef USE_QSIM
+  allocate(fs%shear_velocity(ne))
+  print*,'USE_QSIM ne=',ne
+  call driver%log_message('fabm_schism_init_stage2 using QSim')
+#endif
+  !call driver%log_message('fabm_schism_init_stage2 continuing')
+  !call parallel_abort('test recognition of USE_QSIM') !!wy
+
   ! FABM is the model number 11, its number of tracers are in ntrs(11)
   istart = irange_tr(1,11)
 
@@ -527,6 +545,7 @@ subroutine fabm_schism_init_stage2
   ! get zones !!wy
   if(.not. allocated(zone))allocate(zone(ne))
   ! subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
+  zone(:)=0.0
   pvari=-999.0_rk
   !print*,'going to read zone.gr3',myrank
   call fabm_schism_read_param_2d('zone',zone,pvari)
@@ -534,6 +553,8 @@ subroutine fabm_schism_init_stage2
   print*,'zone(1),myrank=',zone(1),myrank
   do i=1,ne
     fs%bottom_state(i,1)=zone(i)
+    fs%shear_velocity(i)=zone(i)
+    !qsim_variables%zone_number(i)=zone(i)
   end do ! all elements on this processor
   call driver%log_message('got zone.gr3') 
 #endif
@@ -804,19 +825,27 @@ subroutine fabm_schism_init_stage2
 
   call fs%link_environmental_data()
   call driver%log_message('Linked environmental data')
+  print*,'Linked environmental data'
 
 #if _FABM_API_VERSION_ < 1
   call fabm_check_ready(fs%model)
   call fabm_update_time(fs%model, fs%tidx)
 #else
   call fs%model%start()
+  call driver%log_message('model%started')
+  print*,'model%started'
+  
   call fs%model%prepare_inputs(fs%tidx)
+  write(message,*) 'prepared_inputs  fs%tidx=',fs%tidx
+  call driver%log_message(trim(message))
+  print*,'prepared_inputs  fs%tidx=',fs%tidx  !!wy
 #endif
   fs%fabm_ready=.true.
   call driver%log_message('Initialization stage 2 complete')
+  print*,'Initialization stage 2 complete'
 
   !> @todo there was a call to update_time in older versios of this routine
-  !> call fabm_update_time(fs%model, fs%tidx)
+  !> call fabm_update_time(fs%model, fs%tidx)  !!wy
 
 end subroutine fabm_schism_init_stage2
 
@@ -1335,6 +1364,7 @@ subroutine fabm_schism_do()
 #ifdef USE_QSIM
     !!wy use first bottom state variable to store zone number (bottom_source needs to be zero !!)
     fs%bottom_state(i,1)=zone(i)
+    fs%shear_velocity(i)=zone(i)
 #endif
     
     flx_bt(istart:istart+fs%nvar-1,i) = -rhs2d ! positive into sediment
@@ -1792,6 +1822,7 @@ subroutine link_environmental_data(self, rc)
 
   class(type_fabm_schism), intent(inout) :: self
   integer, intent(out), optional         :: rc
+  type(type_fabm_horizontal_variable_id) :: horizontal_id
 
   if (present(rc)) rc = 0
 
@@ -1896,14 +1927,13 @@ subroutine link_environmental_data(self, rc)
   !call self%model%link_horizontal_data(fabm_standard_variables%bottom_turbulent_kinetic_energy, self%eps(1,:))
   call self%model%link_scalar(fabm_standard_variables%number_of_days_since_start_of_the_year,self%day_of_year)
   call driver%log_message('linked scalar standard variable "number_of_days_since_start_of_the_year"')
-
+  
 #ifdef USE_QSIM
-  ! link zone info
-  !call self%model%link_horizontal_data(type_bottom_standard_variable(name='number_of_zone',units='-'),zone(:))
-  call self%model%link_horizontal_data(zone_number,zone(:))
+  horizontal_id = self%model%get_horizontal_variable_id(qsim_variables%shear_velocity)
+  call self%model%link_horizontal_data(horizontal_id,self%shear_velocity)
+  call driver%log_message('link qsim_variables%shear_velocity to self%shear_velocity as zone')
+  print*,'shear_velocity=',self%shear_velocity(1:40)
 #endif
-
-
 
 #endif
 

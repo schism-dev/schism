@@ -18,7 +18,7 @@ include(MPIWrap)
 include(MakeDefineOption)
 include(SCHISMTest)
 
-
+#message(STATUS "\n################   CMAKE_SOURCE_DIR= ${CMAKE_SOURCE_DIR}   ################" )
 message(STATUS "\n################   Begin SCHISM Configuration   ################" )
 message(STATUS "In-source builds not allowed")
 
@@ -46,6 +46,7 @@ if (NOT DEFINED C_PREPROCESS_FLAG)
   message(FATAL_ERROR "Preprocessor flag (e.g. -cpp for intel, -MPreprocess for PGI0 is not set")
 endif()
 add_compile_options(${C_PREPROCESS_FLAG})
+# message(STATUS "\n### C_PREPROCESS_FLAG= ${C_PREPROCESS_FLAG}")
 
 ######### Algorithmic switches and build options involving functionality
 
@@ -227,6 +228,7 @@ add_module(FIB      USE_FIB OFF)
 add_module(Ice      USE_ICE   OFF)
 add_module(Multi_ice USE_MICE   OFF)
 add_module(Fabm     USE_FABM  OFF)
+# add_module(QSim     USE_QSIM  OFF) ##wy does not work as aschism module ...
 add_module(EcoSim   USE_ECO   OFF)
 add_module(Sediment USE_SED   OFF)
 add_module(Sed2d    USE_SED2D OFF)
@@ -315,7 +317,7 @@ foreach (moddir ${schismmoddirs})
    #if(EXISTS "${PROJECT_SOURCE_DIR}/../test/unittest/${moddir}/CMakeLists.txt")
    #  add_subdirectory( "${PROJECT_SOURCE_DIR}/../test/unittest/${moddir}" "${PROJECT_BINARY_DIR}/unittest/${moddir}" )
    # endif()
-    message(STATUS "Added ${moddir}")
+    message(STATUS "moddirs added: ${moddir}")
 endforeach()
 
 ######## Executable Name
@@ -324,7 +326,7 @@ endforeach()
 string(CONCAT mod_tag ${all_use_mod_defs})
 string(REPLACE USE_ _ mod_tag_rev ${mod_tag})
 string(REPLACE _HYDRO_SCHISM "" mod_tag_rev ${mod_tag_rev})
-
+message(STATUS "mod_tag_rev: ${mod_tag_rev}")
 
 ######## Tests ##################
 
@@ -362,7 +364,8 @@ get_property(all_define_options GLOBAL PROPERTY DEFINE-LIST)
 message(STATUS "All defines: ${all_define_options}")
 # Now that the list of global options are accumulated, apply it on all the directories
 foreach (moddir ${schismmoddirs})
-set_property( DIRECTORY ${moddir} APPEND PROPERTY COMPILE_DEFINITIONS ${all_define_options} ${all_use_mod_defs})
+  set_property( DIRECTORY ${moddir} APPEND PROPERTY COMPILE_DEFINITIONS ${all_define_options} ${all_use_mod_defs})
+  message(STATUS "moddir: ${moddir}")
 endforeach()
 
 # Set the driver information for BLD_STANDALONE
@@ -379,6 +382,11 @@ endif(USE_BMI)
 
 ######## Utilities ########
 if (BLD_STANDALONE OR BUILD_TOOLS)
-message(STATUS "\n### Configuring Utilities")
+message(STATUS "\n### Configuring Utilities 2")
 add_subdirectory( Utility )
+endif()
+
+######## QSim ########
+if (USE_QSIM)
+  message(STATUS "\n### USEd_QSIM in src/CMakeList.txt")
 endif()

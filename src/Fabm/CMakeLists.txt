@@ -7,6 +7,7 @@ if(USE_FABM)
   mark_as_advanced(CLEAR FABM_BASE)
   if(FABM_BASE)
     message(STATUS "Using FABM_BASE=${FABM_BASE}")
+    message(STATUS "Using FABM_UZWEIJENS_BASE=${FABM_UZWEIJENS_BASE}")
     if(NOT EXISTS ${FABM_BASE}/include/fabm_version.h)
       add_definitions(-D_FABM_API_VERSION_=0)
       message(STATUS "Added definition -D_FABM_API_VERSION_=0")
@@ -21,15 +22,25 @@ if(USE_FABM)
     add_subdirectory(${FABM_BASE} fabm_src)
     set(FABM_LIBRARIES fabm)
     #message(STATUS "Adding FABM library -l${FABM_LIBRARIES}")
-    set(FABM_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/fabm_src/modules 
+    set(FABM_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/fabm_src/modules   # /home/Wyrwa/SCHISM/schism/cmake/Fabm/
       ${FABM_BASE}/include ${FABM_BASE}/src/drivers/schism
     )
     #message(STATUS "Adding FABM includes ${FABM_INCLUDE_DIRS}")
     mark_as_advanced(FORCE FABM_PREFIX)
   endif()
+  ######## QSim ########
+  if (USE_QSIM)
+    message(STATUS "\n### USE_QSIM in src/Fabm/CMakeList.txt")
+    add_definitions("-DUSE_QSIM")
+    # ./cmake/Fabm/fabm_src/models/uzweijens/qsim_standard_variables.mod
+    # /beegfs/home/Wyrwa/SCHISM/schism/cmake/Fabm/fabm_src/models/uzweijens
+    set(FABM_INCLUDE_DIRS ${FABM_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR}/fabm_src/models/uzweijens)
+  endif()
+  message(STATUS "FABM_INCLUDE_DIRS=${FABM_INCLUDE_DIRS}")
   set_property(TARGET fabm_schism APPEND PROPERTY INCLUDE_DIRECTORIES "${FABM_INCLUDE_DIRS}")
   #set_property(TARGET fabm_schism PROPERTY Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/modules)
   #message(STATUS "fabm_schism dependencies: core ${FABM_LIBRARIES}")
   target_link_libraries(fabm_schism ${FABM_LIBRARIES} core)
+  
+  
 endif(USE_FABM)
-
