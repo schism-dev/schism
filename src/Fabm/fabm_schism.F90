@@ -393,16 +393,16 @@ subroutine fabm_schism_init_stage2
   integer, save, allocatable, target :: bottom_idx(:)
   integer, save, allocatable, target :: surface_idx(:)
 
-  call driver%log_message('fabm_schism_init_stage2 starting')
-  print*,'fabm_schism_init_stage2 printing ne=',ne
+  ! call driver%log_message('fabm_schism_init_stage2 starting')
+  ! print*,'fabm_schism_init_stage2 printing ne=',ne
 #ifdef USE_FABM
-  call driver%log_message('fabm_schism_init_stage2 USE_FABM')
-  print*,'fabm_schism_init_stage2 USE_FABM'
+  ! call driver%log_message('fabm_schism_init_stage2 USE_FABM')
+  ! print*,'fabm_schism_init_stage2 USE_FABM'
 #endif
 #ifdef USE_QSIM
   allocate(fs%zone_number(ne))
-  print*,'USE_QSIM ne=',ne
-  call driver%log_message('fabm_schism_init_stage2 using QSim')
+  ! print*,'USE_QSIM ne=',ne
+  ! call driver%log_message('fabm_schism_init_stage2 using QSim')
 #endif
   !call driver%log_message('fabm_schism_init_stage2 continuing')
   !call parallel_abort('test recognition of USE_QSIM') !!wy
@@ -550,7 +550,7 @@ subroutine fabm_schism_init_stage2
   !print*,'going to read zone.gr3',myrank
   call fabm_schism_read_param_2d('zone',zone,pvari)
   ! zone(:)=myrank
-  print*,'zone(1),myrank=',zone(1),myrank
+  ! print*,'zone(1),myrank=',zone(1),myrank
   do i=1,ne
     fs%bottom_state(i,1)=zone(i)
     fs%zone_number(i)=zone(i)
@@ -825,7 +825,7 @@ subroutine fabm_schism_init_stage2
 
   call fs%link_environmental_data()
   call driver%log_message('Linked environmental data')
-  print*,'Linked environmental data'
+  ! print*,'Linked environmental data'
 
 #if _FABM_API_VERSION_ < 1
   call fabm_check_ready(fs%model)
@@ -833,16 +833,16 @@ subroutine fabm_schism_init_stage2
 #else
   call fs%model%start()
   call driver%log_message('model%started')
-  print*,'model%started'
+  ! print*,'model%started'
   
   call fs%model%prepare_inputs(fs%tidx)
-  write(message,*) 'prepared_inputs  fs%tidx=',fs%tidx
-  call driver%log_message(trim(message))
-  print*,'prepared_inputs  fs%tidx=',fs%tidx  !!wy
+  ! write(message,*) 'prepared_inputs  fs%tidx=',fs%tidx
+  ! call driver%log_message(trim(message))
+  ! print*,'prepared_inputs  fs%tidx=',fs%tidx  !!wy
 #endif
   fs%fabm_ready=.true.
-  call driver%log_message('Initialization stage 2 complete')
-  print*,'Initialization stage 2 complete'
+  call driver%log_message('Initialization stage 2 done')
+  ! print*,'Initialization stage 2 complete'
 
   !> @todo there was a call to update_time in older versios of this routine
   !> call fabm_update_time(fs%model, fs%tidx)  !!wy
@@ -1931,8 +1931,8 @@ subroutine link_environmental_data(self, rc)
 #ifdef USE_QSIM
   horizontal_id = self%model%get_horizontal_variable_id(qsim_variables%zone_number)
   call self%model%link_horizontal_data(horizontal_id,self%zone_number)
-  call driver%log_message('link qsim_variables%zone_number to self%zone_number as zone')
-  print*,'zone_number=',self%zone_number(1:40)
+  ! call driver%log_message('link qsim_variables%zone_number to self%zone_number as zone')
+  ! print*,'zone_number=',self%zone_number(1:40)
 #endif
 
 #endif
@@ -2066,9 +2066,12 @@ subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
       write(gr3file,*)in_dir(1:len_in_dir)//trim(adjustl(varname))//'.gr3'
          !open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.gr3',status='old')
          open(31,file=trim(adjustl(gr3file)),status='old',iostat=istat)
-         if(istat/=0) call parallel_abort('fabm_schism_read_param_2d cannot open .gr3')
+         if(istat/=0)then
+            call parallel_abort('fabm_schism_read_param_2d cannot open .gr3')
+            print*,'fabm_schism_read_param_2d failed reading: ',trim(adjustl(gr3file))
+         endif
          read(31,*); read(31,*)negb,npgb
-         print*,'fabm_schism_read_param_2d reading ',trim(adjustl(gr3file)),' negb,npgb=',negb,npgb
+         ! print*,'fabm_schism_read_param_2d reading ',trim(adjustl(gr3file)),' negb,npgb=',negb,npgb
          if(negb/=ne_global.or.npgb/=np_global) call parallel_abort('Check: '//trim(adjustl(varname))//'.gr3')
          do i=1,np_global
             read(31,*,iostat=istat)ip,xtmp,ytmp,buffer(i)
@@ -2095,7 +2098,7 @@ subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
             pvar(i)=pvar(i)+tvar(nd)/i34(i)
          enddo!j
       enddo!i
-      if(myrank==0)print*,'successfully read from ',trim(adjustl(gr3file))
+      ! if(myrank==0)print*,'successfully read from ',trim(adjustl(gr3file))
 
   else if(int(pvalue)==-9999) then !*.prop
     open(31,file=in_dir(1:len_in_dir)//trim(adjustl(varname))//'.prop',status='old')
