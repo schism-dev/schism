@@ -15,7 +15,7 @@ module uzweijens_qsim_tracerzone
       type(type_state_variable_id) :: id_tracer
       type(type_bottom_state_variable_id) :: id_bottom_variable
       type(type_global_dependency_id) :: id_day_of_year, id_seconds_of_day
-      type(type_horizontal_dependency_id) :: id_shear_velocity, id_zone
+      type(type_horizontal_dependency_id) :: id_zone_number
 
       real(rk) :: tracer_zone, tracer_time
       
@@ -48,11 +48,8 @@ contains
       ! time
       call self%register_dependency(self%id_day_of_year, standard_variables%number_of_days_since_start_of_the_year)
       
-      ! test zone in qsim_variables
-      !###call self%register_horizontal_dependency(self%id_zone, qsim_variables%zone_number)
-      !###call self%register_dependency(self%id_zone, zone)
-      call self%register_horizontal_dependency(self%id_shear_velocity, qsim_variables%shear_velocity)
-      !call self%register_horizontal_dependency(self%id_shear_velocity, "shear_velocity", "m/s", "Ustern")
+      ! zone in qsim_variables
+      call self%register_horizontal_dependency(self%id_zone_number, qsim_variables%zone_number)
 
       ! test zone in bottom state_variable
       call self%register_state_variable(self%id_bottom_variable, "bottom_variable", "-", "Zone number in bottom variable")
@@ -80,7 +77,7 @@ contains
 
       _LOOP_BEGIN_
          _GET_(self%id_tracer,tracer)
-         _GET_HORIZONTAL_(self%id_shear_velocity, qsim_zone)
+         _GET_HORIZONTAL_(self%id_zone_number, qsim_zone)
          _GET_HORIZONTAL_(self%id_bottom_variable, bottom_variable)
          if(abs(qsim_zone-bottom_variable).gt. 0.5 )then
             write(message,*) 'qsim_zone wrong  bottom_variable,qsim_zone=',bottom_variable,qsim_zone
@@ -89,8 +86,7 @@ contains
 
          zone_hop=0.0_rk
          if((time_stamp.ge.(self%tracer_time-1)) .and. (time_stamp.le.(self%tracer_time+1)))zone_hop=1/dt !! hop concentration to 1 in one timestep
-         if(abs(bottom_variable-self%tracer_zone) .gt. 0.1_rk) zone_hop=0.0_rk !! hops only in tracered_zone
-         !if(abs(qsim_zone-self%tracer_zone) .gt. 0.1_rk) zone_hop=0.0_rk !! hops only in tracered_zone
+         if(abs(qsim_zone-self%tracer_zone) .gt. 0.1_rk) zone_hop=0.0_rk !! hops only in tracered_zone
          _ADD_SOURCE_(self%id_tracer, zone_hop)
          
       _LOOP_END_

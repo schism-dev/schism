@@ -147,7 +147,7 @@ module fabm_schism
 #endif
 
 #ifdef USE_QSIM
-    real(rk), allocatable, dimension(:)   :: shear_velocity
+    real(rk), allocatable, dimension(:)   :: zone_number
 #endif
 
     character(len=1024)           :: version = 'unknown'
@@ -400,7 +400,7 @@ subroutine fabm_schism_init_stage2
   print*,'fabm_schism_init_stage2 USE_FABM'
 #endif
 #ifdef USE_QSIM
-  allocate(fs%shear_velocity(ne))
+  allocate(fs%zone_number(ne))
   print*,'USE_QSIM ne=',ne
   call driver%log_message('fabm_schism_init_stage2 using QSim')
 #endif
@@ -553,7 +553,7 @@ subroutine fabm_schism_init_stage2
   print*,'zone(1),myrank=',zone(1),myrank
   do i=1,ne
     fs%bottom_state(i,1)=zone(i)
-    fs%shear_velocity(i)=zone(i)
+    fs%zone_number(i)=zone(i)
     !qsim_variables%zone_number(i)=zone(i)
   end do ! all elements on this processor
   call driver%log_message('got zone.gr3') 
@@ -1364,7 +1364,7 @@ subroutine fabm_schism_do()
 #ifdef USE_QSIM
     !!wy use first bottom state variable to store zone number (bottom_source needs to be zero !!)
     fs%bottom_state(i,1)=zone(i)
-    fs%shear_velocity(i)=zone(i)
+    fs%zone_number(i)=zone(i)
 #endif
     
     flx_bt(istart:istart+fs%nvar-1,i) = -rhs2d ! positive into sediment
@@ -1929,10 +1929,10 @@ subroutine link_environmental_data(self, rc)
   call driver%log_message('linked scalar standard variable "number_of_days_since_start_of_the_year"')
   
 #ifdef USE_QSIM
-  horizontal_id = self%model%get_horizontal_variable_id(qsim_variables%shear_velocity)
-  call self%model%link_horizontal_data(horizontal_id,self%shear_velocity)
-  call driver%log_message('link qsim_variables%shear_velocity to self%shear_velocity as zone')
-  print*,'shear_velocity=',self%shear_velocity(1:40)
+  horizontal_id = self%model%get_horizontal_variable_id(qsim_variables%zone_number)
+  call self%model%link_horizontal_data(horizontal_id,self%zone_number)
+  call driver%log_message('link qsim_variables%zone_number to self%zone_number as zone')
+  print*,'zone_number=',self%zone_number(1:40)
 #endif
 
 #endif
