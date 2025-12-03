@@ -30,7 +30,7 @@ if(USE_FABM)
   endif()
   ######## QSim ########
   if (USE_QSIM)
-    message(STATUS "\n### USE_QSIM in src/Fabm/CMakeList.txt")
+    # message(STATUS "\n### USE_QSIM in src/Fabm/CMakeList.txt")
     add_definitions("-DUSE_QSIM")
     # ./cmake/Fabm/fabm_src/models/uzweijens/qsim_standard_variables.mod
     # /beegfs/home/Wyrwa/SCHISM/schism/cmake/Fabm/fabm_src/models/uzweijens
@@ -41,6 +41,5 @@ if(USE_FABM)
   #set_property(TARGET fabm_schism PROPERTY Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/modules)
   #message(STATUS "fabm_schism dependencies: core ${FABM_LIBRARIES}")
   target_link_libraries(fabm_schism ${FABM_LIBRARIES} core)
-  
   
 endif(USE_FABM)

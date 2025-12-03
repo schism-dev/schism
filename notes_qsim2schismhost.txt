@@ -1,0 +1,17 @@
+
+wenn in
+ ~/SCHISM/schism/src/Fabm/CMakeLists.txt
+    set(FABM_INCLUDE_DIRS ${FABM_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR}/fabm_src/models/uzweijens)
+geht auch   use qsim_standard_variables
+in ~/SCHISM/schism/src/Fabm/fabm_schism.F90
+
+wenn in
+Wyrwa@phil-hpc.hpc:~/SCHISM/schism/src/Fabm/CMakeLists.txt | in ~/SCHISM/schism/src/QSim/CMakeLists.txt nützt es nix
+    add_definitions("-DUSE_QSIM")
+dann ist in ~/SCHISM/schism/src/Fabm/fabm_schism.F90
+#ifdef USE_QSIM verfügbar 
+und Ausgabe bestätigt:
+FABM/SCHISM: fabm_schism_init_stage2 using QSim
+
+cmake command in:
+cmake/SCHISM.local.phil.bfg

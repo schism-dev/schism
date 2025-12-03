@@ -1,11 +1,10 @@
+
 ### BfG HPC phil
 #  Set the base name of the executable.
 #  The main reason for this is to include something like a cluster/architecture name.
 #  Do not add the file extension (none for linux, .exe for Windows etc)
 #  or the list of enabled modules, both of which will be automatically appended.
 set (SCHISM_EXE_BASENAME pschism_bfg CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
-
-
 
 ##########################  LOCATIONS #########################################################
 #
@@ -59,16 +58,6 @@ set(CMAKE_Fortran_FLAGS_RELEASE "-g " CACHE STRING "Fortran flags" FORCE)
 ###MPI_VERSION cannot be set here; use -DMPIVERSION=XX in cmake cmd instead
 #set(MPI_VERSION CACHE STRING  "1")
 
-###FABM usage ### nimmt er irgendwie nicht ???
-#set( USE_FABM ON   CACHE BOOLEAN "FABM BGC model interface")
-#If FABM is on, need to set FABM_BASE
-#set(FABM_BASE /beegfs/home/Wyrwa/FABM/fabm4schism)
-#set(FABM_EXTRA_INSTITUTES uzweijens)
-#set(FABM_UZWEIJENS_BASE ../src/QSim)
-# does not work # cmake -C ../cmake/SCHISM.local.phil.bfg -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
-# cmake -C ../cmake/SCHISM.local.phil.bfg ../src/ # does not work ???
-# cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg ../src/ # does not work ???
-
 ### QSim
 set (USE_QSIM OFF CACHE BOOLEAN "BfG water quality model")
 
@@ -77,13 +66,14 @@ set (USE_QSIM OFF CACHE BOOLEAN "BfG water quality model")
 # Author: Jorn Bruggeman <jorn@bolding-bruggeman.com>
 # Date: 03.07.2025 15:00:55
 # from: https://github.com/fabm-model/fabm.git
+################################################################################################# notes
 #
 # compile:
 # clean: Wyrwa@phil-hpc.hpc:~/SCHISM/github_schism17okt25/cmake> rm CMakeCache.txt
 # sync:  Wyrwa@phil-hpc.hpc:~/SCHISM/github_schism17okt25/entwicklung> rsync -va . /beegfs/home/Wyrwa/SCHISM/github_schism17okt25
-# cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
 # cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_QSIM=ON -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
-# cmake --build .
+# cmake --build .  | or: make pschism
 #
-# USE_QSIM geht nicht ??? # cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_QSIM=ON -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
-#
+# ohne QSim:
+# cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
+################################################################################################# notes
