@@ -549,7 +549,7 @@ subroutine ecosystem(it)
           db_PR(id)  =db_PR(id)+dzb*sum(PR(:,k));           db_oNit(id)=db_oNit(id)+dzb*o2n*rNit(k)*NH4(k)
           db_oDOC(id)=db_oDOC(id)+dzb*o2c*rKHR(k)*DOC(k);   db_oCOD(id)=db_oCOD(id)+dzb*rKCOD(k)*COD(k)
           db_oGP(id) =db_oGP(id)+dzb*o2c*sum((1.3-0.3*fPN(:,k))*GP(:,k))
-          db_oMT(id) =db_oMT(id)+dzb*o2c*sum(((1.0-sum(FCM(:,1:4)))*DOX(k)/(DOX(k)+KhDO(:)))*MT(:,k))
+          db_oMT(id) =db_oMT(id)+dzb*o2c*sum(((1.0-sum(FCM(:,1:4),dim=2))*DOX(k)/(DOX(k)+KhDO(:)))*MT(:,k))
           db_Denit(id)=db_Denit(id)+dzb*dn2c*rDenit(k)*DOC(k)
 
           if(idbg(1)==2) then
