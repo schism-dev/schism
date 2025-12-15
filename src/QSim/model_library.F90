@@ -4,6 +4,7 @@ module uzweijens_model_library
 
    use uzweijens_qsim_age
    use uzweijens_qsim_tracerzone
+   use uzweijens_qsim_decay
    ! Add use statements for new models here
 
    implicit none
@@ -28,6 +29,7 @@ contains
       select case (name)
       case ('qsim_age'); allocate (type_uzweijens_qsim_age::model)
       case ('qsim_tracerzone'); allocate (type_uzweijens_qsim_tracerzone::model)
+      case ('qsim_decay'); allocate (type_uzweijens_qsim_decay::model)
       ! Add case statements for new models here
       end select
 

@@ -1,0 +1,142 @@
+./test/unittest/Hydro/CMakeLists.txt
+./test/unittest/CMakeLists.txt
+./src/EcoSim/CMakeLists.txt
+./src/Multi_ice/CMakeLists.txt
+./src/Fabm/CMakeLists.txt
+./src/BMI/CMakeLists.txt
+./src/Sed2d/CMakeLists.txt
+./src/ICM/CMakeLists.txt
+./src/ParMetis-4.0.3.cray/CMakeLists.txt
+./src/CMakeLists.txt
+./src/ParMetis-4.0.3/libparmetis/CMakeLists.txt
+./src/ParMetis-4.0.3/CMakeLists.txt
+./src/ParMetis-4.0.3/metis/CMakeLists.txt
+./src/ParMetis-4.0.3/metis/include/CMakeLists.txt
+./src/ParMetis-4.0.3/metis/programs/CMakeLists.txt
+./src/ParMetis-4.0.3/metis/libmetis/CMakeLists.txt
+./src/ParMetis-4.0.3/metis/GKlib/test/CMakeLists.txt
+./src/ParMetis-4.0.3/metis/GKlib/CMakeLists.txt
+./src/ParMetis-4.0.3/include/CMakeLists.txt
+./src/ParMetis-4.0.3/programs/CMakeLists.txt
+./src/Driver/CMakeLists.txt
+./src/COSINE/CMakeLists.txt
+./src/Core/CMakeLists.txt
+./src/QSim/CMakeLists.txt
+./src/QSim/template/CMakeLists.txt
+./src/WW3/CMakeLists.txt
+./src/Ice/CMakeLists.txt
+./src/metis-5.1.0/CMakeLists.txt
+./src/metis-5.1.0/include/CMakeLists.txt
+./src/metis-5.1.0/libmetis/CMakeLists.txt
+./src/metis-5.1.0/programs/CMakeLists.txt
+./src/metis-5.1.0/GKlib/CMakeLists.txt
+./src/metis-5.1.0/GKlib/test/CMakeLists.txt
+./src/FIB/CMakeLists.txt
+./src/Utility/Grid_Scripts/CMakeLists.txt
+./src/Utility/Post-Processing-Fortran/CMakeLists.txt
+./src/Utility/Combining_Scripts/CMakeLists.txt
+./src/Utility/UtilLib/CMakeLists.txt
+./src/Utility/Pre-Processing/CMakeLists.txt
+./src/Utility/Gen_Hotstart/CMakeLists.txt
+./src/Utility/ArcGIS/CMakeLists.txt
+./src/Utility/Particle_Tracking/CMakeLists.txt
+./src/Utility/CMakeLists.txt
+./src/Utility/Tides/CMakeLists.txt
+./src/Utility/OneWayNestScripts/CMakeLists.txt
+./src/WWMIII/CMakeLists.txt
+./src/Sediment/CMakeLists.txt
+./src/Hydro/CMakeLists.txt
+------------------------------------------------------
+/beegfs/home/Wyrwa/FABM/fabm4schism/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/drivers/0d/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/drivers/python/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/nersc/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/su/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/bb/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/msi/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/python/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/iow/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/selma/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/gotm/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/hzg/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/template/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/csiro/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/jrc/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/pml/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/akvaplan/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/uhh/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/metu/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/examples/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/examples/particle/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/au/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/models/niva/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/c/CMakeLists.txt
+/beegfs/home/Wyrwa/FABM/fabm4schism/src/yaml/CMakeLists.txt
+------------------------------------------------------
+Wyrwa@phil-hpc.hpc:~/SCHISM/schism> wc -l */*/*Lists.txt
+   27 cmake/metis/CMakeLists.txt
+  392 entwicklung/src/CMakeLists.txt
+   14 src/BMI/CMakeLists.txt
+  154 src/Core/CMakeLists.txt
+   16 src/COSINE/CMakeLists.txt
+   50 src/Driver/CMakeLists.txt
+    5 src/EcoSim/CMakeLists.txt
+   39 src/Fabm/CMakeLists.txt
+   16 src/FIB/CMakeLists.txt
+   58 src/Hydro/CMakeLists.txt
+   14 src/Ice/CMakeLists.txt
+    8 src/ICM/CMakeLists.txt
+   27 src/metis-5.1.0/CMakeLists.txt
+   24 src/Multi_ice/CMakeLists.txt
+   44 src/ParMetis-4.0.3/CMakeLists.txt
+    0 src/ParMetis-4.0.3.cray/CMakeLists.txt
+   19 src/QSim/CMakeLists.txt
+   11 src/Sed2d/CMakeLists.txt
+   16 src/Sediment/CMakeLists.txt
+   11 src/Utility/CMakeLists.txt
+   16 src/WW3/CMakeLists.txt
+   38 src/WWMIII/CMakeLists.txt
+    6 test/unittest/CMakeLists.txt
+ 1005 insgesamt
+   13 cmake/metis/GKlib/test/CMakeLists.txt
+   13 src/metis-5.1.0/GKlib/test/CMakeLists.txt
+   24 src/ParMetis-4.0.3/metis/GKlib/CMakeLists.txt
+    3 src/ParMetis-4.0.3/metis/include/CMakeLists.txt
+   16 src/ParMetis-4.0.3/metis/libmetis/CMakeLists.txt
+   31 src/ParMetis-4.0.3/metis/programs/CMakeLists.txt
+100 insgesamt
+
+Wyrwa@phil-hpc.hpc:~/FABM/fabm4schism> wc -l *Lists.txt
+124 CMakeLists.txt
+248 src/CMakeLists.txt
+  9 src/c/CMakeLists.txt
+ 21 src/yaml/CMakeLists.txt
+ 30 insgesamt
+   89 ./src/drivers/0d/CMakeLists.txt
+   47 ./src/drivers/python/CMakeLists.txt
+   13 ./src/models/akvaplan/CMakeLists.txt
+   12 ./src/models/au/CMakeLists.txt
+   14 ./src/models/bb/CMakeLists.txt
+   10 ./src/models/csiro/CMakeLists.txt
+   25 ./src/models/examples/CMakeLists.txt
+   13 ./src/models/gotm/CMakeLists.txt
+    9 ./src/models/hzg/CMakeLists.txt
+   12 ./src/models/iow/CMakeLists.txt
+   11 ./src/models/jrc/CMakeLists.txt
+    9 ./src/models/metu/CMakeLists.txt
+   10 ./src/models/msi/CMakeLists.txt
+   10 ./src/models/nersc/CMakeLists.txt
+   18 ./src/models/niva/CMakeLists.txt
+   11 ./src/models/pml/CMakeLists.txt
+   39 ./src/models/python/CMakeLists.txt
+   12 ./src/models/selma/CMakeLists.txt
+   22 ./src/models/su/CMakeLists.txt
+    6 ./src/models/template/CMakeLists.txt
+   22 ./src/models/uhh/CMakeLists.txt
+  414 insgesamt
+6 ./src/models/examples/particle/CMakeLists.txt
+
+ 822 lines FABM
+1105 lines SCHISM
+1927 total lines in 74 files

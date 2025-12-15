@@ -1,0 +1,90 @@
+
+
+wenn in ~/SCHISM/schism/src/Fabm/CMakeLists.txt
+    set(FABM_INCLUDE_DIRS ${FABM_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR}/fabm_src/models/uzweijens)
+geht auch   use qsim_standard_variables
+in ~/SCHISM/schism/src/Fabm/fabm_schism.F90
+
+wenn in
+Wyrwa@phil-hpc.hpc:~/SCHISM/schism/src/Fabm/CMakeLists.txt | in ~/SCHISM/schism/src/QSim/CMakeLists.txt nützt es nix
+    add_definitions("-DUSE_QSIM")
+dann ist in ~/SCHISM/schism/src/Fabm/fabm_schism.F90
+#ifdef USE_QSIM verfügbar 
+und Ausgabe bestätigt:
+FABM/SCHISM: fabm_schism_init_stage2 using QSim
+
+
+Wyrwa@phil-hpc.hpc:~/SCHISM/schism> grep -inr add_definitions
+test/unittest/CMakeLists.txt:4:add_definitions(${C_PREPROCESS_FLAG} -DSELFE_ASSERTIVE)   # make sure the preprocessor is on, assertion is a macro
+cmake/README:142:# to pass the option to the compiler using the cmake add_definitions. Good examples to follow include MPIVERSION, USE_TIMER
+src/Fabm/CMakeLists.txt:11:      add_definitions(-D_FABM_API_VERSION_=0)
+src/CMakeLists.txt:27:add_definitions("-DSCHISM")
+src/CMakeLists.txt:113:add_definitions(${MPI_Fortran_COMPILE_FLAGS})
+src/CMakeLists.txt:119:add_definitions(${MPI_C_COMPILE_FLAGS})
+src/ParMetis-4.0.3/metis/programs/CMakeLists.txt:31:add_definitions(-DSVNINFO="${SVNREV}")
+src/metis-5.1.0/programs/CMakeLists.txt:31:add_definitions(-DSVNINFO="${SVNREV}")
+src/Utility/Post-Processing-Fortran/CMakeLists.txt:1:add_definitions(${C_PREPROCESS_FLAG})
+src/Utility/Combining_Scripts/CMakeLists.txt:2:add_definitions(${C_PREPROCESS_FLAG})
+src/WWMIII/CMakeLists.txt:31:  add_definitions(-DNCDF -DST42 -DWWM_SOLVER)
+
+Wyrwa@phil-hpc.hpc:~/SCHISM/schism> grep -inr USE_FABM
+mk/include_modules:113:#  USE_FABM = yes
+cmake/SCHISM.local.build:57:set( USE_FABM OFF   CACHE BOOLEAN "FABM BGC model interface")
+cmake/SCHISM.local.bmi_serial:57:set( USE_FABM OFF   CACHE BOOLEAN "FABM BGC model interface")
+cmake/CMakeCache.txt:679:USE_FABM:BOOL=ON
+Übereinstimmungen in Binärdatei cmake/lib/libfabm_schism.a
+cmake/Driver/CMakeFiles/pschism.dir/DependInfo.cmake:25:  "USE_FABM"
+cmake/Driver/CMakeFiles/pschism.dir/flags.make:5:Fortran_DEFINES = -DBLD_STANDALONE -DBUILD_TOOLS -DMPIVERSION=2 -DSCHISM -DSH_MEM_COMM -DUSE_BULK_FAIRALL -DUSE_FABM -DUSE_HYDRO -DUSE_SCHISM -D_FABM_NO_CONTIGUOUS_
+Übereinstimmungen in Binärdatei cmake/bin/pschism_bfg_FABM_BULK_FAIRALL_BLD_STANDALONE_SH_MEM_COMM_BUILD_TOOLS_TVD-VL
+cmake/Hydro/CMakeFiles/hydro.dir/flags.make:5:Fortran_DEFINES = -DBLD_STANDALONE -DBUILD_TOOLS -DMPIVERSION=2 -DSCHISM -DSH_MEM_COMM -DTVD_VL -DUSE_BULK_FAIRALL -DUSE_FABM -DUSE_HYDRO -DUSE_SCHISM -D_FABM_NO_CONTIGUOUS_
+cmake/Hydro/CMakeFiles/hydro.dir/DependInfo.cmake:35:  "USE_FABM"
+cmake/SCHISM.local.build.example:38:set( USE_FABM OFF  CACHE BOOLEAN "FABM BGC model interface")
+cmake/SCHISM.local.phil.bfg:63:#set( USE_FABM ON   CACHE BOOLEAN "FABM BGC model interface")
+cmake/SCHISM.local.phil.bfg:68:# does not work # cmake -C ../cmake/SCHISM.local.phil.bfg -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
+cmake/SCHISM.local.phil.bfg:84:# cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
+cmake/SCHISM.local.phil.bfg:85:# cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_QSIM=ON -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
+cmake/SCHISM.local.phil.bfg:88:# USE_QSIM geht nicht ??? # cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_QSIM=ON -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
+cmake/Fabm/CMakeFiles/fabm_schism.dir/DependInfo.cmake:25:  "USE_FABM"
+cmake/Fabm/CMakeFiles/fabm_schism.dir/flags.make:5:Fortran_DEFINES = -DBLD_STANDALONE -DBUILD_TOOLS -DMPIVERSION=2 -DSCHISM -DSH_MEM_COMM -DUSE_BULK_FAIRALL -DUSE_FABM -DUSE_HYDRO -DUSE_SCHISM -D_FABM_NO_CONTIGUOUS_
+cmake/QSim/CMakeFiles/fabm_models_uzweijens.dir/DependInfo.cmake:28:  "USE_FABM"
+cmake/QSim/CMakeFiles/fabm_models_uzweijens.dir/flags.make:5:Fortran_DEFINES = -DBLD_STANDALONE -DBUILD_TOOLS -DMPIVERSION=2 -DSCHISM -DSH_MEM_COMM -DUSE_BULK_FAIRALL -DUSE_FABM -DUSE_HYDRO -DUSE_QSIM -DUSE_SCHISM -D_FABM_NO_CONTIGUOUS_
+cmake/SCHISM.local.bmi_parallel:58:set( USE_FABM OFF   CACHE BOOLEAN "FABM BGC model interface")
+cmake/Core/CMakeFiles/core.dir/DependInfo.cmake:32:  "USE_FABM"
+cmake/Core/CMakeFiles/core.dir/flags.make:5:Fortran_DEFINES = -DBLD_STANDALONE -DBUILD_TOOLS -DMPIVERSION=2 -DSCHISM -DSH_MEM_COMM -DUSE_BULK_FAIRALL -DUSE_FABM -DUSE_HYDRO -DUSE_SCHISM
+docs/modules/fabm.md:18:cmake  [...] -DUSE_FABM=ON -DFABM_BASE=/your/path/to/fabm/
+conda.recipe/build.sh:40:    -DUSE_FABM=$FABM \
+src/Fabm/fabm_schism.F90:398:#ifdef USE_FABM
+src/Fabm/fabm_schism.F90:399:  call driver%log_message('fabm_schism_init_stage2 USE_FABM')
+src/Fabm/fabm_schism.F90:400:  print*,'fabm_schism_init_stage2 USE_FABM'
+src/Fabm/CMakeLists.txt:5:if(USE_FABM)
+src/Fabm/CMakeLists.txt:34:endif(USE_FABM)
+src/Makefile:271:ifdef USE_FABM
+src/Makefile:272:  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_FABM
+src/CMakeLists.txt:230:add_module(Fabm     USE_FABM  OFF)
+src/CMakeLists.txt:347:    set(GOTM_USE_FABM OFF CACHE BOOL "use GOTM without FABM")
+src/Core/scribe_io.F90:664:#ifdef USE_FABM
+src/Core/scribe_io.F90:683:#endif/*USE_FABM*/
+src/Core/misc_modules.F90:150:#ifdef USE_FABM
+src/Core/misc_modules.F90:157:#ifdef USE_FABM
+src/Makefile.aron:129:ifdef USE_FABM
+src/Makefile.aron:130:  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_FABM
+src/Hydro/schism_finalize.F90:24:#ifdef USE_FABM
+src/Hydro/schism_finalize.F90:155:#ifdef USE_FABM
+src/Hydro/schism_step.F90:44:#ifdef USE_FABM
+src/Hydro/schism_step.F90:256:#ifdef USE_FABM
+src/Hydro/schism_step.F90:268:#ifdef USE_FABM
+src/Hydro/schism_step.F90:7673:#ifdef USE_FABM
+src/Hydro/schism_step.F90:9120:#ifdef USE_FABM
+src/Hydro/schism_step.F90:9698:#ifdef USE_FABM
+src/Hydro/schism_step.F90:9991:#ifdef USE_FABM
+src/Hydro/schism_step.F90:10176:#ifdef USE_FABM
+src/Hydro/schism_init.F90:81:#ifdef USE_FABM
+src/Hydro/schism_init.F90:410:#ifdef USE_FABM
+src/Hydro/schism_init.F90:5079:#ifdef USE_FABM
+src/Hydro/schism_init.F90:5260:!#ifdef USE_FABM
+src/Hydro/schism_init.F90:6292:#ifdef USE_FABM
+src/Hydro/schism_init.F90:6679:#ifdef USE_FABM
+src/Hydro/schism_init.F90:6910:#ifdef USE_FABM
+src/Hydro/schism_init.F90:6921:#endif/*USE_FABM*/
+src/Hydro/CMakeLists.txt:27:if(USE_FABM)
+
