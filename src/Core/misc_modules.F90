@@ -65,11 +65,11 @@
       real(rkind),intent(out) :: varvalue1
       character(len=2),intent(out) :: varvalue2
       integer,optional,intent(in) :: ndim1
-      integer,optional,intent(out) :: iarr1(10000)
-      real(rkind),optional,intent(out) :: arr1(10000)
+      integer,optional,intent(out) :: iarr1(:)
+      real(rkind),optional,intent(out) :: arr1(:)
 
       character(len=300) :: line_str,str_tmp,str_tmp2
-      integer :: lstr_tmp,lstr_tmp2,line,len_str,loc,loc2
+      integer :: lstr_tmp,lstr_tmp2,line,len_str,loc,loc2,ndim
 
       str_tmp2=adjustl(varname)
       lstr_tmp2=len_trim(str_tmp2)
@@ -121,18 +121,19 @@
             if(myrank==0) write(99,*)varname,' = ',real(varvalue1)
 #endif
           else !arrays
-            if(.not.present(ndim1)) call parallel_abort('get_param: ndim1 not found')
-            if(ndim1>10000) call parallel_abort('get_param: ndim1>10000')
-!'
+            if(present(ndim1)) then
+              ndim = ndim1
+            else
+              ndim = 0
+              call parallel_abort('get_param: ndim1 not found')
+            endif
 
             if(vartype==3) then !integer array
               if(.not.present(iarr1)) call parallel_abort('get_param: iarr1 not found')
-!'
-              read(str_tmp2,*)iarr1(1:ndim1)
+              read(str_tmp2,*)iarr1(1:ndim)
             else if(vartype==4) then !double array
               if(.not.present(arr1)) call parallel_abort('get_param: arr1 not found')
-!'
-              read(str_tmp2,*)arr1(1:ndim1)
+              read(str_tmp2,*)arr1(1:ndim)
             else
               write(errmsg,*)'get_param: unknown type:',vartype
               call parallel_abort(errmsg)
