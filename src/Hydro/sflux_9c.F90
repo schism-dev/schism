@@ -2213,6 +2213,7 @@
      &                           file_julian_date, max_file_times, &
      &                           num_file_times)
 
+        use mpi
         use schism_glbl, only : rkind,in_dir,out_dir,len_in_dir,len_out_dir
         use schism_msgp, only : myrank,itype,rtype,comm,parallel_abort
         use netcdf

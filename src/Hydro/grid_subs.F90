@@ -30,6 +30,7 @@ subroutine aquire_vgrid
 !-------------------------------------------------------------------------------
 ! Aquire vertical grid data from vgrid.in
 !-------------------------------------------------------------------------------
+  use mpi
   use schism_glbl
   use schism_msgp
   implicit none
