@@ -5,7 +5,6 @@ module uzweijens_qsim_decay
    use fabm_types
    use qsim_standard_variables
    use fabm_driver, only: type_base_driver, driver
-   use schism_glbl, only: time_stamp,it_main, dt
 
    implicit none
    private
@@ -30,7 +29,9 @@ contains
       ! Register "planktische Variable" here.
       call self%register_state_variable(self%id_tracer, "tracer", "-", "zone marker")
       call driver%log_message('initialize_decay - register_state_variable(self%id_tracer')
-      
+      ! call self%register_state_dependency(self%id_tracer, "tracer", "-", "zone marker")
+      ! call driver%log_message('initialize_decay - register_state_dependency(self%id_tracer')
+
       ! parameters
       call self%get_parameter(self%decay_rate, "decay_rate","-","rate of tracer decay")
       call driver%log_message('initialize_decay - get_parameter(self%decay_rate')
