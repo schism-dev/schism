@@ -178,15 +178,10 @@ subroutine partition_hgrid
 ! graph partitioning routine applied to dual-graph constructed from elements.
 ! > vertical grid must be aquired prior to calling
 !-------------------------------------------------------------------------------
-!#ifdef USE_MPIMODULE
-!  use mpi
-!#endif
+  use mpi
   use schism_glbl
   use schism_msgp
   implicit none
-!#ifndef USE_MPIMODULE
-  include 'mpif.h'
-!#endif
 
   ! ParMeTiS
   integer :: wgtflag,numflag,ncon,ndims,options(0:2)
@@ -570,15 +565,11 @@ subroutine aquire_hgrid(full_aquire)
 ! > aquire boundary segments and construct boundary segment mappings
 !-------------------------------------------------------------------------------
 !#ifdef USE_MPIMODULE
-!  use mpi
-!#endif
+  use mpi
   use schism_glbl
   use schism_msgp
   use schism_io
   implicit none
-!#ifndef USE_MPIMODULE
-  include 'mpif.h'
-!#endif
   logical,intent(in) :: full_aquire  ! Aquire and construct all tables
   integer :: i,j,k,l,ii,jj,irank,ip,jp,ie,je,ic,iegb,jegb,ngb1,ngb2,ipgb,isgb,icount,new,id,isd
   integer,allocatable :: ibuf(:),isbuf(:),irbuf(:)

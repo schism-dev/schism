@@ -30,9 +30,7 @@
 !===============================================================================
 module schism_msgp
 
-!#ifdef USE_MPIMODULE
-!  use mpi
-!#endif
+  use mpi
   use schism_glbl, only : rkind, llist_type,nvrt, &
                        &ne_global,ne,neg,nea,ielg,iegl,iegrpv,elnode,elside, &
                        &np_global,np,npg,npa,iplg,ipgl,nne,indel,dp, &
@@ -45,9 +43,6 @@ module schism_msgp
 #endif
 
   implicit none
-!#ifndef USE_MPIMODULE
-  include 'mpif.h'
-!#endif
   private  !Default scope is private
 
   !-----------------------------------------------------------------------------

@@ -28,9 +28,7 @@
 !     Do upwind and TVD transport
       subroutine do_transport_tvd_imp(it,ntr,difnum_max_l) !,nvrt1,npa1,dfh1)
 
-!#ifdef USE_MPIMODULE
-!      use mpi
-!#endif
+      use mpi
       use schism_glbl
       use schism_msgp
       use misc_modules
@@ -39,9 +37,6 @@
 !      USE flmud_pool, only: wsink !wsink([],nvrt,npa)>=0 (positive down)
 !#endif /*USE_TIMOR*/
       implicit none
-!#ifndef USE_MPIMODULE
-      include 'mpif.h'
-!#endif
 
       integer, intent(in) :: it !time stepping #; info only
 !      logical, intent(in) :: ltvd !true if TVD is used (must be for all tracers) - always true in this routine

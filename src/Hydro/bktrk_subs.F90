@@ -30,15 +30,10 @@ subroutine init_inter_btrack
 !-------------------------------------------------------------------------------
 ! Initialize data-types for inter-subdomain backtracking.
 !-------------------------------------------------------------------------------
-!#ifdef USE_MPIMODULE
-!  use mpi
-!#endif
+  use mpi
   use schism_glbl
   use schism_msgp
   implicit none
-!#ifndef USE_MPIMODULE
-  include 'mpif.h'
-!#endif
   integer :: blockl(2),types(2),nmm
 #if MPIVERSION==1
   integer :: displ(2),base
@@ -107,15 +102,10 @@ subroutine inter_btrack(itime,nbt,btlist)
 ! Output:
 !   btlist: list of completed inter-subdomain trajectories; not in original order
 !-------------------------------------------------------------------------------
-!#ifdef USE_MPIMODULE
-!  use mpi
-!#endif
+  use mpi
   use schism_glbl
   use schism_msgp
   implicit none
-!#ifndef USE_MPIMODULE
-  include 'mpif.h'
-!#endif
 
   integer,intent(in) :: itime
   integer,intent(in) :: nbt

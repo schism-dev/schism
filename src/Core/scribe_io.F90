@@ -35,12 +35,12 @@
     module scribe_io
     !Limit global vars to those essentials for communication, as scribe ranks do
     !not have access to other vars read in from .nml etc
+    use mpi
     use schism_glbl, only : rkind,errmsg,natrm,max_ncoutvar
     use schism_msgp, only : comm_schism,comm_scribe,nproc_schism,nproc_scribe,nscribes, &
   &myrank_scribe,myrank_schism,rtype,itype,parallel_abort
     use netcdf
     implicit none
-    include 'mpif.h'
     private
 
     integer,save :: node_dim,nele_dim,nedge_dim,four_dim,nv_dim, &
@@ -101,46 +101,46 @@
       endif !myrank_scribe
 
       !Get basic info
-      call mpi_recv(dt,1,rtype,0,100,comm_schism,rrqst,ierr)
+      call mpi_recv(dt,1,rtype,0,100,comm_schism,MPI_STATUS_IGNORE,ierr)
       if(ierr/=MPI_SUCCESS) call parallel_abort('scribe_init: recv error')
-      call mpi_recv(nspool,1,itype,0,101,comm_schism,rrqst,ierr)
-      call mpi_recv(ncount_2dnode,1,itype,0,102,comm_schism,rrqst,ierr)
-      call mpi_recv(nc_out,1,itype,0,103,comm_schism,rrqst,ierr)
-      call mpi_recv(nvrt,1,itype,0,104,comm_schism,rrqst,ierr)
-      call mpi_recv(np_global,1,itype,0,105,comm_schism,rrqst,ierr)
-      call mpi_recv(ne_global,1,itype,0,106,comm_schism,rrqst,ierr)
-      call mpi_recv(ns_global,1,itype,0,107,comm_schism,rrqst,ierr)
-      call mpi_recv(ihfskip,1,itype,0,108,comm_schism,rrqst,ierr)
-      call mpi_recv(counter_out_name,1,itype,0,109,comm_schism,rrqst,ierr)
+      call mpi_recv(nspool,1,itype,0,101,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(ncount_2dnode,1,itype,0,102,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(nc_out,1,itype,0,103,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(nvrt,1,itype,0,104,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(np_global,1,itype,0,105,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(ne_global,1,itype,0,106,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(ns_global,1,itype,0,107,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(ihfskip,1,itype,0,108,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(counter_out_name,1,itype,0,109,comm_schism,MPI_STATUS_IGNORE,ierr)
       if(counter_out_name>max_ncoutvar) call parallel_abort('scribe_init: increase out_name dim')
-      call mpi_recv(iths,1,itype,0,110,comm_schism,rrqst,ierr)
-      call mpi_recv(ntime,1,itype,0,111,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_hydro,40,itype,0,112,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_wwm,40,itype,0,113,comm_schism,rrqst,ierr)
+      call mpi_recv(iths,1,itype,0,110,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(ntime,1,itype,0,111,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_hydro,40,itype,0,112,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_wwm,40,itype,0,113,comm_schism,MPI_STATUS_IGNORE,ierr)
       !Make sure char len is 20 in schism_init and nc_writeout2D()!
-      call mpi_recv(out_name,counter_out_name*20,MPI_CHAR,0,114,comm_schism,rrqst,ierr)
-      call mpi_recv(ncount_2delem,1,itype,0,115,comm_schism,rrqst,ierr)
-      call mpi_recv(ncount_2dside,1,itype,0,116,comm_schism,rrqst,ierr)
-      call mpi_recv(ncount_3dnode,1,itype,0,117,comm_schism,rrqst,ierr)
-      call mpi_recv(ncount_3dside,1,itype,0,118,comm_schism,rrqst,ierr)
-      call mpi_recv(ncount_3delem,1,itype,0,119,comm_schism,rrqst,ierr)
-      call mpi_recv(iout_23d,counter_out_name,itype,0,120,comm_schism,rrqst,ierr)
-      call mpi_recv(h0,1,rtype,0,121,comm_schism,rrqst,ierr)
-      call mpi_recv(ntrs,natrm,itype,0,122,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_cos,20,itype,0,124,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_fib,5,itype,0,125,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_sed2d,14,itype,0,126,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_ice,10,itype,0,127,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_ana,20,itype,0,128,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_marsh,2,itype,0,129,comm_schism,rrqst,ierr)
+      call mpi_recv(out_name,counter_out_name*20,MPI_CHAR,0,114,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(ncount_2delem,1,itype,0,115,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(ncount_2dside,1,itype,0,116,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(ncount_3dnode,1,itype,0,117,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(ncount_3dside,1,itype,0,118,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(ncount_3delem,1,itype,0,119,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iout_23d,counter_out_name,itype,0,120,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(h0,1,rtype,0,121,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(ntrs,natrm,itype,0,122,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_cos,20,itype,0,124,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_fib,5,itype,0,125,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_sed2d,14,itype,0,126,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_ice,10,itype,0,127,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_ana,20,itype,0,128,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_marsh,2,itype,0,129,comm_schism,MPI_STATUS_IGNORE,ierr)
 #ifdef USE_ICM
-      call mpi_recv(nout_icm_3d,2,itype,0,142,comm_schism,rrqst,ierr)
-      !call mpi_recv(nout_d3d,1,itype,0,143,comm_schism,rrqst,ierr)
+      call mpi_recv(nout_icm_3d,2,itype,0,142,comm_schism,MPI_STATUS_IGNORE,ierr)
+      !call mpi_recv(nout_d3d,1,itype,0,143,comm_schism,MPI_STATUS_IGNORE,ierr)
       !allocate(iof_icm(nout_icm))
-      !call mpi_recv(iof_icm,nout_icm,itype,0,144,comm_schism,rrqst,ierr)
+      !call mpi_recv(iof_icm,nout_icm,itype,0,144,comm_schism,MPI_STATUS_IGNORE,ierr)
 #endif
-      call mpi_recv(ics,1,itype,0,146,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_ugrid,1,itype,0,147,comm_schism,rrqst,ierr)
+      call mpi_recv(ics,1,itype,0,146,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_ugrid,1,itype,0,147,comm_schism,MPI_STATUS_IGNORE,ierr)
 
       if(myrank_scribe==0) then
         write(16,*)'Scribe ',myrank_scribe,myrank_schism,nproc_scribe,nproc_compute
@@ -156,17 +156,17 @@
       !Finish rest of recv for modules
       allocate(iof_gen(max(1,ntrs(3))),iof_age(max(1,ntrs(4))),iof_sed(3*ntrs(5)+20), &
      &iof_eco(max(1,ntrs(6))),iof_dvd(max(1,ntrs(12))))
-      call mpi_recv(iof_gen,max(1,ntrs(3)),itype,0,130,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_age,max(1,ntrs(4)),itype,0,131,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_sed,3*ntrs(5)+20,itype,0,132,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_eco,max(1,ntrs(6)),itype,0,133,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_dvd,max(1,ntrs(12)),itype,0,134,comm_schism,rrqst,ierr)
-      call mpi_recv(istart_sed_3dnode,1,itype,0,135,comm_schism,rrqst,ierr)
-      call mpi_recv(start_year,1,itype,0,136,comm_schism,rrqst,ierr)
-      call mpi_recv(start_month,1,itype,0,137,comm_schism,rrqst,ierr)
-      call mpi_recv(start_day,1,itype,0,138,comm_schism,rrqst,ierr)
-      call mpi_recv(start_hour,1,rtype,0,139,comm_schism,rrqst,ierr)
-      call mpi_recv(utc_start,1,rtype,0,140,comm_schism,rrqst,ierr)
+      call mpi_recv(iof_gen,max(1,ntrs(3)),itype,0,130,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_age,max(1,ntrs(4)),itype,0,131,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_sed,3*ntrs(5)+20,itype,0,132,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_eco,max(1,ntrs(6)),itype,0,133,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(iof_dvd,max(1,ntrs(12)),itype,0,134,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(istart_sed_3dnode,1,itype,0,135,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(start_year,1,itype,0,136,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(start_month,1,itype,0,137,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(start_day,1,itype,0,138,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(start_hour,1,rtype,0,139,comm_schism,MPI_STATUS_IGNORE,ierr)
+      call mpi_recv(utc_start,1,rtype,0,140,comm_schism,MPI_STATUS_IGNORE,ierr)
 
       !Write start time into a string for later write 
       !> @todo fix fractional start_hour and utc_start      

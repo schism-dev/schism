@@ -25,6 +25,7 @@
 !===============================================================================
 
     module schism_io
+    use mpi
     use schism_glbl
     use schism_msgp
     use netcdf
@@ -100,7 +101,6 @@
 !      use schism_glbl, only : rkind,mxtimer,wtimer
 !      use schism_msgp
       implicit none
-      include 'mpif.h'
       integer :: i
       real(rkind) :: wavg1(0:mxtimer),wavg2(0:mxtimer)
       real(rkind) :: wbuf(2,0:mxtimer)

@@ -19,6 +19,7 @@
 !-------------------------------------------------------------------------------
       subroutine schism_step(it)
 
+      use mpi
       use schism_glbl
       use schism_msgp
       use schism_io
@@ -101,9 +102,17 @@
 #endif
 
       implicit none
-!#ifndef USE_MPIMODULE
-      include 'mpif.h'
-!#endif
+
+!     Explicit interface for subroutine with optional argument
+      interface
+        subroutine savensend3D_scribe(icount,imode,ivs,nvrt0,npes,savevar1,savevar2)
+          use schism_glbl, only: rkind
+          integer, intent(in) :: imode,ivs,nvrt0,npes
+          integer, intent(inout) :: icount
+          real(rkind), intent(in) :: savevar1(nvrt0,npes)
+          real(rkind), optional, intent(in) :: savevar2(nvrt0,npes)
+        end subroutine savensend3D_scribe
+      end interface
 
       integer, intent(in) :: it
 

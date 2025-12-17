@@ -13,6 +13,7 @@
 !   limitations under the License.
 
       subroutine schism_finalize
+      use mpi
       use schism_glbl
       use schism_msgp
       use schism_io
@@ -30,7 +31,6 @@
 #endif
 
       implicit none
-      include 'mpif.h'
 
       integer :: i,iwbl_itmax_gb
       character(len=72) :: it_char

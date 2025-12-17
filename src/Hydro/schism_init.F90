@@ -20,10 +20,7 @@
 
       subroutine schism_init(iorder,indir,iths,ntime)
 
-!     Most mpi fortran compiler has mpif.h
-!#ifdef USE_MPIMODULE
-!      use mpi
-!#endif
+      use mpi
       use schism_glbl
       use schism_msgp
       use schism_io
@@ -107,8 +104,7 @@
 #endif
 
       implicit none
-      include 'mpif.h'
- 
+
       !iorder: 0: normal; 1: bypass alloc and domain decomp (in this case we
       !assume the domain decomp did not change)
       integer, intent(in) :: iorder 

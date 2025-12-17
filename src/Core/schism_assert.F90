@@ -110,10 +110,9 @@ end subroutine
 
 
 subroutine selfe_assert_impl_mpi(val,expression,file,line,required)
+use mpi
 use schism_msgp
-!use mpi
 implicit none
-include 'mpif.h'
 logical val
 logical is_init
 logical, intent(in) :: required
@@ -184,10 +183,9 @@ end subroutine
 
 
 subroutine selfe_assert_impl_serial(val,expression,file,line,required)
+use mpi
 use schism_msgp
-!use mpi
 implicit none
-include 'mpif.h'
 logical val
 logical is_init
 logical :: required

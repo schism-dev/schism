@@ -1221,7 +1221,6 @@
         use schism_glbl, only : rkind,ipgl,in_dir,out_dir,len_in_dir,len_out_dir,wind_rotate_angle
         use schism_msgp, only : myrank
         implicit none
-        include 'mpif.h'
 
 ! input/output variables
         integer :: num_nodes_out
@@ -2409,13 +2408,11 @@
       subroutine read_coord (file_name, data_name, coord, &
      &                       nx, ny)
 
+        use mpi
         use schism_glbl, only : rkind,in_dir,out_dir,len_in_dir,len_out_dir
         use schism_msgp, only : myrank,comm,parallel_abort
-!        use mpi
         use netcdf
         implicit none
-!        include 'netcdf.inc'
-        include 'mpif.h'
 
         character, intent(in) ::  file_name*50, data_name*50
         integer, intent(in) :: nx, ny
@@ -2460,13 +2457,11 @@
       subroutine read_data (file_name, data_name, data, &
      &                      nx, ny, time_num)
 
+        use mpi
         use schism_glbl, only : rkind,len_in_dir,len_out_dir,in_dir,out_dir
         use schism_msgp, only : myrank,comm,parallel_abort
-!        use mpi
         use netcdf
         implicit none
-!        include 'netcdf.inc'
-        include 'mpif.h'        
 
         character(*), intent(in) ::  file_name, data_name
         integer, intent(in) :: nx, ny, time_num

@@ -27,15 +27,10 @@ subroutine solve_jcg(mnei_p1,np1,npa1,itime,moitn,mxitn,rtol,s,x,b,bc,lbc)
 !-------------------------------------------------------------------------------
 ! Jacobi Preconditioned Conjugate Gradient for elevation-like variables.
 !-------------------------------------------------------------------------------
-!#ifdef USE_MPIMODULE
-!  use mpi
-!#endif
+  use mpi
   use schism_glbl, only : rkind,np,npa,wtimer,iplg,ipgl,nnp,indnd,errmsg
   use schism_msgp
   implicit none
-!#ifndef USE_MPIMODULE
-  include 'mpif.h'
-!#endif
   integer,intent(in) :: mnei_p1,np1,npa1 !for dimensioning only
   integer,intent(in) :: itime !for outputting/debug only
   integer,intent(in) :: moitn,mxitn    !output interval and max iterations
@@ -322,15 +317,10 @@ subroutine solve_jcg_qnon(itime,moitn,mxitn,rtol,nvrt1,mnei1,np1,npa1,ihydro2,qm
 !-------------------------------------------------------------------------------
 ! Jacobi Preconditioned Conjugate Gradient for non-hydrostatic model
 !-------------------------------------------------------------------------------
-!#ifdef USE_MPIMODULE
-!  use mpi
-!#endif
+  use mpi
   use schism_glbl !, only : rkind,np,npa,wtimer,iplg,ipgl,mnei,nnp,indnd,errmsg
   use schism_msgp
   implicit none
-!#ifndef USE_MPIMODULE
-  include 'mpif.h'
-!#endif
   integer,intent(in) :: itime !for info only
   integer,intent(in) :: moitn,mxitn    !output interval and max iterations
   integer,intent(in) :: nvrt1,mnei1,np1,npa1 !used in dimensioning arrays (=nvrt,mnei,np,npa)

@@ -86,6 +86,7 @@
 !     but since these vars are 'derived' from main state vars, this simplifies
 !     the hotstart somewhat.
 
+      use mpi
       use schism_glbl
       use schism_msgp
       use netcdf
@@ -95,8 +96,6 @@
 #endif
 
       implicit none
-
-      include 'mpif.h'
 
       real(rkind), intent(in) :: time
 
@@ -1016,16 +1015,11 @@
 !     Calculate z-coord. at a _wet_ node
 !     Search for 'ivcor' for other changes
 !-------------------------------------------------------------------------------
-!#ifdef USE_MPIMODULE
-!      use mpi
-!#endif
+      use mpi
       use schism_glbl, only: rkind,errmsg,ivcor,eta2,dp,kbp,nvrt,kz,h0,h_s, &
      &h_c,theta_b,theta_f,s_con1,sigma,ztot,cs,sigma_lcl,iplg
       use schism_msgp, only: parallel_abort
       implicit none
-!#ifndef USE_MPIMODULE
-      include 'mpif.h'
-!#endif
       integer, intent(in) :: itag,inode !tag to indicate where this routine is called from
 !      real(rkind), intent(in) :: dep,etal
       integer, intent(out) :: kbpl
@@ -1122,15 +1116,10 @@
 ! Used when resolution is fine enough.
 ! ONLY WORKS WITH PURE TRI's
 !-------------------------------------------------------------------------------
-!#ifdef USE_MPIMODULE
-!      use mpi
-!#endif
+      use mpi
       use schism_glbl
       use schism_msgp
       implicit none
-!#ifndef USE_MPIMODULE
-      include 'mpif.h'
-!#endif
       integer, intent(in) :: iths,it
 
 !     Function
@@ -1955,15 +1944,10 @@
 ! Routine to update level indices and wetting and drying.
 ! Use levels1() for better inundation if resolution is fine enough.
 !-------------------------------------------------------------------------------
-!#ifdef USE_MPIMODULE
-!      use mpi
-!#endif
+      use mpi
       use schism_glbl
       use schism_msgp
       implicit none
-!#ifndef USE_MPIMODULE
-      include 'mpif.h'
-!#endif
       integer, intent(in) :: iths,it
 
 !     Local
@@ -2417,15 +2401,10 @@
 !-------------------------------------------------------------------------------
 ! Convert side vel. to node vel. at WHOLE levels.
 !-------------------------------------------------------------------------------
-!#ifdef USE_MPIMODULE
-!      use mpi
-!#endif
+      use mpi
       use schism_glbl
       use schism_msgp
       implicit none
-!#ifndef USE_MPIMODULE
-      include 'mpif.h'
-!#endif
 
 !      integer, intent(in) :: ifltype(max(1,nope_global))
 
@@ -6803,8 +6782,8 @@
      &srqst7
       use schism_msgp, only : nscribes,nproc_schism,comm_schism,parallel_abort
 
+      use mpi
       implicit none
-      include 'mpif.h'
 
       !imode: 1(node), 2(elem), 3(side)
       !npes: resident only
