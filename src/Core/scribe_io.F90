@@ -188,19 +188,19 @@
         !systems
         do i=1,nproc_compute
           call mpi_irecv(itmp,1,itype,i-1,199,comm_schism,rrqst,ierr)
-          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          call mpi_wait(rrqst,MPI_STATUS_IGNORE,ierr)
           np(i)=itmp
         enddo !i
 
         do i=1,nproc_compute
           call mpi_irecv(itmp,1,itype,i-1,198,comm_schism,rrqst,ierr)
-          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          call mpi_wait(rrqst,MPI_STATUS_IGNORE,ierr)
           ne(i)=itmp
         enddo !i
 
         do i=1,nproc_compute
           call mpi_irecv(itmp,1,itype,i-1,197,comm_schism,rrqst,ierr)
-          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          call mpi_wait(rrqst,MPI_STATUS_IGNORE,ierr)
           ns(i)=itmp
         enddo !i
 
@@ -258,32 +258,32 @@
         !Other vars using index arrays
         do i=1,nproc_compute
           call mpi_irecv(work,np(i),rtype,i-1,193,comm_schism,rrqst,ierr)
-          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          call mpi_wait(rrqst,MPI_STATUS_IGNORE,ierr)
           xnd(iplg(1:np(i),i))=work(1:np(i))
         enddo !i
         do i=1,nproc_compute
           call mpi_irecv(work,np(i),rtype,i-1,192,comm_schism,rrqst,ierr)
-          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          call mpi_wait(rrqst,MPI_STATUS_IGNORE,ierr)
           ynd(iplg(1:np(i),i))=work(1:np(i))
         enddo !i
         do i=1,nproc_compute
           call mpi_irecv(work,np(i),rtype,i-1,191,comm_schism,rrqst,ierr)
-          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          call mpi_wait(rrqst,MPI_STATUS_IGNORE,ierr)
           dp(iplg(1:np(i),i))=work(1:np(i))
         enddo !i
         do i=1,nproc_compute
           call mpi_irecv(iwork,np(i),itype,i-1,190,comm_schism,rrqst,ierr)
-          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          call mpi_wait(rrqst,MPI_STATUS_IGNORE,ierr)
           kbp00(iplg(1:np(i),i))=iwork(1:np(i))
         enddo !i
         do i=1,nproc_compute
           call mpi_irecv(iwork,ne(i),itype,i-1,189,comm_schism,rrqst,ierr)
-          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          call mpi_wait(rrqst,MPI_STATUS_IGNORE,ierr)
           i34(ielg(1:ne(i),i))=iwork(1:ne(i))
         enddo !i
         do i=1,nproc_compute
           call mpi_irecv(iwork2,4*ne(i),itype,i-1,188,comm_schism,rrqst,ierr)
-          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          call mpi_wait(rrqst,MPI_STATUS_IGNORE,ierr)
 
           do j=1,ne(i)
             iegb=ielg(j,i)
@@ -295,7 +295,7 @@
 
         do i=1,nproc_compute
           call mpi_irecv(iwork3,2*ns(i),itype,i-1,187,comm_schism,rrqst,ierr)
-          call mpi_wait(rrqst,MPI_STATUSES_IGNORE,ierr)
+          call mpi_wait(rrqst,MPI_STATUS_IGNORE,ierr)
           do j=1,ns(i)
             isgb=islg(j,i)
             isidenode(1,isgb)=iplg(iwork3(1,j),i)

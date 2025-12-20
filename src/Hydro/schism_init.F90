@@ -2768,10 +2768,10 @@
           do i=0,nproc-1
             if(nhtsend1(i)/=0) then
 #if MPIVERSION==1
-              call mpi_type_indexed(nhtsend1(i),send_bsize,ihtsend1(1,i),rtype, &
+              call mpi_type_indexed(nhtsend1(i),send_bsize,ihtsend1(:,i),rtype, &
      &htsend_type(i),ierr)
 #elif MPIVERSION==2
-              call mpi_type_create_indexed_block(nhtsend1(i),1,ihtsend1(1,i),rtype, &
+              call mpi_type_create_indexed_block(nhtsend1(i),1,ihtsend1(:,i),rtype, &
      &htsend_type(i),ierr)
 #endif
               if(ierr/=MPI_SUCCESS) call parallel_abort('MAIN: create htsend_type',ierr)
@@ -2787,10 +2787,10 @@
           do i=0,nproc-1
             if(nhtrecv1(i)/=0) then
 #if MPIVERSION==1
-              call mpi_type_indexed(nhtrecv1(i),recv_bsize,ihtrecv1(1,i),rtype, &
+              call mpi_type_indexed(nhtrecv1(i),recv_bsize,ihtrecv1(:,i),rtype, &
      &htrecv_type(i),ierr)
 #elif MPIVERSION==2
-              call mpi_type_create_indexed_block(nhtrecv1(i),1,ihtrecv1(1,i),rtype, &
+              call mpi_type_create_indexed_block(nhtrecv1(i),1,ihtrecv1(:,i),rtype, &
      &htrecv_type(i),ierr)
 #endif
               if(ierr/=MPI_SUCCESS) call parallel_abort('MAIN: create htrecv_type',ierr)

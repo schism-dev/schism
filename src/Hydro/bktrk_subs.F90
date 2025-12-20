@@ -219,10 +219,10 @@ subroutine inter_btrack(itime,nbt,btlist)
   do inbr=1,nnbr
     if(nbtsend(inbr)/=0) then
 #if MPIVERSION==1
-      call mpi_type_indexed(nbtsend(inbr),bbtsend,ibtsend(1,inbr),bt_mpitype, &
+      call mpi_type_indexed(nbtsend(inbr),bbtsend,ibtsend(:,inbr),bt_mpitype, &
       btsend_type(inbr),ierr)
 #elif MPIVERSION==2
-      call mpi_type_create_indexed_block(nbtsend(inbr),1,ibtsend(1,inbr),bt_mpitype, &
+      call mpi_type_create_indexed_block(nbtsend(inbr),1,ibtsend(:,inbr),bt_mpitype, &
       btsend_type(inbr),ierr)
 #endif
       if(ierr/=MPI_SUCCESS) call parallel_abort('INTER_BTRACK: create btsend_type',ierr)
@@ -264,10 +264,10 @@ subroutine inter_btrack(itime,nbt,btlist)
       do j=1,nbtrecv(inbr); ibtrecv(j,inbr)=i+j-1; enddo; !displacement
       i=i+nbtrecv(inbr)
 #if MPIVERSION==1
-      call mpi_type_indexed(nbtrecv(inbr),bbtrecv,ibtrecv(1,inbr),bt_mpitype, &
+      call mpi_type_indexed(nbtrecv(inbr),bbtrecv,ibtrecv(:,inbr),bt_mpitype, &
       btrecv_type(inbr),ierr)
 #elif MPIVERSION==2
-      call mpi_type_create_indexed_block(nbtrecv(inbr),1,ibtrecv(1,inbr),bt_mpitype, &
+      call mpi_type_create_indexed_block(nbtrecv(inbr),1,ibtrecv(:,inbr),bt_mpitype, &
       btrecv_type(inbr),ierr)
 #endif
       if(ierr/=MPI_SUCCESS) call parallel_abort('INTER_BTRACK: create btrecv_type',ierr)
@@ -544,10 +544,10 @@ subroutine inter_btrack(itime,nbt,btlist)
     if(nbtsend(irank)/=0) then
       if(irank==myrank) call parallel_abort('INTER_BTRACK: self communication (1)')
 #if MPIVERSION==1
-      call mpi_type_indexed(nbtsend(irank),bbtsend,ibtsend(1,irank),bt_mpitype, &
+      call mpi_type_indexed(nbtsend(irank),bbtsend,ibtsend(:,irank),bt_mpitype, &
       btsend_type(irank),ierr)
 #elif MPIVERSION==2
-      call mpi_type_create_indexed_block(nbtsend(irank),1,ibtsend(1,irank),bt_mpitype, &
+      call mpi_type_create_indexed_block(nbtsend(irank),1,ibtsend(:,irank),bt_mpitype, &
       btsend_type(irank),ierr)
 #endif
       if(ierr/=MPI_SUCCESS) call parallel_abort('INTER_BTRACK: create btsend_type',ierr)
@@ -564,10 +564,10 @@ subroutine inter_btrack(itime,nbt,btlist)
       do j=1,nbtrecv(irank); ibtrecv(j,irank)=i+j-1; enddo; !displacement
       i=i+nbtrecv(irank)
 #if MPIVERSION==1
-      call mpi_type_indexed(nbtrecv(irank),bbtrecv,ibtrecv(1,irank),bt_mpitype, &
+      call mpi_type_indexed(nbtrecv(irank),bbtrecv,ibtrecv(:,irank),bt_mpitype, &
       btrecv_type(irank),ierr)
 #elif MPIVERSION==2
-      call mpi_type_create_indexed_block(nbtrecv(irank),1,ibtrecv(1,irank),bt_mpitype, &
+      call mpi_type_create_indexed_block(nbtrecv(irank),1,ibtrecv(:,irank),bt_mpitype, &
       btrecv_type(irank),ierr)
 #endif
       if(ierr/=MPI_SUCCESS) call parallel_abort('INTER_BTRACK: create btrecv_type',ierr)
