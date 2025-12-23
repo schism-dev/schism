@@ -809,9 +809,13 @@ if p.flag[fname]==1 and ('p7' in p.source):
    C=read(p.source,1)
    if hasattr(C,'wsm'): [C.attr(i,C.wsm.attr(i)) for i in C.wsm.attr()];  [C.attr('sho_'+i,C.sho.attr(i)) for i in C.sho.attr()] #old format
 
+   #move largest source to river head
+   sxy=C.sxy[:]; xy=gd.exy[read(p.region+'river_head_rappahannock.reg').inside(gd.exy)]
+   if len(xy)!=0: ip=C.sid[list(C.sname).index('RU5_6030_0001')]; sxy[ip]=xy[abs(xy[:,0]+1j*xy[:,1]-sxy[ip[0],0]-1j*sxy[ip[0],1]).argmax()]
+
    #find source element
-   ie=gd.ie(); sinde=unique(ie[near_pts(r_[C.sxy,C.sho_sxy],gd.exy[ie])]) #sinde is source element
-   eid=near_pts(C.sxy,gd.exy[sinde]); C.eid=array([[eid[i] for i in sid] for sid in C.sid],'O')
+   ie=gd.ie(); sinde=unique(ie[near_pts(r_[sxy,C.sho_sxy],gd.exy[ie])]) #sinde is source element
+   eid=near_pts(sxy,gd.exy[sinde]); C.eid=array([[eid[i] for i in sid] for sid in C.sid],'O')
 
    #-----------------------------------
    #watershed loading
