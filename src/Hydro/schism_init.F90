@@ -514,7 +514,7 @@
       veg_vert_scale_cd=(/(1.0d0,i=1,nbins_veg_vert+1)/) !scaling [-]
       veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
       veg_vert_scale_D=(/(1.0d0,i=1,nbins_veg_vert+1)/)
-      veg_cw=3.6d0
+      veg_cw=3.6d0 !s/m
       veg_di0=1.d-2 !m
       veg_h0=0.3d0 !m
       veg_nv0=10.d0 !/m^2
