@@ -2479,64 +2479,75 @@
       enddo !i
 !$OMP end do
 
-!     Add vertical variation to veg_alpha and compute vertical mean etc
+!...  Veg
       if(iveg/=0) then
-        if(iveg==1) then !specify vertical variation
-!$OMP     do
-          do i=1,npa
-            if(idry(i)==1) then
-              veg_alpha3D(:,i)=veg_alpha0(i)
-            else !wet
-              do k=kbp(i),nvrt
-                rl10=znl(k,i)-znl(kbp(i),i) !>=0
-                if(rl10>=veg_vert_z(nbins_veg_vert+1)) then
-                  cff1=veg_vert_scale_cd(nbins_veg_vert+1)
-                  cff2=veg_vert_scale_N(nbins_veg_vert+1)
-                  cff3=veg_vert_scale_D(nbins_veg_vert+1)
-                else
-                  ifl=0
-                  do kk=1,nbins_veg_vert
-                    if(rl10>=veg_vert_z(kk).and.rl10<=veg_vert_z(kk+1)) then
-                      zrat=(rl10-veg_vert_z(kk))/(veg_vert_z(kk+1)-veg_vert_z(kk))
-                      ifl=kk
-                      exit
-                    endif !znl
-                  enddo !kk
-                  if(ifl==0) then
-                    write(errmsg,*)'STEP: veg vert failed,',veg_vert_z
-                    call parallel_abort(errmsg) 
-                  endif
-                  cff1=veg_vert_scale_cd(ifl)*(1.d0-zrat)+veg_vert_scale_cd(ifl+1)*zrat
-                  cff2=veg_vert_scale_N(ifl)*(1.d0-zrat)+veg_vert_scale_N(ifl+1)*zrat
-                  cff3=veg_vert_scale_D(ifl)*(1.d0-zrat)+veg_vert_scale_D(ifl+1)*zrat
-                endif !rl10
-  
-                veg_alpha3D(k,i)=veg_alpha0(i)*cff1*cff2*cff3
-              enddo !k
-            endif !idry
-          enddo !i=1,npa
-!$OMP     end do
+        !Init veg_alpha3D
+!$OMP   do
+        do i=1,npa
+          veg_alpha3D(:,i)=veg_alpha0(i)
+        enddo !i
+!$OMP end do
 
-        else !Ganthy (iveg=2)
+        if(iveg>=2) then !Ganthy's flex stem option
           !Modify canopy height, diameter, and density
 !$OMP     do
           do i=1,npa
             !Make sure there is veg on this node
             if(veg_h_unbent(i)>0.d0) then
-              wtmp2=sqrt(dav(1,i)**2.d0+dav(2,i)**2.d0)*100.d0 !cm/s
-              veg_h(i)=0.72d-2*(4.657d0-0.158d0*wtmp2+0.262d0*veg_lai-0.011d0*veg_lai*wtmp2+ &
-     &0.0022d0*wtmp2*wtmp2+0.048d0*veg_lai*veg_lai)-0.00784d0
+              wtmp2=sqrt(dav(1,i)**2.d0+dav(2,i)**2.d0)
+              veg_h(i)=veg_h_unbent(i)*exp(-veg_cw*wtmp2) 
+!0.72d-2*(4.657d0-0.158d0*wtmp2+0.262d0*veg_lai-0.011d0*veg_lai*wtmp2+ &
+!     &0.0022d0*wtmp2*wtmp2+0.048d0*veg_lai*veg_lai)-0.00784d0
               veg_h(i)=max(veg_h(i),1.d-2) !impose min of 1cm
+              veg_di(i)=veg_di_unbent(i)*veg_h_unbent(i)/veg_h(i)
+              veg_nv(i)=veg_nv_unbent(i)*veg_h_unbent(i)/veg_h(i)
 
-              wtmp2=veg_cw*veg_di_unbent(i)*veg_h_unbent(i)/veg_h(i) !\phi_b
-              veg_di(i)=(veg_di_unbent(i)+wtmp2)*0.5d0
-              wtmp2=max(0.d0,veg_h_unbent(i)-veg_h(i)) !surplus height
-              veg_nv(i)=veg_nv_unbent(i)*(1.d0+wtmp2/veg_h(i))
+!              wtmp2=veg_cw*veg_di_unbent(i)*veg_h_unbent(i)/veg_h(i) !\phi_b
+!              veg_di(i)=(veg_di_unbent(i)+wtmp2)*0.5d0
+!              wtmp2=max(0.d0,veg_h_unbent(i)-veg_h(i)) !surplus height
+!              veg_nv(i)=veg_nv_unbent(i)*(1.d0+wtmp2/veg_h(i))
             endif !veg_h_unbent
             veg_alpha3D(:,i)=0.5d0*veg_di(i)*veg_nv(i)*veg_cd(i)
           enddo !i
 !$OMP     end do
-        endif !iveg
+        endif !iveg>=2
+
+!       Add vertical variation to veg_alpha and compute vertical mean 
+!$OMP   do
+        do i=1,npa
+          if(idry(i)==1) then
+            veg_alpha3D(:,i)=veg_alpha0(i)
+          else !wet
+            do k=kbp(i),nvrt
+              rl10=znl(k,i)-znl(kbp(i),i) !>=0
+              if(rl10>=veg_vert_z(nbins_veg_vert+1)) then
+                cff1=veg_vert_scale_cd(nbins_veg_vert+1)
+                cff2=veg_vert_scale_N(nbins_veg_vert+1)
+                cff3=veg_vert_scale_D(nbins_veg_vert+1)
+              else
+                ifl=0
+                do kk=1,nbins_veg_vert
+                  if(rl10>=veg_vert_z(kk).and.rl10<=veg_vert_z(kk+1)) then
+                    zrat=(rl10-veg_vert_z(kk))/(veg_vert_z(kk+1)-veg_vert_z(kk))
+                    ifl=kk
+                    exit
+                  endif !znl
+                enddo !kk
+                if(ifl==0) then
+                  write(errmsg,*)'STEP: veg vert failed,',veg_vert_z
+                  call parallel_abort(errmsg) 
+                endif
+                cff1=veg_vert_scale_cd(ifl)*(1.d0-zrat)+veg_vert_scale_cd(ifl+1)*zrat
+                cff2=veg_vert_scale_N(ifl)*(1.d0-zrat)+veg_vert_scale_N(ifl+1)*zrat
+                cff3=veg_vert_scale_D(ifl)*(1.d0-zrat)+veg_vert_scale_D(ifl+1)*zrat
+              endif !rl10
+  
+              !veg_alpha3D(k,i)=veg_alpha0(i)*cff1*cff2*cff3
+              veg_alpha3D(k,i)=veg_alpha3D(k,i)*cff1*cff2*cff3
+            enddo !k
+          endif !idry
+        enddo !i=1,npa
+!$OMP   end do
   
         !Compute mean
 !$OMP   do
@@ -8248,6 +8259,7 @@
 !$OMP end master
 
       !Set Cd etc for marsh and also drowned marsh
+      !These may be overwritten by veg algo
 !$OMP workshare
       veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha0=0.d0
 !$OMP end workshare

@@ -213,7 +213,7 @@
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,istemp,relax_2_airt, &
-     &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
+     &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_cw, &
      &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
      &drown_marsh,create_marsh_min,create_marsh_max,age_marsh_min
 
@@ -514,7 +514,7 @@
       veg_vert_scale_cd=(/(1.0d0,i=1,nbins_veg_vert+1)/) !scaling [-]
       veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
       veg_vert_scale_D=(/(1.0d0,i=1,nbins_veg_vert+1)/)
-      veg_lai=1.d0; veg_cw=1.5d0
+      veg_cw=3.6d0
       veg_di0=1.d-2 !m
       veg_h0=0.3d0 !m
       veg_nv0=10.d0 !/m^2
@@ -1154,7 +1154,7 @@
         call parallel_abort(errmsg)
       endif
 
-      if(iveg==1) then !specify vertical variation
+      if(iveg>0) then !specify vertical variation
         do k=1,nbins_veg_vert
           if(veg_vert_z(k)>=veg_vert_z(k+1)) then
             write(errmsg,*)'INIT: veg_vert_z not ascending,',veg_vert_z
@@ -3996,7 +3996,7 @@
         if(j/=NF90_NOERR) call parallel_abort('init: surface_restore.nc not found')
       endif !iref_ts
 
-!     Vegetation inputs: veg_*.gr3
+!     Vegetation inputs (unbent): veg_*.gr3
       veg_alpha0=0.d0 !=D*Nv*Cdv/2; init; D is diameter or leaf width; Cdv is form drag (veg_cd)
       veg_h=0.d0 !veg height; not used at 2D sides
       veg_nv=0.d0 !Nv: # of stems per m^2
@@ -4072,14 +4072,7 @@
           endif
         enddo !i
 
-        !Save unbent (original) values
-        veg_h_unbent=veg_h
-        veg_nv_unbent=veg_nv
-        veg_di_unbent=veg_di
-
 #ifdef USE_MARSH
-        !Reset
-        !veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha0=0.d0; veg_cd=0.d0
         do i=1,nea
           if(imarsh(i)>0) then !imarsh<=nmarsh_types
             veg_di(elnode(1:i34(i),i))=veg_di0(imarsh(i)) 
@@ -4090,6 +4083,11 @@
           endif
         enddo !i
 #endif
+
+        !Save unbent (original) values
+        veg_h_unbent=veg_h
+        veg_nv_unbent=veg_nv
+        veg_di_unbent=veg_di
       endif !iveg/=0
 
 !...  Surface min. mixing length for f.s. and max. for all; inactive 
