@@ -694,7 +694,7 @@
   veg_vert_scale_D = 1.,1.,1. !scaling [-]; used if iveg=1
 
 !  veg_lai = 1. !Leaf Area Index [-]; used if iveg=2. Ganthy suggests 0-10?
-  veg_cw = 3.6 !calibration coefficient with iveg=2. Ganthy suggests 3.6
+  veg_cw = 3.6 !scaling coefficient with iveg=2 [exp(-veg_cw*|U|)]. Ganthy suggests 3.6 s/m
 
 !----------------------------------------------------------------------
 ! Marsh model parameters (only if USE_MARSH is on, and in this case
