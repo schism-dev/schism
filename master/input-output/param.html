@@ -2310,11 +2310,13 @@ i.e. (horizontal <code>+ or *</code> vertical relaxation factors) times <code>dt
 <code>veg_cd.gr3</code> (form drag coefficient), <code>veg_D.gr3</code> (depth is stem diameter in meters);
  <code>veg_N.gr3</code> (depth is # of stems per m2); and <code>veg_h.gr3</code> (height of canopy in meters). These are original, unbent
   values for the vegetation.</p>
-<p>If <code>iveg=1</code>, the vertical variation/scalings for these parameters are specified for <code>nbins_veg_vert</code> vertical bins, with
+<p>The vertical variation/scalings for these parameters are specified for <code>nbins_veg_vert</code> vertical bins, with
  <code>veg_vert_z(1:nbins_veg_vert+1)</code> specifying the distance from bed (in meters) for each bin 
- (ascending order starting from 0). The vertical scalings are given by <code>veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1)</code>.</p>
-<p>If <code>iveg=2</code>, flexible vegetation formulation of Ganthy et al. (2011) is used (under active development). Parameters needed for this case are:
-  non-dimensional Leaf Area Index <code>veg_lai</code> and <code>veg_cw</code> (a non-dimensional calibration coefficient for diameter of bent leaf).</p>
+ (ascending order starting from 0; const extrapolation is done above max). 
+The vertical scalings are given by <code>veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1)</code>.</p>
+<p>If <code>iveg=1</code>, rigid cylinder option is used. If <code>iveg=2</code>, flexible vegetation formulation of Ganthy is used. 
+Parameters needed for this case include:
+  <code>veg_cw</code> (a non-dimensional calibration coefficient for beding).</p>
 <h3 id="itr_met3-int-h_tvd5-double">itr_met=3 (int), h_tvd=5. (double)<a class="headerlink" href="#itr_met3-int-h_tvd5-double" title="Permanent link">&para;</a></h3>
 <p>Transport option for all tracers. <code>itr_met=3</code> for TVD, and <code>itr_met=4</code> for 3rd order WENO. <code>h_tvd</code> specifies the transition depth (in meters) between upwind and higher-order schemes; i.e. more efficient upwind is used when the <code>local depth &lt; h_tvd</code>. 
 Also in this case, you can additionally toggle between upwind and TVD by specifying regions in <code>tvd.prop</code>. The TVD limiter function is specified in <code>TVD_LIM</code> in <code>mk/include_modules</code> (for code efficiency purpose). </p>
