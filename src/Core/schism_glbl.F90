@@ -111,7 +111,7 @@ module schism_glbl
                       &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
                       &ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
                       &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2,ri_st, &
-                      &create_marsh_min,create_marsh_max,age_marsh_min,relax_2_airt,veg_lai,veg_cw
+                      &create_marsh_min,create_marsh_max,age_marsh_min,relax_2_airt,veg_cw
   real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:), &
         &veg_di0(:),veg_h0(:),veg_nv0(:),veg_cd0(:),drown_marsh(:)
 

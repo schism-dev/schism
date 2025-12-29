@@ -279,12 +279,14 @@ Parameters for submerged or emergent vegetation. If `iveg/=0`, you need to suppl
  `veg_N.gr3` (depth is # of stems per m2); and `veg_h.gr3` (height of canopy in meters). These are original, unbent
   values for the vegetation.
 
-If `iveg=1`, the vertical variation/scalings for these parameters are specified for `nbins_veg_vert` vertical bins, with
+The vertical variation/scalings for these parameters are specified for `nbins_veg_vert` vertical bins, with
  `veg_vert_z(1:nbins_veg_vert+1)` specifying the distance from bed (in meters) for each bin 
- (ascending order starting from 0). The vertical scalings are given by `veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1)`.
+ (ascending order starting from 0; const extrapolation is done above max). 
+The vertical scalings are given by `veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1)`.
 
-If `iveg=2`, flexible vegetation formulation of Ganthy et al. (2011) is used (under active development). Parameters needed for this case are:
-  non-dimensional Leaf Area Index `veg_lai` and `veg_cw` (a non-dimensional calibration coefficient for diameter of bent leaf).
+If `iveg=1`, rigid cylinder option is used. If `iveg=2`, flexible vegetation formulation of Ganthy is used. 
+Parameters needed for this case include:
+  `veg_cw` (a non-dimensional calibration coefficient for beding).
 
 ### itr_met=3 (int), h_tvd=5. (double)
 Transport option for all tracers. `itr_met=3` for TVD, and `itr_met=4` for 3rd order WENO. `h_tvd` specifies the transition depth (in meters) between upwind and higher-order schemes; i.e. more efficient upwind is used when the `local depth < h_tvd`. 

@@ -673,6 +673,30 @@
   flag_fib = 1
 
 !----------------------------------------------------------------------
+! Vegetation model
+! If iveg/=0, need 4 extra inputs (for unbent stems): (1) veg_D.gr3 (depth is stem diameter in meters);
+! (2) veg_N.gr3 (depth is # of stems per m^2);
+! (3) veg_h.gr3 (height of canopy in meters);
+! (4) veg_cd.gr3 (form drag coefficient).
+! If one of these depths=0 at a node, the code will set all to 0. 
+
+! With iveg/=0, the vertical scaling is given by veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1) below.
+! veg_vert_z(1:nbins_veg_vert+1) specify the distance from bed for each bin (ascending 
+! order starting from 0; const extrapolation is done beyond largest height).
+! iveg=2: flex vegeation using Ganthy fomulation.
+! For all options, the cross section of leaf can be circular or rectnagular; in 
+! the latter case, the input 'diameter' is leaf width.
+!----------------------------------------------------------------------
+  iveg = 0 !on/off flag
+  veg_vert_z = 0.,0.5,1. ![m] starting from 0.; used if iveg=1
+  veg_vert_scale_cd = 1.,1.,1. !scaling [-]; used if iveg=1
+  veg_vert_scale_N = 1.,1.,1. !scaling [-]; used if iveg=1
+  veg_vert_scale_D = 1.,1.,1. !scaling [-]; used if iveg=1
+
+!  veg_lai = 1. !Leaf Area Index [-]; used if iveg=2. Ganthy suggests 0-10?
+  veg_cw = 3.6 !calibration coefficient with iveg=2. Ganthy suggests 3.6
+
+!----------------------------------------------------------------------
 ! Marsh model parameters (only if USE_MARSH is on, and in this case
 ! iveg must /=0)
 !----------------------------------------------------------------------
@@ -687,27 +711,6 @@
   create_marsh_max = 0. ![m] 
   age_marsh_min = 1. ![days] min marsh age threshold of surrounding cells to allow migration.
                      !Needs to account for morph acceleration
-
-!----------------------------------------------------------------------
-! Vegetation model
-! If iveg/=0, need 4 extra inputs: (1) veg_D.gr3 (depth is stem diameter in meters);
-! (2) veg_N.gr3 (depth is # of stems per m^2);
-! (3) veg_h.gr3 (height of canopy in meters);
-! (4) veg_cd.gr3 (form drag coefficient).
-! If one of these depths=0 at a node, the code will set all to 0. 
-
-! With iveg/=0, the vertical scaling is given by veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1) below.
-! veg_vert_z(1:nbins_veg_vert+1) specify the distance from bed for each bin (ascending order starting from 0).
-! iveg=2: flex vegeation using Ganthy (2011) fomulation
-!----------------------------------------------------------------------
-  iveg = 0 !on/off flag
-  veg_vert_z = 0.,0.5,1. ![m] starting from 0.; used if iveg=1
-  veg_vert_scale_cd = 1.,1.,1. !scaling [-]; used if iveg=1
-  veg_vert_scale_N = 1.,1.,1. !scaling [-]; used if iveg=1
-  veg_vert_scale_D = 1.,1.,1. !scaling [-]; used if iveg=1
-
-  veg_lai = 1. !Leaf Area Index [-]; used if iveg=2. Ganthy suggests 0-10?
-  veg_cw = 1.5 !calibration coefficient in diameter of bent leaf [-]; used if iveg=2. Ganthy suggests 0-25?
 
 !-----------------------------------------------------------------------
 ! Fraction of vertical flux closure adjustment applied at surface, then subtracted
