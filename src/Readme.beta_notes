@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-- `` (29 Dec 2025): removed veg_lai;
+- `5a174a05` (29 Dec 2025): removed veg_lai;
 - `8e0b1477` (30 Sept 2025): removed/renamed vclose_surf_frac as vclose_surf_frac0. If vclose_surf_frac0<0, needs vclose.gr3 (depth in [0,1]);
 
 Tag stofs3d-atl.v3.1.0 (from v5.14): Sept 17, 2025
@@ -643,7 +643,7 @@ git versions:
 161. `b2c4d490`: changed soil conductivity in a cell from min to mean;
 162. `8f61b12e` (10 Oct 2025): fixed a bug (uninit'ed var) in fix_bad_quads.f90
 162. `57f824d` (10 Nov 2025): changed default air-sea option to Fairall in make;
-163. `` (29 Dec 2025): revsied flex veg module (included MARSH);
+163. `5a174a05` (29 Dec 2025): revsied flex veg module (included MARSH);
 
 ================================================================================================
 (D) Auto-test history:
