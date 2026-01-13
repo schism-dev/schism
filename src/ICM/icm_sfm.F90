@@ -33,7 +33,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,it,isub)
   !local variables
   integer :: i,j,k,m,ierr,iPBS(3)
   real(rkind) :: stc,Kd,Kp,j1,j2,k1,k2,fd0,fd1,fd2,SA1,SA2,PO41,PO42
-  real(rkind) :: wTSS,wtemp,wsalt,wPBS(3),wRPOC,wLPOC,wRPON,wLPON,wRPOP,wLPOP
+  real(rkind) :: wTSS,wtemp,wsalt,wPBS(3),wRPOC,wLPOC,wRPON,wLPON,wRPOP,wLPOP,wPH
   real(rkind) :: wSRPOC,wSRPON,wSRPOP,wPIP,wPO4,wNH4,wNO3,wDOX,wCOD,wSU,wSA,wPO4d,wPO4p,wSAd
   real(rkind) :: XJC,XJN,XJP,rKTC(3),rKTN(3),rKTP(3),rKTS,FPOC(3),FPON(3),FPOP(3),FPOS
   real(rkind) :: fSTR,SODrt,tau,erate,edfrac(2),swild(50)
@@ -51,6 +51,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,it,isub)
   wLPOP=LPOP(kb+1);  wPO4 =PO4(kb+1);  wNH4 =NH4(kb+1)
   wNO3 =NO3(kb+1);   wCOD =COD(kb+1);  wDOX =min(max(DOX(kb+1),1.d-2),50.d0)
   fd0=1.0/(1.0+KPO4p*wTSS); wPO4d=fd0*wPO4; wPO4p=(1.0-fd0)*wPO4
+  wPH=max(3.0d0,min(12.0d0,6.51+0.0395*wsalt+0.0275*wtemp+0.1334*wDOX)) !simple pH formulation from Jeremy
   if(iSRM==1) then
     wSRPOC=SRPOC(kb+1); wSRPON=SRPON(kb+1); wSRPOP=SRPOP(kb+1); wPIP=PIP(kb+1)
   endif
@@ -243,6 +244,7 @@ subroutine sfm_calc(id,kb,tdep,wdz,it,isub)
     k1=0.0;  k2=0.0  !no reactions 
     call sfm_eq(2,PO41,PO42,wPO4d,bPO4(id),stc,Kd,Kp,fd1,fd2,j1,j2,k1,k2)
     JPO4(id)=stc*(fd1*PO41-wPO4d);  bPO4(id)=PO42
+    if(wPH>8.3d0) JPO4(id)=JPO4(id)*exp(2.d0*(wPH-8.3d0)) !additonal PO4 release under high pH condition
 
     !------------------------------------------------------------------
     !sediment erosion: this part needs more documentation
