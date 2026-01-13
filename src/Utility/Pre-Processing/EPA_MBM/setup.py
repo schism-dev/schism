@@ -323,7 +323,7 @@ fname='watertype.gr3'
 if p.flag[fname]!=0:
    print('writing '+fname)
    vi=M.f2(gd.xy,value=M.watertype.clip(0,7) if p.flag[fname]==1 else M.watertype)
-   gd.save(fname,value=vi.astype('int'),outfmt='{:d}')
+   gd.save(fname,value=round(vi).astype('int'),outfmt='{:d}')
 
 fname='diffmin.gr3'
 if p.flag[fname]==1:
@@ -610,7 +610,7 @@ if p.flag[fname]!=0:
    if p.flag['ICM'] in [2,20]: vnames,svars,rats=vnames[:-4],svars[:-4],rats[:-4]
 
    #interp
-   i1=abs(M.CB74_time-p.StartT).argmin(); i1=abs(M.CB74_time-p.EndT-2).argmin(); mti=M.CB74_time[i1:i2]; cz=M.CB74_depth
+   i1=abs(M.CB74_time-p.StartT).argmin(); i2=abs(M.CB74_time-p.EndT-2).argmin(); mti=M.CB74_time[i1:i2]; cz=M.CB74_depth
    bind=pindex(read('ICM_nudge.gr3').z!=0); lz=abs(compute_zcor(vd.sigma[bind],gd.dp[bind])).T.clip(cz.min(),cz.max())
    nobn=bind.size; ntr=len(svars); nt=len(mti); nvrt=vd.nvrt
    mys=array([M.attr('CB74_'+svar)[:,i1:i2]*rat for svar, rat in zip(svars,rats)]).transpose([1,0,2]) #interp in time
@@ -623,7 +623,7 @@ if p.flag[fname]!=0:
    fid.createVariable('time','float64',('time',)); fid.createVariable('map_to_global_node','int',('node',))
    fid.createVariable('tracer_concentration','float32',('time','node','nLevels','ntracers'),zlib=True)
    while(irec<nt): #put variable values
-       fpt=arange(irec,min(irec+dt,nt)); trs=zeros([nvrt,nobn,ntr,len(fpt)],'float32')*nan; irec=irec+dt
+       fpt=arange(irec,min([irec+dt,nt])); trs=zeros([nvrt,nobn,ntr,len(fpt)],'float32')*nan; irec=irec+dt
        for k, zi in enumerate(lz):
            for i in arange(cz.size-1): trs[k,(zi>=cz[i])*(zi<cz[i+1])]=mys[i,:,fpt].T[None,...]
        for k in arange(nvrt-1)[::-1]: fpn=isnan(trs[k]); trs[k][fpn]=trs[k+1][fpn]  #remove nan
