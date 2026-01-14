@@ -719,7 +719,7 @@
 !        call get_param('param.in','coriolis',2,itmp,coricoef,stringvalue)
       endif
 
-!     Wind (use nws=2 and USE_ATMOS for coupling directly to atmos model)
+!     Wind (use nws=4 and USE_ATMOS for coupling directly to atmos model)
       if(nws<-1.or.nws>6.or.nws==3) then
         write(errmsg,*)'Unknown nws',nws
         call parallel_abort(errmsg)

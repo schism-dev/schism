@@ -530,16 +530,29 @@
 
       if(nws==4) then !include USE_ATMOS
         if(time>wtime2) then
+#ifdef USE_ATMOS
+          !ESMF not extended to ghosts
+          call exchange_p2d(windx2)
+          call exchange_p2d(windy2)
+          call exchange_p2d(pr2)
+          call exchange_p2d(airt2) !centigrade
+          call exchange_p2d(shum2)
+          call exchange_p2d(srad)
+          call exchange_p2d(hradd)
+#ifdef PREC_EVAP
+          call exchange_p2d(fluxprc)
+          call exchange_p2d(prec_snow)
+#endif 
+          do i=1,npa
+               !ESMF only update within range np NOT npa by ele-itp, therefore some airt2 are still init value (C)
+               if (airt2(i)>100.d0) airt2(i)=airt2(i)-273.15d0 !Conv K to C, ESMF send with unit K
+          enddo !i
+#endif /*USE_ATMOS*/
+
 !...      Heat budget & wind stresses
           if(ihconsv/=0) then
             !Assume all vars in sflux*.nc are available from atmos model or read in from atmos.nc,
             !and this routine compute other fluxes
-#ifdef USE_ATMOS
-            do i=1,npa
-               !ESMF only update within range np NOT npa by ele-itp, therefore some airt2 are still init value (C)
-               if (airt2(i)>100.d0) airt2(i)=airt2(i)-273.15d0 !Conv K to C, ESMF send with unit K
-            end do
-#endif
             call surf_fluxes2 (wtime2,windx2,windy2,pr2,airt2, &
      &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
@@ -658,22 +671,8 @@
               endif !isconsv/
             endif !ipgl
           enddo !i
-#endif /*USE_ATMOS*/
+#endif /*not USE_ATMOS*/
 
-#ifdef USE_ATMOS
-          !ESMF may not extend to ghosts
-          call exchange_p2d(windx2)
-          call exchange_p2d(windy2)
-          call exchange_p2d(pr2)
-          call exchange_p2d(airt2) !centigrade
-          call exchange_p2d(shum2)
-          call exchange_p2d(srad)
-          call exchange_p2d(hradd)
-#ifdef PREC_EVAP
-          call exchange_p2d(fluxprc)
-          call exchange_p2d(prec_snow)
-#endif 
-#endif /*USE_ATMOS*/
         endif !time>wtime2
 
         wtratio=(time-wtime1)/wtiminc
