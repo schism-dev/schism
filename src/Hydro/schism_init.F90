@@ -952,7 +952,7 @@
       endif
 
 !...  Surface T,S relax for long-term simulations
-      if(iref_ts/=0.and.iref_ts/=1) then
+      if(iref_ts<0.or.iref_ts>2) then
         write(errmsg,*)'Wrong iref_ts:',iref_ts
         call parallel_abort(errmsg)
       endif
@@ -1452,6 +1452,10 @@
       if(iref_ts/=0) then
         allocate(ref_ts1(npa,2),ref_ts2(npa,2),ref_ts(npa,2),stat=itmp)
         if(itmp/=0) call parallel_abort('INIT: alloc failed (57)')
+        if(iref_ts==2) then
+          allocate(ref_ts_scale(npa),stat=itmp)
+          if(itmp/=0) call parallel_abort('INIT: alloc failed (57.0)')
+        endif
       endif
 
 !     Offline transport
@@ -3995,6 +3999,31 @@
         j=nf90_open(in_dir(1:len_in_dir)//'surface_restore.nc',NF90_NOWRITE,ncid_ref_ts)
         if(j/=NF90_NOERR) call parallel_abort('init: surface_restore.nc not found')
       endif !iref_ts
+
+!     Read in ref_ts_scale.gr3
+      if(iref_ts==2) then
+        if(myrank==0) then
+          open(10,file=in_dir(1:len_in_dir)//'ref_ts_scale.gr3',status='old')
+          read(10,*)
+          read(10,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
+     &call parallel_abort('Check ref_ts_scale.gr3')
+          do i=1,np_global
+            read(10,*)j,xtmp,ytmp,tmp1
+            if(tmp1<0.d0.or.tmp1>1.d0) then
+              write(errmsg,*)'Wrong relax scale at node:',i,tmp1
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp1
+          enddo !i
+          close(10)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) ref_ts_scale(ipgl(i)%id)=buf3(i)
+        enddo !i
+      endif !iref_ts==2
 
 !     Vegetation inputs (unbent): veg_*.gr3
       veg_alpha0=0.d0 !=D*Nv*Cdv/2; init; D is diameter or leaf width; Cdv is form drag (veg_cd)

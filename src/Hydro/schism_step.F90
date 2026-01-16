@@ -7399,7 +7399,11 @@
             if(iref_ts/=0) then
               tmp=sum(ref_ts(elnode(1:i34(i),i),2))/real(i34(i),rkind)
               if(tmp>0.d0) then
-                tmp2=max(0.d0,min(1.d0,(dpe(i)-ref_ts_h2)/(ref_ts_h1-ref_ts_h2)))
+                if(iref_ts==1) then
+                  tmp2=max(0.d0,min(1.d0,(dpe(i)-ref_ts_h2)/(ref_ts_h1-ref_ts_h2)))
+                else !=2
+                  tmp2=sum(ref_ts_scale(elnode(1:i34(i),i)))/real(i34(i),rkind) !\in [0,1]
+                endif !iref_ts
                 flx_sf(2,i)=flx_sf(2,i)+ref_ts_restore_depth/ref_ts_tscale/86400.d0*tmp2* &
                         &(tmp-tr_el(2,nvrt,i))
               endif !tmp>
@@ -7428,7 +7432,12 @@
             if(iref_ts/=0) then
               tmp=sum(ref_ts(elnode(1:i34(i),i),1))/real(i34(i),rkind)
               if(tmp>-99.d0) then
-                tmp2=max(0.d0,min(1.d0,(dpe(i)-ref_ts_h2)/(ref_ts_h1-ref_ts_h2)))
+                if(iref_ts==1) then
+                  tmp2=max(0.d0,min(1.d0,(dpe(i)-ref_ts_h2)/(ref_ts_h1-ref_ts_h2)))
+                else !=2
+                  tmp2=sum(ref_ts_scale(elnode(1:i34(i),i)))/real(i34(i),rkind) !\in [0,1]
+                endif !iref_ts
+
                 flx_sf(1,i)=flx_sf(1,i)+ref_ts_restore_depth/ref_ts_tscale/86400.d0*tmp2* &
                         &(tmp-tr_el(1,nvrt,i))
               endif !tmp>

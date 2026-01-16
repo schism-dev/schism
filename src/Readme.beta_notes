@@ -9,6 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- `` (16 Jan 2026): expanded iref_ts to 2 (which requires input ref_ts_scale.gr3 (values in [0,1]);
 - `5a174a05` (29 Dec 2025): removed veg_lai;
 - `8e0b1477` (30 Sept 2025): removed/renamed vclose_surf_frac as vclose_surf_frac0. If vclose_surf_frac0<0, needs vclose.gr3 (depth in [0,1]);
 
