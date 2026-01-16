@@ -620,14 +620,15 @@
 
 !-----------------------------------------------------------------------
 ! Surface T,S restoration (for large-scale long-term runs). If invoked, 
-! the input is surface_restore.nc
+! the input is surface_restore.nc. If iref_ts=2, additional input ref_ts_scale.gr3
+! specifies scaling factors in [0,1] (ramp-down nearshore).
 !-----------------------------------------------------------------------
-  iref_ts = 0 !on/off
+  iref_ts = 0 !off (0); 1 (scaling factor from depths below); 2 (scaling factor from ref_ts_scale.gr3)
   ref_ts_restore_depth = 50. !restoration depth [m]
   ref_ts_tscale = 100. !restoration time scale [days]
-  ref_ts_h1 = 100. !ramp-down depth 1 [m] (to turn off restoration in shallows)
-  ref_ts_h2 = 60. !ramp-down depth 2 [m]; must <ref_ts_h1
   ref_ts_dt = 30. !time step in surface_restore.nc [days]
+  ref_ts_h1 = 100. !ramp-down depth 1 [m] (to turn off restoration in shallows). Used if iref_ts=1
+  ref_ts_h2 = 60. !ramp-down depth 2 [m]; must <ref_ts_h1
 
 !-----------------------------------------------------------------------
 ! Cut-off depth for cubic spline interpolation near bottom when computing horizontal gradients

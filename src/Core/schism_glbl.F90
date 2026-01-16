@@ -510,6 +510,7 @@ module schism_glbl
 
   real(4),save,dimension(:,:,:),allocatable :: trnd_nu1,trnd_nu2,trnd_nu
   real(4),save,dimension(:,:),allocatable :: ref_ts1,ref_ts2,ref_ts
+  real(rkind),save,allocatable :: ref_ts_scale(:)
   integer,save,allocatable :: iadv(:),iwater_type(:) 
 
   !weno>
