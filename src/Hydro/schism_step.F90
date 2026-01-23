@@ -7874,7 +7874,7 @@
 
             if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex.and.(nws==2.or.nws==4)) then !shallow wet
               tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
-              tr_el(1,:,i)=tr_el(1,:,i)*(1-relax_2_airt)+tmp2*relax_2_airt
+              tr_el(1,:,i)=max(tempmin,min(tempmax,tr_el(1,:,i)*(1-relax_2_airt)+tmp2*relax_2_airt))
             endif !shallow
           enddo !i
 !$OMP     enddo
