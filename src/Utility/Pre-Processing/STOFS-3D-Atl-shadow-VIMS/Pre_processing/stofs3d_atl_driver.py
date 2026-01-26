@@ -37,10 +37,10 @@ Temporary changes to be tested:
 # ------------------------- Import modules ---------------------------
 import os
 import subprocess
+from pathlib import Path
 import socket
 import shutil
 from datetime import datetime
-import copy
 import logging
 
 import numpy as np
@@ -52,7 +52,7 @@ import json
 # self-defined modules
 import pylib
 from pylib import inside_polygon, read_schism_reg, read_schism_vgrid
-from pylib_experimental.schism_file import source_sink, TimeHistory
+
 if 'gulf' in socket.gethostname():
     from pylib_experimental.schism_file import cread_schism_hgrid as schism_read
     print('Using c++ function to accelerate hgrid reading')
@@ -65,12 +65,11 @@ from AVISO.aviso2schism import OpenBoundaryInventory as OpenBoundaryInventoryAVI
 from pyschism.forcing.hycom.hycom2schism import Nudge
 
 # Import from the sub folders. These are not from installed packages.
-from Source_sink.NWM.gen_sourcesink_nwm import gen_sourcesink_nwm
-from Source_sink.Constant_sinks.set_constant_sink import set_constant_sink
-from Source_sink.Relocate.relocate_source_feeder import relocate_sources2
+from Utils.utils import mkcd_new_dir, try_remove, prep_run_dir, find_points_in_polyshp
 from Prop.gen_tvd import gen_tvd_prop
 from Bctides.bctides.bctides import Bctides  # temporary, bctides.py will be merged into pyschism
 # from pyschism.forcing.bctides import Bctides
+from Source_sink.assemble_source_sink import assemble_source_sink
 
 # Import configuration
 from stofs3d_atl_config import ConfigStofs3dAtlantic
@@ -83,99 +82,6 @@ script_path = os.path.dirname(os.path.realpath(__file__))
 print(f"script_path: {script_path}")
 
 DRIVER_PRINT_PREFIX = '\n-----------------STOFS3D-ATL driver:---------------------\n'
-
-
-# ---------------------------------------------------------------------
-#                         Utility functions
-# ---------------------------------------------------------------------
-def mkcd_new_dir(path, remove=True):
-    '''Make a new directory and change to it'''
-    if remove:
-        remove_folder(path)
-    os.makedirs(path, exist_ok=True)
-    os.chdir(path)
-
-
-def remove_folder(path):
-    '''Remove a folder and all its contents'''
-    try:
-        shutil.rmtree(path)
-        print(f"{path} and all contents removed successfully")
-    except FileNotFoundError:
-        print(f"{path} does not exist, no need to remove.")
-    except OSError as error:
-        print(f"Error removing {path}: {error}")
-        raise
-
-
-def try_remove(file):
-    '''Try to remove a file, ignore if it does not exist'''
-    try:
-        os.remove(file)
-    except FileNotFoundError:
-        print(f"{file} does not exist, no need to remove.")
-    except OSError:
-        print(f"Error removing: {file}")
-        raise
-
-
-def find_points_in_polyshp(pt_xy, shapefile_names):
-    '''Find points inside polygons defined in shapefiles'''
-    ind = np.zeros(pt_xy[:, 0].shape)
-    for shapefile_name in shapefile_names:
-        # shapefile # records = sf.records() # sf.shapeType # len(sf) # s = sf.shape(idx)
-        sf = shapefile.Reader(shapefile_name)
-        shapes = sf.shapes()
-
-        for i, shp in enumerate(shapes):
-            poly_xy = np.array(shp.points).T
-            print(f'shape {i+1} of {len(shapes)}, {poly_xy[:, 0]}')
-            ind += inside_polygon(pt_xy, poly_xy[0], poly_xy[1])  # 1: true; 0: false
-
-    ind = ind.astype('bool')
-    return ind
-
-
-def prep_run_dir(parent_dir, runid, scr_dir=None):
-    '''
-    Prepare the run directory and return the path to the model input folder
-    - parent_dir: the parent directory where the run directory is created
-    - runid: the run directory name
-    - scr_dir: the parent directory where outputs are stored, e.g.:
-        scr_dir/R{runid}/outputs/,
-        if None, use the run directory
-        parent_dir/R{runid}/outputs/
-
-    Model inputs and the scripts are saved in the Input dir, e.g., I01;
-    The run directory is saved in the Run dir, e.g., R01;
-    The outputs are saved on the scratch disk and linked under parent dir. e.g.,
-    parent_dir/O01/outputs/.
-    Other post-processed outputs can be put under parent_dir/O01/
-    '''
-    if scr_dir is None:
-        scr_dir = parent_dir
-
-    model_input_path = f'{parent_dir}/I{runid}'
-    rundir = f'{parent_dir}/R{runid}'
-    output_dir = f'{scr_dir}/R{runid}/outputs'
-
-    os.makedirs(rundir, exist_ok=True)
-    os.makedirs(model_input_path, exist_ok=True)
-    os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(f'{parent_dir}/O{runid}', exist_ok=True)
-
-    os.chdir(rundir)
-    subprocess.run(
-        f'ln -sf {output_dir} .',
-        shell=True, stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL, check=False)  # ignore errors, existing folder okay
-
-    os.chdir(f'{parent_dir}/O{runid}')
-    os.system(f'ln -sf {output_dir} .')
-    os.system(f'ln -sf {model_input_path}/hgrid.gr3 .')
-
-    return model_input_path, rundir, output_dir
-
 
 # ---------------------------------------------------------------------
 # Simple pre-processing functions that do not need subfolders
@@ -306,7 +212,7 @@ def gen_elev2d(
             print('\n' + '-'*50)
         else:
             break
-        
+
     hgrid = pyschism_Hgrid.open(hgrid_fname, crs='epsg:4326')
     bnd = OpenBoundaryInventoryAVISO(hgrid)
     bnd.fetch_data(
@@ -365,7 +271,7 @@ def gen_nudge_stofs(
             restart = True
 
     # Include the last exception in the error message
-    raise Exception(f"Failed to fetch nudge coefficient after {max_retry} attempts. Last error: {e}")
+    raise Exception(f"Failed to fetch nudge coefficient after {max_retry} attempts due to repeated errors.")
 
 
 def gen_drag(hgrid: pylib.schism_grid):
@@ -601,71 +507,6 @@ def gen_elev_ic(hgrid=None, h0=0.1, city_shape_fnames=None, base_elev_ic=None):
     return elev_ic
 
 
-def gen_relocated_source(original_source_sink_dir, relocated_source_sink_dir):
-    """
-    Generate relocated vsource.th for STOFS-3D-ATL
-    based on sources.json and sinks.json generated by relocate_sources2
-    """
-
-    original_ss = source_sink.from_files(source_dir=original_source_sink_dir)
-
-    original_ele_nwm_mapping = json.load(
-        open(f'{original_source_sink_dir}/sources.json', 'r')
-    )
-    # reverse the mapping
-    original_nwm_ele_mappping = {}
-    for ele, nwm_fids in original_ele_nwm_mapping.items():
-        for nwm_fid in nwm_fids:
-            if nwm_fid in original_nwm_ele_mappping:
-                print(
-                    f"Warning: NWM feature ID {nwm_fid} is already mapped to "
-                    f"{original_nwm_ele_mappping[nwm_fid]}. Overwriting with {ele}"
-                )  # if an nwm_fid is mapped to multiple elements, keep the last one.
-
-                # This can happen if the original source_sink is generated by pyschism,
-                # with an NWM segment weaving in and out of multiple elements,
-                # resulting in multiple sources and sinks maped to the same nwm_fid.
-                # However, the relocation process will ignore all sinks, so only one source
-                # should be mapped to the same nwm_fid. And the exact location is somewhat arbitrary.
-                # In a rare case, a river can go in as one nwm_fid and out as another nwm_fid,
-                # so make sure this doesn't happen by properly aligning the schism land boundary
-                # and avoid NWM segments weaving in and out of multiple elements.
-            original_nwm_ele_mappping[nwm_fid] = ele
-
-    relocated_ele_nwm_mapping = json.load(
-        open(f'{relocated_source_sink_dir}/sources.json', 'r')
-    )
-
-    relocated_ele_mapping = {}
-    for ele, nwm_fids in relocated_ele_nwm_mapping.items():
-        relocated_ele_mapping[ele] = [original_nwm_ele_mappping[nwm_fid] for nwm_fid in nwm_fids]
-        # remove duplicates
-        relocated_ele_mapping[ele] = list(set(relocated_ele_mapping[ele]))
-
-    vsource_data = np.zeros((original_ss.vsource.n_time, len(relocated_ele_mapping)), dtype=float)
-    for i, [relocated_ele, original_eles] in enumerate(relocated_ele_mapping.items()):
-        for original_ele in original_eles:
-            vsource_data[:, i] += original_ss.vsource.df[original_ele].values
-
-    # assemble relocated vsource.th and msource.th
-    relocated_vsource = TimeHistory(
-        data_array=np.c_[original_ss.vsource.time, vsource_data], columns=list(relocated_ele_mapping.keys()))
-    
-    relocated_msource_data = np.ones((original_ss.vsource.n_time, len(relocated_ele_mapping)), dtype=float)
-    relocated_msource_list = [
-        TimeHistory(
-            data_array=np.c_[original_ss.vsource.time, relocated_msource_data*-9999],
-            columns=list(relocated_ele_mapping.keys())
-        ),  # Temperature
-        TimeHistory(
-            data_array=np.c_[original_ss.vsource.time, relocated_msource_data*0],
-            columns=list(relocated_ele_mapping.keys())
-        )  # Salinity
-    ]
-
-    return relocated_vsource, relocated_msource_list
-
-
 # ---------------------------------------------------------------------
 #       Main function to generate inputs for STOFS-3D-ATL
 # ---------------------------------------------------------------------
@@ -873,158 +714,9 @@ def stofs3d_atl_driver(
     if input_files['source_sink']:
         sub_dir = 'Source_sink'
         print(f'{DRIVER_PRINT_PREFIX}Generating source_sink.in ...')
-
-        if config.hgrid_without_feeders is not None:
-            print(
-                'Normal case: beside the main hgrid, '
-                f'an hgrid without feeders is provided: {config.hgrid_without_feeders}, '
-                'assuming the main hgrid has feeders!'
-            )
-            main_hgrid_has_feeder = True
-        else:
-            print(
-                'Special case: only the main hgrid is provided,'
-                'assuming the main hgrid has NO feeders!'
-                'Caution: you should not search for NWM source/sink on a grid with feeders!'
-            )
-            main_hgrid_has_feeder = False
-            
-        # '''  comment out the following code to skip generating original source_sink files
-        # Generate original source_sink files
         mkcd_new_dir(f'{model_input_path}/{sub_dir}')
 
-        # generate source_sink files by intersecting NWM river segments
-        # with the model land boundary
-        mkcd_new_dir(f'{model_input_path}/{sub_dir}/original_source_sink/')
-        if config.hgrid_without_feeders is not None:
-            os.symlink(f'{config.hgrid_without_feeders}', 'hgrid.gr3')
-        else:
-            os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
-
-        gen_sourcesink_nwm(
-            hgrid_fname='./hgrid.gr3',  # current directory: {model_input_path}/{sub_dir}/original_source_sink/
-            startdate=config.startdate, rnday=config.rnday,
-            cache_folder=config.nwm_cache_folder)
-        # '''
-        
-        # A single NWM segment weaving in and out will create duplicate sources/sinks
-        # , so it is not necessary to remove duplicates here.
-        # The code may be reusable, so it is kept here.
-        # 
-        # # find any duplicate sources
-        # with open(
-        #     f'{model_input_path}/{sub_dir}/original_source_sink/sources.json',
-        #     'r', encoding='utf-8'
-        # ) as f:
-        #     old_sources2fids = json.load(f)
-        # fid_list = [fid for fids in old_sources2fids.values() for fid in fids]
-        # if len(fid_list) != len(set(fid_list)):
-        #     print(f'Number of duplicated fids: {len(fid_list) - len(set(fid_list))}')
-        #     # raise ValueError('Duplicated fids in new2fid')
-
-        #     for fid in set(fid_list):
-        #         if fid_list.count(fid) > 1:
-        #             print(f'Duplicated fid: {fid}')
-
-        #     # backup the original source_sink files
-        #     os.system(f'cp -r {model_input_path}/{sub_dir}/original_source_sink/ '
-        #               f'{model_input_path}/{sub_dir}/original_source_sink_0/')
-
-        #     # remove duplicated sources in the original source_sink files
-        #     old_sources2fids = remove_duplicate_dict_values(old_sources2fids)
-        #     # remove keys with empty values
-        #     old_sources2fids = {k: v for k, v in old_sources2fids.items() if v}
-
-        #     # regenerate old sources based on updated old_sources2fids
-        #     with open(
-        #         f'{model_input_path}/{sub_dir}/original_source_sink/sources.json',
-        #         'w', encoding='utf-8'
-        #     ) as f:
-        #         json.dump(old_sources2fids, f, indent=4)
-        #     gen_sourcesink_nwm(
-        #         hgrid_fname='./hgrid.gr3',
-        #         startdate=config.startdate, rnday=config.rnday,
-        #         cache_folder=config.nwm_cache_folder)
-
-        # Relocate source locations to resolved river channels, the result is the "base" source/sink.
-        # Set appropriate no_feeder option, mandatory_sources_coor, and
-        # feeder_info_file in stofs3d_atl_config.py
-        if config.relocate_source:
-            # relocate
-            mkcd_new_dir(f'{model_input_path}/{sub_dir}/relocated_source_sink/')
-            os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
-
-            # this will generate relocated sources.json and sinks.json
-            relocate_sources2(
-                old_ss_dir=f'{model_input_path}/{sub_dir}/original_source_sink/',
-                feeder_info_file=config.feeder_info_file,
-                hgrid_fname=f'{model_input_path}/hgrid.gr3',
-                outdir=f'{model_input_path}/{sub_dir}/relocated_source_sink/',
-                max_search_radius=2100, mandatory_sources_coor=config.mandatory_sources_coor,
-                allow_neglection=False, main_hgrid_has_feeder=main_hgrid_has_feeder,
-            )
-
-            # regenerate vsource.th based on relocated sources.json
-            regenerate_using_pyschism = True
-
-            if regenerate_using_pyschism:
-                # gen_sourcesin_nwm requires sinks.json
-                os.system(f'ln -sf {model_input_path}/{sub_dir}/original_source_sink/sinks.json .')
-                gen_sourcesink_nwm(  # with existing sources.json and sinks.json
-                    hgrid_fname=f'{model_input_path}/hgrid.gr3',
-                    startdate=config.startdate, rnday=config.rnday,
-                    cache_folder=config.nwm_cache_folder
-                )
-                relocated_ss = source_sink.from_files(
-                    source_dir=f'{model_input_path}/{sub_dir}/relocated_source_sink/',
-                )  # sinks will be discarded later, only sources will be used
-                base_ss = source_sink(
-                    vsource=relocated_ss.vsource, vsink=None, msource=relocated_ss.msource
-                )
-            else:
-                # In the case the original sources have been adjusted by USGS obs,
-                # Don't call gen_sourcesink_nwm again, use gen_relocated_source instead.
-                # This may create minor duplicates in the sources, check the print message to
-                # see if the duplicated sources are small.
-                # This doesn't matter for operation, since only sources.json is used.
-                # Todo: remove the duplicated sources;
-                relocated_vsource, relocated_msource_list = gen_relocated_source(
-                    original_source_sink_dir=f'{model_input_path}/{sub_dir}/original_source_sink/',
-                    relocated_source_sink_dir=f'{model_input_path}/{sub_dir}/relocated_source_sink/',
-                )
-                base_ss = source_sink(
-                    vsource=relocated_vsource, vsink=None, msource=relocated_msource_list)
-                base_ss.writer(f'{model_input_path}/{sub_dir}/relocated_source_sink/')
-        else:
-            base_ss = source_sink.from_files(f'{model_input_path}/{sub_dir}/original_source_sink/')
-
-        # set constant sinks (pumps and background sinks)
-        mkcd_new_dir(f'{model_input_path}/{sub_dir}/constant_sink/')
-        # copy *.shp to the current directory
-        os.system(f'cp {script_path}/Source_sink/Constant_sinks/levee_4_pump_polys.* .')
-        hgrid_utm = copy.deepcopy(hgrid)
-        hgrid_utm.proj(prj0='epsg:4326', prj1='epsg:26918')
-        background_ss = set_constant_sink(
-            wdir=f'{model_input_path}/{sub_dir}/constant_sink/', hgrid_utm=hgrid_utm)
-
-        # assemble source/sink files and write to model_input_path
-        total_ss = base_ss + background_ss
-        total_ss.writer(f'{model_input_path}/{sub_dir}/')
-
-        # the final source/sink uses the relocated sources and constant sinks (no json needed)
-        os.chdir(f'{model_input_path}/{sub_dir}')
-        os.system('ln -sf ./relocated_source_sink/sources.json .')
-
-        # write diagnostic outputs
-        hgrid.compute_ctr()
-        with open(f'{model_input_path}/{sub_dir}/vsource.xyz', 'w') as f:
-            f.write('lon lat vsource\n')
-            for i, ele in enumerate(total_ss.source_eles):
-                f.write(f'{hgrid.xctr[ele-1]} {hgrid.yctr[ele-1]} {total_ss.vsource.df.iloc[:, i].mean()}\n')
-        with open(f'{model_input_path}/{sub_dir}/vsink.xyz', 'w') as f:
-            f.write('lon lat vsink\n')
-            for i, ele in enumerate(total_ss.sink_eles):
-                f.write(f'{hgrid.xctr[ele-1]} {hgrid.yctr[ele-1]} {total_ss.vsink.df.iloc[:, i].mean()}\n')
+        assemble_source_sink(config, hgrid, wdir=f'{model_input_path}/{sub_dir}')
 
         os.chdir(run_dir)
         os.system(f'ln -sf ../I{runid}/{sub_dir}/source.nc .')
@@ -1071,7 +763,7 @@ def stofs3d_atl_driver(
 
         os.chdir(run_dir)
         os.system(f'ln -sf ../I{runid}/{sub_dir}/*3D.th.nc .')
-    
+
     # -----------------elev2D.th.nc---------------------
     if input_files['elev2D.th.nc']:
         sub_dir = 'Elev2Dth'
@@ -1112,18 +804,21 @@ def stofs3d_atl_driver(
 
 
 def sample2():
-    '''Subsetting example workflow for STOFS3D Atlantic v7.2,
-    assuming the original source_sink files have been generated by gen_sourcesink_nwm'''
+    '''
+    Subsetting example workflow for STOFS3D Atlantic v7.2,
+    assuming the original source_sink files have already
+    been generated by gen_sourcesink_nwm
+    '''
 
     import geopandas as gpd
     from shapely import get_coordinates
     import json
     from Source_sink.Relocate.relocate_source_feeder import v19p2_for_sms_v27_mandatory_sources_coor
-    
+
     # --------------inputs -----------------
     wdir = '/sciclone/schism10/feiye/TEMP/clip_by_polygon/I03/Source_sink/'
     main_hgrid_fname = f'{wdir}/hgrid.gr3'
-    hgrid_without_feeders_fname = main_hgrid_fname
+    # hgrid_without_feeders_fname = main_hgrid_fname
 
     startdate = datetime(2018, 8, 30)
     rnday = 10
@@ -1190,7 +885,8 @@ def sample2():
     gen_sourcesink_nwm(  # with existing sources.json and sinks.json
         hgrid_fname=main_hgrid_fname,
         startdate=startdate, rnday=rnday,
-        cache_folder='/sciclone/schism10/feiye/TEMP/clip_by_polygon/I03/Source_sink/original_source_sink/20180830'  # generated by the first call
+        cache_folder='/sciclone/schism10/feiye/TEMP/clip_by_polygon/I03/Source_sink/original_source_sink/20180830',
+        # cache_folder generated by the first call
     )
 
     print('read relocated source/sink and discard sinks')
@@ -1212,5 +908,5 @@ def sample2():
 
 if __name__ == '__main__':
     sample2()
-    
+
     print('Done')

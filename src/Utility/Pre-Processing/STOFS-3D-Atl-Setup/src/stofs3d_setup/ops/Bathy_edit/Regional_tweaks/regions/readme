@@ -1,0 +1,28 @@
+#---------------------------------------------
+#regions/*.reg for modified grid depths
+#---------------------------------------------
+1) 2020: min_5m_ll.reg  [Fei], added for impose minimum depth for Caribbean Sea 
+
+2) April, 2021, [ZG], added regions of minimum depth for blocked rivers or inlets
+   SabinePass.reg: 7m, inlet was blocked
+   BergenPoint.reg: 5m, river depth too shallow
+   Washington_3.reg: 15: river depth too shallow for tidal propagation 
+
+3) May 2021: [Wei]: hgrid.ll (map does not change, NWM_3D_v7.map, same as RUN06a_ZG)
+        Set minimum depth for regions where rivers are broken
+          Susquehanna_river.reg  10m
+          NorthEast_river.reg 5m
+          Elk_river.reg 2m
+          Patuxent_river.reg  5m
+          Rappahannock_river.reg 6m
+          York_river.reg 10m
+          James_river.reg 14m
+          Hudson_river.reg 16m
+          Merrimack_river.reg 3m
+          Saco_river.reg 3m
+          Androscoggin_Kennebec_rivers.reg 3m
+          Penobscot_river.reg 5m
+          StCroix_river.reg 5m
+
+4) 7/23/2021, [ZG]: don't impose minimum depth for Peurto Rico and US Virgin Islands 
+     min_5m_ll_noPR.reg: region for Carribean Sea, but excuded the PR region

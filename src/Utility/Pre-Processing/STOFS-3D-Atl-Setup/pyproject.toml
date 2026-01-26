@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stofs3d-setup"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = ["pydantic>=2", "pyyaml>=6"]
+
+[project.scripts]
+stofs3d-setup = "stofs3d_setup.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
