@@ -1,4 +1,4 @@
-from pylib import zdata, schism_grid, schism_vgrid, WriteNC, inside_polygon  # from ZG's pylib: pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pylibs4schism==0.1.10
+from pylib import zdata, schism_grid, schism_vgrid, WriteNC, inside_polygon, read  # from ZG's pylib: pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pylibs4schism==0.1.10
 from scipy import spatial
 from scipy.interpolate import griddata
 from scipy.sparse import csc_matrix
@@ -45,7 +45,7 @@ class Hotstart():
             If str, the directory containing hgrid.gr3 and vgrid.in files
             If dict, it should contain keys 'np', 'ne', 'ns', 'nvrt' representing the grid dimensions,
              e.g., {'np': 4, 'ne': 2, 'ns': 5, 'nvrt': 4}.
-        
+
         ntracers: int, number of tracers (default is 2).
 
         hot_file: str or None
@@ -344,21 +344,70 @@ class Hotstart():
                 t = time()
             print(f'Total time for interpolation: {time()-t0} seconds', flush=True)
 
-    def trnd_propogate(self):
+    def set_dry_flags(self, h0=1e-5):
+        '''
+        Set idry, idry_e and idry_s based on eta2,
+        not used at the moment
+        '''
+        self.idry.val = (self.eta2 < -self.hgrid.dp + h0).astype('int32')
+        # An element is wet if and only if depths at all nodes >h0
+        self.idry_e.val = np.ones(self.hgrid.ne).astype('int32')
+        for i34 in [3, 4]:
+            idx = (self.hgrid.i34 == i34)
+            self.idry_e.val[idx] = np.amax(self.idry.val[self.hgrid.elnode[idx, 0: i34]], axis=1).astype(int)
+
+        # slightly different from SCHISM:
+        # SCHISM: A node is wet if and only if at least one surrounding element is wet. This script: skipped
+        # SCHISM: A side is wet if and only if at least one surrounding element is wet. This script: changed to both nodes are wet
+        self.idry_s.val = np.amax(self.idry.val[self.hgrid.isidenode], axis=1).astype('int32')
+
+    def trnd_propogate(self, half_levels=True):
         '''
         Propogate trnd to tr_el and tr_nd0
+
+        Note:
+            Previously this didn't consider vertical interpolation, i.e., half_levels=False;
+                now it does by default.
+            The half_levels option is retained for backward compatibility.
+
+            Slight differences from SCHISM's native approach near bottom, but should be acceptable.
         '''
         tmp_grid = copy.deepcopy(self.grid.hgrid)
-        for i, _ in enumerate(['tem', 'sal']):
-            for j in range(0, self.grid.vgrid.nvrt):
-                tmp_ele_vals = tmp_grid.interp_node_to_elem(value=self.tr_nd.val[:, j, i])
-                self.tr_el.val[:, j, i] = copy.deepcopy(tmp_ele_vals)
+        # for i, _ in enumerate(['tem', 'sal']):
+        #     for j in range(0, self.grid.vgrid.nvrt):
+        #         tmp_ele_vals = tmp_grid.interp_node_to_elem(value=self.tr_nd.val[:, j, i])
+        #         self.tr_el.val[:, j, i] = copy.deepcopy(tmp_ele_vals)
+
+        # horizontal interp at nodes' level first
+        temp_tr_el = tmp_grid.interp_node_to_elem(value=self.tr_nd.val)
+        # assert np.allclose(temp_tr_el, self.tr_el.val)  # should be identical
+        self.tr_el.val[:] = temp_tr_el[:]
+
+        if half_levels:
+            self.tr_el.val[:, 1:, :] = 0.5 * (temp_tr_el[:, :-1, :] + temp_tr_el[:, 1:, :]) # vertical interp to half levels
+        else:
+            self.tr_el.val[:] = temp_tr_el
 
         self.tr_nd0.val[:] = self.tr_nd.val[:]
 
     def writer(self, fname):
         self.attrs = ['dimname','dims']
         WriteNC(fname, self, vars=self.vars)  # only writing the native variables of a hotstart.nc
+
+    def plot(self, var, plot_layer=-1, out_dir='./'):
+        self.grid.hgrid.compute_all()
+        if var == 'trel':
+            plt.scatter(self.grid.hgrid.xctr, self.grid.hgrid.yctr, s=5, c=self.tr_el.val[:, plot_layer, 0], cmap='jet', vmin=0, vmax=33)
+            plt.savefig(f'{out_dir}/temprature.png', dpi=700)
+
+            plt.scatter(self.grid.hgrid.xctr, self.grid.hgrid.yctr, s=5, c=self.tr_el.val[:, plot_layer, 1], cmap='jet', vmin=0, vmax=33)
+            plt.savefig(f'{out_dir}/salinity.png', dpi=700)
+        elif var == 'trnd':
+            plt.scatter(self.grid.hgrid.x, self.grid.hgrid.y, s=5, c=self.tr_nd.val[:, plot_layer, 0], cmap='jet', vmin=0, vmax=33)
+            plt.savefig(f'{out_dir}/temprature.png', dpi=700)
+
+            plt.scatter(self.grid.hgrid.x, self.grid.hgrid.y, s=5, c=self.tr_nd.val[:, plot_layer, 1], cmap='jet', vmin=0, vmax=33)
+            plt.savefig(f'{out_dir}/salinity.png', dpi=700)
 
     def replace_vars(self, var_dict=[], shapefile_name=None):
         '''
@@ -455,6 +504,21 @@ def GetVerticalWeight(zcor_in, kbp_in, zcor_out, neighbors):
         z_idx_upper[i, above] = l_idx[above]
 
     return [z_weight_lower, z_idx_lower, z_idx_upper]
+
+
+def find_ele_node_in_region(bpfile, grid):
+    '''
+    Find element/node index within one or more polygons defined in a bpfile
+        bpfile: schism bpfile path name
+        grid: schism_grid instance
+    '''
+    bp = read(bpfile)
+    grid.compute_ctr()
+
+    inside_ele_mask = inside_polygon(np.c_[grid.xctr, grid.yctr], bp.x, bp.y).astype('bool')
+    inside_node_mask = inside_polygon(np.c_[grid.x, grid.y], bp.x, bp.y).astype('bool')
+
+    return [inside_ele_mask, inside_node_mask]
 
 
 def find_ele_node_in_shpfile(shapefile_name, grid):
@@ -637,7 +701,7 @@ def Sample4():
     myhot.writer('./hotstart_reinit_elev.nc')
 
 
-if __name__ == "__main__":
+def Sample5():
     """
     Replace the temporature and salinity from the operation's hotstart.nc
     with the values from another hotstart.nc file based on HYCOM.
@@ -648,6 +712,7 @@ if __name__ == "__main__":
         grid_info='./',  # folder containing hgrid and vgrid
         hot_file='./hotstart_from_hycom.nc'
     )
+    bg_hot.trnd_propogate()
     fg_hot = Hotstart(
         grid_info='./',
         hot_file='./hotstart_from_oper.nc'
@@ -665,3 +730,29 @@ if __name__ == "__main__":
     # plt.savefig(f'./new_surface_temp.png', dpi=700)
 
     fg_hot.writer('./new_hotstart.nc')
+
+
+def sample_Pacific():
+    '''
+    Sample usage of setting salinity to 0 in a region for STOFS3D-Pacific
+    '''
+
+    [_, node_mask] = find_ele_node_in_region(
+        bpfile='/sciclone/schism10/feiye/TEMP/Pacific_Hot/modify.reg',
+        grid=read('/sciclone/schism10/feiye/TEMP/Pacific_Hot/hgrid.gr3')
+    )
+    fg_hot = Hotstart(
+        grid_info='/sciclone/schism10/feiye/TEMP/Pacific_Hot/',
+        hot_file='/sciclone/schism10/feiye/TEMP/Pacific_Hot/hotstart.nc.original'
+    )
+    fg_hot.tr_nd.val[node_mask, :, 1] = 0.0  # set salinity to 0
+    fg_hot.trnd_propogate()
+    # for ind in node_idx_list:
+    #     fg_hot.eta2.val[ind] = -fg_hot.grid.hgrid.dp[ind] - 0.1  # set water surface to 0.1 m below ground
+    # Note: do fg_hot.trnd_propogate() before writing if trnd is changed; it propogates trnd values to trnd0 and tr_el
+    fg_hot.writer(f'{fg_hot.source_dir}/hotstart_S0.nc')
+
+if __name__ == "__main__":
+    # Sample5()
+    sample_Pacific()
+    print('done')

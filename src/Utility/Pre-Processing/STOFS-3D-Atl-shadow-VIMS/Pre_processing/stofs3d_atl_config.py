@@ -36,6 +36,9 @@ class ConfigStofs3dAtlantic():
                                 # made by make_feeder_channel.py in RiverMapper
         hgrid_without_feeders=None,
         mandatory_sources_coor=None,  # a dictionary of mandatory sources' coordinates
+        existing_source_json_path=None,  # path to an existing sources.json and sinks.json to be reused
+        reuse_source_json=False,  # whether to reuse existing sources.json and sinks.json when relocating sources
+        replace_nwm_with_usgs=False,  # whether to replace NWM streamflow with USGS gage data if available
         gr3_values=None,
         tvd_regions=None
     ):
@@ -53,6 +56,9 @@ class ConfigStofs3dAtlantic():
         self.feeder_info_file = feeder_info_file
         self.hgrid_without_feeders = hgrid_without_feeders
         self.mandatory_sources_coor = mandatory_sources_coor
+        self.existing_source_json_path = existing_source_json_path
+        self.reuse_source_json = reuse_source_json
+        self.replace_nwm_with_usgs = replace_nwm_with_usgs
 
         if bc_flags is None:
             self.bc_flags = [
@@ -200,7 +206,7 @@ class ConfigStofs3dAtlantic():
             ),
             hgrid_without_feeders=None,
             mandatory_sources_coor=rsf.v45_s2_mandatory_sources_coor,
-            relocate_source=True,
+            relocate_source=False,
             nwm_cache_folder=None,
             bc_flags=[[5, 3, 0, 0]],
             bc_relax=[[None, None, None, None]],

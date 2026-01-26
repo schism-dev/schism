@@ -1,0 +1,35 @@
+profile: "v7.3_2024_atlas"   # or whatever recipe name you wire to
+
+run:
+  project_dir: "/sciclone/schism10/feiye/STOFS3D-v7.3/"
+  runid: "21j"  # "r2024"
+  hgrid_path: "/sciclone/schism10/feiye/STOFS3D-v8/v7.3_static_inputs_2025_09_09/hgrid.gr3"
+
+model:
+  version: "v7p2"
+  rnday: 185 # 397
+  startdate: "2024-07-01"  # "2022-12-31"
+  nwm_cache_folder: "/sciclone/schism10/feiye/STOFS3D-v7.3/I21j/NWM_20231201/"
+  existing_source_json_path: '/sciclone/schism10/feiye/STOFS3D-v8/I15k_v7/Source_sink/original_source_sink/'
+  replace_nwm_with_usgs: True
+
+
+runtime:
+  # optional scratch target for outputs symlink:
+  scr_dir: "/sciclone/scr10/feiye/STOFS3D-v7.3/"
+
+inputs:
+  bctides: false
+  vgrid: false
+  gr3: false
+  nudge_gr3: false
+  shapiro: false
+  drag: false
+  elev_ic: false
+  source_sink: false
+  soil: false
+  "hotstart.nc": false
+  "3D.th.nc": false
+  "elev2D.th.nc": true
+  "*nu.nc": false
+  "*.prop": false

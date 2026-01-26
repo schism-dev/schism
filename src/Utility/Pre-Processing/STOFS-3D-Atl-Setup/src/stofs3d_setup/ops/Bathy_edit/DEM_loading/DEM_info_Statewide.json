@@ -1,0 +1,7 @@
+{
+    "USGS_1M": {
+        "Annotation": "USGS 1m Statewide DEMs",
+        "Note": "CT and RI, mainly for breakwaters",
+        "File": "/sciclone/schism10/Hgrid_projects/DEMs/USGS_1M_Stationwide/"
+    }
+}

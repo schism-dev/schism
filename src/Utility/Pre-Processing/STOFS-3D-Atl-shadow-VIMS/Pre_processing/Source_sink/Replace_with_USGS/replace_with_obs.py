@@ -19,11 +19,18 @@ import geopandas as gpd
 from schism_py_pre_post.Grid.Prop import Prop
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
 from schism_py_pre_post.Utilities.util import b_in_a
-from schism_py_pre_post.Download.Data import ObsData
-from schism_py_pre_post.Download.download_usgs_with_api import \
+from .download_usgs import \
     download_stations, usgs_var_dict, convert_to_ObsData, \
     get_usgs_stations_from_state
 from pylib import schism_grid
+
+
+STOFS3D_ATL_STATES = [
+    'TX', 'LA', 'MS', 'AL', 'FL', 'GA', 'SC', 'NC', 'VA',
+    'DC', 'MD', 'DE', 'PA', 'NJ', 'NY', 'CT', 'RI', 'MA', 'NH', 'ME'
+]
+
+cache_folder = '/sciclone/schism10/feiye/Cache/'
 
 
 def read_nwm_data(
@@ -165,14 +172,19 @@ def find_usgs_along_nwm(
                                 vsource=vsource, total_seg_length=total_seg_length, order=order+1, nwm_shp=nwm_shp)
 
 
-def prepare_usgs_stations(diag_output=None):
+def prepare_usgs_stations(states=None, diag_output=None):
     '''
     Prepare USGS stations for a spatial range larger than the model domain,
     so that stations within the search range can be selected for each vsource.
+
+    states: list of states to search for USGS stations, e.g., ['LA', 'MS', 'TX']
     '''
+    if states is None:
+        raise ValueError('a list of states must be provided')
+
     # get station info
     station_info = get_usgs_stations_from_state(
-        states=['LA', 'MS', 'TX'], parameter=usgs_var_dict["streamflow"]["id"])
+        states=states, parameter=usgs_var_dict["streamflow"]["id"])
 
     station_ids = station_info["site_no"].to_numpy()
     station_lon = station_info['dec_long_va'].to_numpy()
@@ -183,6 +195,12 @@ def prepare_usgs_stations(diag_output=None):
     station_ids = station_ids[valid]
     station_lon = station_lon[valid].astype(float)
     station_lat = station_lat[valid].astype(float)
+
+    # remove duplicates
+    _, unique_idx = np.unique(station_ids, return_index=True)
+    station_ids = station_ids[unique_idx]
+    station_lon = station_lon[unique_idx]
+    station_lat = station_lat[unique_idx]
 
     if diag_output is not None:
         with open(diag_output, 'w', encoding='utf-8') as f:
@@ -201,8 +219,12 @@ def associate_poi_with_nwm(
 ) -> gpd.geodataframe.GeoDataFrame:
     '''
     Associate USGS stations with NWM segment fid.
-    This is done by finding the nearest NWM segment to each USGS station,
-    then excluding the USGS stations that are too far away from the NWM segment.
+    This is done by finding the nearest NWM segment to each USGS station within a threshold.
+    Then, it ensures only one USGS station is associated with each NWM segment.
+
+    Note that some NWM segments have already associated USGS stations in the shapefile
+    by the attribute 'gages', which are from NWM v1. In this case, the gages will be
+    overwritten with the newly associated USGS stations.
 
     Input:
     nwm_shp: geopandas dataframe of NWM hydrofabric shapefile
@@ -211,31 +233,70 @@ def associate_poi_with_nwm(
 
     if poi_names is None:
         poi_names = [f'{i}' for i in range(len(poi))]
+    poi_names = np.array(poi_names)
 
-    nwm_seg_center_lon = nwm_shp.geometry.centroid.x.to_numpy()
-    nwm_seg_center_lat = nwm_shp.geometry.centroid.y.to_numpy()
-    seg_tree = cKDTree(np.c_[nwm_seg_center_lon, nwm_seg_center_lat])
-    dist, poi2nwm_idx = seg_tree.query(poi)
-    poi2nwm_idx[dist > 0.1] = -1  # exclude points that > 10 km away from the NWM segment
+    # Build KDTree from segment centroids
+    seg_centers = np.c_[nwm_shp.geometry.centroid.x, nwm_shp.geometry.centroid.y]
+    seg_tree = cKDTree(seg_centers)
 
-    # finer screening
-    for i, this_idx in enumerate(poi2nwm_idx):
-        if this_idx != -1:
-            idx = nwm_shp.index[this_idx]
-            if nwm_shp.loc[idx].geometry.distance(gpd.points_from_xy([poi[i, 0]], [poi[i, 1]])) > 0.01:
-                poi2nwm_idx[i] = -1
+    # query k nearest centroid neighbors
+    k = 10
+    dist, idx = seg_tree.query(poi, k=k)   # (n_poi, k)
 
-    # create a new column in the nwm_shp dataframe to store the associated poi
+    # enforce threshold (10 km ≈ 0.1°)
+    dist[dist > 0.1] = np.inf
+    idx[dist == np.inf] = -1
+
+    poi_points = gpd.points_from_xy(poi[:, 0], poi[:, 1])
+
+    poi2nwm_idx = np.full(len(poi), -1, dtype=int)
+    poi2nwm_distance = np.full(len(poi), np.inf)
+
+    for i in range(len(poi)):
+        candidates = []
+        for j in range(k):
+            seg_pos = idx[i, j]
+            if seg_pos == -1:
+                continue
+            seg_idx = nwm_shp.index[seg_pos]
+            # true geometry distance
+            geom_dist = nwm_shp.loc[seg_idx, "geometry"].distance(poi_points[i])
+            if geom_dist <= 0.01:   # 1 km cutoff
+                candidates.append((seg_idx, geom_dist))
+
+        if candidates:
+            # pick the closest by geometry distance
+            seg_idx, geom_dist = min(candidates, key=lambda x: x[1])
+            poi2nwm_idx[i] = nwm_shp.index.get_loc(seg_idx)  # store positional index
+            poi2nwm_distance[i] = geom_dist
+
+    # deal with multiple poi's associated with the same nwm segment,
+    # retain the one with the smallest distance
+    # Build (poi -> seg) matches that passed screening
+    valid = np.where(poi2nwm_idx != -1)[0]
+    matches = pd.DataFrame({
+        "poi": [poi_names[i] for i in valid],
+        "seg_pos": [poi2nwm_idx[i] for i in valid],          # position in nwm_shp.index
+        "dist": [poi2nwm_distance[i] for i in valid],
+    })
+    seg_index = nwm_shp.index.to_numpy()
+    matches["seg_idx"] = seg_index[matches["seg_pos"].values]
+
+    # --- WARN: multiple POIs on the same segment ---
+    seg_dupes = matches[matches.duplicated("seg_idx", keep=False)].sort_values(["seg_idx", "dist"])
+    for seg_idx, grp in seg_dupes.groupby("seg_idx"):
+        fid = nwm_shp.at[seg_idx, "featureID"] if "featureID" in nwm_shp.columns else seg_idx
+        print(f"warning: NWM segment {fid} matched {len(grp)} POIs:")
+        for _, r in grp.iterrows():
+            print(f"    poi={r.poi}, dist={r.dist:.6f}")
+        print(f"    choosing the closest one: poi={grp.iloc[0].poi}, dist={grp.iloc[0].dist:.6f}\n")
+    # --- Keep the closest POI per segment ---
+    best_seg = matches.sort_values(["seg_idx", "dist"]).groupby("seg_idx", as_index=False).first()
+    # reset/assign column
     if poi_label not in nwm_shp.columns:
         nwm_shp[poi_label] = None
-    for i, this_idx in enumerate(poi2nwm_idx):
-        if this_idx != -1:  # valid poi
-            idx = nwm_shp.index[this_idx]
-            if nwm_shp.loc[idx, 'gages'] is not None:
-                if nwm_shp.loc[idx, 'gages'] != poi_names[i]:
-                    print(f'warning: segment {nwm_shp.loc[idx].featureID} has inconsistent gages:')
-                    print(f'gage: {nwm_shp.loc[idx].gages} vs. {poi_label}: {poi_names[i]}')
-            nwm_shp.loc[idx, poi_label] = poi_names[i]
+    nwm_shp[poi_label] = None
+    nwm_shp.loc[best_seg["seg_idx"].values, poi_label] = best_seg["poi"].values
 
     idx = nwm_shp[poi_label].notnull()
     print(f'{sum(idx)} {poi_label} associated with NWM segments')
@@ -313,6 +374,7 @@ def test():
 
 def source_nwm2usgs(
     start_time_str="2017-12-01 00:00:00",
+    states=['LA', 'MS', 'TX'],
     f_shapefile="/sciclone/schism10/feiye/schism20/REPO/NWM/Shapefiles/ecgc/ecgc.shp",
     original_ss_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/',
     nwm_data_dir='/sciclone/schism10/whuang07/schism20/NWM_v2.1/',
@@ -329,11 +391,18 @@ def source_nwm2usgs(
     as well as the location of the USGS stations.
     However, only NWM v1's shapefile has the USGS station information.
     This is acceptable because the segment IDs are the same between NWM v1 and later versions.
+
+    The output is adjusted vsource.th written to output_dir.
     '''
 
     os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(f'{output_dir}/Diag/', exist_ok=True)
+    os.makedirs(f'{output_dir}/Pngs/', exist_ok=True)
 
-    usgs_stations, usgs_stations_coords = prepare_usgs_stations(diag_output=f'{output_dir}/usgs_stations.txt')
+    usgs_stations, usgs_stations_coords = prepare_usgs_stations(
+        states=states,
+        diag_output=f'{output_dir}/usgs_stations.txt',
+    )
 
     nwm_shp = preprocess_nwm_shp(f_shapefile)
 
@@ -341,7 +410,7 @@ def source_nwm2usgs(
     nwm_shp = associate_poi_with_nwm(
         nwm_shp, poi=usgs_stations_coords, poi_names=usgs_stations.tolist(),
         poi_label='gages', diag_output=f'{output_dir}/auto_nearby_gages.txt')
-    
+
     # manually associate some USGS stations with NWM segments,
     # set the NWM segment to be the one associated with the vsource injection
     manual_nwm2usgs = {
@@ -351,8 +420,7 @@ def source_nwm2usgs(
     }
     for nwm_featureID, usgs_id in manual_nwm2usgs.items():
         nwm_shp.loc[nwm_shp['featureID'] == nwm_featureID, 'gages'] = usgs_id
-    
-    # print diagnostic info
+
     idx = nwm_shp['gages'].notnull()
     print(f'{nwm_shp.loc[idx]}')
 
@@ -402,9 +470,10 @@ def source_nwm2usgs(
             vsource=my_source, total_seg_length=0.0, order=0, nwm_shp=nwm_shp
         )
         my_source.upstream_path.writer(
-            f'{output_dir}/Ele{str(my_source.hgrid_ie)}_upstream', shp_gpd=nwm_shp)
+            f'{output_dir}/Diag/Ele{str(my_source.hgrid_ie)}_upstream', shp_gpd=nwm_shp)
 
         # disable downstream search for now, because it may double count a USGS flow
+        # when multiple upstream branches merge into one downstream branch
         # recursively go through downstream branches to find available USGS stations
         # find_usgs_along_nwm(
         #     iupstream=False, starting_seg_id=my_source.nwm_fid,
@@ -427,6 +496,7 @@ def source_nwm2usgs(
     usgs_data = download_stations(
         param_id=usgs_var_dict['streamflow']['id'],
         station_ids=usgs_stations,
+        cache_fname=f'{cache_folder}/usgs_stofs3d_atl_{padded_start_time.strftime("%Y%m%d")}_{padded_end_time.strftime("%Y%m%d")}.pkl',
         datelist=pd.date_range(start=padded_start_time, end=padded_end_time),
     )
     my_obs = convert_to_ObsData(usgs_data)
@@ -530,12 +600,18 @@ def source_nwm2usgs(
                 (nwm_df.index - df.index[0]).total_seconds().to_numpy(),
                 nwm_df[idx].to_numpy().squeeze()
             )
-            
-        plt.figure(figsize=(10, 6)) 
+
+        plt.figure(figsize=(10, 6))
         plt.plot(df.index, df['Data'], '.k', label="original vsource")
         for k, usgs_id in enumerate(mysrc_usgs_id):
-            plt.plot(df.index, this_vs_usgs_array[:, k], linestyle1[k], linewidth=0.5, label=f'usgs {usgs_id}')
-            plt.plot(df.index, this_vsource_nwm_array[:, k], linestyle2[k], linewidth=0.5, label=f'NWM near usgs {usgs_id}')
+            plt.plot(
+                df.index, this_vs_usgs_array[:, k],
+                linestyle1[k], linewidth=0.5, label=f'usgs {usgs_id}'
+            )
+            plt.plot(
+                df.index, this_vsource_nwm_array[:, k],
+                linestyle2[k], linewidth=0.5, label=f'NWM near usgs {usgs_id}'
+            )
 
         # take the diff (including all relavant usgs-nwm pairs found)
         diff_usgs_nwm = this_vs_usgs_array - this_vsource_nwm_array
@@ -545,7 +621,7 @@ def source_nwm2usgs(
 
         plt.legend()
         # plt.show()
-        plt.savefig(f'{output_dir}/{i}_{my_source.hgrid_ie}.png', dpi=400)
+        plt.savefig(f'{output_dir}/Pngs/{i}_{my_source.hgrid_ie}.png', dpi=400)
         plt.clf()
 
         # replace vsource at this source
@@ -557,23 +633,27 @@ def source_nwm2usgs(
     my_th.writer(f'{output_dir}/adjusted_vsource.th')
 
 
-if __name__ == "__main__":
+def sample_LA_domain():
+    """Sample LA domain for testing purposes."""
+
     # sample usage (the final product is "adjusted_vsource.th" in the output_dir):
-    # source_nwm2usgs(
-    #     start_time_str="2024-03-05 00:00:00",
-    #     f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
-    #     original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/',
-    #     nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/20240305/',
-    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/USGS_adjusted_sources/',
-    # )
 
     source_nwm2usgs(
-        start_time_str="2021-08-01 00:00:00",
+        start_time_str="2024-03-05 00:00:00",
+        states=['LA', 'MS', 'TX'],
         f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
-        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09g/Source_sink/original_source_sink/',
-        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09g/Source_sink/original_source_sink/20210801/',
-        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09j/Source_sink/USGS_adjusted_sources/',
+        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I19/Source_sink/original_source_sink/',
+        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/20240305/',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I19/Source_sink/USGS_adjusted_sources/',
     )
+
+    # source_nwm2usgs(
+    #     start_time_str="2021-08-01 00:00:00",
+    #     f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
+    #     original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09g/Source_sink/original_source_sink/',
+    #     nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09g/Source_sink/original_source_sink/20210801/',
+    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09j/Source_sink/USGS_adjusted_sources/',
+    # )
 
     # source_nwm2usgs(
     #     start_time_str="2017-12-01 00:00:00",
@@ -591,4 +671,21 @@ if __name__ == "__main__":
     #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Source_sink/USGS_adjusted_sources/',
     # )
 
+
+def sample_stofs_v7v8():
+    """
+    Sample STOFS v7/v8 domain for testing purposes.
+    """
+    source_nwm2usgs(
+        start_time_str="2017-12-01 00:00:00",
+        states=STOFS3D_ATL_STATES,
+        f_shapefile="/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp",
+        original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15n_v7/original_source_sink0/',
+        nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/NWM/CONUS/netcdf/CHRTOUT/for_2018_hindcast/',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15n_v7/Source_sink/USGS_adjusted_sources/',
+    )
+
+
+if __name__ == "__main__":
+    sample_LA_domain()
     print('done')

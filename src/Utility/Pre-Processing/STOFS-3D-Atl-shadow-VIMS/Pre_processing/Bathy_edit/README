@@ -7,3 +7,5 @@
     The meshing in those rivers/canals needs to be improved in the next version
   2.2) set dp = min(dp, -8.975) in outfall_canal_fix_min_-8.957_depth.reg to prevent leakage into New Orleans
 
+Todo: remove outdated files in Bathy_edit/Levee/Levee_info/Polygons/¬
+

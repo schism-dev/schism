@@ -58,17 +58,22 @@ def gen_elev_ic(hgrid=None, h0=0.1, city_shape_fnames=None, aviso_file=None):
     import xarray as xr
     ocean = np.logical_not(land)
     x1, y1 = transform_ll_to_cpp(hgrid.x, hgrid.y)
-    # read aviso data
-    ds = xr.open_dataset(aviso_file)
-    lon2 = ds.longitude.values
-    lat2 = ds.latitude.values
-    x2, y2 = transform_ll_to_cpp(lon2, lat2)
-    ssh = np.squeeze(ds.adt.values[0, :, :])
-    ds.close()
-    # interpolate aviso data onto model grid
-    ssh_int = interp_to_points_2d(y2, x2, np.c_[y1, x1], ssh)
 
-    elev_ic[ocean] = ssh_int[ocean] - 0.42  # nEw, uniform shift for STOFS-3D-Atl v7
+    if aviso_file is None:
+        print('no aviso file provided, setting elev to 0 in the ocean')
+    else:
+        print(f'reading aviso data from {aviso_file} for ocean elev')
+        # read aviso data
+        ds = xr.open_dataset(aviso_file)
+        lon2 = ds.longitude.values
+        lat2 = ds.latitude.values
+        x2, y2 = transform_ll_to_cpp(lon2, lat2)
+        ssh = np.squeeze(ds.adt.values[0, :, :])
+        ds.close()
+        # interpolate aviso data onto model grid
+        ssh_int = interp_to_points_2d(y2, x2, np.c_[y1, x1], ssh)
+
+        elev_ic[ocean] = ssh_int[ocean] - 0.42  # nEw, uniform shift for STOFS-3D-Atl v7
 
     return elev_ic
 
@@ -143,7 +148,7 @@ def tweak_stofs3d_hotstart(
     my_hot.eta2.val[:] = gen_elev_ic(
         hgrid=my_hot.grid.hgrid, h0=0.1,
         city_shape_fnames=[f'{wdir}/{x}' for x in city_shapefile_names],
-        aviso_file=f'{wdir}/{aviso_file}'
+        aviso_file=aviso_file
     )
 
     print('writing the final hotstart.nc')
@@ -153,7 +158,7 @@ if __name__ == "__main__":
     # Modify hycom-based hotstart.nc.hycom with coastal observation values of T and S, and a better initial elevation
     tweak_stofs3d_hotstart(
         wdir='./',
-        hotstart_date_str='2025-03-01',
+        hotstart_date_str='2024-03-05',
         city_shapefile_names = ["LA_urban_polys_lonlat_v2.shp"],  # polygon shapefile specifying cities, use v3 for Bayou Lafourche if the area is refined
         aviso_file='aviso.nc'
     )
