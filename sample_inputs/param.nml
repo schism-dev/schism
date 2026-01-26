@@ -685,7 +685,7 @@
 ! veg_vert_z(1:nbins_veg_vert+1) specify the distance from bed for each bin (ascending 
 ! order starting from 0; const extrapolation is done beyond largest height).
 ! iveg=2: flex vegeation using Ganthy fomulation.
-! For all options, the cross section of leaf can be circular or rectnagular; in 
+! For all options, the cross section of leaf can be circular or rectangular; in 
 ! the latter case, the input 'diameter' is leaf width.
 !----------------------------------------------------------------------
   iveg = 0 !on/off flag
