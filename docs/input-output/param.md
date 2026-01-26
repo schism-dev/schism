@@ -285,8 +285,8 @@ The vertical variation/scalings for these parameters are specified for `nbins_ve
 The vertical scalings are given by `veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1)`.
 
 If `iveg=1`, rigid cylinder option is used. If `iveg=2`, flexible vegetation formulation of Ganthy is used. 
-Parameters needed for this case include:
-  `veg_cw` (a non-dimensional calibration coefficient for beding).
+Additional parameter needed for flex case is:
+  `veg_cw` (a non-dimensional calibration coefficient for bending).
 
 ### itr_met=3 (int), h_tvd=5. (double)
 Transport option for all tracers. `itr_met=3` for TVD, and `itr_met=4` for 3rd order WENO. `h_tvd` specifies the transition depth (in meters) between upwind and higher-order schemes; i.e. more efficient upwind is used when the `local depth < h_tvd`. 
