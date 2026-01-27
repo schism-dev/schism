@@ -167,7 +167,7 @@ module schism_glbl
   character(len= 4),save :: a_4
   integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D,irec0_schout, &
  &istack0_schout(2),ncid_source,ncid_schout(8,2),nrec_schout,nstride_schout, &
- &ncid_atmos,ncid_ref_ts
+ &ncid_atmos,ncid_ref_ts,ncid_sta,id_staout(30)
         
   ! ADT for global-to-local linked-lists
   type :: llist_type

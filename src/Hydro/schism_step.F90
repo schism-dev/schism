@@ -180,7 +180,7 @@
       character(len=6),save :: a_6
       character(len=48) :: time_string,sname,snames_schout(8),vnames_schout(8)
       integer :: lfgb       ! Length of processor specific global output file name
-      real(4) :: floatout
+      real(4) :: floatout(1)
       real(8) :: dbleout2(1)
 
 
@@ -10323,10 +10323,11 @@
         call mpi_reduce(sta_out3d,sta_out3d_gb,nvrt*nout_sta*nvar_sta,rtype,MPI_SUM,0,comm,ierr)
         call mpi_reduce(zta_out3d,zta_out3d_gb,nvrt*nout_sta*nvar_sta,rtype,MPI_SUM,0,comm,ierr)
 
-        if(myrank==0) then
+        if(myrank==0.and.mod(it,nspool_sta)==0) then
+          icount2=it/nspool_sta
 !          write(290,*)nwild2(1:nout_sta)
           do i=1,nvar_sta
-            if(iof_sta(i)==0.or.mod(it,nspool_sta)/=0) cycle
+            if(iof_sta(i)==0) cycle !.or.mod(it,nspool_sta)/=0) cycle
             do j=1,nout_sta
               if(nwild2(j)==0) then !outside domain
                 sta_out_gb(j,i)=1.d7 !-9999.d0
@@ -10341,12 +10342,33 @@
                   zta_out3d_gb(:,j,i)=zta_out3d_gb(:,j,i)/dble(nwild2(j))
                 endif
               endif
-            enddo !j
-            write(250+i,'(e24.16,6000(1x,e14.6))')time,sta_out_gb(:,i)
-            if(iout_sta==2.and.i>4) write(250+i,'(e24.16,300000(1x,e14.6))')time,sta_out3d_gb(:,:,i),zta_out3d_gb(:,:,i)
-          enddo !i
+            enddo !j=1,nout_sta
+
+            if(iout_sta==1) then !ASCII
+              write(250+i,'(e24.16,6000(1x,e14.6))')time,sta_out_gb(:,i)
+!             if(iout_sta==2.and.i>4) write(250+i,'(e24.16,300000(1x,e14.6))')time,sta_out3d_gb(:,:,i),zta_out3d_gb(:,:,i)
+
+            else if(iout_sta==2) then !nc
+              m=nf90_put_var(ncid_sta,id_staout(i+1),real(sta_out_gb(:,i)),(/1,icount2/),(/nout_sta,1/))
+              !3D
+              if(i>4) then
+                m=nf90_put_var(ncid_sta,id_staout(i+7),real(sta_out3d_gb(:,:,i)),(/1,1,icount2/),(/nvrt,nout_sta,1/))
+                !zta_out3d_gb should be done only once
+                m=nf90_put_var(ncid_sta,id_staout(16),real(zta_out3d_gb(:,:,i)),(/1,1,icount2/),(/nvrt,nout_sta,1/))
+              endif !i
+            endif !iout_sta=2
+          enddo !i=1,nvar_sta
+
+          !Finish outputting other vars in nc
+          if(iout_sta==2) then
+            floatout(1)=real(time)
+            m=nf90_put_var(ncid_sta,id_staout(1),floatout,(/icount2/),(/1/))
+            !Flush to make sure ihot=2 works
+            m=nf90_sync(ncid_sta)
+          endif !iout_sta=2
+
           write(16,*)'done station outputs...'
-        endif !myrank
+        endif !myrank and 
       endif !iout_sta/=0
 
 #ifdef USE_HA

@@ -4269,19 +4269,58 @@
 
 !       Open output file from rank 0
         if(myrank==0) then
-          do i=1,nvar_sta
-            write(ifile_char,'(i03)')i
-            ifile_char=adjustl(ifile_char)  !place blanks at end
-            ifile_len=len_trim(ifile_char)
-            if(ihot==2) then
-              open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='old')
-            else
-              open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='replace')
-            endif
-          enddo !i
-          write(16,*)'done preparing station outputs'
-          !call flush(16) ! flush "mirror.out"
-        endif
+          if(iout_sta==1) then !ASCII
+            do i=1,nvar_sta
+              write(ifile_char,'(i03)')i
+              ifile_char=adjustl(ifile_char)  !place blanks at end
+              ifile_len=len_trim(ifile_char)
+              if(ihot==2) then
+                open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='old')
+              else
+                open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='replace')
+              endif
+            enddo !i
+            write(16,*)'done preparing station outputs'
+            !call flush(16) ! flush "mirror.out"
+          else !nc
+            if(ihot<=1) then
+              j=nf90_create('staout.nc',OR(NF90_NETCDF4,NF90_CLOBBER),ncid_sta)
+              j=nf90_def_dim(ncid_sta,'nstations',nout_sta,nwild(1))
+              j=nf90_def_dim(ncid_sta,'nVert',nvrt,nwild(2))
+              j=nf90_def_dim(ncid_sta,'nTracers2',ntracers-2,nwild(3))
+              j=nf90_def_dim(ncid_sta,'time',NF90_UNLIMITED,nwild(4))
+
+              j=nf90_def_var(ncid_sta,'time_in_sec',NF90_FLOAT,nwild(3),id_staout(1))
+              nwild2(1)=nwild(1); nwild2(2)=nwild(4)
+              j=nf90_def_var(ncid_sta,'elev',NF90_FLOAT,nwild2(1:2),id_staout(2))
+              j=nf90_def_var(ncid_sta,'air_pres',NF90_FLOAT,nwild2(1:2),id_staout(3))
+              j=nf90_def_var(ncid_sta,'windx',NF90_FLOAT,nwild2(1:2),id_staout(4))
+              j=nf90_def_var(ncid_sta,'windy',NF90_FLOAT,nwild2(1:2),id_staout(5))
+              j=nf90_def_var(ncid_sta,'temp',NF90_FLOAT,nwild2(1:2),id_staout(6))
+              j=nf90_def_var(ncid_sta,'salt',NF90_FLOAT,nwild2(1:2),id_staout(7))
+              j=nf90_def_var(ncid_sta,'uvel',NF90_FLOAT,nwild2(1:2),id_staout(8))
+              j=nf90_def_var(ncid_sta,'vvel',NF90_FLOAT,nwild2(1:2),id_staout(9))
+              j=nf90_def_var(ncid_sta,'wvel',NF90_FLOAT,nwild2(1:2),id_staout(10))
+              nwild2(1:3)=nwild((/2,1,4/))
+              j=nf90_def_var(ncid_sta,'temp3D',NF90_FLOAT,nwild2(1:3),id_staout(12))
+              j=nf90_def_var(ncid_sta,'salt3D',NF90_FLOAT,nwild2(1:3),id_staout(13))
+              j=nf90_def_var(ncid_sta,'uvel3D',NF90_FLOAT,nwild2(1:3),id_staout(14))
+              j=nf90_def_var(ncid_sta,'vvel3D',NF90_FLOAT,nwild2(1:3),id_staout(15))
+              j=nf90_def_var(ncid_sta,'zcoordinate',NF90_FLOAT,nwild2(1:3),id_staout(16))
+
+              nwild2(1:3)=nwild((/3,1,4/))
+              j=nf90_def_var(ncid_sta,'tracer',NF90_FLOAT,nwild2(1:3),id_staout(17))
+              nwild2(1:4)=nwild((/3,2,1,4/))
+              j=nf90_def_var(ncid_sta,'tracer3D',NF90_FLOAT,nwild2(1:4),id_staout(18))
+              !deflate
+              !j=nf90_def_var_deflate(ncid_sta,id_staout(),0,1,4)
+              j=nf90_enddef(ncid_sta)
+            else !append (ihot=2)
+              j=nf90_open('staout.nc',NF90_WRITE,ncid_sta)
+              if(j/=NF90_NOERR) call parallel_abort('init: error in staout.nc')
+            endif !ihot
+          endif !iout_sta
+        endif !myrank
       endif !iout_sta
 
 #ifdef USE_HA

@@ -211,16 +211,20 @@
 
 !     Init time history in/outputs
 !     Station output
-      if(iout_sta/=0.and.myrank==0) then
-        do i=1,nvar_sta
-          rewind(250+i)    
-          do it=1,it_now !iths_main
-            if(iof_sta(i)==1.and.mod(it,nspool_sta)==0) then
-              read(250+i,*)
-              if(iout_sta==2.and.i>4) read(250+i,*)
-            endif
-          enddo !it
-        enddo !i
+      if(myrank==0) then
+        if(iout_sta==1) then !ASCII
+          do i=1,nvar_sta
+            rewind(250+i)    
+            do it=1,it_now !iths_main
+              if(iof_sta(i)==1.and.mod(it,nspool_sta)==0) then
+                read(250+i,*)
+                if(iout_sta==2.and.i>4) read(250+i,*)
+              endif
+            enddo !it
+          enddo !i
+        else !nc
+
+        endif !
       endif !myrank
 
 !     Rewind flux.out

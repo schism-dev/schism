@@ -16,6 +16,7 @@
       use schism_glbl
       use schism_msgp
       use schism_io
+      use netcdf
       USE hydraulic_structures
 #ifdef USE_HA
       USE harm
@@ -147,6 +148,8 @@
       do i=1,2000
         close(i)
       enddo !i
+
+      if(iout_sta==2.and.myrank==0) i=nf90_close(ncid_sta)
 
 #ifdef USE_WWM
       call TERMINATE_WWM
