@@ -10223,7 +10223,7 @@
               sta_out(i,j)=0.d0
               sta_out3d(:,i,j)=0.d0
               zta_out3d(:,i,j)=0.d0
-            else !is parent
+            else !has parent
               iep_flag(i)=1
               sta_out(i,j)=0.d0 !initialize
               if(j==1) then !elev.
@@ -10234,18 +10234,18 @@
                 swild2(1,1:i34(ie))=windx(elnode(1:i34(ie),ie))
               else if(j==4) then !wind y
                 swild2(1,1:i34(ie))=windy(elnode(1:i34(ie),ie))
-              else if(j==5) then !T
-                swild2(1:nvrt,1:i34(ie))=tr_nd(1,1:nvrt,elnode(1:i34(ie),ie))
-              else if(j==6) then !S
-                swild2(1:nvrt,1:i34(ie))=tr_nd(2,1:nvrt,elnode(1:i34(ie),ie))
-              else if(j==7) then !u
+!              else if(j==5) then !T
+!                swild2(1:nvrt,1:i34(ie))=tr_nd(1,1:nvrt,elnode(1:i34(ie),ie))
+!              else if(j==6) then !S
+!                swild2(1:nvrt,1:i34(ie))=tr_nd(2,1:nvrt,elnode(1:i34(ie),ie))
+              else if(j==5) then !u
 !Error: may not be accurate near poles as pframe changes rapidly there
                 swild2(1:nvrt,1:i34(ie))=uu2(1:nvrt,elnode(1:i34(ie),ie))
-              else if(j==8) then !v
+              else if(j==6) then !v
                 swild2(1:nvrt,1:i34(ie))=vv2(1:nvrt,elnode(1:i34(ie),ie))
-              else if(j==9) then !w
+              else if(j==7) then !w
                 swild2(1:nvrt,1:i34(ie))=ww2(1:nvrt,elnode(1:i34(ie),ie))
-              else if(j<=9+ntracers-2) then 
+              else if(j<=7+ntracers) then 
                 swild2(1:nvrt,1:i34(ie))=tr_nd(j-7,1:nvrt,elnode(1:i34(ie),ie))
               else
                 call parallel_abort('STEP: unknown sta. output')
@@ -10310,7 +10310,7 @@
                     endif !k
                   enddo !k
                 endif !idry_e
-              endif !j
+              endif !j (2D or 3D)
             endif !ie
           enddo !i=1,nout_sta
 !Debug
