@@ -768,9 +768,9 @@
       if(ihconsv/=0.and.nws/=2.and.nws/=4) call parallel_abort('Heat budge model must have nws>=2')
 
 #ifdef USE_BULK_FAIRALL
-      if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Fairall et al.(03)'
+      if(ihconsv/=0.and.myrank==0) write(16,*)'Turb. Fluxes: Fairall et al.(03)'
 #else
-      if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Zeng et al.(98)'
+      if(ihconsv/=0.and.myrank==0) write(16,*)'Turb. Fluxes: Zeng et al.(98)'
 #endif
 
 #ifdef USE_ATMOS

@@ -65,9 +65,11 @@
         nt0=nt0+1
         read(10,*,end=98,err=98) !time,wild0(:)
         if(i>4) then !3D
-          read(10,*,end=98,err=98) !time,wild(:,:),zcor(:,:)
+          read(10,*,end=97,err=97) time,wild(:,:),zcor(:,:)
         endif !i>4
       enddo
+97    print*, 'staout_* does not have profile!',nt0-1
+      stop
 98    continue
       if(nt0>1) ntime=min(ntime,nt0-1) !not empty
       close(10)
