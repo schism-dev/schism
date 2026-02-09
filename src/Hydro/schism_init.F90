@@ -2856,7 +2856,7 @@
         endif !myrank
         call mpi_bcast(ieg_source_ngen,max(1,nsources_bmi),itype,0,comm,istat)
         call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
-        call mpi_bcast(ieg_source_flowpath_ids,max(1,nsources),itype,0,comm,istat)
+        call mpi_bcast(ieg_source_flowpath_ids,max(1,nsources_bmi),itype,0,comm,istat)
         call mpi_bcast(nsinks,1,itype,0,comm,istat)
 
         ! Now define the time step interval for sources and sinks here
