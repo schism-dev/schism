@@ -7,6 +7,14 @@
 ! local sparse matrix of size npi x npia (keeping order of non-0 struc's). 
 ! The local-2-global mappings are then generated so we can assemble matrix locally.
 !------------------------------------------------------------------------------
+!Routines & functions
+!init_petsc
+!gen_mappings
+!load_mat_row
+!petsc_solve
+!finalize_petsc
+
+
 module petsc_schism
 
 #if PETSCV==1
@@ -64,8 +72,8 @@ PetscErrorCode :: perr
 Character(len=256) :: filename, print_status
 
 ! Mappings
-! npi  - resident nodes excluding those owned by other processes [interface nodes] (subset of np)
-! npia - npi plus neighbor nodes (subset of npa)
+! npi  - local resident nodes that are owned by this rank (no overlaps of interface nodes btw proc's)
+! npia - local nodes plus ghost or interface nodes of npi nodes
 ! petsc_global - Global mapping to map to petsc
 PetscInt :: npi, npia 
 PetscInt, allocatable :: npi2np(:),npa2npi(:),npa2npia(:),npia2gb(:)
@@ -101,7 +109,7 @@ subroutine init_petsc
   call gen_mappings
 
 ! Count # of non-zero entries for (block) diagonal (d_nnz) and off-diagonal (o_nnz) parts for each row
-! Diagonal part is owned by the local proc, off-d entries 'belong to' other proc's (i.e. not part of local npi nodes)
+! 'Diagonal' entries are owned by the local proc, off-d entries 'belong to' other proc's (i.e. not part of local npi nodes)
 ! Use npa2npi map (=-999) to identify off-diagonal nonzeros.
 ! Essential boundary conditions are imposed by replacing rows with diagonal 1,
 ! and moving columns to RHS
@@ -217,9 +225,6 @@ subroutine gen_mappings
   PetscInt :: i,j,k,nd,istat,ip,npig
   PetscInt, allocatable :: npi_list(:), npig_list(:)
 
-  ! npi  - local resident nodes that are owned by this rank (no overlaps of
-  ! interface nodes btw proc's)
-  ! npia - local nodes plus ghost or interface nodes of npi nodes
   ! npi_list,npig_list are 1-based
   allocate(npig_list(npa),npi_list(np),stat=istat)
   if(istat/=0) call parallel_abort('gen_mappings: Fail to allocate mappings')
