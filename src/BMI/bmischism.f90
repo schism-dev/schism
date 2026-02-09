@@ -721,7 +721,7 @@ end function schism_finalizer
       allocate(grid_x(nsources_bmi))
       ! loop over all user sources for mesh and append T-Route
       ! flow path ids from hydrofabric to array
-      do i = 1, nsources
+      do i = 1, nsources_bmi
          grid_x(i) = ieg_source_flowpath_ids(i)
       enddo
       x(:) = grid_x(:)
@@ -823,7 +823,7 @@ end function schism_finalizer
       allocate(grid_y(nsources_bmi))
       ! loop over all user sources for mesh and append T-Route
       ! flow path ids from hydrofabric to array
-      do i = 1, nsources
+      do i = 1, nsources_bmi
          grid_y(i) = ieg_source_flowpath_ids(i)
       enddo
       y(:) = grid_y(:)
