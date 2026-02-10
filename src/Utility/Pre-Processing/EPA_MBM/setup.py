@@ -141,9 +141,9 @@ for fname,module in zip(fnames,modules):
     else:
        copyfile(pname,fname); print('writing {}'.format(fname))
     if hasattr(p,'schism') and module!='WWM':
-       #rname=fname+'.0'; sname=p.schism+'/sample_inputs/'+('wwminput.nml.WW3' if module=='WWM' else fname)
-       rname=fname+'.0'; sname=p.schism+'/sample_inputs/'+fname
-       os.rename(fname,rname); copyfile(sname,fname); chparam(fname,source=rname); os.remove(rname)
+       pn0='old_'+fname; pn=p.schism+'/sample_inputs/'+fname; os.rename(fname,pn0); copyfile(pn,fname); P=read(pn0); S=read(pn)
+       [chparam(fname,i) for i in S if ((i not in P) and fname=='param.nml' and (not i.startswith('iof_')))] #remove new parameters
+       chparam(fname,source=pn0); os.remove(pn0) #update parameter values
        if p.flag['SED']==1 and fname=='param.nml': #add sediment output channel
           P=read(fname,1); nsed=max([i for i in arange(23) if 'iof_sed({})'.format(i) in P])
           for i in arange(nsed+1,28):
