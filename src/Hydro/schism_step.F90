@@ -9657,7 +9657,6 @@
             endif
           endif !iof
         enddo !i
-        call io_icepack(noutput)
 #endif /*USE_MICE*/
 
         !Check total # of vars
