@@ -13,9 +13,9 @@
 
 # Use PetSc as solver for FE eq
 #'v1': v3.5; 'v2': 3.6, 3.7; 'v3': 3.10
- PETSC_VERSION = v3
- USE_PETSC = yes
- EXEC := $(EXEC)_PETSC
+# PETSC_VERSION = v3
+# USE_PETSC = yes
+# EXEC := $(EXEC)_PETSC
 
 # Coupling with atmospheric model via ESMF
 # USE_ATMOS = yes
