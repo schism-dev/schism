@@ -1667,7 +1667,7 @@
 !     may require different init. T,S: -9999 (junk) so ambient values will be
 !     used to avoid 'ice rain' (if randrop falls on a source_sink.in elem, vsource will be combined and
 !     values in msource.th will be used. If outside, ambient values are used and
-!     note that evap/precip is handled separately for S outside source method). later
+!     note that evap/precip is handled separately for S outside source method). Later
 !     air T may be used also.
 !     Other tracers: 0 (otherwise additional nutrients from rain will fall onto
 !     water) 
