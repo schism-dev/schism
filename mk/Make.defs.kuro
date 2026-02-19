@@ -45,7 +45,7 @@ EXEC   := pschism_$(ENV)_Intel
 # Environment 
 ################################################################################
 
-FCP = mpiifort
+FCP = mpiifx
 FCS = ifx
 FLD = $(FCP)
 # MPI vserion (1 or 2) 

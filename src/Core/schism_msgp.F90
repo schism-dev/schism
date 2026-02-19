@@ -475,8 +475,8 @@ subroutine parallel_finalize
   implicit none
 
   if(schism_initialized_mpi) then
-   call mpi_finalize(ierr)
-   if(ierr/=MPI_SUCCESS) call parallel_abort(error=ierr)
+    call mpi_finalize(ierr)
+    if(ierr/=MPI_SUCCESS) call parallel_abort(error=ierr)
   endif
 
 end subroutine parallel_finalize
