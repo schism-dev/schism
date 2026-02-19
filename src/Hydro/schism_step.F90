@@ -529,26 +529,33 @@
 !$OMP end parallel
 
       if(nws==4) then !include USE_ATMOS
-        if(time>wtime2) then
+
 #ifdef USE_ATMOS
-          !ESMF not extended to ghosts
-          call exchange_p2d(windx2)
-          call exchange_p2d(windy2)
-          call exchange_p2d(pr2)
-          call exchange_p2d(airt2) !centigrade
-          call exchange_p2d(shum2)
-          call exchange_p2d(srad)
-          call exchange_p2d(hradd)
+        !ESMF not extended to ghosts
+        !ESMF only update '2' (at the current time)
+        call exchange_p2d(windx2)
+        call exchange_p2d(windy2)
+        call exchange_p2d(pr2)
+        call exchange_p2d(airt2) !centigrade
+        call exchange_p2d(shum2)
+        call exchange_p2d(srad)
+        call exchange_p2d(hradd)
 #ifdef PREC_EVAP
-          call exchange_p2d(fluxprc)
-          call exchange_p2d(prec_snow)
+        call exchange_p2d(fluxprc)
+        call exchange_p2d(prec_snow)
 #endif 
-          do i=1,npa
-               !ESMF only update within range np NOT npa by ele-itp, therefore some airt2 are still init value (C)
-               if (airt2(i)>100.d0) airt2(i)=airt2(i)-273.15d0 !Conv K to C, ESMF send with unit K
-          enddo !i
+        do i=1,npa
+          !ESMF only update within range np NOT npa by ele-itp, therefore some airt2 are still init value (C)
+          if (airt2(i)>100.d0) airt2(i)=airt2(i)-273.15d0 !Conv K to C, ESMF send with unit K
+        enddo !i
+
+        !Update wind and pres at current time
+        windx=windx2
+        windy=windy2
+        pr=pr2
 #endif /*USE_ATMOS*/
 
+        if(time>wtime2) then
 !...      Heat budget & wind stresses
           if(ihconsv/=0) then
             !Assume all vars in sflux*.nc are available from atmos model or read in from atmos.nc,
@@ -595,6 +602,7 @@
             if(myrank==0) write(16,*)'heat budge model completes...'
           endif !ihconsv.ne.0
 
+#ifndef USE_ATMOS
           wtime1=wtime2
           wtime2=wtime2+wtiminc
           windx1=windx2
@@ -604,7 +612,6 @@
           shum1=shum2
 
           !Read in next record
-#ifndef USE_ATMOS
           itmp2=wtime2/wtiminc+1
           if(myrank==0) then
             j=nf90_inq_varid(ncid_atmos, "uwind",mm)
@@ -675,6 +682,7 @@
 
         endif !time>wtime2
 
+#ifndef USE_ATMOS
         wtratio=(time-wtime1)/wtiminc
 !$OMP parallel do default(shared) private(i)
         do i=1,npa
@@ -683,6 +691,7 @@
           pr(i)=pr1(i)+wtratio*(pr2(i)-pr1(i))
         enddo !i
 !$OMP end parallel do
+#endif /*not USE_ATMOS*/
 
       endif !nws=4
 
