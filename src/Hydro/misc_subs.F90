@@ -295,7 +295,7 @@
           airt1=20._rkind; airt2=20._rkind
           shum1=0._rkind; shum2=0._rkind
 
-#else /*USE_ATMOS*/
+#else /*not USE_ATMOS*/
         !Read 1st record
         if(myrank==0) then
           j=nf90_open(in_dir(1:len_in_dir)//'atmos.nc',NF90_NOWRITE,ncid_atmos)
