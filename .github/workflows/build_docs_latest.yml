@@ -26,7 +26,7 @@ jobs:
       - name: Install python packages
         run: |
           pip install --upgrade pip
-          pip install mkdocs>=1.5.0 mkdocs-material>=9.5.0 mike>=2.0.0
+          pip install zensical mike
       
       - name: Get tag of the version
         uses: olegtarasov/get-tag@v2.1
