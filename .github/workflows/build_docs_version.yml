@@ -1,33 +1,40 @@
 name: release documentation 
+
 on:
   push:
     branches:
       - 'v*.*'
+
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Setup python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.x
-      - name: Install python packages
-        run: pip install mkdocs==1.5.2 mkdocs-material==8.3.4 mike==1.1.2 setuptools
       - name: Configure git user
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-      - name: Get tag of the version
-        uses: olegtarasov/get-tag@v2.1
-        id: tag_name
-      - name: Get branch names
-        id: branch-name
-        uses: tj-actions/branch-names@v9.0.0
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install python packages
+        run: |
+          pip install --upgrade pip
+          pip install mike mkdocs mkdocs-material
+      
       - name: Deploy with mike
         run: |
-          mike deploy --force --push ${{ steps.branch-name.outputs.current_branch }} ${{ steps.tag_name.outputs.tag }}
+          mike deploy --push ${{ github.ref_name }}
           mike set-default --push stable
