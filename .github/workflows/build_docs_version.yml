@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - 'v*.*'
-      - docs_update
 
 permissions:
   contents: write
@@ -21,6 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
 
       - name: Setup python
@@ -34,15 +34,7 @@ jobs:
           pip install --upgrade pip
           pip install mike mkdocs mkdocs-material
       
-      - name: Get tag of the version
-        uses: olegtarasov/get-tag@v2.1
-        id: tag_name
-      
-      - name: Get branch names
-        id: branch-name
-        uses: tj-actions/branch-names@v9.0.0
-      
       - name: Deploy with mike
         run: |
-          mike deploy --push ${{ steps.branch-name.outputs.current_branch }} ${{ steps.tag_name.outputs.tag }} --builder "zensical build"
+          mike deploy --push ${{ github.ref_name }}
           mike set-default --push stable

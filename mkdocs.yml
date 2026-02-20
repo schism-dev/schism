@@ -50,7 +50,7 @@ repo_url: https://github.com/schism-dev/schism
 nav:
   - Home: index.md
   - Changelog: changelog.md
-  - Hello World:
+  - Getting started:
     - Overview: schism/overview.md
     - Getting the source code: getting-started/getting-sourcecode.md
     - Compilation: getting-started/compilation.md
