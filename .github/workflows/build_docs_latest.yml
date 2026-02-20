@@ -32,13 +32,9 @@ jobs:
           pip install --upgrade pip
           pip install mike mkdocs mkdocs-material
       
-      - name: Get tag of the version
-        uses: olegtarasov/get-tag@v2.1
-        id: tag_name
-      
       - name: Deploy with mike
         run: |
-          mike deploy --update-aliases master stable
-          mike retitle master stable
-          mike set-default --push stable
+          VERSION=${GITHUB_REF_NAME}
+          mike deploy --push --update-aliases $VERSION stable
+          mike set-default --push latest
 
