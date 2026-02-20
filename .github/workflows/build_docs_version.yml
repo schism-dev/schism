@@ -17,7 +17,7 @@ jobs:
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -32,12 +32,7 @@ jobs:
       - name: Install python packages
         run: |
           pip install --upgrade pip
-          pip install zensical mike mkdocs mkdocs-material
-
-      - name: Create Zensical Shim
-        run: |
-          # This forces 'mike' to use 'zensical' when it tries to run a build
-          sudo ln -sf $(which zensical) /usr/local/bin/mkdocs
+          pip install mike mkdocs mkdocs-material
       
       - name: Get tag of the version
         uses: olegtarasov/get-tag@v2.1
