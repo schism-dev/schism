@@ -34,11 +34,6 @@ jobs:
           # This forces 'mike' to use 'zensical' when it tries to run a build
           sudo ln -sf $(which zensical) /usr/local/bin/mkdocs
       
-      - name: Configure git user
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-      
       - name: Get tag of the version
         uses: olegtarasov/get-tag@v2.1
         id: tag_name
