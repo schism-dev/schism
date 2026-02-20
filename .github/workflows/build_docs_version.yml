@@ -1,32 +1,46 @@
 name: release documentation 
+
 on:
   push:
     branches:
       - 'v*.*'
+
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.x
+          python-version: '3.11'
+          cache: 'pip'
+
       - name: Install python packages
-        run: pip install mkdocs==1.5.2 mkdocs-material==8.3.4 mike==1.1.2 setuptools
+        run: |
+          pip install --upgrade pip
+          pip install mkdocs>=1.5.0 mkdocs-material>=9.5.0 mike>=2.0.0
+      
       - name: Configure git user
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
+      
       - name: Get tag of the version
         uses: olegtarasov/get-tag@v2.1
         id: tag_name
+      
       - name: Get branch names
         id: branch-name
         uses: tj-actions/branch-names@v9.0.0
+      
       - name: Deploy with mike
         run: |
           mike deploy --force --push ${{ steps.branch-name.outputs.current_branch }} ${{ steps.tag_name.outputs.tag }}
