@@ -36,5 +36,5 @@ jobs:
         run: |
           VERSION=${GITHUB_REF_NAME}
           mike deploy --push --update-aliases $VERSION stable
-          mike set-default --push latest
+          mike set-default --push stable
 
