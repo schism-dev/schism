@@ -26,7 +26,12 @@ jobs:
       - name: Install python packages
         run: |
           pip install --upgrade pip
-          pip install zensical mike
+          pip install zensical mike mkdocs
+
+      - name: Create Zensical Shim
+        run: |
+          # This forces 'mike' to use 'zensical' when it tries to run a build
+          sudo ln -sf $(which zensical) /usr/local/bin/mkdocs
       
       - name: Get tag of the version
         uses: olegtarasov/get-tag@v2.1
@@ -34,11 +39,6 @@ jobs:
       
       - name: Deploy with mike
         run: |
-          # 1. Create a shim so 'mike' calls 'zensical'
-          echo '#!/bin/bash' > /usr/local/bin/mkdocs
-          echo 'zensical "$@"' >> /usr/local/bin/mkdocs
-          chmod +x /usr/local/bin/mkdocs
-
           mike deploy --update-aliases master stable
           mike retitle master stable
           mike set-default --push stable
