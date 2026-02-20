@@ -44,5 +44,10 @@ jobs:
       
       - name: Deploy with mike
         run: |
+          # 1. Create a shim so 'mike' calls 'zensical'
+          echo '#!/bin/bash' > /usr/local/bin/mkdocs
+          echo 'zensical "$@"' >> /usr/local/bin/mkdocs
+          chmod +x /usr/local/bin/mkdocs
+
           mike deploy --push ${{ steps.branch-name.outputs.current_branch }} ${{ steps.tag_name.outputs.tag }} --builder "zensical build"
           mike set-default --push stable

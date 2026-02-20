@@ -34,7 +34,12 @@ jobs:
       
       - name: Deploy with mike
         run: |
-          mike deploy --update-aliases master stable --builder "zensical build"
+          # 1. Create a shim so 'mike' calls 'zensical'
+          echo '#!/bin/bash' > /usr/local/bin/mkdocs
+          echo 'zensical "$@"' >> /usr/local/bin/mkdocs
+          chmod +x /usr/local/bin/mkdocs
+
+          mike deploy --update-aliases master stable
           mike retitle master stable
           mike set-default --push stable
 
