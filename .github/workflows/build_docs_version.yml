@@ -27,7 +27,7 @@ jobs:
       - name: Install python packages
         run: |
           pip install --upgrade pip
-          pip install zensical mike mkdocs-material
+          pip install zensical mike
       
       - name: Configure git user
         run: |
@@ -44,5 +44,5 @@ jobs:
       
       - name: Deploy with mike
         run: |
-          mike deploy --push ${{ steps.branch-name.outputs.current_branch }} ${{ steps.tag_name.outputs.tag }}
+          mike deploy --push ${{ steps.branch-name.outputs.current_branch }} ${{ steps.tag_name.outputs.tag }} --builder "zensical build"
           mike set-default --push stable

@@ -26,7 +26,7 @@ jobs:
       - name: Install python packages
         run: |
           pip install --upgrade pip
-          pip install zensical mike mkdocs-material
+          pip install zensical mike
       
       - name: Get tag of the version
         uses: olegtarasov/get-tag@v2.1
@@ -34,7 +34,7 @@ jobs:
       
       - name: Deploy with mike
         run: |
-          mike deploy --update-aliases master stable
+          mike deploy --update-aliases master stable --builder "zensical build"
           mike retitle master stable
           mike set-default --push stable
 

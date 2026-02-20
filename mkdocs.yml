@@ -1,7 +1,8 @@
 site_name: SCHISM
 use_directory_urls: false
 theme:
-  name: material
+  name: zensical
+  variant: classic
   features:
     - toc.integrate
     - toc.follow
