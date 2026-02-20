@@ -44,5 +44,5 @@ jobs:
       
       - name: Deploy with mike
         run: |
-          mike deploy --force --push ${{ steps.branch-name.outputs.current_branch }} ${{ steps.tag_name.outputs.tag }}
+          mike deploy --push ${{ steps.branch-name.outputs.current_branch }} ${{ steps.tag_name.outputs.tag }}
           mike set-default --push stable
