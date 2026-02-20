@@ -4,6 +4,7 @@ on:
     branches:
       - master
       - docs
+      - docs_update
 permissions:
   contents: write
 
