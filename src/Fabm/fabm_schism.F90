@@ -11,7 +11,7 @@
 !> @author Jan Kossack <jan.kossack@hereon.de>
 !> @author Wang Zhenggui
 
-!> @copyright Copyright 2021-2024 Helmholtz-Zentrum hereon GmbH
+!> @copyright Copyright 2021-2025 Helmholtz-Zentrum hereon GmbH
 !> @copyright Copyright 2021-2022 Virginia Institute of Marine Science
 !> @copyright Copyright 2017-2021 Helmholtz-Zentrum Geesthacht GmbH
 !
@@ -400,7 +400,7 @@ subroutine fabm_schism_init_stage2
   call fs%model%set_mask(fs%mask_hz)
 #endif
 #endif
-#endif
+!#endif
 
   allocate(bottom_idx(1:ne))
   do i=1,ne

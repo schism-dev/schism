@@ -1,0 +1,35 @@
+# CMake presets for compiling on a Homebrew (Linux/macOS) system
+#
+# SPDX-FileCopyrightText: 2024-2025 Helmholtz-Zentrum hereon GmbH
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileContributor: Carsten Lemmen <carsten.lemmen@hereon.de>
+#
+# Prerequisites:
+#   brew install llvm gfortran cmake make
+#
+
+# Detect Homebrew prefix for macOS and Linux
+if(EXISTS /opt/homebrew)
+  set(HOMEBREW_PREFIX /opt/homebrew)
+elseif(EXISTS $ENV{HOME}/.linuxbrew)
+  set(HOMEBREW_PREFIX $ENV{HOME}/.linuxbrew)
+elseif(EXISTS /home/linuxbrew/.linuxbrew)
+  set(HOMEBREW_PREFIX /home/linuxbrew/.linuxbrew)
+elseif(EXISTS /usr/local)
+  set(HOMEBREW_PREFIX /usr/local)
+else()
+  message(FATAL_ERROR "Homebrew prefix not found.")
+endif()
+
+# Set parallel compilers from Homebrew MPI wrappers
+set(CMAKE_Fortran_COMPILER ${HOMEBREW_PREFIX}/bin/mpifort CACHE PATH "Path to parallel Fortran compiler")
+set(CMAKE_C_COMPILER ${HOMEBREW_PREFIX}/bin/mpicc CACHE PATH "Path to parallel C compiler")
+set(CMAKE_CXX_COMPILER ${HOMEBREW_PREFIX}/bin/mpicxx CACHE PATH "Path to parallel C++ compiler")
+
+# Fortran compiler flags
+set(CMAKE_Fortran_FLAGS "-ffree-line-length-none -fallow-argument-mismatch" CACHE STRING "Fortran flags" FORCE)
+set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -ffree-line-length-none -static-libgfortran -finit-local-zero" CACHE STRING "Fortran release flags" FORCE)
+
+# NetCDF library paths (Homebrew default prefix)
+set(NetCDF_FORTRAN_DIR ${HOMEBREW_PREFIX} CACHE PATH "Path to NetCDF Fortran library")
+set(NetCDF_C_DIR ${HOMEBREW_PREFIX} CACHE PATH "Path to NetCDF C library")
