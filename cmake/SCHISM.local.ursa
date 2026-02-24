@@ -1,0 +1,27 @@
+### NOAA RDHPC Ursa Cluster (GCC/OpenMPI)
+# Executable basename
+set (SCHISM_EXE_BASENAME pschism_Ursa CACHE STRING "Base name of the executable")
+
+### Compilers
+set(CMAKE_Fortran_COMPILER gfortran CACHE PATH "Path to serial Fortran compiler")
+set(CMAKE_C_COMPILER gcc CACHE PATH "Path to serial C compiler")
+
+### NetCDF Locations
+# Note: On Ursa, if environment variables are not set, use 'nc-config --prefix' 
+# and 'nf-config --prefix' to find absolute paths.
+if(DEFINED ENV{NETCDF_FORTRAN_ROOT})
+    set(NetCDF_FORTRAN_DIR "$ENV{NETCDF_FORTRAN_ROOT}" CACHE PATH "Path to NetCDF Fortran")
+else()
+    # Placeholder path based on Feb 2026 Spack build
+    set(NetCDF_FORTRAN_DIR "/apps/spack-2024-12/linux-rocky9-x86_64/gcc-11.4.1/netcdf-fortran-4.6.1-rxwle72kj3anm4uess3ixiqg7ezgq4vk" CACHE PATH "Path to NetCDF Fortran")
+endif()
+
+if(DEFINED ENV{NETCDF_ROOT})
+    set(NetCDF_C_DIR "$ENV{NETCDF_ROOT}" CACHE PATH "Path to NetCDF C")
+else()
+    # Placeholder path based on Feb 2026 Spack build
+    set(NetCDF_C_DIR "/apps/spack-2024-12/linux-rocky9-x86_64/gcc-11.4.1/netcdf-c-4.9.2-dzmdg3ly7avioysvapk37klgegbsq3js" CACHE PATH "Path to NetCDF C")
+endif()
+
+### Compile flags
+set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -mcmodel=medium -ffree-line-length-none -finit-local-zero" CACHE STRING "Fortran flags" FORCE)
