@@ -562,10 +562,10 @@ end function schism_finalizer
 
     select case(grid)
     case(SCHISM_BMI_GRID_ALL_NODES)
-       size = npa!np_global
+       size = npa
        bmi_status = BMI_SUCCESS
     case(SCHISM_BMI_GRID_ALL_ELEMENTS)
-       size = ne_global
+       size = nea
        bmi_status = BMI_SUCCESS
     case(SCHISM_BMI_GRID_OFFSHORE_BOUNDARY_POINTS)
        size = nnode_et
@@ -688,7 +688,7 @@ end function schism_finalizer
       x(:) = grid_x(:)
       bmi_status = BMI_SUCCESS
     case(SCHISM_BMI_GRID_OFFSHORE_BOUNDARY_POINTS)
-      allocate(grid_x(size(ath2(1,1,:,1,1))))
+      allocate(grid_x(nnode_et))
       ! Since open water level boundaries
       ! are constrained by user, we must
       ! set a count loop to break once 
@@ -790,7 +790,7 @@ end function schism_finalizer
       y(:) = grid_y(:)
       bmi_status = BMI_SUCCESS
     case(SCHISM_BMI_GRID_OFFSHORE_BOUNDARY_POINTS)
-      allocate(grid_y(size(ath2(1,1,:,1,1))))
+      allocate(grid_y(nnode_et))
       ! Since open water level boundaries
       ! are constrained by user, we must
       ! set a count loop to break once 
@@ -902,7 +902,7 @@ end function schism_finalizer
     ! available in SCHISM, otherwise 2d model
     ! this is ignored
     if (ics==2) then
-      allocate(grid_z(size(ath2(1,1,:,1,1))))
+      allocate(grid_z(nnode_et))
       ! Since open water level boundaries
       ! are constrained by user, we must
       ! set a count loop to break once
