@@ -106,6 +106,9 @@ subroutine init_petsc
 !                             view, perr)
 !  CHKERRQ(perr)
 
+!  Pass on comm to PETSc (not working)
+!  PETSC_COMM_WORLD= comm
+
   call gen_mappings
 
 ! Count # of non-zero entries for (block) diagonal (d_nnz) and off-diagonal (o_nnz) parts for each row
