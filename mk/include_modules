@@ -11,7 +11,7 @@
  USE_OLDIO = yes
  EXEC := $(EXEC)_OLDIO
 
-# Use PetSc as solver for FE eq
+# Use PetSc as solver for FE eq. Works with NO_PARMETIS and USE_OLDIO on.
 #'v1': v3.5; 'v2': 3.6, 3.7; 'v3': 3.10
  PETSC_VERSION = v3
  USE_PETSC = yes
