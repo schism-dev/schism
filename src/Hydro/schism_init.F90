@@ -2826,10 +2826,10 @@
         if(myrank==0) then
           open(31,file=in_dir(1:len_in_dir)//'source_sink_BMI.in',status='old')
           read(31,*)nsources_bmi
-          ! Keep source_sink.in file format the same, but just force
-          ! all elements in the  mesh to be sources for potential
-          ! forecasted precipitation sources in the future
-          nsources = ne_global
+          ! Since the NextGen_GL project only wants to use discharge
+          ! boundaries wih the source method here, then we just assign
+          ! source terms to be only a function of discharge boundaries
+          nsources = nsources_bmi
         endif !myrank
         call mpi_bcast(nsources_bmi,1,itype,0,comm,istat)
         call mpi_bcast(nsources,1,itype,0,comm,istat)
