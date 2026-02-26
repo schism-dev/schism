@@ -571,7 +571,7 @@ end function schism_finalizer
        size = nnode_et
        bmi_status = BMI_SUCCESS
     case(SCHISM_BMI_GRID_SOURCE_ELEMENTS)
-       size = nsources_bmi
+       size = nsources
        bmi_status = BMI_SUCCESS
     case(SCHISM_BMI_GRID_SINK_ELEMENTS)
        size = nsinks
@@ -718,10 +718,10 @@ end function schism_finalizer
     case(SCHISM_BMI_GRID_SOURCE_ELEMENTS)
       ! Allocate bnd_ind array to ingest
       ! global element indices for source boundaries
-      allocate(grid_x(nsources_bmi))
+      allocate(grid_x(nsources))
       ! loop over all user sources for mesh and append T-Route
       ! flow path ids from hydrofabric to array
-      do i = 1, nsources_bmi
+      do i = 1, nsources
          grid_x(i) = ieg_source_flowpath_ids(i)
       enddo
       x(:) = grid_x(:)
@@ -820,10 +820,10 @@ end function schism_finalizer
     case(SCHISM_BMI_GRID_SOURCE_ELEMENTS)
       ! Allocate bnd_ind array to ingest
       ! global element indices for source boundaries
-      allocate(grid_y(nsources_bmi))
+      allocate(grid_y(nsources))
       ! loop over all user sources for mesh and append T-Route
       ! flow path ids from hydrofabric to array
-      do i = 1, nsources_bmi
+      do i = 1, nsources
          grid_y(i) = ieg_source_flowpath_ids(i)
       enddo
       y(:) = grid_y(:)
@@ -1238,12 +1238,12 @@ end function schism_finalizer
         ath2(1,1,:,2,1) = src(:)
         bmi_status=BMI_SUCCESS
     case("Q_bnd_source")
-        ath3(ieg_source_ngen(1:nsources_bmi),1,1,1) = ath3(ieg_source_ngen(1:nsources_bmi),1,2,1)
-        ath3(ieg_source_ngen(1:nsources_bmi),1,2,1) = src(1:nsources_bmi)
+        ath3(:,1,1,1) = ath3(:,1,2,1)
+        ath3(:,1,2,1) = src(:)
         bmi_status=BMI_SUCCESS
     case("Q_bnd_sink")
-        ath3(ieg_sink(1:nsinks),1,1,2) = ath3(ieg_sink(1:nsinks),1,2,2)
-        ath3(ieg_sink(1:nsinks),1,2,2) = src(1:nsinks)
+        ath3(:,1,1,2) = ath3(:,1,2,2)
+        ath3(:,1,2,2) = src(:)
         bmi_status=BMI_SUCCESS
     case("SFCPRS")
         pr1(:) = pr2(:)
