@@ -23,7 +23,7 @@ set(NO_PARMETIS OFF CACHE BOOLEAN "Turn off ParMETIS")
 set (TVD_LIM VL CACHE STRING "Flux limiter")
 # Build with OLD/IO to enable SCHISM to run in serial mode
 set (OLDIO ON CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
-set (USE_ATMOS ON CACHE BOOLEAN "Coupling with atmospheric model via ESMF or BMI")
+set (USE_ATMOS OFF CACHE BOOLEAN "Coupling with atmospheric model via ESMF or BMI")
 set (USE_BMI ON CACHE BOOLEAN "Build a library that can be used from BMI, with sources and some b.c. provided by BMI")
 set (BUILD_SHARED_LIBS ON CACHE BOOLEAN "Build SCHISM shared libraries for BMI compliancy")
 set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
