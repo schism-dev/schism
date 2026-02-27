@@ -228,77 +228,76 @@ program schism_driver_test
     source_accum = 0.2
 
     do while (current_time < end_time)
-    ! Tell SCHISM how long to run for between each
-    ! discharge boundary update from T-Route
-    time_until = current_time + 3600.0
+      ! Tell SCHISM how long to run for between each
+      ! discharge boundary update from T-Route
+      time_until = current_time + 3600.0
 
-    ! Run the SCHISM model
-    status = m%update_until(time_until)
+      ! Run the SCHISM model
+      status = m%update_until(time_until)
 
-    ! update current_time
-    status = m%get_current_time(current_time)
+      ! update current_time
+      status = m%get_current_time(current_time)
 
-    ! Now here is where you will perform an OS call to 
-    ! execute a T-Route workflow to post-process the 
-    ! current station.in output data fields for 
-    ! T-Route and then execute T-Route
+      ! Now here is where you will perform an OS call to 
+      ! execute a T-Route workflow to post-process the 
+      ! current station.in output data fields for 
+      ! T-Route and then execute T-Route
 
-    ! iterative accumlation term for testing
-    source_accum = source_accum + 0.1
+      ! iterative accumlation term for testing
+      source_accum = source_accum + 0.1
 
-    if(nsources > 0) then
-    ! Next, you will once again read in the next T-Route data fields
-    ! for timestep t1 and use MPI scatter using Q_bnd_source
-    ! variable. Use the ieg_source_flowpath_ids variable as the
-    ! geospatial reference from source_sink_BMI.in to link the
-    ! proper discharge boundary conditions from the given hydrofabric
-    ! flow path ids associated with the given SCHISM element
+      if(nsources > 0) then
+      ! Next, you will once again read in the next T-Route data fields
+      ! for timestep t1 and use MPI scatter using Q_bnd_source
+      ! variable. Use the ieg_source_flowpath_ids variable as the
+      ! geospatial reference from source_sink_BMI.in to link the
+      ! proper discharge boundary conditions from the given hydrofabric
+      ! flow path ids associated with the given SCHISM element
 
-    ! Now we will execute a BMI call here to set the second
-    ! T-Route data fields for timestep t1. During this call
-    ! the BMI will automatically assign the previous source
-    ! value to t0 and then the new value you've just given it
-    ! to the t1 field of ath3
-    Q_bnd_source(:) = source_accum
-    status = m%set_value('Q_bnd_source', Q_bnd_source)
-    ! Display t0 and t1 results to ensure user specified
-    ! data was properly set
-    print*, 'Q_bnd_source t0 new data', ath3(1,1,1,1)
-    print*, 'Q_bnd_source t1 new data', ath3(1,1,2,1)
-    endif
+      ! Now we will execute a BMI call here to set the second
+      ! T-Route data fields for timestep t1. During this call
+      ! the BMI will automatically assign the previous source
+      ! value to t0 and then the new value you've just given it
+      ! to the t1 field of ath3
+        Q_bnd_source(:) = source_accum
+        status = m%set_value('Q_bnd_source', Q_bnd_source)
+        ! Display t0 and t1 results to ensure user specified
+        ! data was properly set
+        print*, 'Q_bnd_source t0 new data', ath3(1,1,1,1)
+        print*, 'Q_bnd_source t1 new data', ath3(1,1,2,1)
+      endif !nsources
 
 
-    if(nsinks > 0) then
-    ! Next, you will once again read in the next T-Route data fields
-    ! for timestep t1 and use MPI scatter using Q_bnd_sink
-    ! variable. Use the ieg_sink_flowpath_ids variable as the
-    ! geospatial reference from source_sink_BMI.in to link the
-    ! proper discharge boundary conditions from the given hydrofabric
-    ! flow path ids associated with the given SCHISM element
+      if(nsinks > 0) then
+      ! Next, you will once again read in the next T-Route data fields
+      ! for timestep t1 and use MPI scatter using Q_bnd_sink
+      ! variable. Use the ieg_sink_flowpath_ids variable as the
+      ! geospatial reference from source_sink_BMI.in to link the
+      ! proper discharge boundary conditions from the given hydrofabric
+      ! flow path ids associated with the given SCHISM element
 
-    ! Now we will execute a BMI call here to set the second
-    ! T-Route data fields for timestep t1. During this call
-    ! the BMI will automatically assign the previous sink
-    ! value to t0 and then the new value you've just given it
-    ! to the t1 field of ath3
-    Q_bnd_sink(:) = source_accum*-1.0
-    status = m%set_value('Q_bnd_sink', Q_bnd_sink)
-    ! Display t0 and t1 results to ensure user specified
-    ! data was properly set
-    print*, 'Q_bnd_sink t0 new data', ath3(1,1,1,2)
-    print*, 'Q_bnd_sink t1 new data', ath3(1,1,2,2)
-    endif
-
-    enddo
+      ! Now we will execute a BMI call here to set the second
+      ! T-Route data fields for timestep t1. During this call
+      ! the BMI will automatically assign the previous sink
+      ! value to t0 and then the new value you've just given it
+      ! to the t1 field of ath3
+        Q_bnd_sink(:) = source_accum*-1.0
+        status = m%set_value('Q_bnd_sink', Q_bnd_sink)
+        ! Display t0 and t1 results to ensure user specified
+        ! data was properly set
+        print*, 'Q_bnd_sink t0 new data', ath3(1,1,1,2)
+        print*, 'Q_bnd_sink t1 new data', ath3(1,1,2,2)
+      endif !nsinks
+    enddo !do while
 
     ! Deallocate forcing field arrays
     ! to free up  memory use
     if(nsources > 0) then
-    deallocate(Q_bnd_source)
+      deallocate(Q_bnd_source)
     endif
 
     if(nsinks > 0) then
-    deallocate(Q_bnd_sink)
+      deallocate(Q_bnd_sink)
     endif
 
     deallocate(Q_dt)
