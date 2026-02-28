@@ -225,7 +225,7 @@ program schism_driver_test
     status = m%get_end_time(end_time)
 
     ! dummy field accumulation for testing
-    source_accum = 0.2
+    source_accum = 100 !0.2
 
     do while (current_time < end_time)
       ! Tell SCHISM how long to run for between each
@@ -244,7 +244,7 @@ program schism_driver_test
       ! T-Route and then execute T-Route
 
       ! iterative accumlation term for testing
-      source_accum = source_accum + 0.1
+      source_accum = source_accum + 100. !0.1
 
       if(nsources > 0) then
       ! Next, you will once again read in the next T-Route data fields
@@ -281,7 +281,7 @@ program schism_driver_test
       ! the BMI will automatically assign the previous sink
       ! value to t0 and then the new value you've just given it
       ! to the t1 field of ath3
-        Q_bnd_sink(:) = source_accum*-1.0
+        Q_bnd_sink(:) = -10. !source_accum*-1.0
         status = m%set_value('Q_bnd_sink', Q_bnd_sink)
         ! Display t0 and t1 results to ensure user specified
         ! data was properly set
