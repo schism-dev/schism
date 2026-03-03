@@ -1,4 +1,4 @@
-!   Copyright 2014 College of William and Mary
+ !changed from 0.05!   Copyright 2014 College of William and Mary
 !
 !   Licensed under the Apache License, Version 2.0 (the "License");
 !   you may not use this file except in compliance with the License.
@@ -110,6 +110,18 @@
 !     External functions
       integer :: kronecker,lindex_s,omp_get_num_threads,omp_get_thread_num,julian_day
       real(rkind) :: eqstate,quad_int !,signa
+
+!     Evan Variable Addition
+     
+!      integer :: step_min !gate for drowning
+!      real(8) :: tau_avg_wet,ts, wet_frac
+!      real(8), allocatable :: tau_sum_wet(:),wet_thr(:),tmpout(:)
+!      integer, allocatable :: nwet_inun(:), nt_inun(:), marsh_ban(:),marsh_ban_tau(:)
+!      integer, allocatable :: nwet(:)
+!      real(kind=8), parameter :: marsh_maturity_days = 29.5d0    ! !! ADDED
+!      real(kind=8), parameter :: marsh_tau_thresh_pa   = 0.35d0   ! !! ADDED, was 5, then 3.5, then 1, 0.5, now 0.2, was 0.35 (works
+      !well, trying 1)
+!      real(kind=8) :: tsum, elem_tau_pa       ! !! ADDED
 
 !     Local variables
       integer :: istat,i,j,k,l,m,kk,mm,jj,ll,lll,nd,nd0,ie,ie0,iegb,icount, &
@@ -8186,6 +8198,23 @@
 !...  Marsh migration model
 #ifdef USE_MARSH
       !Account for SLR
+      ! add variables for marsh maturity and max bed shear stress
+      ! Allocate (once) and initialize (once) the wet-stress accumulators on EACH rank
+      !if (.not. allocated(tau_sum_wet)) then
+      !  allocate(tau_sum_wet(ne), nwet(ne),nwet_inun(ne),nt_inun(ne),marsh_ban(ne),marsh_ban_tau(ne),wet_thr(nmarsh_types),tmpout(ne))
+      !  tau_sum_wet = 0.d0
+      !  nwet = 0
+      !  nwet_inun = 0
+      !  nt_inun   = 0
+      !  marsh_ban = 0
+      !  ts = 0
+      !  marsh_ban_tau=0
+        !initial test, .2,.18,.12,1. Not enough drowning
+      !  wet_thr(1) = 0.18d0 !throw your wetness % thresholds. 100% is wet all of the time 
+      !  wet_thr(2) = 0.14d0
+      !  wet_thr(3) = 0.10d0
+      !  wet_thr(4) = 1d0
+      !endif
 !$OMP single
       slr_elev=slr_rate*time !additional surface elev(>=0) [m]
 !$OMP end single
@@ -8194,26 +8223,150 @@
       do i=1,nea
         if(ibarrier_m(i)==1) imarsh(i)=0
         nwild(i)=imarsh(i) !save type before update
-        if(imarsh(i)>=0) age_marsh(i)=age_marsh(i)+time/86400.d0 !days
+        if(imarsh(i)>0) age_marsh(i)=age_marsh(i)+dt/86400.d0 !days Evan(changed this to dt instead time since time made a global
+        ! time change 
       enddo !i
 !$OMP end do
-
-!$OMP do
+!$OMP do PRIVATE(smax,smin,wet_frac,elem_tau_pa,tau_avg_wet,itype,ifl,tmp2,icount2,jj,j,m,nd,ie,max_dep_chg)
       do i=1,ne
         if(ibarrier_m(i)==1) cycle
+        
 
+        ! ---- if inundation is greater than x%>kill ----
+        ! Located here to calculated for all elems
+        nt_inun(i)=nt_inun(i)+1 !nt_inun is now a time step tracker
+        if (idry_e(i)==0) then
+              nwet_inun(i)=nwet_inun(i)+1
+        endif
+        !ts = ts + 1 wet_frac = dble(nwet_inun(i)) / ts I think this doesn't work, changing to elem calc to b mpi safe
+        wet_frac = dble(nwet_inun(i)) / dble(nt_inun(i))
+        
         !not barrier
         smax=maxval(dp(elnode(1:i34(i),i)))+slr_elev !max depth with SLR
         smin=minval(dp(elnode(1:i34(i),i)))+slr_elev !min depth
-        if(nwild(i)>0) then !marsh elem
+
+        !---Calculate max shear stress and prep storage
+        elem_tau_pa = 0.d0
+        do jj = 1, i34(i)
+          nd = elnode(jj, i)
+          elem_tau_pa = max(elem_tau_pa, bed_taun(nd))   ! bed_taun from sed_mod
+        enddo
+        elem_tau_pa = elem_tau_pa * rho0   ! u*^2 -> tau [Pa]
+        if(tau_max(i)<elem_tau_pa) then
+          tau_max(i)=elem_tau_pa
+        endif
+       
+        !---Calculate vertical change sediment if marsh is present--
+        !calculating for max of cell
+        max_dep_chg=0.d0
+        if (imarsh(i)>0) then
+          do jj = 1,i34(i)
+            nd=elnode(jj,i)
+            max_dep_chg=max(max_dep_chg,dhnd(nd))
+          enddo
+          marsh_dep_chg(i)=marsh_dep_chg(i)+max_dep_chg
+        endif
+       
+        ! --- accumulate ONLY when element is wet ---
+        if (idry_e(i) == 0) then
+          tau_sum_wet(i)  = tau_sum_wet(i)  + elem_tau_pa
+          nwet(i) = nwet(i) + 1
+        endif
+
+        ! --- compute average over wet timesteps only ---
+        if (nwet(i) > 0) then
+          tau_avg_wet = tau_sum_wet(i) / dble(nwet(i))
+        else
+                tau_avg_wet = 0.d0
+        endif
+        
+        !---- set tau ban ----
+        if (nwet(i) >= 100)  then
+          if (tau_avg_wet > kill_tau_imm) then !changed from 0.05
+            marsh_ban_tau(i)=1
+          else
+            marsh_ban_tau(i)=0
+          endif
+        endif
+
+        !---show where marsh is allowed---
+        !I don't know why, but making this bit mask explodes MPI
+        !plz fix if ur smarter than me, this scale is hard to visualize in schismview
+        marsh_ban(i) = 0
+        if (wet_frac > wet_thr(1)) marsh_ban(i) = marsh_ban(i) + 1
+        if (wet_frac > wet_thr(2)) marsh_ban(i) = marsh_ban(i) + 10
+        if (wet_frac > wet_thr(3)) marsh_ban(i) = marsh_ban(i) + 100
+        if (wet_frac > wet_thr(4)) marsh_ban(i) = marsh_ban(i) + 1000
+
+        !--- kill immature marsh if bed stress > threshold during the maturation window
+        if(nwild(i)>0) then !marsh elem (was marsh in previous step)
+#ifdef USE_SED
+        !To do: combine all these ifs into one. keepng them apart for ez disabling for now 
+        !gates for each marsh type. Waits to kill marsh to allow for warm up
+        if(imarsh(i)>0 .and. nt_inun(i)>step_min) then
+                if (wet_frac>wet_thr(imarsh(i))) then !maybe clean up? Will this explode the code with an error?
+                        imarsh(i)=0
+                        age_marsh(i)=0.d0
+                        tau_sum_wet(i)=0.d0
+                        nwet(i)=0
+                        marsh_dep_chg(i)=0.d0
+                        marsh_ban_track(i)=1
+                        !can add more logic here to reset indundation tracker
+                        cycle
+                 endif
+         endif
+
+         ! kill immature marsh if stress threshold exceeded during 29.5-day window or if established marsh threshold exceedd
+         if (age_marsh(i) < marsh_maturity_days .and. tau_avg_wet  > kill_tau_imm) then
+                imarsh(i)    = 0
+                age_marsh(i) = 0.d0
+                tau_sum_wet(i) = 0.d0
+                nwet(i)= 0
+                marsh_dep_chg(i)=0.d0
+                !marsh_ban_track(i)=2
+                cycle
+         endif
+
+
+         !Kill if too much sediment has been lost. Reset counters
+         if (kill_dep_chg < marsh_dep_chg(i)) then
+                imarsh(i)    = 0
+                age_marsh(i) = 0.d0
+                tau_sum_wet(i) = 0.d0
+                nwet(i)= 0
+                marsh_dep_chg(i)=0.d0
+                marsh_ban_track(i)=3
+                cycle
+         endif
+          
+         !if(elem_tau_pa>marsh_tau_thresh_pa) then !seems this is leading to anomolous kills
+         !killss mature marsh if beyond a threshold
+         if (age_marsh(i) > marsh_maturity_days .and. tau_avg_wet > marsh_tau_thresh_pa) then
+                imarsh(i)    = 0
+                age_marsh(i) = 0.d0
+                tau_sum_wet(i) = 0.d0
+                nwet(i)= 0
+                marsh_dep_chg(i)=0.d0
+                marsh_ban_track(i)=4
+         endif
+
+ 
+#endif
+
           if(smax>drown_marsh(nwild(i))) then !drowned
             imarsh(i)=0
             age_marsh(i)=0.d0
+            tau_sum_wet(i)=0.d0
+            nwet(i)=0
+            marsh_dep_chg(i)=0.d0
+            marsh_ban_track(i)=5
 !            Cdp(elnode(1:i34(i),i))=0.001d0
 !            Cd(elside(1:i34(i),i))=0.001d0
 !            rough_p(elnode(1:i34(i),i))=1.d-4
           endif !smax
-        else !non-marsh elem @last step
+
+        else !non-marsh elem @last stepi
+          if (marsh_ban_tau(i)==1) cycle
           if(smax<=create_marsh_max.and.smin>=create_marsh_min) then !create marsh
             ifl=0
             tmp2=0.d0 !stats of age of surround cells
@@ -8231,7 +8384,15 @@
             end do loop16
             if(icount2>0) then
               tmp2=tmp2/dble(icount2)
-              if(tmp2>age_marsh_min) imarsh(i)=ifl
+              if(tmp2>age_marsh_min) then
+                  if(wet_frac>wet_thr(ifl) .and. step_min<nt_inun(i)) then !skip the loop if too wet
+                        cycle
+                  endif
+                  imarsh(i)=ifl
+                  age_marsh(i)   = 0.d0
+                  tau_sum_wet(i) = 0.d0
+                  nwet(i) = 0
+              endif
             endif !icount2
           endif !smax
         endif !nwild
@@ -8247,30 +8408,29 @@
 !$OMP workshare
       veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha0=0.d0
 !$OMP end workshare
-!$OMP do 
+
+! NODE-BASED veg assignment: only assign veg if the contributing element is a marsh
+! AND that element has matured (age >= marsh_maturity_days). Otherwise leave zeros.
+!$OMP do
       do i=1,np
         do j=1,nne(i)
           ie=indel(j,i)
-          if(imarsh(ie)>0) then !iveg/=0
-            if(imarsh(i)>nmarsh_types) then
-              write(errmsg,*)'STEP: imarsh(i)>nmarsh_',iplg(i),imarsh(i)
+          if(imarsh(ie)>0 .and. age_marsh(ie) >= marsh_maturity_days) then !iveg/=0 and matured  !! MODIFIED
+            if(imarsh(ie)>nmarsh_types) then                              ! !! MODIFIED (was imarsh(i) - fixed)
+              write(errmsg,*)'STEP: imarsh(i)>nmarsh_',iplg(i),imarsh(ie)  ! !! MODIFIED (report ie)
               call parallel_abort(errmsg)
             endif
-            veg_di(i)=veg_di0(imarsh(i))
-            veg_h(i)=veg_h0(imarsh(i))
-            veg_nv(i)=veg_nv0(imarsh(i))
-            veg_cd(i)=veg_cd0(imarsh(i))
-            veg_alpha0(i)=veg_di0(imarsh(i))*veg_nv0(imarsh(i))*veg_cd0(imarsh(i))/2.d0
-          endif !imarsh
-
-          !drowned marsh: veg_di etc =0
-!          if(nwild(ie)==1.and.imarsh(ie)==0) then
-!            Cdp(i)=0.001d0
-!            rough_p(i)=1.d-4
-!          endif
+            veg_di(i)=veg_di0(imarsh(ie))        ! use element marsh type ie, not node i  !! MODIFIED
+            veg_h(i)=veg_h0(imarsh(ie))          !! MODIFIED
+            veg_nv(i)=veg_nv0(imarsh(ie))        !! MODIFIED
+            veg_cd(i)=veg_cd0(imarsh(ie))        !! MODIFIED
+            veg_alpha0(i)=veg_di0(imarsh(ie))*veg_nv0(imarsh(ie))*veg_cd0(imarsh(ie))/2.d0  !! MODIFIED
+          endif !imarsh matured
         enddo !j
-      enddo !i
+      enddo !i np
 !$OMP end do
+
+
 
 !!$OMP do
 !      do i=1,ns
@@ -9302,10 +9462,24 @@
         end if
 #endif
 
-#ifdef USE_MARSH
-        if(iof_marsh(1)==1) call writeout_nc(id_out_var(noutput+5), &
-     &'marsh_flag',4,1,nea,dble(imarsh))
-        noutput=noutput+1
+#ifdef USE_MARSH !Evan changing outs
+        if(iof_marsh(1)==1) then 
+                call writeout_nc(id_out_var(noutput+5), 'marsh_flag',4,1,nea,dble(imarsh))
+                noutput=noutput+1
+        endif
+        ! ---- write wet frac ----
+        !if(iof_marsh(2)==1) then
+        !        do i=1,nea
+        !                if (nt_inun(i) > 0) then
+        !                        tmpout(i) = (dble(nwet_inun(i)) / dble(nt_inun(i)))*100  ! fraction
+        !                        ! tmpout(i) = 100.d0 * dble(nwet_inun(i)) / dble(nt_inun(i))  ! percent
+        !                else
+        !                        tmpout(i) = 0.d0
+        !                endif
+        !        enddo
+        !        call writeout_nc(id_out_var(noutput+6), 'wetFrac', 1, 1, nea, dble(tmpout))
+        !        noutput = noutput + 1
+        !endif
 #endif
 
 #ifdef USE_MICE
@@ -9686,12 +9860,78 @@
       enddo
 #endif
 
-#ifdef USE_MARSH
+#ifdef USE_MARSH 
         if(iof_marsh(1)==1) then
           icount=icount+1 
           if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.14)')
           varout_2delem(icount,:)=imarsh(1:ne)
         endif
+
+        if(iof_marsh(2)==1) then 
+           !Evan adding  wet_frac output
+           icount = icount + 1
+           if(icount > ncount_2delem) call parallel_abort('STEP: icount>nscribes(Evan)')
+           !varout_2delem(icount,:) = nwet_inun(1:ne)
+
+           do i=1,ne
+              varout_2delem(icount,i) = (dble(nwet_inun(i)) / dble(nt_inun(i)))*100
+           enddo
+        endif
+        
+        if(iof_marsh(3)==1) then
+           icount = icount + 1
+           if(icount > ncount_2delem) call parallel_abort('STEP: icount>nscribes(Evan)')
+           do i=1,ne
+             if (nwet(i) > 0) then
+               varout_2delem(icount,i) = tau_sum_wet(i) / dble(nwet(i))
+             else
+                varout_2delem(icount,i) = 0.d0
+             endif
+           enddo
+
+        endif
+
+        if(iof_marsh(4)==1) then
+          icount=icount+1
+          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.14)')
+          varout_2delem(icount,:)=tau_max(1:ne)
+        endif
+
+
+        if(iof_marsh(5)==1) then
+          icount=icount+1
+          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.14) iof_marsh(5)')
+          varout_2delem(icount,:)=marsh_ban_tau(1:ne)
+        endif
+
+        if(iof_marsh(6)==1) then
+          icount=icount+1
+          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.14) iof_marsh(6)')
+          varout_2delem(icount,:)=marsh_ban(1:ne)
+        endif
+
+        if(iof_marsh(7)==1) then
+          icount=icount+1
+          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.14) iof_marsh(7)')
+          varout_2delem(icount,:)=age_marsh(1:ne)
+        endif
+
+
+        if(iof_marsh(8)==1) then
+          icount=icount+1
+          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.14) iof_marsh(8)')
+          varout_2delem(icount,:)=marsh_dep_chg(1:ne)
+        endif
+
+
+        if(iof_marsh(9)==1) then
+          icount=icount+1
+          if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.14): iof_marsh(9)')
+          varout_2delem(icount,:)=marsh_ban_track(1:ne)
+        endif
+
+
+
 #endif
 
 #ifdef USE_FABM
@@ -10168,7 +10408,7 @@
         call mpi_isend(varout_2dside(1:ncount_2dside,1:ns),ns*ncount_2dside,MPI_REAL4,iscribe_2d, &
      &702,comm_schism,srqst7(nsend_varout),ierr)
 
-      endif !nc_out>0.and.mod(it,nspool)==0
+      endif !nc_out>0.and.mod(it,nspool)==0 
 !=============================================================================
 #endif /*OLDIO*/
 
@@ -10766,7 +11006,9 @@
 #ifdef TIMER2
       tmp=mpi_wtime()
       write(12,*)'Time taken for outputs=',tmp-cwtmp3,it
-      cwtmp3=tmp !reset
+      cwtmp3=tmp !reseubroutine schism_step
 #endif
 
       end subroutine schism_step
+
+ 

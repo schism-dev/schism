@@ -26,20 +26,20 @@ set (OLDIO OFF CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
 
 set (USE_ATMOS OFF CACHE BOOLEAN "Coupling with atmospheric model via ESMF")
 set (USE_BMI OFF CACHE BOOLEAN "Build a library that can be used from BMI, with sources and some b.c. provided by BMI")
-set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
+set (PREC_EVAP ON CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
 ## GOTM5.2 is installed by default, and has been tested successfully, defined GOTM_BASE to use a non-standard GOTM source 
 ## Note that source code of GOTM5.2 is from GOTM web so make sure to use recursive clone (to get the submodule)
 ##set( GOTM_BASE /work2/03473/seatonc/frontera/GOTM5.2/code CACHE STRING "Path to non-standard GOTM base directory")
 set (USE_GOTM OFF CACHE BOOLEAN "Use GOTM turbulence model. This just enables the build -- GOTM must still be selected in param.nml")
 set (USE_HA OFF CACHE BOOLEAN "Enable harmonic analysis output modules")
-set( USE_MARSH OFF CACHE BOOLEAN "Use marsh module")
+set( USE_MARSH ON CACHE BOOLEAN "Use marsh module")
 set( USE_PAHM OFF CACHE BOOLEAN "Use PaHM module")
 
 #   Enable/Disable Modules
 #Use SED instead of USE_SED2D
 ##set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
-set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
+set( USE_WWM ON CACHE BOOLEAN "Use wind-wave module")
 ##Coupling to WW3, either via ESMF or hard coupling (in dev)
 set( USE_WW3 OFF CACHE BOOLEAN "Use Wave Watch III")
 set( USE_ICE OFF CACHE BOOLEAN "Use 1-class ICE module")
@@ -52,7 +52,7 @@ set( USE_ECO OFF   CACHE BOOLEAN "Use ECO-SIM module")
 set( USE_ICM OFF  CACHE BOOLEAN "Use ICM module")
 set( USE_COSINE OFF   CACHE BOOLEAN "Use CoSiNE module")
 set( USE_FIB OFF   CACHE BOOLEAN "Use fecal indicating bacteria module")
-set( USE_SED OFF   CACHE BOOLEAN "Use sediment module")
+set( USE_SED ON CACHE BOOLEAN "Use sediment module")
 
 set( USE_FABM OFF   CACHE BOOLEAN "FABM BGC model interface")
 #If FABM is on, need to set FABM_BASE (after cloning from Joseph's fork: https://github.com/josephzhang8/fabm.git).

@@ -139,9 +139,8 @@
       real(rkind), allocatable :: swild3(:) !,rwild(:,:)
       real(rkind), allocatable :: swild4(:,:) !double precision for hotstart.in (only)
       real(rkind), allocatable :: swild99(:,:),swild98(:,:,:) !used for exchange etc (deallocate immediately afterwards)
-      real(rkind), allocatable :: buf3(:),buf4(:)
+      real(rkind), allocatable :: buf3(:),buf4(:),buf5(:) !Evan add buf5
 !      real(4), allocatable :: swild9(:,:) !used in tracer nudging
-
 
 !     Local variables
       type(llist_type),pointer :: llp
@@ -150,8 +149,8 @@
       !Dimensions of out_name,iout_23d should be same as in scribe_io
       character(len=20) :: out_name(max_ncoutvar)
       integer :: iout_23d(max_ncoutvar)
-
-      integer :: i,j,k,l,m,mm,im2d,itmp,itmp1,itmp2,izonal5,nadv,ncor, &
+!Evan addded itmp3
+      integer :: i,j,k,l,m,mm,im2d,itmp,itmp1,itmp2,itmp3,izonal5,nadv,ncor, &
                 &istat,icount,indx2,ic_elev, &
                 &ipgb,isgb,iegb,irr0,nn,ifl,nd,nd1,nd2,ii,nope1, &
                 &ntmp,nrecl_et,nrecl_fl,nrecl_tr2(natrm),nd_gb, &
@@ -447,7 +446,7 @@
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), &
-     &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_mice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
+     &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_mice(10),iof_ana(20),iof_marsh(9),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
      &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1), &
@@ -525,7 +524,7 @@
       age_marsh_min=0.d0
       istemp=0
       relax_2_airt=5.d-2
-
+      
       !Output elev, hvel by default
       nc_out=1
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
@@ -1359,7 +1358,7 @@
 
 !     Alloc arrays that are used only in this routine. Note: swild, swild2, swild10 will be re-dimensioned (larger dimension) later
       allocate(nwild(nea+12+natrm),nwild2(ns_global),swild(nsa+nvrt+12+ntracers),swild2(nvrt,12),swild10(max(3,nvrt),12), &
-         &swild3(50+ntracers),swild4(ntracers,nvrt),buf3(ns_global),buf4(ns_global),stat=istat)
+         &swild3(50+ntracers),swild4(ntracers,nvrt),buf3(ns_global),buf4(ns_global),buf5(ns_global),stat=istat) !Evan add buf5
       if(istat/=0) call parallel_abort('INIT: alloc wild')
 
       if(iorder==0) then
@@ -1486,7 +1485,35 @@
 #endif
 
 #ifdef USE_MARSH
-      allocate(imarsh(nea),ibarrier_m(nea),age_marsh(nea),stat=istat)
+      !Evan changing how allocating works
+      allocate(imarsh(nea),ibarrier_m(nea),age_marsh(nea),tau_sum_wet(ne), &
+        &nwet(nea),nwet_inun(nea),nt_inun(nea),marsh_ban(nea),marsh_ban_tau(nea),wet_thr(nmarsh_types),tmpout(nea),tau_max(nea),marsh_dep_chg(nea),marsh_ban_track(nea),stat=istat)
+        !params
+        marsh_maturity_days = 29.5d0
+        marsh_tau_thresh_pa   = 0.3d0 !was 3.5, but I think that was broken? 0.1 was wayyy too low. trying 0.3
+        kill_dep_chg=0.1 !depth of sediment loss that kills marsh (m)
+        kill_tau_imm=0.2 !was 0.35, likely too conservative
+        !arrays
+        marsh_ban_track=0
+        tau_sum_wet = 0.d0
+        nwet = 0
+        nwet_inun = 0
+        nt_inun   = 0
+        marsh_ban = 0
+        ts = 0
+        marsh_ban_tau=0
+        tau_max = 0
+        marsh_dep_chg = 0 
+        !initial test .3 works for all if bounded by lower drowning
+        wet_thr(1) = 0.7d0 !0.3 ->.33 !throw your wetness % thresholds. 100% is wet all of the time
+        wet_thr(2) = 0.7d0 !0.18 ->.30
+        wet_thr(3) = 0.7d0 !0.14 ->.30
+        wet_thr(4) = 1d0 
+              
+
+        
+      
+      
       if(istat/=0) call parallel_abort('INIT: MARSH allocation failure')
 #endif
 
@@ -1767,7 +1794,7 @@
       deta1_dxy_elem=0.d0
       stemp=0.d0 !init for output
 #ifdef USE_MARSH
-      age_marsh=0.d0
+      !age_marsh=0.d0 Evan Commenting out since it's now an input
 #endif
 
 !Tsinghua group
@@ -2193,30 +2220,35 @@
 #endif
 
 #ifdef USE_MARSH
-!...  Inputs for marsh migration model
+!...  Inputs for marsh migration model, Evan added buf5
       if(myrank==0) then
         open(10,file=in_dir(1:len_in_dir)//'marsh_init.prop',status='old')
         open(32,file=in_dir(1:len_in_dir)//'marsh_barrier.prop',status='old')
+        open(33,file=in_dir(1:len_in_dir)//'marsh_age.prop',status='old')
         do i=1,ne_global
           read(10,*)j,buf3(i) !tmp1
           read(32,*)j,buf4(i) !tmp2
+          read(33,*)j,buf5(i)
           itmp1=nint(buf3(i))
           itmp2=nint(buf4(i))
+          itmp3 = nint(buf5(i))
           if(itmp1<0.or.itmp1>nmarsh_types.or.itmp2/=0.and.itmp2/=1) then
             write(errmsg,*)'Unknown marsh flag:',i,tmp1,tmp2
             call parallel_abort(errmsg)
           endif
         enddo !i
-        close(10); close(32)
+        close(10); close(32); close(33)
       endif !myrank
       call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
       call mpi_bcast(buf4,ns_global,rtype,0,comm,istat)
+      call mpi_bcast(buf5,ns_global,rtype,0,comm,istat)
 
       do i=1,ne_global
         if(iegl(i)%rank==myrank) then
           ie=iegl(i)%id
           imarsh(ie)=nint(buf3(i)) !itmp1
           ibarrier_m(ie)=nint(buf4(i)) !itmp2
+          age_marsh(ie)=nint(buf5(i))
           if(ibarrier_m(ie)==1) imarsh(ie)=0
         endif
       enddo !i
@@ -6634,7 +6666,69 @@
         counter_out_name=counter_out_name+1
         out_name(counter_out_name)='marshFlag'
         iout_23d(counter_out_name)=4
+      endif
+      
+      if(iof_marsh(2)==1) then
+        ! Wetfract calc added Evan
+        ncount_2delem = ncount_2delem + 1
+        counter_out_name = counter_out_name + 1
+        out_name(counter_out_name) = 'wetFrac'      
+        iout_23d(counter_out_name) = 1
       endif !iof_marsh 
+
+
+      if(iof_marsh(3)==1) then
+        ncount_2delem = ncount_2delem + 1
+        counter_out_name = counter_out_name + 1
+        out_name(counter_out_name) = 'AvgBss'
+        iout_23d(counter_out_name) = 1
+      endif
+      
+      if(iof_marsh(4)==1) then
+        ncount_2delem = ncount_2delem + 1
+        counter_out_name = counter_out_name + 1
+        out_name(counter_out_name) = 'MaxBss'
+        iout_23d(counter_out_name) = 1
+      endif
+
+      if(iof_marsh(5)==1) then
+        ncount_2delem = ncount_2delem + 1
+        counter_out_name = counter_out_name + 1
+        out_name(counter_out_name) = 'BanTau'
+        iout_23d(counter_out_name) = 4
+      endif
+
+      if(iof_marsh(6)==1) then
+        ncount_2delem = ncount_2delem + 1
+        counter_out_name = counter_out_name + 1
+        out_name(counter_out_name) = 'BanInun'
+        iout_23d(counter_out_name) = 4
+      endif
+
+      if(iof_marsh(7)==1) then
+        ncount_2delem = ncount_2delem + 1
+        counter_out_name = counter_out_name + 1
+        out_name(counter_out_name) = 'MarshAge'
+        iout_23d(counter_out_name) = 1
+      endif
+
+      if(iof_marsh(8)==1) then
+        ncount_2delem = ncount_2delem + 1
+        counter_out_name = counter_out_name + 1
+        out_name(counter_out_name) = 'MarshDepChg'
+        iout_23d(counter_out_name) = 1
+      endif
+
+      if(iof_marsh(9)==1) then
+        ncount_2delem = ncount_2delem + 1
+        counter_out_name = counter_out_name + 1
+        out_name(counter_out_name) = 'MarshKillTrack'
+        iout_23d(counter_out_name) = 4
+      endif
+
+
+
+
 #endif
 
 #ifdef USE_FABM
@@ -7057,7 +7151,7 @@
           call mpi_send(iof_sed2d,14,itype,nproc_schism-i,126,comm_schism,ierr)
           call mpi_send(iof_ice,10,itype,nproc_schism-i,127,comm_schism,ierr)
           call mpi_send(iof_ana,20,itype,nproc_schism-i,128,comm_schism,ierr)
-          call mpi_send(iof_marsh,2,itype,nproc_schism-i,129,comm_schism,ierr)
+          call mpi_send(iof_marsh,9,itype,nproc_schism-i,129,comm_schism,ierr) !changing from 2 to 7 Evan
 
           call mpi_send(iof_gen,max(1,ntrs(3)),itype,nproc_schism-i,130,comm_schism,ierr)
           call mpi_send(iof_age,max(1,ntrs(4)),itype,nproc_schism-i,131,comm_schism,ierr)

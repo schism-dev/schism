@@ -677,8 +677,14 @@ module schism_glbl
   real(rkind),save,allocatable     :: cf_x1(:),cf_x2(:),cf_y1(:),cf_y2(:),cf_denom(:)
   integer,save,allocatable         :: cf_i(:), cf_j(:)
 #endif
-! Marsh model
-  integer,save,allocatable     :: imarsh(:),ibarrier_m(:)
+! Marsh model ---Evan Variable adds---
+  integer,save,allocatable     :: imarsh(:),ibarrier_m(:),nwet_inun(:), nt_inun(:), &
+  &  marsh_ban(:),marsh_ban_tau(:),nwet(:),marsh_ban_track(:)
+  real(8), save, allocatable :: tau_sum_wet(:),wet_thr(:),tmpout(:),tau_max(:),marsh_dep_chg(:)
+  integer, save         ::       step_min !gate for drowning
+  real(8),save               ::       tau_avg_wet,ts, wet_frac,kill_dep_chg,max_dep_chg
+  real(kind=8),save  :: tsum, elem_tau_pa, marsh_maturity_days, marsh_tau_thresh_pa, kill_tau_imm
+  REAL(rkind),save, allocatable :: dhnd(:) !total depth change in dt (=sus+bedload) ported from sed
 
 ! Vegetation
   real(rkind),save,allocatable     :: veg_alpha0(:),veg_h(:),veg_nv(:),veg_di(:),veg_cd(:), &

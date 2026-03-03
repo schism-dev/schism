@@ -135,7 +135,7 @@
      & ipgl,nope_global,np_global,dp,h0,dpe,    &
      & iegl,out_wwm,pi,eta2,dp00,dldxy,we,time_stamp, &
      & itur,Phai,in_dir,out_dir,len_in_dir,len_out_dir, &
-     & uu2,vv2,dav
+     & uu2,vv2,dav,dhnd !dhnd coming from global now
                             !Tsinghua group:+alphd,im_pick_up,Two_phase_mix
                             !phai_m !1120:-alphd,im_pick_up,Two_phase_mix,phai_m  +itur,Phai
       USE schism_msgp
@@ -202,7 +202,8 @@
       REAL(rkind),save, allocatable :: hdep(:),hbed(:) !depth change (in dt) due to suspended load and bedload
       REAL(rkind),save, allocatable :: hbed_ised(:),hdep_nd(:)
       REAL(rkind),save, allocatable :: qsan(:) 
-      REAL(rkind),save, allocatable :: dhnd(:) !total depth change in dt (=sus+bedload)
+      !Evan changing this to global to interact with marsh
+      !REAL(rkind),save, allocatable :: dhnd(:) !total depth change in dt (=sus+bedload)
 
       ! - For waves
       INTEGER          :: t
