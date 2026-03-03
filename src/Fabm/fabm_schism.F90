@@ -403,7 +403,9 @@ subroutine fabm_schism_init_stage2
 !#endif
 
   allocate(bottom_idx(1:ne))
+  bottom_idx = 1
   do i=1,ne
+    if (kbe(i) < 1) cycle
     bottom_idx(i) = kbe(i)+1
   enddo
 
@@ -736,6 +738,7 @@ subroutine fabm_schism_init_stage2
   ! calculate initial layer heights, note that the at nlevel=1, this variable 
   ! is not defined 
   do i=1,ne
+    if (kbe(i) < 1) cycle
     fs%layer_height(kbe(i)+1:nvrt,i) =   ze(kbe(i)+1:nvrt,i)-ze(kbe(i):nvrt-1,i)
     fs%layer_depth (kbe(i)+1:nvrt,i) = -(ze(kbe(i)+1:nvrt,i)+ze(kbe(i):nvrt-1,i))/2
   enddo
@@ -915,6 +918,7 @@ subroutine get_light(fs)
     ! get light extinction and calculate par
     fs%light_extinction = 0.0_rk
     do nel=1,ne
+      if (kbe(nel) < 1) cycle
       call fabm_get_light_extinction(fs%model,1,nvrt,nel,localext)
 
       do k=nvrt,kbe(nel)+1,-1
@@ -1037,6 +1041,7 @@ subroutine fabm_schism_do()
   ! calculate layer height, and depth
   do i=1,ne
     if (idry_e(i) /= 0) cycle
+    if (kbe(i) < 1) cycle
     fs%layer_height(kbe(i)+1:nvrt,i) =   ze(kbe(i)+1:nvrt,i)-ze(kbe(i):nvrt-1,i)
     fs%layer_depth (kbe(i)+1:nvrt,i) = -(ze(kbe(i)+1:nvrt,i)+ze(kbe(i):nvrt-1,i))/2
   enddo
@@ -1092,6 +1097,8 @@ subroutine fabm_schism_do()
 
   if (associated(fs%bottom_speed)) then
     do ie=1,ne
+      if (idry_e(ie) /= 0) cycle
+      if (kbe(ie) < 1) cycle
       fs%bottom_speed(ie) = 0
       do j=1,i34(ie)
         fs%bottom_speed(ie) = fs%bottom_speed(ie)  + sqrt( &
@@ -1123,6 +1130,7 @@ subroutine fabm_schism_do()
   !if (allocated(fs%pres)) then
     do i=1,ne
       if (idry_e(i) /= 0) cycle
+      if (kbe(i) < 1) cycle
       do k=1,nvrt
         n = max(k,kbe(i))
         !fs%pres(k,i) = rho0*grav*abs(ze(n,i))*real(1.e-4,rkind)
@@ -1170,6 +1178,7 @@ subroutine fabm_schism_do()
   do i=1,ne
 
     if (idry_e(i) /= 0) cycle
+    if (kbe(i) < 1) cycle
 
 !write(0,*) 'fabm: get rhs'
     rhs = 0.0_rk
@@ -1299,11 +1308,13 @@ subroutine integrate_vertical_movement(fs)
   real(rk) :: w(nvrt,fs%nvar)
 
   do i=1,ne
-    if (idry_e(i) == 0) then
+    if (kbe(i) < 1) cycle
+    if (idry_e(i) /= 0) cycle 
+
 #if _FABM_API_VERSION_ < 1
-      call fabm_get_vertical_movement(fs%model, 1, nvrt, i, w)
+    call fabm_get_vertical_movement(fs%model, 1, nvrt, i, w)
 #else
-      call fs%model%get_vertical_movement(1, nvrt, i, w)
+    call fs%model%get_vertical_movement(1, nvrt, i, w)
 #endif
 
     lower_flux(1:kbe(i)+1,1:fs%nvar) = 0.0_rk
@@ -1329,7 +1340,6 @@ subroutine integrate_vertical_movement(fs)
         tr_el(istart+n-1,k,i) = tr_el(istart+n-1,k,i) + dt*h_inv(k)*(-upper_flux(k,n)+lower_flux(k,n))
       end do
     end do
-    end if ! idry_e==0
   end do
 end subroutine integrate_vertical_movement
 
