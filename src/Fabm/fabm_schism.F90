@@ -11,7 +11,7 @@
 !> @author Jan Kossack <jan.kossack@hereon.de>
 !> @author Wang Zhenggui
 
-!> @copyright Copyright 2021-2025 Helmholtz-Zentrum hereon GmbH
+!> @copyright Copyright 2021-2026 Helmholtz-Zentrum hereon GmbH
 !> @copyright Copyright 2021-2022 Virginia Institute of Marine Science
 !> @copyright Copyright 2017-2021 Helmholtz-Zentrum Geesthacht GmbH
 !
@@ -109,7 +109,7 @@ module fabm_schism
     character(len=256)                :: short_name
     character(len=256)                :: units
     character(len=256)                :: long_name
-    logical                           :: do_output
+    logical                           :: do_output=.false.
     logical                           :: output_averaged=.true.
   end type
 
@@ -118,13 +118,13 @@ module fabm_schism
     character(len=256)                :: short_name
     character(len=256)                :: units
     character(len=256)                :: long_name
-    logical                           :: do_output
+    logical                           :: do_output=.false.
     logical                           :: output_averaged=.true.
   end type
 
   type, public :: fabm_schism_parameter
-    integer  :: ispm  !spm option flag
-    real(rk) :: spm0  !constant spm conc. for ispm=0
+    integer  :: ispm=0  !spm option flag
+    real(rk) :: spm0=0.0_rk  !constant spm conc. for ispm=0
   end type
 
   type, public :: type_fabm_schism
@@ -135,8 +135,8 @@ module fabm_schism
 #endif
 
     character(len=1024)           :: version = 'unknown'
-    real(rk)                      :: day_of_year, seconds_of_day
-    logical                       :: fabm_ready
+    real(rk)                      :: day_of_year=0.0_rk, seconds_of_day=0.0_rk
+    logical                       :: fabm_ready=.false.
     logical                       :: repair_allowed=.true.
     integer                       :: nvar=-1
     integer                       :: ndiag=-1
@@ -181,7 +181,7 @@ module fabm_schism
     type(fabm_schism_bulk_diagnostic_variable), dimension(:), allocatable :: interior_diagnostic_variables
     type(fabm_schism_horizontal_diagnostic_variable), dimension(:), allocatable :: horizontal_diagnostic_variables
     type(fabm_schism_parameter)         :: params
-    real(rk)                            :: tidx
+    real(rk)                            :: tidx=0.0_rk
     real(rk)                            :: time_since_last_output = 0.0_rk
     real(rk)                            :: time_since_last_hor_output = 0.0_rk
     real(rk)                            :: time_fabm(1)=-999.0_rk  !time in forcing files
@@ -204,7 +204,7 @@ module fabm_schism
 
   type(type_fabm_schism), public :: fs ! the main module object
   integer  :: ncid=-1 ! ncid of hotstart variables
-  real     :: missing_value=-2E20_rk ! missing_value for netcdf variables
+  real(rk), parameter :: missing_value=-2E20_rk ! missing_value for netcdf variables
 
 contains
 
@@ -490,6 +490,7 @@ subroutine fabm_schism_init_stage2
   do n=1,fs%ndiag
     if (fs%interior_diagnostic_variables(n)%output_averaged) then
       allocate(fs%interior_diagnostic_variables(n)%data(nvrt,ne))
+    fs%interior_diagnostic_variables(n)%data = 0.0_rk
     else
 #if _FABM_API_VERSION_ < 1
       fs%interior_diagnostic_variables(n)%data => fabm_get_bulk_diagnostic_data(fs%model,n)
@@ -497,7 +498,6 @@ subroutine fabm_schism_init_stage2
       fs%interior_diagnostic_variables(n)%data => fs%model%get_interior_diagnostic_data(n)
 #endif
     end if
-    fs%interior_diagnostic_variables(n)%data = missing_value
     fs%time_since_last_output = 0.0_rk
 
     write(message,'(A)') 'Linked interior diagnostic '// &
@@ -521,6 +521,7 @@ subroutine fabm_schism_init_stage2
   do n=1,fs%ndiag_hor
     if (fs%horizontal_diagnostic_variables(n)%output_averaged) then
       allocate(fs%horizontal_diagnostic_variables(n)%data(ne))
+    fs%horizontal_diagnostic_variables(n)%data = 0.0_rk
     else
 #if _FABM_API_VERSION_ < 1
       fs%horizontal_diagnostic_variables(n)%data => fabm_get_horizontal_diagnostic_data(fs%model,n)
@@ -528,7 +529,6 @@ subroutine fabm_schism_init_stage2
       fs%horizontal_diagnostic_variables(n)%data => fs%model%get_horizontal_diagnostic_data(n)
 #endif
     end if
-    fs%horizontal_diagnostic_variables(n)%data = 0.0_rk
     fs%time_since_last_hor_output = 0.0_rk
 
     write(message,'(A)') 'Linked horizontal diagnostic '// &
@@ -551,11 +551,11 @@ subroutine fabm_schism_init_stage2
 
   ! link environment
   allocate(fs%light_extinction(nvrt,ne))
-  fs%light_extinction = missing_value
+  fs%light_extinction = 0.0_rk
 
   !> @todo what is a sensible value for layers below kbe?
   allocate(fs%layer_height(nvrt,ne))
-  fs%layer_height = missing_value
+  fs%layer_height = 0.0_rk
 
   allocate(fs%layer_depth(nvrt,ne))
   fs%layer_depth = missing_value
@@ -606,8 +606,8 @@ subroutine fabm_schism_init_stage2
   endif
 #endif
 
-  !> Set I_0 to missing_value if atmospheric forcing is provided by setting nws = 2 and
-  !> ihconsv = 1 in param.nml
+  !> Initialize radiation fields with safe nonnegative defaults.
+  !> Atmospheric forcing is provided by setting nws = 2 and ihconsv = 1 in param.nml.
   !> @todo check models using muE as unit
 #if _FABM_API_VERSION_ < 1
   if (fs%model%variable_needs_values(standard_variables%surface_downwelling_shortwave_flux) &
@@ -620,7 +620,7 @@ subroutine fabm_schism_init_stage2
     endif
 
     allocate(fs%I_0(ne))
-    fs%I_0 = missing_value
+    fs%I_0 = 0.0_rk
     call fabm_link_horizontal_data(fs%model,standard_variables%surface_downwelling_shortwave_flux,fs%I_0)
     call driver%log_message('Linked requested surface downwelling short wave flux')
   endif
@@ -629,7 +629,7 @@ subroutine fabm_schism_init_stage2
    .or. fs%model%variable_needs_values(standard_variables%downwelling_photosynthetic_radiative_flux)) then
 
     allocate(fs%par0(ne))
-    fs%par0 = missing_value
+    fs%par0 = 0.0_rk
     call fabm_link_horizontal_data(fs%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%par0)
     call driver%log_message('Linked requested surface downwelling PAR flux')
   endif
@@ -637,7 +637,7 @@ subroutine fabm_schism_init_stage2
   if (fs%model%variable_needs_values(standard_variables%downwelling_photosynthetic_radiative_flux)) then
 
     allocate(fs%par(nvrt, ne))
-    fs%par = missing_value
+    fs%par = 0.0_rk
     call fabm_link_interior_data(fs%model,standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
     call driver%log_message('Linked requested downwelling PAR flux')
   endif
@@ -645,7 +645,7 @@ subroutine fabm_schism_init_stage2
   if (fs%model%variable_needs_values(standard_variables%downwelling_photosynthetic_radiative_flux)) then
 
     allocate(fs%par(nvrt, ne))
-    fs%par = missing_value
+    fs%par = 0.0_rk
     call fabm_link_interior_data(fs%model,standard_variables%downwelling_photosynthetic_radiative_flux,fs%par)
     call driver%log_message('Linked requested downwelling PAR flux')
   endif
@@ -662,7 +662,7 @@ subroutine fabm_schism_init_stage2
     endif
 
     allocate(fs%I_0(ne))
-    fs%I_0 = missing_value
+    fs%I_0 = 0.0_rk
     call fs%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux,fs%I_0)
     call driver%log_message('Linked requested surface downwelling short wave flux')
   endif
@@ -671,7 +671,7 @@ subroutine fabm_schism_init_stage2
    .or. fs%model%variable_needs_values(fabm_standard_variables%downwelling_photosynthetic_radiative_flux)) then
 
     allocate(fs%par0(ne))
-    fs%par0 = missing_value
+    fs%par0 = 0.0_rk
     call fs%model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux,fs%par0)
     call driver%log_message('Linked requested surface downwelling PAR flux')
   endif
@@ -716,7 +716,7 @@ subroutine fabm_schism_init_stage2
   fs%bottom_speed = missing_value
 
   allocate(fs%bottom_roughness(ne))
-  fs%bottom_roughness = missing_value
+  fs%bottom_roughness = 0.0_rk
 
   ! Link ice environment
 #ifdef USE_ICEBGC
@@ -724,12 +724,13 @@ subroutine fabm_schism_init_stage2
   fs%dh_growth = missing_value
 
   allocate(fs%ice_thick(ne))
-  fs%ice_thick = missing_value
+  fs%ice_thick = 0.0_rk
 
   allocate(fs%ice_cover(ne))
-  fs%ice_cover = missing_value
+  fs%ice_cover = 0.0_rk
+
   allocate(fs%snow_thick(ne))
-  fs%snow_thick = missing_value
+  fs%snow_thick = 0.0_rk
 #endif
 
   ! calculate initial layer heights, note that the at nlevel=1, this variable 
@@ -1919,6 +1920,8 @@ subroutine fabm_schism_read_param_2d(varname,pvar,pvalue)
   integer :: i,j,k,negb,npgb,ip,ie,nd
   real(rkind) :: xtmp,ytmp,rtmp
   real(rkind),dimension(np) :: tvar
+
+  tvar = 0.0_rkind
 
   !read spatailly varying parameter values
   if(int(pvalue)==-999) then  !*.gr3
