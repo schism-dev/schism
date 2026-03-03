@@ -400,7 +400,7 @@ subroutine fabm_schism_init_stage2
   call fs%model%set_mask(fs%mask_hz)
 #endif
 #endif
-!#endif
+#endif
 
   allocate(bottom_idx(1:ne))
   bottom_idx = 1
