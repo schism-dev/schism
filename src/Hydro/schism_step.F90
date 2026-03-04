@@ -111,18 +111,6 @@
       integer :: kronecker,lindex_s,omp_get_num_threads,omp_get_thread_num,julian_day
       real(rkind) :: eqstate,quad_int !,signa
 
-!     Evan Variable Addition
-     
-!      integer :: step_min !gate for drowning
-!      real(8) :: tau_avg_wet,ts, wet_frac
-!      real(8), allocatable :: tau_sum_wet(:),wet_thr(:),tmpout(:)
-!      integer, allocatable :: nwet_inun(:), nt_inun(:), marsh_ban(:),marsh_ban_tau(:)
-!      integer, allocatable :: nwet(:)
-!      real(kind=8), parameter :: marsh_maturity_days = 29.5d0    ! !! ADDED
-!      real(kind=8), parameter :: marsh_tau_thresh_pa   = 0.35d0   ! !! ADDED, was 5, then 3.5, then 1, 0.5, now 0.2, was 0.35 (works
-      !well, trying 1)
-!      real(kind=8) :: tsum, elem_tau_pa       ! !! ADDED
-
 !     Local variables
       integer :: istat,i,j,k,l,m,kk,mm,jj,ll,lll,nd,nd0,ie,ie0,iegb,icount, &
                  &icount1,icount2,icount3,jsj,k0,k1,k2,ipgb,ndgb1,ndgb2, &
