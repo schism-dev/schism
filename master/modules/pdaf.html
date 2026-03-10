@@ -3041,8 +3041,11 @@
 <li>DA_data: observation inputs, file naming is <code>data_????????.dat</code> (<code>?</code>s with i8.8 format with padding 0s, representing the SCHISM time steps). If the file does not exist, the code still runs with no DA done at that DA step. </li>
 </ol>
 <p>Currently, we support 6 types of observation including: elevation(z), sea-level anomaly(a), temperature (t), salinity(s), u-velocity(u), and v-velocity(v). </p>
-<p>These are ascii files and their format are as follows:<br />
-<a href="../assets/pdaf_data_format.png">here</a></p>
+<p>These are ascii files and their format are as follows:  </p>
+<figure id="pdaf_data_format">
+<p><img alt="Data format for obs in PDAF" src="../assets/pdaf_data_format.png" title="Data format for obs in PDAF" /></p>
+<figcaption>Data format for obs in PDAF</figcaption>
+</figure>
 <p>First row is total number of observations, then followed by obs-type, X, Y, Z, obs-values.  </p>
 <p>If rms_type=3, one extra column is needed for observation errors. Users can also specify uniform observation error with rms_type=1,2 in pdaf.nml. </p>
 <p><a href="../assets/pdaf_folder_structures.png">Working folder structures</a></p>
