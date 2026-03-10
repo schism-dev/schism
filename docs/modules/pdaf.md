@@ -121,8 +121,8 @@ If successful, an executable schism_pdaf will be there.
 The input files include: 
 
 1. standard schism inputs, these files depend on user case setups 
-2. schism_pdaf control files 
-  - schism_pdaf.cfg: control ensemble size, # of concurrent members, scribe cores (if used), ics_set (same as ics in param.nml: coordinate system) 
+2. schism_pdaf control files:
+  2.1 schism_pdaf.cfg: control ensemble size, # of concurrent members, scribe cores (if used), ics_set (same as ics in param.nml: coordinate system) 
 ```
 # This ESMF resource file is read by the program `multi_schism`.  Its only
 # configuration label is the number of schism instances to launch.
@@ -136,7 +136,7 @@ scribe_count: 6
 # ics_set for scribe cores
 ics_set: 2
 ```
-  - global.nml: control parameters for ESMF & PDAF coupling info, set starting date and run hours and DA steps. Note that the time origin info, duration and SCHISM time step need to be consistent with param.nml (under any ihot setting). Specify the DA interval with `num_schism_dt_in_couple` (# of SCHISM steps when calling PDAF), and this value should always be identical as delt_obs in `pdaf.nml`. 
+  2.2 global.nml: control parameters for ESMF & PDAF coupling info, set starting date and run hours and DA steps. Note that the time origin info, duration and SCHISM time step need to be consistent with param.nml (under any ihot setting). Specify the DA interval with `num_schism_dt_in_couple` (# of SCHISM steps when calling PDAF), and this value should always be identical as delt_obs in `pdaf.nml`. 
 ```
 &sim_time
   start_year=2000
@@ -149,7 +149,7 @@ ics_set: 2
 /
 ```
 
- - pdaf.nml: control pdaf parameters such as filter type, localization range…etc. 
+ 2.3 pdaf.nml: control pdaf parameters such as filter type, localization range…etc. 
 ```
 !Namelist file for PDAF configuration
 &pdaf_nml
@@ -175,8 +175,6 @@ ics_set: 2
  min_MSL_acDay = 10., ! Control minimum accumalation MSL day to derived SSH-A, unit: Days
 /
 ``` 
-
- 
 
 3. schism_pdaf ensemble inputs  
 
@@ -209,7 +207,11 @@ First row is total number of observations, then followed by obs-type, X, Y, Z, o
 
 If rms_type=3, one extra column is needed for observation errors. Users can also specify uniform observation error with rms_type=1,2 in pdaf.nml. 
 
-[Working folder structures](../assets/pdaf_folder_structures.png)
+<figure markdown id='PDAF run dir structure'>
+<img alt="PDAF run dir structure" src="../assets/pdaf_folder_structures.png" title="PDAF run dir structure" />
+<figcaption>PDAF run dir structure</figcaption>
+</figure>
+
 
 #How to run it 
 
