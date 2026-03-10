@@ -199,8 +199,11 @@ meanstate.bin (optional): usually only used for twin experiments.
 Currently, we support 6 types of observation including: elevation(z), sea-level anomaly(a), temperature (t), salinity(s), u-velocity(u), and v-velocity(v). 
 
 These are ascii files and their format are as follows:  
-[here](../assets/pdaf_data_format.png)
- 
+<figure markdown id='pdaf_data_format'>
+<img alt="Data format for obs in PDAF" src="../assets/pdaf_data_format.png" title="Data format for obs in PDAF" />
+<figcaption>Data format for obs in PDAF</figcaption>
+</figure>
+
 
 First row is total number of observations, then followed by obs-type, X, Y, Z, obs-values.  
 
