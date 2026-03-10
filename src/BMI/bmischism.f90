@@ -1238,12 +1238,12 @@ end function schism_finalizer
         ath2(1,1,:,2,1) = src(:)
         bmi_status=BMI_SUCCESS
     case("Q_bnd_source")
-        ath3(:,1,1,1) = ath3(:,1,2,1)
-        ath3(:,1,2,1) = src(:)
+        ath3(1:nsources,1,1,1) = ath3(1:nsources,1,2,1)
+        ath3(1:nsources,1,2,1) = src(1:nsources)
         bmi_status=BMI_SUCCESS
     case("Q_bnd_sink")
-        ath3(:,1,1,2) = ath3(:,1,2,2)
-        ath3(:,1,2,2) = src(:)
+        ath3(1:nsinks,1,1,2) = ath3(1:nsinks,1,2,2)
+        ath3(1:nsinks,1,2,2) = src(1:nsinks)
         bmi_status=BMI_SUCCESS
     case("SFCPRS")
         pr1(:) = pr2(:)
