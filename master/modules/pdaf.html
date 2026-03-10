@@ -2968,8 +2968,8 @@
 <p>The input files include: </p>
 <ol>
 <li>standard schism inputs, these files depend on user case setups </li>
-<li>schism_pdaf control files </li>
-<li>schism_pdaf.cfg: control ensemble size, # of concurrent members, scribe cores (if used), ics_set (same as ics in param.nml: coordinate system) 
+<li>schism_pdaf control files:
+  2.1 schism_pdaf.cfg: control ensemble size, # of concurrent members, scribe cores (if used), ics_set (same as ics in param.nml: coordinate system) 
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a># This ESMF resource file is read by the program `multi_schism`.  Its only
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a># configuration label is the number of schism instances to launch.
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
@@ -2981,9 +2981,8 @@
 <a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>scribe_count: 6
 <a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a># ics_set for scribe cores
 <a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>ics_set: 2
-</code></pre></div></li>
-<li>
-<p>global.nml: control parameters for ESMF &amp; PDAF coupling info, set starting date and run hours and DA steps. Note that the time origin info, duration and SCHISM time step need to be consistent with param.nml (under any ihot setting). Specify the DA interval with <code>num_schism_dt_in_couple</code> (# of SCHISM steps when calling PDAF), and this value should always be identical as delt_obs in <code>pdaf.nml</code>. 
+</code></pre></div>
+  2.2 global.nml: control parameters for ESMF &amp; PDAF coupling info, set starting date and run hours and DA steps. Note that the time origin info, duration and SCHISM time step need to be consistent with param.nml (under any ihot setting). Specify the DA interval with <code>num_schism_dt_in_couple</code> (# of SCHISM steps when calling PDAF), and this value should always be identical as delt_obs in <code>pdaf.nml</code>. 
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>&amp;sim_time
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>  start_year=2000
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>  start_month=1
@@ -2993,10 +2992,9 @@
 <a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>  schism_dt=120 !SCHISM dt in sec (must be int)
 <a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>  num_schism_dt_in_couple=1 !# of SCHISM steps used in the ESMF main stepping
 <a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>/
-</code></pre></div></p>
-</li>
-<li>
-<p>pdaf.nml: control pdaf parameters such as filter type, localization range…etc. 
+</code></pre></div></li>
+</ol>
+<p>2.3 pdaf.nml: control pdaf parameters such as filter type, localization range…etc. 
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>!Namelist file for PDAF configuration
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>&amp;pdaf_nml
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a> screen = 3,      ! 0 is default, use 3 to debug 
@@ -3021,10 +3019,8 @@
 <a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a> min_MSL_acDay = 10., ! Control minimum accumalation MSL day to derived SSH-A, unit: Days
 <a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>/
 </code></pre></div></p>
-</li>
-<li>
-<p>schism_pdaf ensemble inputs  </p>
-</li>
+<ol>
+<li>schism_pdaf ensemble inputs  </li>
 </ol>
 <p>We follow suggestions from PDAF and use Pham’s method (2001) to generate ensemble information. More details can be found <a href="https://pdaf.awi.de/trac/wiki/EnsembleGeneration">here</a>.  </p>
 <p>In summary, users can do a freerun (no DA) and extract its snapshots for EOFs analysis. Snapshots can be extracted with ncl scripts (extract2bin.ncl or extract2bin_scrio.ncl), and use generate_covar.F90 to generate required inputs as follows: 
@@ -3048,7 +3044,10 @@
 </figure>
 <p>First row is total number of observations, then followed by obs-type, X, Y, Z, obs-values.  </p>
 <p>If rms_type=3, one extra column is needed for observation errors. Users can also specify uniform observation error with rms_type=1,2 in pdaf.nml. </p>
-<p><a href="../assets/pdaf_folder_structures.png">Working folder structures</a></p>
+<figure id="PDAF run dir structure">
+<p><img alt="PDAF run dir structure" src="../assets/pdaf_folder_structures.png" title="PDAF run dir structure" /></p>
+<figcaption>PDAF run dir structure</figcaption>
+</figure>
 <h1 id="how-to-run-it">How to run it<a class="headerlink" href="#how-to-run-it" title="Permanent link">&para;</a></h1>
 <p>When inputs are ready, users need to create each ensemble folder with naming schism_??? (i3.3 format), and link schism input file inside. makedir.pl (under src/PDAF_bindings/utility) can be used to create each member outputs dir and link input files in each dir.  </p>
 <p>Users also need to create folder DA_output with two subfolder a and f for storing DA outputs after/before the DA step, respectively. 
