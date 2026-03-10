@@ -65,6 +65,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#theory" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -2502,6 +2507,8 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
+        
+      
       
       <a href="pdaf.html" class="md-nav__link md-nav__link--active">
         
@@ -2881,9 +2888,117 @@
   
 
 
-  <h1>Data assimilation (PDAF)</h1>
+<h1 id="theory">Theory<a class="headerlink" href="#theory" title="Permanent link">&para;</a></h1>
+<p>Refer to this <a href="https://ccrm.vims.edu/yinglong/SVN_large_files/Yu_etal_OM_2025-SCHISM-Data-Assimilation.pdf">paper</a>.</p>
+<h1 id="compilation">Compilation<a class="headerlink" href="#compilation" title="Permanent link">&para;</a></h1>
+<p>Pre-requirements: ESMF, PDAF, SCHISM as libraries; the following sections show how to build for each. </p>
+<h2 id="build-esmf">Build ESMF<a class="headerlink" href="#build-esmf" title="Permanent link">&para;</a></h2>
+<p>ESMF version must be newer than version 8.1, users can download from https://earthsystemmodeling.org/download/ </p>
+<p>Specify macros depending on your platform resources, the following use intel with intelmpi as example, more options can be found from https://earthsystemmodeling.org/docs/release/latest/ESMF_usrdoc/node10.html#SECTION000106000000000000000 : </p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>export ESMF_DIR= where you untar ESMF 
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>export ESMF_COMPILER=intel 
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>export ESMF_OPENMP=OFF 
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>export ESMF_PTHREADS=OFF 
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>export ESMF_COMM=intelmpi 
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>export ESMF_NETCDF=split 
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>export ESMF_NETCDF_INCLUDE=&quot;$NetCDF_FORTRAN_DIR/include -I$NetCDF_FORTRAN_DIR/include $NetCDF_C_DIR/include -I$NetCDF_C_DIR/include&quot; 
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>export ESMF_NETCDF_LIBPATH=&quot;$NetCDF_FORTRAN_DIR/lib -L$NetCDF_FORTRAN_DIR/lib $NetCDF_C_DIR/lib -L$NetCDF_C_DIR/lib&quot; 
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>export ESMF_NETCDF_LIBS=&quot;-lnetcdff -lnetcdf&quot; 
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>export ESMF_PIO=OFF 
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>export ESMF_ABI=x86_64_medium  #(optional) 
+</code></pre></div>
+<p>Then do the following: </p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cd $ESMF_DIR 
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>make info &gt;&amp; tmp #(inspect config info) 
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>make clobber 
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>make 
+</code></pre></div>
+<p>This may take some time depending on your system. If successful, the library &amp; esmf.mk will be located in <code>$ESMF_DIR/lib/libO/Linux</code>.intel.x86_64_medium.intelmpi.default/;  the actual path depends on compile option. </p>
+<p>If this is a fresh install, and you intend to build schism_pdaf after, remember to unset the macro to avoid conflict when building schism_pdaf, like the following: </p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>unset ESMF_DIR 
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>unset ESMF_COMPILER 
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>unset ESMF_OPENMP 
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>unset ESMF_PTHREADS 
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>unset ESMF_COMM 
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>unset ESMF_NETCDF 
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>unset ESMF_PIO 
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>unset ESMF_ABI 
+</code></pre></div>
+<h2 id="build-pdaf">Build PDAF<a class="headerlink" href="#build-pdaf" title="Permanent link">&para;</a></h2>
+<p>PDAF version 3.0 is not compatible with previous version (2.3.1 and older), so if you have previous version, please update it to the latest one. </p>
+<p>Get PDAF 3.0 from github </p>
+<p>git clone https://github.com/PDAF/PDAF.git </p>
+<p>Choose build option from folder make.arch or make one and put into it. </p>
+<p>Common choices are linux_ifort_impi.h, linux_ifort_mvapich2.h, linux_mpiifort_impi.h.  </p>
+<p>Change compiling option if necessary. PDAF requires BLAS and LAPACK library. If your platform provides compiler optimized math library like Intel-MKL, OpenBLAS, AOCL (AMD), these can also be used and you need to config corresponding options in the *.h file. </p>
+<p>Here we use linux_ifort_impi.h as example, define marco as following then build the lib </p>
+<p>export ARCH=linux_ifort_impi </p>
+<p>export PDAF_ARCH=$ARCH </p>
+<p>make </p>
+<p>If successful, libraries &amp; module files are located in lib and include respectively. </p>
+<p>1.3 Build SCHISM </p>
+<p>Follow https://schism-dev.github.io/schism/stable/getting-started/getting-sourcecode.html and https://schism-dev.github.io/schism/stable/getting-started/compilation.html#cmake to build schism libs. </p>
+<p>Note: schism_pdaf only support scribe-IO under fully parallel mode (all ensembles run concurrently), and OLDIO (schout output nc files) under flexible mode (ensembles members run in batches, for under-resourced platform).  </p>
+<p>If users wish to use scribe-IO, build schism with OLDIO=OFF. If OLDIO is preferred, set OLDIO=ON.  </p>
+<p>schism_pdaf also supports static domain decomposition without ParMetis (requires partition.prop as input). If this feature is used, set NO_PARMETIS=ON. </p>
+<p>1.4 Build schism_pdaf </p>
+<p>Get schism_pdaf code with the following: </p>
+<p>git clone https://github.com/schism-dev/schism-esmf.git   </p>
+<p>Define macros for the following: </p>
+<p>export ESMFMKFILE= where ESMF lib is located </p>
+<p>export SCHISM_BUILD_DIR= where schism build is located </p>
+<p>export PDAF_LIB_DIR=where PDAF lib is located </p>
+<p>export SCHISM_NO_PARMETIS=off  (If you wish to use static decomposition, then set it on) </p>
+<p>If any library like Intel-MKL, OpenBLAS, AOCL (AMD)… is used when compiling PDAF, remember to check LDFLAGS within corresponding compiler section in the beginning of Makefile, make sure linking path &amp; compile options are correct. </p>
+<p>Then we can build schism_pdaf with the following: </p>
+<p>make distclean </p>
+<p>make pdaf  </p>
+<p>If successful, an executable schism_pdaf will be there. </p>
+<ol>
+<li>Prepare the inputs  </li>
+</ol>
+<p>The input files include: </p>
+<p>i. standard schism inputs, these files depend on user case setups </p>
+<p>ii. schism_pdaf control files </p>
+<p>schism_pdaf.cfg: control ensemble size, # of concurrent members, scribe cores (if used), ics_set (same as ics in param.nml: coordinate system) </p>
+<div class="highlight"><pre><span></span><code> global.nml: control parameters for ESMF &amp; PDAF coupling info, set starting date and run hours and DA steps. Note that the time origin info, duration and SCHISM time step need to be consistent with param.nml (under any ihot setting). Specify the DA interval with ‘num_schism_dt_in_couple’ (# of SCHISM steps when calling PDAF), and this value should always be identical as delt_obs in pdaf.nml.
+</code></pre></div>
+<p>pdaf.nml: control pdaf parameters such as filter type, localization range…etc. </p>
+<p>iii. schism_pdaf ensemble inputs  </p>
+<p>We follow suggestions from PDAF and use Pham’s method (2001) to generate ensemble information. More details can be found from https://pdaf.awi.de/trac/wiki/EnsembleGeneration . </p>
+<p>In summary, users can do a freerun (no DA) and extract its snapshots for EOFs analysis. Snapshots can be extracted with ncl scripts (extract2bin.ncl or extract2bin_scrio.ncl), and use generate_covar.F90 to generate required inputs as follows: </p>
+<p>eofs.dat: number of EOFs </p>
+<p>eofs.bin: EOFs matrix </p>
+<p>svd.bin: svd values from analysis </p>
+<p>meanstate.bin (optional): usually only used for twin experiments.  </p>
+<p>Note: generate_covar.F90 is serial program. If any large case needs to be analyzed, large memory is required for analysis and long execution time should be expected. These utility scripts are located at src/PDAF_bindings/utility/gen_cov/  </p>
+<p>iv. DA_data: observation inputs, file naming is data_????????.dat (?s with i8.8 format with padding 0s, representing the SCHISM time steps). If the file does not exist, the code still runs with no DA done at that DA step. </p>
+<p>Currently, it supports 6 types of observation including: elevation(z), sea-level anomaly(a), temperature (t), salinity(s), u-velocity(u), and v-velocity(v). </p>
+<p>These are ascii files and their format are as follows:  </p>
+<p>1st row is total number of observations, then followed by </p>
+<p>obs-type, X, Y, Z, obs-values,  </p>
+<p>If rms_type=3, one extra column is needed for observation errors. Users can also specify uniform observation error with rms_type=1,2 in pdaf.nml. </p>
+<p>Fig: Working folder structures </p>
+<ol>
+<li>How to run it </li>
+</ol>
+<p>When inputs are ready, users need to create each ensemble folder with naming schism_??? (i3.3 format), and link schism input file inside. makedir.pl (under src/PDAF_bindings/utility) can be used to create each member outputs dir and link input files in each dir.  </p>
+<p>Users also need to create folder DA_output with two subfolder a and f for storing DA outputs after/before the DA step, respectively. </p>
+<div class="highlight"><pre><span></span><code>DA_output/a : Analysis (After DA)
 
-<p>We are working on a user manual; meanwhile this <a href="https://ccrm.vims.edu/yinglong/SVN_large_files/Yu_etal_OM_2025-SCHISM-Data-Assimilation.pdf">paper</a> serves as interim manual. </p>
+DA_output/f : Forecast (Before DA)
+</code></pre></div>
+<p>To launch the run, users may need to add esmf lib path into LD_LIBRARY_PATH in the job script or environment, like the following: </p>
+<p>export LD_LIBRARY_PATH=$LD_LIBRARY_PATH: /where_esmf_installed/lib/libO/Linux.intel.64.openmpi.default/  </p>
+<p>The following configs are mandatory! </p>
+<p>For scribe-IO: set nc_out=1 in param.nml </p>
+<p>For OLDIO: set nc_out=0 in param.nml </p>
+<p>4.Check the outputs </p>
+<p>During the run, users can check job screen output which will show PDAF config information and DA status, as well as timing information. </p>
+<p>If users choose scribe-IO, scribe output will be located in each schism_???/outputs. </p>
+<p>DA_output/ will store ensemble-mean files in OLDIO format, and users need to combine them, and link local_to_global* from schism_001/outputs/ to perform the combine task. </p>
+<p>DA effects in schism_???/output/*.nc (either scribe or schout format) only can be seen after 2nd DA (if DA frequency = output frequency), since model state update always happens at the beginning of next DA cycle. If users need to check instantaneous DA result, it will be only under DA_output/a </p>
+<p>If DA frequency &gt; output frequency, DA effects will be seen after 1st DA + 1 output step.    </p>
 
 
 
