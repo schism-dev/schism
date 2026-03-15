@@ -1621,10 +1621,10 @@
           units = 'm s-1'
         case ('windStressX')
           standard_name = 'downward_x_stress_at_sea_water_surface'
-          units = 'N m-2'
+          units = 'm2 s-2'
         case ('windStressY')
           standard_name = 'downward_y_stress_at_sea_water_surface'
-          units = 'N m-2'
+          units = 'm2 s-2'
         case ('bottom_index_node')
           long_name = 'Bottom index at node'
           standard_name = 'model_level_number_at_sea_floor'
