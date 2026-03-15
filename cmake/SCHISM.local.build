@@ -45,6 +45,7 @@ set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
 set( USE_WW3 OFF CACHE BOOLEAN "Use Wave Watch III")
 set( USE_ICE OFF CACHE BOOLEAN "Use 1-class ICE module")
 set( USE_MICE OFF CACHE BOOLEAN "Use multi-class ICE module")
+set( USE_CICE OFF CACHE BOOLEAN "Coupled to CICE via ESMF/UFS")
 
 #Tracer models
 set( USE_GEN OFF CACHE BOOLEAN "Use generic tracer module")
