@@ -693,6 +693,14 @@
 !$OMP end parallel do
 #endif /*not USE_ATMOS*/
 
+#ifdef USE_CICE
+        do i=1,npa
+          fluxprc_ocn(i) = fluxprc(i)
+          fluxevp_ocn(i) = fluxevp(i)
+          sflux_ocn(i)   = sflux(i)
+          srad_ocn(i)    = srad(i)
+        enddo
+#endif /*USE_CICE*/
       endif !nws=4
 
 #ifdef USE_SIMPLE_WIND
@@ -995,6 +1003,97 @@
       endif !icou_elfe_wwm
 #endif
 !$OMP end parallel
+
+!$OMP   do
+
+
+#ifdef USE_CICE
+  !>--------------------------------------------------------
+  !>              Imported values from CICE
+  !>         CICE-UFS coupling importing variables
+  !>--------------------------------------------------------
+  
+  !>--------------------------------------------------------
+  !>  Boundary points zeroing out fluxes that might effect
+  !>--------------------------------------------------------
+
+  do i = 1,np
+      if((isbnd(1,i)>0))  then
+        tau_oi(1,i) = real(0)
+        tau_oi(2,i) = real(0)
+        fresh_wa_flux(i)=real(0)
+        salinity_flux(i)= real(0)
+      endif
+  enddo 
+
+  !>--------------------------------------------------------
+  !> updating ghost region for incoming variables from CICE
+  !>--------------------------------------------------------
+ 
+  call exchange_p2d(aice)
+  call exchange_p2d(CdnIO)
+  call exchange_p2d(tau_oi)
+  call exchange_p2d(uvice)
+  call exchange_p2d(vvice)
+  call exchange_p2d(fresh_wa_flux)
+  call exchange_p2d(srad_th_ice)
+  call exchange_p2d(net_heat_flux)
+
+  do i = 1,npa
+    if (aice(i) > real(1e-8)) then
+      !>-------------------------------------------------
+      !> Ice ocean stress
+      !> tau_oi is in units of [N/m/m] (1=x, 2=y)
+      !>-------------------------------------------------
+
+        tau(1,i)   = (1-aice(i))*tau(1,i) + aice(i)*(tau_oi(1,i)/real(1025.0)) 
+        tau(2,i)   = (1-aice(i))*tau(2,i) + aice(i)*(tau_oi(2,i)/real(1025.0))
+     
+      !>-------------------------------------------------
+      !> Fresh water flux 
+      !> fresh_wa_fluxs is in units of [kg/s/m/m]
+      !> Salinity flux is incoded as eq fresh water flux [kg/s/m/m]
+      !>-------------------------------------------------
+        
+        fluxprc(i) = (1-aice(i))*fluxprc_ocn(i) + aice(i)*(fresh_wa_flux(i)+salinity_flux(i)) !*real(0.5)
+      
+      !>-------------------------------------------------
+      !> Scaling the evaporation flux to account for ice
+      !> This is done to keep consistent with fluxprcp
+      !>-------------------------------------------------
+       
+       fluxevp(i) = (1-aice(i))*fluxevp_ocn(i)      
+
+      !>-------------------------------------------------
+      !>Heat flux ice to ocean  (multiplied by aice)
+      !> net_heat_flux is in units of [W/m/m]
+      !>-------------------------------------------------
+
+        sflux(i)   =  (1-aice(i))*sflux_ocn(i)  + aice(i)*net_heat_flux(i)
+
+      !>-------------------------------------------------
+      !>Short-wave pen. flux 
+      !>srad_th_ice is in units of [W/m/m]
+      !>------------------------------------------------
+         
+         srad(i)   =   (1-aice(i))*srad_ocn(i) + aice(i)*srad_th_ice(i)
+
+        if(idry(i)==1) then
+          fluxprc(i)=0;
+          sflux(i)=0;
+          fluxevp(i)=0;
+          srad(i)=0;
+          tau(1,i)=0;
+          tau(2,i)=0;
+        endif
+     end if !aice
+  end do
+!$OMP   end do
+
+  !>--------------------------------------------------------
+  !> end CICE import
+  !>--------------------------------------------------------
+#endif /*USE_CICE*/
 
 #ifdef USE_MICE
       !Exchange variables btw hydro and ice:
