@@ -22,6 +22,7 @@
 # EXEC := $(EXEC)_ATMOS
 
 # Build a library that can be used from BMI, with sources and some b.c. provided by BMI
+## Try to use cmake for this
 # USE_BMI = yes
 # EXEC := $(EXEC)_BMI
 

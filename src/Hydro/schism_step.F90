@@ -1032,12 +1032,19 @@
  
   call exchange_p2d(aice)
   call exchange_p2d(CdnIO)
-  call exchange_p2d(tau_oi)
+  !call exchange_p2d(tau_oi)
   call exchange_p2d(uvice)
   call exchange_p2d(vvice)
   call exchange_p2d(fresh_wa_flux)
   call exchange_p2d(srad_th_ice)
   call exchange_p2d(net_heat_flux)
+
+  swild(1:npa)=tau_oi(1,:)
+  call exchange_p2d(swild)
+  tau_oi(1,:)=swild(1:npa)
+  swild(1:npa)=tau_oi(2,:)
+  call exchange_p2d(swild)
+  tau_oi(2,:)=swild(1:npa)
 
   do i = 1,npa
     if (aice(i) > real(1e-8)) then
