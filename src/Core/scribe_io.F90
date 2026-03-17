@@ -53,7 +53,7 @@
   &iths0,ncid_schism_2d,ncid_schism_3d,istart_sed_3dnode,start_year,start_month,start_day, ics,iof_ugrid
     !Output flag dim must be same as schism_init! ---Evan Changing iof_marsh()
     integer,save :: ntrs(natrm),iof_hydro(40),iof_wwm(40),iof_cos(20),iof_fib(5), &
-  &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(9),counter_out_name,nout_icm_3d(2)
+  &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(11),counter_out_name,nout_icm_3d(2)
     real(rkind), save :: dt,h0,start_hour,utc_start
     character(len=20), save :: out_name(max_ncoutvar)
     integer, save :: iout_23d(max_ncoutvar)
@@ -128,7 +128,7 @@
       call mpi_recv(iof_sed2d,14,itype,0,126,comm_schism,rrqst,ierr)
       call mpi_recv(iof_ice,10,itype,0,127,comm_schism,rrqst,ierr)
       call mpi_recv(iof_ana,20,itype,0,128,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_marsh,9,itype,0,129,comm_schism,rrqst,ierr)
+      call mpi_recv(iof_marsh,11,itype,0,129,comm_schism,rrqst,ierr)
 #ifdef USE_ICM
       call mpi_recv(nout_icm_3d,2,itype,0,142,comm_schism,rrqst,ierr)
       !call mpi_recv(nout_d3d,1,itype,0,143,comm_schism,rrqst,ierr)

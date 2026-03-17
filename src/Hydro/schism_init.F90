@@ -446,7 +446,7 @@
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
      &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), &
-     &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_mice(10),iof_ana(20),iof_marsh(9),iof_dvd(max(1,ntrs(12))), &
+     &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_mice(10),iof_ana(20),iof_marsh(11),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
      &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1), &
@@ -1487,28 +1487,43 @@
 #ifdef USE_MARSH
       !Evan changing how allocating works
       allocate(imarsh(nea),ibarrier_m(nea),age_marsh(nea),tau_sum_wet(ne), &
-        &nwet(nea),nwet_inun(nea),nt_inun(nea),marsh_ban(nea),marsh_ban_tau(nea),wet_thr(nmarsh_types),tmpout(nea),tau_max(nea),marsh_dep_chg(nea),marsh_ban_track(nea),stat=istat)
+        &nwet(nea),nwet_inun(nea),nt_inun(nea),marsh_ban(nea),marsh_ban_tau(nea),wet_thr(nmarsh_types),&
+        &tmpout(nea),tau_max(nea),marsh_dep_chg(nea),marsh_ban_track(nea),opt2_max(nmarsh_types),opt2_min(nmarsh_types),&
+        imarsh_dead(nea),imarsh_dead_timer(nea),stat=istat)
+        !toggle options
+        marshspread_opt=2 !1=spread at any elevation, 2=spread only adjacent
+        marsh_grow_opt=3 !1=no value until marsh is mature,2= linear growth,3= exponential growth
+
         !params
-        marsh_maturity_days = 29.5d0
-        marsh_tau_thresh_pa   = 0.3d0 !was 3.5, but I think that was broken? 0.1 was wayyy too low. trying 0.3
+        marsh_maturity_days = 90!29.5d0
+        marsh_tau_thresh_pa   = 0.25d0 !was 3.5, but I think that was broken? 0.1 was wayyy too low. trying 0.3
         kill_dep_chg=0.1 !depth of sediment loss that kills marsh (m)
-        kill_tau_imm=0.2 !was 0.35, likely too conservative
-        !arrays
+        kill_tau_imm=0.25 !was 0.35, likely too conservative
+        imarsh_death_lag=3 !# of days until colonization of marsh can try again
+        veg_morph_time=20 ! # of days until marsh module begins
+        !arrays - do not edit these are for initializng
         marsh_ban_track=0
         tau_sum_wet = 0.d0
         nwet = 0
         nwet_inun = 0
-        nt_inun   = 0
-        marsh_ban = 0
-        ts = 0
-        marsh_ban_tau=0
-        tau_max = 0
-        marsh_dep_chg = 0 
+        nt_inun   = 0 !number of inundation time step
+        marsh_ban = 0 !tracks if marsh is banned 1=banned 0=not
+        ts = 0 !tracks number of timestep
+        marsh_ban_tau=0 !tracks ban due to excess bss - 1=banned 0=not
+        tau_max = 0 !maximum bed shear stress
+        marsh_dep_chg = 0 !tracks depth of the marsh element elevation
+        imarsh_dead = 2 !2 indicates it was never marsh. 1 is dead and 0 is alive 
+        imarsh_dead_timer=0 !array that tracks the time an element has dead marsh 
         !initial test .3 works for all if bounded by lower drowning
-        wet_thr(1) = 0.7d0 !0.3 ->.33 !throw your wetness % thresholds. 100% is wet all of the time
-        wet_thr(2) = 0.7d0 !0.18 ->.30
-        wet_thr(3) = 0.7d0 !0.14 ->.30
-        wet_thr(4) = 1d0 
+
+        !Assign arrays
+        !wet_thr(1) = 0.9d0!0.7d0 !0.3 ->.33 !throw your wetness % thresholds. 100% is wet all of the time
+        !wet_thr(2) = 0.9d0!0.7d0 !0.18 ->.30
+        !wet_thr(3) =  0.9d0!0.7d0 !0.14 ->.30
+        !wet_thr(4) =  0.9d0!1d0 
+        wet_thr = [0.9d0, 0.9d0, 0.9d0, 0.9d0]
+        opt2_max = [-1.95d0,-2.32d0,-3.0264d0, -3.3164d0]
+        opt2_min = [-2.32d0, -3.0264d0, -3.3164d0, -3.5164d0]
               
 
         
@@ -6553,6 +6568,19 @@
       ised_out_sofar=ised_out_sofar+ntrs(5)
 #endif /*USE_SED*/
 
+#ifdef USE_MARSH
+
+      if(iof_marsh(11)==1) then
+        ncount_2dnode = ncount_2dnode + 1
+        iout_23d(ncount_2dnode) = 1
+        out_name(ncount_2dnode) = 'VegDrag' 
+      endif
+
+#endif /*USE_MARSH*/
+
+
+
+
 #ifdef USE_ICE
       if(iof_ice(2)==1) then
         ncount_2dnode=ncount_2dnode+2
@@ -6726,8 +6754,12 @@
         iout_23d(counter_out_name) = 4
       endif
 
-
-
+      if(iof_marsh(10)==1) then
+        ncount_2delem = ncount_2delem + 1
+        counter_out_name = counter_out_name + 1
+        out_name(counter_out_name) = 'MarshDeadTimer'
+        iout_23d(counter_out_name) = 1
+      endif
 
 #endif
 
@@ -7151,7 +7183,7 @@
           call mpi_send(iof_sed2d,14,itype,nproc_schism-i,126,comm_schism,ierr)
           call mpi_send(iof_ice,10,itype,nproc_schism-i,127,comm_schism,ierr)
           call mpi_send(iof_ana,20,itype,nproc_schism-i,128,comm_schism,ierr)
-          call mpi_send(iof_marsh,9,itype,nproc_schism-i,129,comm_schism,ierr) !changing from 2 to 7 Evan
+          call mpi_send(iof_marsh,11,itype,nproc_schism-i,129,comm_schism,ierr) !changing from 2 to 7 Evan
 
           call mpi_send(iof_gen,max(1,ntrs(3)),itype,nproc_schism-i,130,comm_schism,ierr)
           call mpi_send(iof_age,max(1,ntrs(4)),itype,nproc_schism-i,131,comm_schism,ierr)
