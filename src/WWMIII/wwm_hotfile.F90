@@ -836,14 +836,14 @@ MODULE wwm_hotfile_mod
 #ifdef MPI_PARALL_GRID
       IF (MULTIPLEOUT_HOT.eq.0) THEN
         np_write=np_global
-        ne_write=ne_global
+        ne_write=ne_total !ne_global
       ELSE
         np_write=MNP
         ne_write=MNE
       ENDIF
 #else
       np_write=np_global
-      ne_write=ne_global
+      ne_write=ne_total !ne_global
 #endif
       CALL CREATE_LOCAL_HOTNAME(HOTOUT%FNAME, FILERET, MULTIPLEOUT_HOT, HOTSTYLE_OUT)
       IF (IDXHOTOUT.eq.0) THEN
