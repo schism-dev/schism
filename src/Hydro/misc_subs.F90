@@ -6353,6 +6353,57 @@
 
       end subroutine savensend3D_scribe
 
+! add by Zhiyun Du, to save 3d var in sedbed and send to scribe
+!     Save temp 3D sediment-bed vars and send to scribes
+      subroutine savensend3D_bed_scribe(icount,ivs,Nbed0,nees,savevar1,savevar2)
+      use schism_glbl, only : rkind,ne,nsend_varout, &
+        &varout_3dbed,ncount_3dbed,srqst7
+      use schism_msgp, only : nscribes,nproc_schism,comm_schism,parallel_abort
+
+      implicit none
+      include 'mpif.h'
+
+      ! ivs: 1 scalar; 2 vector
+      ! nees: resident element number, should be ne
+      integer, intent(in) :: ivs,Nbed0,nees
+      ! icount: global counter
+      integer, intent(inout) :: icount
+      real(rkind), intent(in) :: savevar1(Nbed0,nees)
+      real(rkind), optional, intent(in) :: savevar2(Nbed0,nees)
+
+      integer :: j,ierr
+
+      ! Check
+      if(nees/=ne) call parallel_abort('savensend3D_bed_scribe: nees/=ne')
+      if(ivs/=1.and.ivs/=2) call parallel_abort('savensend3D_bed_scribe: ivs')
+
+      if(ivs==2.and..not.present(savevar2)) then
+        call parallel_abort('savensend3D_bed_scribe: missing vector component')
+      endif
+
+      do j=1,ivs ! scalar/vector
+        icount=icount+1
+        nsend_varout=nsend_varout+1
+        if(nsend_varout>nscribes.or.icount>ncount_3dbed) then
+          write(*,*) 'ERROR in savensend3D_bed_scribe before send'
+          write(*,*) 'icount=',icount,' ncount_3dbed=',ncount_3dbed
+          write(*,*) 'nsend_varout=',nsend_varout,' nscribes=',nscribes
+          call parallel_abort('savensend3D_bed_scribe: too many sends')
+        endif
+
+        if(j==1) then
+          varout_3dbed(:,:,icount)=savevar1(:,1:nees)
+        else
+          varout_3dbed(:,:,icount)=savevar2(:,1:nees)
+        endif
+
+        call mpi_isend(varout_3dbed(:,1:ne,icount),ne*Nbed0,MPI_REAL4, &
+     &  nproc_schism-nsend_varout,200+nsend_varout,comm_schism, &
+     &  srqst7(nsend_varout),ierr)
+      enddo !j
+
+      end subroutine savensend3D_bed_scribe
+
       !dir$ attributes forceinline :: signa2
       function signa2(x1,x2,x3,y1,y2,y3)
 !-------------------------------------------------------------------------------
