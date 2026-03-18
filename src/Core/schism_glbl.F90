@@ -153,11 +153,16 @@ module schism_glbl
   integer,save :: ihfskip,nrec,nspool,ifile,ifile_len, &
      &noutput,it_main,iths_main,id_out_var(2000),id_out_ww3(100),ncount_2dnode, &
      &ncount_2delem,ncount_2dside,ncount_3dnode,ncount_3delem,ncount_3dside,nsend_varout
+  
+  ! added by Zhiyun Du
+  integer,save :: ncount_3dbed
+  
   integer,save,allocatable :: srqst7(:)
   real(rkind),save :: time_stamp !simulation time in sec
   !Send var buffers
   real(4),save,allocatable :: varout_3dnode(:,:,:),varout_3delem(:,:,:),varout_3dside(:,:,:)
   real(4),save,allocatable :: varout_2dnode(:,:),varout_2delem(:,:),varout_2dside(:,:)
+  real(4),save,allocatable :: varout_3dbed(:,:,:) ! add by Zhiyun Du
   character(len=48),save,allocatable :: outfile_ns(:) 
   character(len=48),save :: a_48
   character(len=16),save :: a_16

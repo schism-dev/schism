@@ -36,7 +36,8 @@
     &one_dim,two_dim,time_dim,time_dims(1),itime_id,ele_dims(2),x_dims(1), &
     &y_dims(1),z_dims(1),var2d_dims(2),var3d_dims(3),var4d_dims(4),dummy_dim(1), &
     &data_start_1d(1),data_start_2d(2),data_start_3d(3),data_start_4d(4), &
-    &data_count_1d(1),data_count_2d(2),data_count_3d(3),data_count_4d(4)
+    &data_count_1d(1),data_count_2d(2),data_count_3d(3),data_count_4d(4), &
+    &nbed_dim ! added by Zhiyun Du
 
     integer,save,public :: ncid_schism_io
     public :: write_obe
@@ -359,6 +360,106 @@
       endif !2/3D
  
       end subroutine writeout_nc
+
+!===============================================================================
+! add by Zhiyun Du, to output 3D bed variables
+subroutine writeout_nc_bed(varid,var_nm,idim1,idim2,outvar1)
+!-------------------------------------------------------------------------------
+!     Netcdf output for element-based bed-layer variables.
+!     Can be called from any routine, but make sure that
+!     the calling routine is called inside the main time loop
+!     exactly ONCE per step!
+!
+!     This routine is intended for variables like:
+!         bed(Nbed,nea,MBEDP)
+!         bed(Nbed,nea,i_tracer)
+!
+!     Inputs:
+!            var_nm:  name of the output variable in nc file
+!            idim1:   vertical bed dimension, should be Nbed
+!            idim2:   horizontal dimension, should be nea
+!            outvar1(idim1,idim2): output array, e.g. bed(:,:,ithck)
+!     In/out:
+!            varid: first call will define the variable and return its ID;
+!                   later calls reuse that ID
+!
+!     Output variable dimensions in netCDF:
+!            (nbed, nele, time)
+!-------------------------------------------------------------------------------
+      implicit none
+
+      character(len=*), intent(in) :: var_nm
+      integer, intent(in) :: idim1,idim2
+      real(rkind), intent(in) :: outvar1(idim1,idim2)
+      integer, intent(inout) :: varid
+
+      character(len=1000) :: var_nm2
+      integer :: i,iret,iret2,irec,len_var,idim2p
+      real*4 :: a1d(1)
+
+!----- Return if not output step
+      if(mod(it_main,nspool)/=0) return
+
+      if(idim1<=0) call parallel_abort('writeout_nc_bed: should be Nbed for idim1')
+
+      irec=(it_main-(ifile-1)*ihfskip)/nspool
+      if(irec<=0) call parallel_abort('writeout_nc_bed: irec<=0')
+
+      var_nm2=adjustl(var_nm)
+      len_var=len_trim(var_nm2)
+
+!----- Dump time
+      a1d(1)=real(time_stamp)
+      data_start_1d(1)=irec
+      data_count_1d(1)=1
+      iret=nf90_put_var(ncid_schism_io,itime_id,a1d,data_start_1d,data_count_1d)
+
+!----- Element-based output
+      idim2p=ne
+      if(idim2<idim2p) call parallel_abort('writeout_nc_bed: idim2<ne')
+
+!----- Check whether variable already exists
+      iret2=nf90_inq_varid(ncid_schism_io,var_nm2(1:len_var),i)
+
+!----- Define variable if needed
+      if(iret2/=NF90_NOERR) then
+        iret=nf90_redef(ncid_schism_io)
+
+!       Define bed dimension if not already defined
+        iret = nf90_inq_dimid(ncid_schism_io,'nSCHISM_bed_layers',nbed_dim)
+        if(iret /= NF90_NOERR) then
+          iret = nf90_def_dim(ncid_schism_io,'nSCHISM_bed_layers',idim1,nbed_dim)
+          if(iret /= NF90_NOERR) call parallel_abort('writeout_nc_bed: def nbed_dim')
+        endif
+
+!       Dimensions: (nbed, nele, time)
+        var3d_dims(1)=nbed_dim
+        var3d_dims(2)=nele_dim
+        var3d_dims(3)=time_dim
+
+        iret=nf90_def_var(ncid_schism_io,var_nm2(1:len_var),NF90_FLOAT,var3d_dims,varid)
+        if(iret /= NF90_NOERR) call parallel_abort('writeout_nc_bed: def var')
+
+        iret=nf90_def_var_deflate(ncid_schism_io,varid,0,1,4)
+        iret=nf90_put_att(ncid_schism_io,varid,'i23d',10)
+        iret=nf90_put_att(ncid_schism_io,varid,'ivs',1)
+
+        iret=nf90_enddef(ncid_schism_io)
+      endif
+
+!----- Write data
+      data_start_3d(1)=1
+      data_start_3d(2)=1
+      data_start_3d(3)=irec
+
+      data_count_3d(1)=idim1
+      data_count_3d(2)=idim2p
+      data_count_3d(3)=1
+
+      iret=nf90_put_var(ncid_schism_io,varid,real(outvar1(1:idim1,1:idim2p)), &
+     &                  data_start_3d,data_count_3d)
+
+      end subroutine writeout_nc_bed
 
 !===============================================================================
       subroutine fill_nc_header(iopen)

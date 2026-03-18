@@ -1573,6 +1573,34 @@
       ENDDO !i
       CALL exchange_p2d(bed_taun(:))
 
+! Added by Zhiyun Du, interpolate tau_c,tau_w,tau_wc to node, for output
+      tau_c_n  = 0.0d0
+      tau_w_n  = 0.0d0
+      tau_wc_n = 0.0d0
+      DO i=1,np
+        IF(idry(i)==1) CYCLE
+        ta = 0.0d0
+        DO j=1,nne(i)
+          ie=indel(j,i)
+          IF(idry_e(ie)==0)THEN
+            ta=ta+area(ie)
+            tau_c_n(i)  = tau_c_n(i)  + tau_c(ie)  * area(ie)
+            tau_w_n(i)  = tau_w_n(i)  + tau_w(ie)  * area(ie)
+            tau_wc_n(i) = tau_wc_n(i) + tau_wc(ie) * area(ie)
+          ENDIF
+        ENDDO !j
+        IF(ta==0.d0)THEN
+          CALL parallel_abort('SEDIMENT: elem2nod (2)')
+        ELSE
+          tau_c_n(i)  = tau_c_n(i)/ta
+          tau_w_n(i)  = tau_w_n(i)/ta
+          tau_wc_n(i) = tau_wc_n(i)/ta
+        ENDIF
+      ENDDO !i
+      CALL exchange_p2d(tau_c_n(:))
+      CALL exchange_p2d(tau_w_n(:)) 
+      CALL exchange_p2d(tau_wc_n(:))  
+
 !---------------------------------------------------------------------
 ! - BCG: If only one bed layer, re-initialize bed thickness to initial
 ! thickness and update bed_mass accordingly

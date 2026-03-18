@@ -219,6 +219,13 @@
       IF(i/=0) CALL parallel_abort('sed_alloc: lbc_sed allocation failure')
       ALLOCATE(bc_sed(npa),stat=i)
       IF(i/=0) CALL parallel_abort('sed_alloc: bc_sed allocation failure')
+      ! add below by Zhiyun Du
+      ALLOCATE(tau_c_n(npa),stat=i)
+      IF(i/=0) CALL parallel_abort('sed_alloc: tau_c_n allocation failure')
+      ALLOCATE(tau_w_n(npa),stat=i)
+      IF(i/=0) CALL parallel_abort('sed_alloc: tau_w_n allocation failure')
+      ALLOCATE(tau_wc_n(npa),stat=i)
+      IF(i/=0) CALL parallel_abort('sed_alloc: tau_wc_n allocation failure')      
 
       ! BM
       ALLOCATE(poron(npa),stat=i)
@@ -312,6 +319,9 @@
       bed_d50n(:)  = IniVal
       bed_taun(:)  = IniVal
       bed_rough(:) = IniVal
+      tau_c_n(:) = IniVal ! add by Zhiyun Du
+      tau_w_n(:) = IniVal ! add by Zhiyun Du
+      tau_wc_n(:) = IniVal ! add by Zhiyun Du
 
       ! BM
       poron(:) = IniVal 
@@ -781,6 +791,9 @@
       bed_taun(:)    = 0.0d0
       bed_fracn(:,:) = 0.0d0
       bdfc(:)        = 0.0d0
+      tau_c_n(:) = 0.0d0  ! add by Zhiyun Du
+      tau_w_n(:) = 0.0d0  ! add by Zhiyun Du
+      tau_wc_n(:) = 0.0d0  ! add by Zhiyun Du
       DO i=1,nea
         DO j=1,i34(i)
           DO ised=1,ntr_l

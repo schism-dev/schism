@@ -40,7 +40,8 @@
     private
 
     integer,save :: node_dim,nele_dim,nedge_dim,four_dim,nv_dim, &
-    &one_dim,two_dim,time_dim,itime_id,ivar_id,elnode_id, iside_id, i34_id,ix_id,iy_id,ih_id 
+    &one_dim,two_dim,time_dim,itime_id,ivar_id,elnode_id, iside_id, i34_id,ix_id,iy_id,ih_id
+    integer,save :: nbed_dim ! added by Zhiyun Du     
 !    integer, save:: ixel_id2, iyel_id2, ixsd_id2, iysd_id2
     integer,save :: node_dim2,nele_dim2,nedge_dim2,four_dim2,nv_dim2, &
     &one_dim2,two_dim2,time_dim2,itime_id2,i34_id2
@@ -51,6 +52,9 @@
     integer,save :: ifile,ihfskip,nspool,nc_out,nvrt,nproc_compute,np_global,ne_global,ns_global, &
   &np_max,ne_max,ns_max,ncount_2dnode,ncount_2delem,ncount_2dside,ncount_3dnode,ncount_3delem,ncount_3dside, &
   &iths0,ncid_schism_2d,ncid_schism_3d,istart_sed_3dnode,start_year,start_month,start_day, ics,iof_ugrid
+
+    integer,save :: ncount_3dbed, Nbed ! added by Zhiyu Du
+
     !Output flag dim must be same as schism_init!
     integer,save :: ntrs(natrm),iof_hydro(40),iof_wwm(40),iof_cos(20),iof_fib(5), &
   &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),counter_out_name,nout_icm_3d(2)
@@ -67,7 +71,7 @@
     real(rkind),save,allocatable :: xnd(:),ynd(:),dp(:),xel(:),yel(:),xsd(:),ysd(:)
     real(4),save,allocatable :: var2dnode(:,:,:),var2dnode_gb(:,:),var2delem(:,:,:),var2delem_gb(:,:), &
   &var2dside(:,:,:),var2dside_gb(:,:),var3dnode(:,:,:),var3dnode_gb(:,:),var3dside(:,:,:),var3dside_gb(:,:), &
-  &var3delem(:,:,:),var3delem_gb(:,:)
+  &var3delem(:,:,:),var3delem_gb(:,:), var3dbed(:,:,:), var3dbed_gb(:,:) ! last two added by Zhiyun Du
 
     public :: scribe_init
     public :: scribe_step
@@ -84,7 +88,7 @@
       integer, intent(out) :: iths,ntime
  
       character(len=1000) :: var_nm2
-      integer :: i,j,m,rrqst,ierr,itmp,ipgb,iegb,isgb
+      integer :: i,j,m,rrqst,ierr,itmp,ipgb,iegb,isgb,istat ! add istat by Zhiyun Du
       integer,allocatable :: iwork(:),iwork2(:,:),iwork3(:,:)
       real(rkind),allocatable :: work(:)
       
@@ -103,6 +107,13 @@
       call mpi_recv(ncount_2dnode,1,itype,0,102,comm_schism,rrqst,ierr)
       call mpi_recv(nc_out,1,itype,0,103,comm_schism,rrqst,ierr)
       call mpi_recv(nvrt,1,itype,0,104,comm_schism,rrqst,ierr)
+
+! added 2 more vars for sediment module, Zhiyun Du
+! the tags must be same as in schism_init.F90
+#ifdef USE_SED
+      call mpi_recv(Nbed,1,itype,0,141,comm_schism,rrqst,ierr)
+      call mpi_recv(ncount_3dbed,1,itype,0,123,comm_schism,rrqst,ierr)
+#endif      
       call mpi_recv(np_global,1,itype,0,105,comm_schism,rrqst,ierr)
       call mpi_recv(ne_global,1,itype,0,106,comm_schism,rrqst,ierr)
       call mpi_recv(ns_global,1,itype,0,107,comm_schism,rrqst,ierr)
@@ -150,11 +161,12 @@
       endif !myrank_scribe
 
       !Finish rest of recv for modules
-      allocate(iof_gen(max(1,ntrs(3))),iof_age(max(1,ntrs(4))),iof_sed(3*ntrs(5)+20), &
+! changed to iof_sed(3*ntrs(5)+40) by Zhiyun Du, original is 20, must same as in schism_init.F90
+      allocate(iof_gen(max(1,ntrs(3))),iof_age(max(1,ntrs(4))),iof_sed(3*ntrs(5)+40), &
      &iof_eco(max(1,ntrs(6))),iof_dvd(max(1,ntrs(12))))
       call mpi_recv(iof_gen,max(1,ntrs(3)),itype,0,130,comm_schism,rrqst,ierr)
       call mpi_recv(iof_age,max(1,ntrs(4)),itype,0,131,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_sed,3*ntrs(5)+20,itype,0,132,comm_schism,rrqst,ierr)
+      call mpi_recv(iof_sed,3*ntrs(5)+40,itype,0,132,comm_schism,rrqst,ierr)
       call mpi_recv(iof_eco,max(1,ntrs(6)),itype,0,133,comm_schism,rrqst,ierr)
       call mpi_recv(iof_dvd,max(1,ntrs(12)),itype,0,134,comm_schism,rrqst,ierr)
       call mpi_recv(istart_sed_3dnode,1,itype,0,135,comm_schism,rrqst,ierr)
@@ -358,6 +370,16 @@
         allocate(var3delem(nvrt,ne_max,nproc_compute),var3delem_gb(nvrt,ne_global))
         var3delem(nvrt,ne_max,nproc_compute)=0.
       endif
+
+! added by Zhiyun Du, allocate for 3d vars in sediment bed 
+#ifdef USE_SED
+      if(ncount_3dbed>0) then
+        allocate(var3dbed(Nbed,ne_max,nproc_compute), stat=istat)
+        if(istat/=0) call parallel_abort('scribe_init: var3dbed')
+        allocate(var3dbed_gb(Nbed,ne_global), stat=istat)
+        if(istat/=0) call parallel_abort('scribe_init: var3dbed_gb')
+      endif
+#endif
        
 !      call mpi_barrier(comm_scribe,ierr)
       if(myrank_scribe==0) write(16,*)'finished scribe_init:',myrank_schism
@@ -565,6 +587,7 @@
       enddo !j
 
       itmp5=istart_sed_3dnode+ntrs(5) !index of iof_sed so far
+      ! total SSC
       if(iof_sed(itmp5+1)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
 !          itotal=itotal+1
 !          icount_out_name=icount_out_name+1 !index into out_name
@@ -582,6 +605,15 @@
 !          endif !myrank_schism
 !      endif !iof_
       itmp5=itmp5+1
+! output bed thickness 3D, Zhiyun Du
+      if(iof_sed(itmp5+1)==1) call scribe_recv_write_bed(it,1,itotal,icount_out_name)
+      itmp5=itmp5+1
+
+! bed fraction for each sediment class
+      do j=1,ntrs(5)
+        if(iof_sed(itmp5+j)==1) call scribe_recv_write_bed(it,1,itotal,icount_out_name)
+      enddo
+      itmp5=itmp5+ntrs(5)      
 #endif /*USE_SED*/
 
 #ifdef USE_ECO
@@ -1021,6 +1053,87 @@
       end subroutine nc_writeout3D
 
 !===============================================================================
+! add a new subroutine to write 3d vars in the bed, Zhiyun Du
+      subroutine nc_writeout3D_bed(it,idim1,idim2,var3d_bed_gb,vname,i23d)
+      implicit none
+
+      ! idim1 = Nbed
+      ! idim2 = ne_global
+      integer, intent(in) :: it,idim1,idim2,i23d
+      real(4), intent(in) :: var3d_bed_gb(idim1,idim2)
+      character(len=*), intent(in) :: vname
+
+      integer :: irec,iret,ivarid,chunks(3)
+      integer,save :: ivar_id_bed = -999
+      character(len=140) :: fname
+      character(len=12) :: ifile_char
+      real(rkind) :: a1d(1)
+
+      ! Check inputs
+      if(idim1/=Nbed) call parallel_abort('nc_writeout3D_bed: idim1/=Nbed')
+      if(idim2/=ne_global) call parallel_abort('nc_writeout3D_bed: idim2/=ne_global')
+
+      chunks(1)=idim1
+      chunks(2)=idim2
+      chunks(3)=1
+      if(4.d0*chunks(1)*chunks(2)*chunks(3)>3.d9) call parallel_abort('nc_writeout3D_bed: chunk size')
+
+      if(mod(it-nspool,ihfskip)==0) then
+        ifile=(it-1)/ihfskip+1
+        write(ifile_char,'(i12)') ifile
+        fname=trim(adjustl(out_dir))//'/'//trim(adjustl(vname))//'_'//trim(adjustl(ifile_char))//'.nc'
+        iret=nf90_create(trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_CLOBBER),ncid_schism_3d)
+
+        call fill_header_static(iof_ugrid,ncid_schism_3d,itime_id,node_dim, &
+     &nele_dim,nedge_dim,four_dim,nv_dim,one_dim,two_dim,time_dim)
+
+        iret=nf90_redef(ncid_schism_3d)
+
+        ! define bed-layer dimension if not already in header
+        iret=nf90_def_dim(ncid_schism_3d,'nSCHISM_bed_layers',Nbed,nbed_dim)
+        if(iret/=NF90_NOERR .and. iret/=NF90_EEXIST) then
+          call parallel_abort('nc_writeout3D_bed: def nbed_dim')
+        endif
+
+        var3d_dims(1)=nbed_dim
+        var3d_dims(2)=nele_dim
+        var3d_dims(3)=time_dim
+
+        iret=nf90_def_var(ncid_schism_3d,trim(adjustl(vname)),NF90_FLOAT,var3d_dims,ivar_id_bed)
+        if(iret.ne.NF90_NOERR) call parallel_abort('nc_writeout3D_bed: var_dims')
+
+        iret=nf90_put_att(ncid_schism_3d,ivar_id_bed,'i23d',i23d)
+        iret=nf90_put_att(ncid_schism_3d,ivar_id_bed,'missing_value',NF90_FILL_FLOAT)
+
+        iret=nf90_def_var_chunking(ncid_schism_3d,ivar_id_bed,NF90_CHUNKED,chunks)
+        iret=nf90_def_var_deflate(ncid_schism_3d,ivar_id_bed,0,1,4)
+        call add_mesh_attributes(ncid_schism_3d, ivar_id_bed)
+        iret=nf90_enddef(ncid_schism_3d)
+      endif
+
+      irec=(it-(ifile-1)*ihfskip)/nspool
+      if(irec<=0) call parallel_abort('nc_writeout3D_bed: irec<=0')
+
+      a1d(1)=dble(it*dt)
+      data_start_1d(1)=irec
+      data_count_1d(1)=1
+      iret=nf90_put_var(ncid_schism_3d,itime_id,a1d,data_start_1d,data_count_1d)
+      if(iret/=NF90_NOERR) call parallel_abort('nc_writeout3D_bed: put time')
+
+      data_start_3d=(/1,1,irec/)
+      data_count_3d=(/Nbed,idim2,1/)
+      if(ivar_id_bed <= 0) call parallel_abort('nc_writeout3D_bed: ivar_id_bed not set')
+      iret=nf90_put_var(ncid_schism_3d,ivar_id_bed,real(var3d_bed_gb),data_start_3d,data_count_3d)
+      if(iret/=NF90_NOERR) call parallel_abort('nc_writeout3D_bed: put 3D bed var')
+
+      if(mod(it,ihfskip)==0) then
+        iret=nf90_close(ncid_schism_3d)
+        ivar_id_bed = -999
+      endif
+
+      end subroutine nc_writeout3D_bed
+
+!===============================================================================
 !     Declare static and time vars and fill in static vars
 !     Outputs: dimension IDs and var ID for time array (itime_id0)
       subroutine fill_header_static(iheader,ncid_schism0,itime_id0,node_dim0, &
@@ -1357,6 +1470,39 @@
       enddo !m=1,ivs
 
       end subroutine scribe_recv_write
+
+! ==============================================================================
+! added a new subroutine to rev and write 3d vars in sediment bed, Zhiyun Du
+      subroutine scribe_recv_write_bed(it,ivs,itotal,icount_out_name)
+      implicit none
+      integer, intent(in) :: it,ivs
+      integer, intent(inout) :: itotal,icount_out_name
+      character(len=20) :: varname3
+      integer :: i,m,irank,ierr
+
+      if(ivs/=1.and.ivs/=2) call parallel_abort('scribe_recv_write_bed: ivs')
+
+      do m=1,ivs
+        itotal=itotal+1
+        icount_out_name=icount_out_name+1
+        irank=nproc_schism-itotal
+
+        if(myrank_schism==irank) then
+          do i=1,nproc_compute
+            call mpi_irecv(var3dbed(:,:,i),ne(i)*Nbed,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+          enddo
+          call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+
+          do i=1,nproc_compute
+            var3dbed_gb(1:Nbed,ielg(1:ne(i),i)) = var3dbed(1:Nbed,1:ne(i),i)
+          enddo
+
+          varname3=out_name(icount_out_name)
+          call nc_writeout3D_bed(it,Nbed,ne_global,var3dbed_gb,varname3,iout_23d(icount_out_name))
+        endif
+      enddo
+
+      end subroutine scribe_recv_write_bed
 
 !===============================================================================
       subroutine add_mesh_attributes(ncid, varid)

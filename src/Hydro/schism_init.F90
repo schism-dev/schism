@@ -442,9 +442,10 @@
       !To add new outputs, simply make sure the iof_* has sufficient size, and
       !just add the output statements in _step and flags in param.nml (same
       !order). Flags for modules other than hydro are only used inside USE_*
+! changed to iof_sed(3*sed_class+40) by Zhiyun Du, original is 20
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
-     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), &
+     &iof_sed(3*sed_class+40),iof_eco(max(1,eco_class)),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), &
      &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_mice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
@@ -6313,7 +6314,7 @@
 #endif /*USE_WWM*/
 
 #ifdef USE_SED
-      do i=7,13
+      do i=7,16  ! modified by Zhiyun Du, original 7,13
         if(iof_sed(i)/=0) then
           ncount_2dnode=ncount_2dnode+1
           iout_23d(ncount_2dnode)=1
@@ -6332,18 +6333,24 @@
               out_name(ncount_2dnode)='sedErosionalFlux'
             case(13)
               out_name(ncount_2dnode)='sedDepositionalFlux'
+            case(14)
+              out_name(ncount_2dnode)='bedWaveStress'
+            case(15)
+              out_name(ncount_2dnode)='bedCurrentStress'
+            case(16)
+              out_name(ncount_2dnode)='bedWaveCurrentStress'
           end select
         endif
       enddo !i
 
-      if(iof_sed(14)/=0) then
+      if(iof_sed(17)/=0) then   ! modified by Zhiyun Du, original 14
         ncount_2dnode=ncount_2dnode+2
         iout_23d(ncount_2dnode-1:ncount_2dnode)=1
         out_name(ncount_2dnode-1)='sedBedloadTransportX'
         out_name(ncount_2dnode)='sedBedloadTransportY'
       endif !iof
 
-      ised_out_sofar=14 !set output flag index so far
+      ised_out_sofar=17 !set output flag index so far, modified by Zhiyun Du , original 14
       do i=1,ntrs(5)
         if(iof_sed(i+ised_out_sofar)==1) then !vectors
           write(ifile_char,'(i12)')i
@@ -6660,6 +6667,31 @@
       ised_out_sofar=ised_out_sofar+1
 #endif /*USE_SED*/
 
+! added by Zhiyun Du, two 3d vars in sediment bed
+ncount_3dbed = 0
+#ifdef USE_SED
+      istart_sed_3dnode = istart_sed_3dnode
+      if(iof_sed(ised_out_sofar+1)==1) then
+        ncount_3dbed=ncount_3dbed+1
+        counter_out_name=counter_out_name+1
+        iout_23d(counter_out_name)=2
+        out_name(counter_out_name)='BedThickness_3d'
+      endif
+      ised_out_sofar=ised_out_sofar+1
+
+      do i=1,ntrs(5)
+        if(iof_sed(i+ised_out_sofar)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          ncount_3dbed=ncount_3dbed+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=2
+          out_name(counter_out_name)='BedFraction_3d_'//ifile_char(1:itmp2)
+        endif !iof
+      enddo !i
+      ised_out_sofar=ised_out_sofar+ntrs(5) !index for iof_sed so far
+#endif /*USE_SED*/
+
 #ifdef USE_ECO
       do i=1,ntrs(6)
         if(iof_eco(i)==1) then
@@ -6854,12 +6886,17 @@
           allocate(varout_3delem(nvrt,ne,ncount_3delem),stat=istat)
           if(istat/=0) call parallel_abort('INIT: 3delem')
         endif
+
+        if(ncount_3dbed>0) then
+          allocate(varout_3dbed(Nbed,ne,ncount_3dbed),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: 3delem_bed')
+        endif
       endif !iorder
 
 !...  Send basic time info to scribes. Make sure the send vars are not altered
 !     during non-block sends/recv
 !     Min # of scribes required (all 2D (nodes/elem/side) vars share 1 scribe)
-      noutvars=ncount_3dnode+ncount_3delem+ncount_3dside+1 
+      noutvars=ncount_3dnode+ncount_3delem+ncount_3dside+1+ncount_3dbed ! add the last by Zhiyun Du 
       if (noutvars > nscribes) then
         write(errmsg, '(A,I0,A,A,I0,A)') 'INIT: Too few scribes (', nscribes , '). ', &
         ' Please specify atleast equal to number of output variables (', noutvars, ')' 
@@ -6874,6 +6911,12 @@
           call mpi_send(ncount_2dnode,1,itype,nproc_schism-i,102,comm_schism,ierr)
           call mpi_send(nc_out,1,itype,nproc_schism-i,103,comm_schism,ierr)
           call mpi_send(nvrt,1,itype,nproc_schism-i,104,comm_schism,ierr)
+
+          ! add send Nbed by Zhiyun Du, use tag 141 that has not been used
+#ifdef USE_SED
+          call mpi_send(Nbed,1,itype,nproc_schism-i,141,comm_schism,ierr)
+#endif       
+
           call mpi_send(np_global,1,itype,nproc_schism-i,105,comm_schism,ierr)
           call mpi_send(ne_global,1,itype,nproc_schism-i,106,comm_schism,ierr)
           call mpi_send(ns_global,1,itype,nproc_schism-i,107,comm_schism,ierr)
@@ -6890,6 +6933,12 @@
           call mpi_send(ncount_3dnode,1,itype,nproc_schism-i,117,comm_schism,ierr)
           call mpi_send(ncount_3dside,1,itype,nproc_schism-i,118,comm_schism,ierr)
           call mpi_send(ncount_3delem,1,itype,nproc_schism-i,119,comm_schism,ierr)
+
+          ! add send ncount_3dbed by Zhiyun Du, use tag 123
+#ifdef USE_SED
+          call mpi_send(ncount_3dbed,1,itype,nproc_schism-i,123,comm_schism,ierr)
+#endif
+
           call mpi_send(iout_23d,counter_out_name,itype,nproc_schism-i,120,comm_schism,ierr)
           call mpi_send(h0,1,rtype,nproc_schism-i,121,comm_schism,ierr)
           call mpi_send(ntrs,natrm,itype,nproc_schism-i,122,comm_schism,ierr)
@@ -6902,7 +6951,7 @@
 
           call mpi_send(iof_gen,max(1,ntrs(3)),itype,nproc_schism-i,130,comm_schism,ierr)
           call mpi_send(iof_age,max(1,ntrs(4)),itype,nproc_schism-i,131,comm_schism,ierr)
-          call mpi_send(iof_sed,3*ntrs(5)+20,itype,nproc_schism-i,132,comm_schism,ierr)
+          call mpi_send(iof_sed,3*ntrs(5)+40,itype,nproc_schism-i,132,comm_schism,ierr) ! changed to +40 by Zhiyun Du
           call mpi_send(iof_eco,max(1,ntrs(6)),itype,nproc_schism-i,133,comm_schism,ierr)
           call mpi_send(iof_dvd,max(1,ntrs(12)),itype,nproc_schism-i,134,comm_schism,ierr)
           call mpi_send(istart_sed_3dnode,1,itype,nproc_schism-i,135,comm_schism,ierr)

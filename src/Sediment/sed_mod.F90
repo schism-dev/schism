@@ -267,6 +267,9 @@
        REAL(rkind), ALLOCATABLE :: bed_taun(:)     !Bottom shear stress (m^2/s/s)
        REAL(rkind), ALLOCATABLE :: bed_rough(:)    !Apparent Roughness length (bedform prediction)
        REAL(rkind), ALLOCATABLE :: imnp(:)         !BM: morphological ramp value (-); imnp(npa)
+       REAL(rkind), ALLOCATABLE :: tau_c_n(:)     !Bottom current shear stress (m^2/s/s), add by Zhiyun Du
+       REAL(rkind), ALLOCATABLE :: tau_w_n(:)     !Bottom wave shear stress (m^2/s/s),add by Zhiyun Du
+       REAL(rkind), ALLOCATABLE :: tau_wc_n(:)     !Bottom current-wave shear stress (m^2/s/s),add by Zhiyun Du
 
        ! WWM variables defined at element centres
        REAL(rkind), ALLOCATABLE :: hs(:)     !Significant wave height from WWM (m) ; (hs(nea)

@@ -63,7 +63,8 @@
        USE sed_mod, only : Wsed,Srho,Nbed,MBEDP,bedldu,bedldv,bed,bottom,    &
                           &bed_frac,mcoefd,bed_fracn,bed_d50n,bed_taun,&
                           &bedforms_rough,bed_rough,izcr,izsw,izwr,izbld, &
-                          &bed,ithck,iaged,ntr_l,Sd50,eroflxn,depflxn,poron,Qaccun,Qaccvn 
+                          &bed,ithck,iaged,ntr_l,Sd50,eroflxn,depflxn,poron,Qaccun,Qaccvn, &
+                          &tau_c_n,tau_w_n,tau_wc_n ! added by Zhiyun Du 
 #endif
 
 #ifdef USE_SED2D
@@ -129,6 +130,9 @@
                  !ncid_schout,ncid_schout2,ncid_schout3,ncid_schout4,ncid_schout5, &
                  !&ncid_schout6,ncid_schout7,ncid_schout_2,ncid_schout2_2,ncid_schout3_2,ncid_schout4_2,ncid_schout5_2, &
                  !&ncid_schout6_2,ncid_schout7_2,
+       integer :: icount_bed ! added by Zhiyun Du
+       real(rkind), allocatable :: tmp_bed(:,:), tmp_bed2(:,:) ! added by Zhiyun Du
+       integer :: nbed_send_expected, nbed_send_done ! added by Zhiyun Du
 !      integer :: nstp,nnew !Tsinghua group !1120:close
       real(rkind) :: cwtmp,cwtmp2,cwtmp3,wtmp1,wtmp2,time,ramp,rampbc,rampwind,rampwafo,dzdx,dzdy, &
                      &dudz,dvdz,dudx,dudx2,dvdx,dvdx2,dudy,dudy2,dvdy,dvdy2, &
@@ -9089,11 +9093,22 @@
      &'SED_eroflx',1,1,npa,eroflxn) ![kg/m/m/s]
         if(iof_sed(13)==1) call writeout_nc(id_out_var(noutput+17), &
      &'SED_depflx',1,1,npa,depflxn) ![kg/m/m/s]
+
+! add below, Zhiyun Du, 03/12/2026
         if(iof_sed(14)==1) call writeout_nc(id_out_var(noutput+18), &
+     &'wave_bed_stress',1,1,npa,tau_w_n*rho0) ![Pa]
+        if(iof_sed(15)==1) call writeout_nc(id_out_var(noutput+19), &
+     &'current_bed_stress',1,1,npa,tau_c_n*rho0) ![Pa]
+        if(iof_sed(16)==1) call writeout_nc(id_out_var(noutput+20), &
+     &'wave_current_bed_stress',1,1,npa,tau_wc_n*rho0) ![Pa]
+
+        if(iof_sed(17)==1) call writeout_nc(id_out_var(noutput+21), &
      &'SED_qbdl_acc',1,1,npa,Qaccun,Qaccvn) ![[kg/m/s]]
 
-        noutput=noutput+14
-        icount=14 !offset
+     
+
+        noutput=noutput+17  ! original is noutput+14
+        icount=17 !offset   ! original value is 14
 
         do i=1,ntrs(5)
           write(it_char,'(i72)')i
@@ -9127,8 +9142,25 @@
 
         if(iof_sed(icount+1)==1) call writeout_nc(id_out_var(noutput+icount+5), &
      &'SED_TSC',2,nvrt,npa,total_sus_conc)
-
         noutput=noutput+1
+        icount=icount+1
+
+! added by Zhiyun Du, note "writeout_nc_bed", output bed thickness 
+        if(iof_sed(icount+1)==1) call writeout_nc_bed(id_out_var(noutput+icount+5), &
+     &'SED_bed_thickness_layer',Nbed,nea,bed(:,:,ithck))
+        noutput=noutput+1
+        icount=icount+1
+
+! added by Zhiyun Du, output sed fraction
+        do i=1,ntrs(5)
+          write(it_char,'(i72)')i
+          it_char=adjustl(it_char); lit=len_trim(it_char)
+          itmp=irange_tr(1,5)+i-1 !global tracer #
+          if(iof_sed(icount+i)==1) call writeout_nc_bed(id_out_var(noutput+icount+i+4), &
+     &'SED_bedfrac_layer_'//it_char(1:lit),Nbed,nea,bed_frac(:,:,i))
+        enddo !i
+        noutput=noutput+ntrs(5)
+        icount=icount+ntrs(5)
 #endif /*USE_SED*/
 
 #ifdef USE_ECO
@@ -9592,7 +9624,7 @@
 #endif /*USE_WWM*/
 
 #ifdef USE_SED
-      do i=7,13
+      do i=7,16 ! change by Zhiyun Du, original is 7,13
         if(iof_sed(i)/=0) then
           icount=icount+1
           if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.0)')
@@ -9611,18 +9643,24 @@
               varout_2dnode(icount,:)=eroflxn(1:np)
             case(13)
               varout_2dnode(icount,:)=depflxn(1:np)
+            case(14) ! add by Zhiyun Du
+              varout_2dnode(icount,:)=tau_w_n(1:np)*rho0
+            case(15) ! add by Zhiyun Du
+              varout_2dnode(icount,:)=tau_c_n(1:np)*rho0
+            case(16) ! add by Zhiyun Du
+              varout_2dnode(icount,:)=tau_wc_n(1:np)*rho0
           end select
         endif
       enddo !i
 
-      if(iof_sed(14)/=0) then
+      if(iof_sed(17)/=0) then  ! modified by Zhiyun Du, original is 14
         icount=icount+2
         if(icount>ncount_2dnode) call parallel_abort('STEP: icount>nscribes(2.11)')
         varout_2dnode(icount-1,:)=Qaccun(1:np)
         varout_2dnode(icount,:)=Qaccvn(1:np)
       endif
 
-      ised_out_sofar=14 !set output flag index so far
+      ised_out_sofar=17 !set output flag index so far, original is 14, modified by Zhiyun Du
       do i=1,ntrs(5)
         if(iof_sed(i+ised_out_sofar)==1) then !vectors
           icount=icount+2
@@ -9969,6 +10007,7 @@
 !          nsend_varout=nsend_varout+1
 !          if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.81)')
           itmp=irange_tr(1,5)+i-1 !tracer #
+!          write(*,*) 'icount_ssc_tracers = ', icount
           call savensend3D_scribe(icount,1,1,nvrt,np,tr_nd(itmp,:,1:np))
 !          varout_3dnode(:,:,icount)=tr_nd(itmp,:,1:np)
 !          call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
@@ -9986,7 +10025,52 @@
 !        call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
 !     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
       endif
+
+      ised_out_sofar=ised_out_sofar+1 ! added by Zhiyun Du
 #endif /*USE_SED*/
+
+! added by Zhiyun Du, to save 3d vars in sediment bed
+icount_bed = 0
+#ifdef USE_SED
+    nbed_send_expected = ncount_3dbed
+    nbed_send_done     = 0
+
+    ! Allocate temp buffers once if we will send anything
+    if ( (iof_sed(ised_out_sofar+1)==1) .or. any(iof_sed(ised_out_sofar+2:ised_out_sofar+1+ntrs(5))==1) ) then
+      if (.not. allocated(tmp_bed))  allocate(tmp_bed(Nbed, ne))
+      if (.not. allocated(tmp_bed2)) allocate(tmp_bed2(Nbed, ne))  ! optional second component (future vector)
+    endif
+
+    ! bed thickness all layers (3D bed)
+    if (iof_sed(ised_out_sofar+1)==1) then
+      tmp_bed(:,:) = bed(1:Nbed, 1:ne, ithck)
+      call savensend3D_bed_scribe(icount_bed, 1, Nbed, ne, tmp_bed)
+      nbed_send_done = nbed_send_done + 1
+    endif
+    ised_out_sofar = ised_out_sofar + 1
+
+    ! bed fraction all layers by class (3D bed)
+    do i=1,ntrs(5)
+      if (iof_sed(i+ised_out_sofar)==1) then
+        tmp_bed(:,:) = bed_frac(1:Nbed, 1:ne, i)
+        call savensend3D_bed_scribe(icount_bed, 1, Nbed, ne, tmp_bed)
+        nbed_send_done = nbed_send_done + 1
+      endif
+    enddo
+    ised_out_sofar = ised_out_sofar + ntrs(5)
+
+    ! Sanity check, may not needed
+    if (nbed_send_expected /= nbed_send_done) then
+      write(*,*) 'ERROR bedout: expected bed sends=', nbed_send_expected, ' but did=', nbed_send_done
+      write(*,*) 'ERROR bedout: icount_bed(after)=', icount_bed
+      call flush(6)
+      call parallel_abort('bedout: send count mismatch (ncount_3dbed vs actual)')
+    endif
+
+    ! (Optional) deallocate temps here, or keep them allocated for performance:
+    if (allocated(tmp_bed))  deallocate(tmp_bed)
+    if (allocated(tmp_bed2)) deallocate(tmp_bed2)
+#endif
 
 #ifdef USE_ECO
         do i=1,ntrs(6)
