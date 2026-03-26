@@ -19,6 +19,7 @@ set(SH_MEM_COMM ON CACHE BOOLEAN "Use shared memory communicator")
 set(NO_PARMETIS OFF CACHE BOOLEAN "Turn off ParMETIS")
 
 #   Algorithm choices
+set (USE_SPK ON CACHE BOOLEAN "Use sphere harmonic for SAL via spherepack - not working")
 # TVD_LIM must be one of SB, VL, MM or OS for Superbee, Van Leer, Minmod, or Osher.")
 set (TVD_LIM VL CACHE STRING "Flux limiter")
 #Turn OLDIO off to use the new scribe based I/O

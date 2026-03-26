@@ -52,6 +52,7 @@ add_compile_options(${C_PREPROCESS_FLAG})
 message(STATUS "\n### Processing algorithmic switches and build options involving functionality for main project")
 
 # Defined early in the list to allow use as a default for others
+define_opt(USE_SPK "Use Spherepack to compute SAL" OFF)
 define_opt(USE_BMI "Build a library that can be used from BMI, with sources and some b.c. provided by BMI" OFF)
 
 define_opt(NO_PARMETIS "Disable ParMETIS" OFF)
