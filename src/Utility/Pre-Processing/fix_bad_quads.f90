@@ -213,7 +213,7 @@
       close(13)
 
       open(12,file='hgrid.gr3.new',status='replace')
-      write(12,*)'Threshold of ang ratio=',rat_angle
+      write(12,*)'Thresholds=',real(rat_angle),real(aspect_rat)
       write(12,*)ne,np
       do i=1,np
         write(12,'(i12,2(1x,e22.14),1x,e16.5)')i,xnd(i),ynd(i),dp(i) 
