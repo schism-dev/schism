@@ -305,7 +305,7 @@
 !     Output in SCHISM convention
       open(19,file='vgrid.in',status='replace')
       write(19,*)1 !ivcor
-      write(19,*)nvrt
+      write(19,*)nvrt,' !av=',real(nprism)/ne
       if(np>10000000) stop 'Please increase write length'
       write(19,'(10000000(1x,i10))')nvrt+1-kbp(:)
 
