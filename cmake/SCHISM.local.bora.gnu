@@ -14,4 +14,4 @@ set(NetCDF_C_DIR  "$ENV{NETCDF}"  CACHE PATH "Path to NetCDF C library")
 
 ###Compile flags
 #CMAKE_EXE_LINKER_FLAGS did not work so I had to remove -static
-set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -ffree-line-length-none -static-libgfortran -finit-local-zero" CACHE STRING "Fortran flags" FORCE)
+set(CMAKE_Fortran_FLAGS_RELEASE "-O2 -ffree-line-length-none -finit-local-zero" CACHE STRING "Fortran flags" FORCE)
