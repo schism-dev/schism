@@ -141,9 +141,9 @@ for fname,module in zip(fnames,modules):
     else:
        copyfile(pname,fname); print('writing {}'.format(fname))
     if hasattr(p,'schism') and module!='WWM':
-       #rname=fname+'.0'; sname=p.schism+'/sample_inputs/'+('wwminput.nml.WW3' if module=='WWM' else fname)
-       rname=fname+'.0'; sname=p.schism+'/sample_inputs/'+fname
-       os.rename(fname,rname); copyfile(sname,fname); chparam(fname,source=rname); os.remove(rname)
+       pn0='old_'+fname; pn=p.schism+'/sample_inputs/'+fname; os.rename(fname,pn0); copyfile(pn,fname); P=read(pn0); S=read(pn)
+       [chparam(fname,i) for i in S if ((i not in P) and fname=='param.nml' and (not i.startswith('iof_')))] #remove new parameters
+       chparam(fname,source=pn0); os.remove(pn0) #update parameter values
        if p.flag['SED']==1 and fname=='param.nml': #add sediment output channel
           P=read(fname,1); nsed=max([i for i in arange(23) if 'iof_sed({})'.format(i) in P])
           for i in arange(nsed+1,28):
@@ -323,7 +323,7 @@ fname='watertype.gr3'
 if p.flag[fname]!=0:
    print('writing '+fname)
    vi=M.f2(gd.xy,value=M.watertype.clip(0,7) if p.flag[fname]==1 else M.watertype)
-   gd.save(fname,value=vi.astype('int'),outfmt='{:d}')
+   gd.save(fname,value=round(vi).astype('int'),outfmt='{:d}')
 
 fname='diffmin.gr3'
 if p.flag[fname]==1:
@@ -610,7 +610,7 @@ if p.flag[fname]!=0:
    if p.flag['ICM'] in [2,20]: vnames,svars,rats=vnames[:-4],svars[:-4],rats[:-4]
 
    #interp
-   i1=abs(M.CB74_time-p.StartT).argmin(); i1=abs(M.CB74_time-p.EndT-2).argmin(); mti=M.CB74_time[i1:i2]; cz=M.CB74_depth
+   i1=abs(M.CB74_time-p.StartT).argmin(); i2=abs(M.CB74_time-p.EndT-2).argmin(); mti=M.CB74_time[i1:i2]; cz=M.CB74_depth
    bind=pindex(read('ICM_nudge.gr3').z!=0); lz=abs(compute_zcor(vd.sigma[bind],gd.dp[bind])).T.clip(cz.min(),cz.max())
    nobn=bind.size; ntr=len(svars); nt=len(mti); nvrt=vd.nvrt
    mys=array([M.attr('CB74_'+svar)[:,i1:i2]*rat for svar, rat in zip(svars,rats)]).transpose([1,0,2]) #interp in time
@@ -623,7 +623,7 @@ if p.flag[fname]!=0:
    fid.createVariable('time','float64',('time',)); fid.createVariable('map_to_global_node','int',('node',))
    fid.createVariable('tracer_concentration','float32',('time','node','nLevels','ntracers'),zlib=True)
    while(irec<nt): #put variable values
-       fpt=arange(irec,min(irec+dt,nt)); trs=zeros([nvrt,nobn,ntr,len(fpt)],'float32')*nan; irec=irec+dt
+       fpt=arange(irec,min([irec+dt,nt])); trs=zeros([nvrt,nobn,ntr,len(fpt)],'float32')*nan; irec=irec+dt
        for k, zi in enumerate(lz):
            for i in arange(cz.size-1): trs[k,(zi>=cz[i])*(zi<cz[i+1])]=mys[i,:,fpt].T[None,...]
        for k in arange(nvrt-1)[::-1]: fpn=isnan(trs[k]); trs[k][fpn]=trs[k+1][fpn]  #remove nan
@@ -809,9 +809,13 @@ if p.flag[fname]==1 and ('p7' in p.source):
    C=read(p.source,1)
    if hasattr(C,'wsm'): [C.attr(i,C.wsm.attr(i)) for i in C.wsm.attr()];  [C.attr('sho_'+i,C.sho.attr(i)) for i in C.sho.attr()] #old format
 
+   #move largest source to river head
+   sxy=C.sxy[:]; xy=gd.exy[read(p.region+'river_head_rappahannock.reg').inside(gd.exy)]
+   if len(xy)!=0: ip=C.sid[list(C.sname).index('RU5_6030_0001')]; sxy[ip]=xy[abs(xy[:,0]+1j*xy[:,1]-sxy[ip[0],0]-1j*sxy[ip[0],1]).argmax()]
+
    #find source element
-   ie=gd.ie(); sinde=unique(ie[near_pts(r_[C.sxy,C.sho_sxy],gd.exy[ie])]) #sinde is source element
-   eid=near_pts(C.sxy,gd.exy[sinde]); C.eid=array([[eid[i] for i in sid] for sid in C.sid],'O')
+   ie=gd.ie(); sinde=unique(ie[near_pts(r_[sxy,C.sho_sxy],gd.exy[ie])]) #sinde is source element
+   eid=near_pts(sxy,gd.exy[sinde]); C.eid=array([[eid[i] for i in sid] for sid in C.sid],'O')
 
    #-----------------------------------
    #watershed loading

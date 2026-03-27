@@ -94,7 +94,7 @@ module schism_glbl
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
                   &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm,iof_icm_ba,&
-                  &iof_icm_clam,nbins_veg_vert,veg_lai,veg_cw,niter_hdif,nmarsh_types,istemp
+                  &iof_icm_clam,nbins_veg_vert,niter_hdif,nmarsh_types,istemp
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_cos,iof_fib, &
@@ -111,7 +111,7 @@ module schism_glbl
                       &hmin_airsea_ex,hmin_salt_ex,shapiro0,loadtide_coef,h_massconsv,rinflation_icm, &
                       &ref_ts_h1,ref_ts_h2,ref_ts_restore_depth,ref_ts_tscale, &
                       &ref_ts_dt,watertype_rr,watertype_d1,watertype_d2,ri_st, &
-                      &create_marsh_min,create_marsh_max,age_marsh_min,relax_2_airt
+                      &create_marsh_min,create_marsh_max,age_marsh_min,relax_2_airt,veg_cw
   real(rkind),save,allocatable :: veg_vert_z(:),veg_vert_scale_cd(:),veg_vert_scale_N(:),veg_vert_scale_D(:), &
         &veg_di0(:),veg_h0(:),veg_nv0(:),veg_cd0(:),drown_marsh(:)
 
@@ -496,6 +496,8 @@ module schism_glbl
   real(rkind),save,allocatable :: tau_oi(:,:)
   !(npa). freshwater flux due to ice melting [kg/s/m/m]. >0: precip; <0: evap
   real(rkind),save,allocatable :: fresh_wa_flux(:)
+  !(npa). salinity flux due to ice melting/growth [psu/s].:
+  real(rkind),save,allocatable ::salinity_flux(:)
   !(npa). net heat flux into the ocean surface [W/m/m]. >0: warm the ocean
   real(rkind),save,allocatable :: net_heat_flux(:)
   real(rkind),save,allocatable :: wind_rotate_angle(:) !in radians
@@ -504,12 +506,40 @@ module schism_glbl
   !(npa). evap water flux in ice model [kg/s/m/m]. 
   real(rkind),save,allocatable :: ice_evap(:)
   real(rkind),save,allocatable :: srad_o(:)
+  real(rkind),save,allocatable :: sflux_o(:)
+  real(rkind),save,allocatable :: aice(:)
+   
+  !>---------------------------------------------------
+  !         Creating vars to dump cice fields to
+  !>---------------------------------------------------
+  real(rkind), allocatable, save, target :: uvice(:)
+  real(rkind), allocatable, save, target :: vvice(:)
+  real(rkind), allocatable, save, target :: taux_ice(:)
+  real(rkind), allocatable, save, target :: tauy_ice(:)
+  real(rkind), allocatable, save, target :: vol_sno(:)
+  real(rkind), allocatable, save, target :: vol_ice(:)
+  real(rkind), allocatable, save, target :: ifresh_flux(:)
+  real(rkind), allocatable, save, target :: isalt_flux(:)
+  real(rkind), allocatable, save, target :: iheat_flux(:)
+  real(rkind), allocatable, save, target :: isw_pen(:)
+  real(rkind), allocatable, save, target :: frzmlt(:)
+  real(rkind), allocatable, save, target :: CdnIO(:) 
+  
+  !>---------------------------------------------------
+  !         CICE coupling aux variables
+  !>---------------------------------------------------           
+  real(rkind), allocatable, save, target :: fluxprc_ocn(:) 
+  real(rkind), allocatable, save, target :: fluxevp_ocn(:) 
+  real(rkind), allocatable, save, target :: sflux_ocn(:)   
+  real(rkind), allocatable, save, target :: srad_ocn(:)    
+
   logical,save,allocatable :: lhas_ice(:)
   logical,save :: lice_free_gb
   real(rkind),save,allocatable :: deta1_dxy_elem(:,:)
 
   real(4),save,dimension(:,:,:),allocatable :: trnd_nu1,trnd_nu2,trnd_nu
   real(4),save,dimension(:,:),allocatable :: ref_ts1,ref_ts2,ref_ts
+  real(rkind),save,allocatable :: ref_ts_scale(:)
   integer,save,allocatable :: iadv(:),iwater_type(:) 
 
   !weno>

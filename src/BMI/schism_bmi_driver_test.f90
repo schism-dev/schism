@@ -203,7 +203,7 @@ program schism_driver_test
 
   ! Set water level boundaries with allocated 
   ! dummy data after model has been initialized
-  allocate(ETA2_bnd(size(ath2(1,1,:,1,1))))
+  allocate(ETA2_bnd(nnode_et))
 
   ! Lets assume we read in some fake hotstart conditions from the NextGen framework,
   ! which we apply some initial condition to SCHISM t0 forcing fields.
@@ -239,7 +239,7 @@ program schism_driver_test
   ! allocated dummy data after model has been initialized
   ! AND T-Route data has been first set to discharge t0
   ! source boundary arrays. This must be the workflow order
-  allocate(RAINRATE(size(ieg_source)))
+  allocate(RAINRATE(nea))
 
   ! SCHISM BMI source/sink terms MUST call discharge boundary
   ! terms first, followed by the rainfall contribution so the 
@@ -536,6 +536,14 @@ program schism_driver_test
     deallocate(ETA2_dt)
     deallocate(Q_dt)
 
+
+  ! Wait for all processes to finish demonstrating BMI functionality
+  ! before attempting to run SCHISM for some amount of time
+    call MPI_BARRIER(MPI_COMM_WORLD, mpi_err)
+    if (mpi_err /= MPI_SUCCESS) then
+       print*, "MPI_BARRIER call failed during BMI functionality demonstration"
+    end if
+    
     !------------------------------------------
     ! Now we updated "t0" and "t1" for variables
     ! after first hour run the rest of the model
@@ -705,12 +713,11 @@ program schism_driver_test
     print*, "The grid rank for ", 'ETA2_bnd', " is ", grid_rank
 
     ! allocate water level point coords arrays
-    allocate(grid_x_wlbnd(size(ath2(1,1,:,1,1))))
-    allocate(grid_y_wlbnd(size(ath2(1,1,:,1,1))))
+    allocate(grid_x_wlbnd(nnode_et))
+    allocate(grid_y_wlbnd(nnode_et))
     ! BMI call to get coordinates of the grid
     status = m%get_grid_x(grid_int, grid_x_wlbnd)
     status = m%get_grid_y(grid_int, grid_y_wlbnd)
-    status = m%get_grid_z(grid_int, grid_z_wlbnd)
 
     print*, "The X coord for grid ", grid_int, " is ", grid_x_wlbnd(1:5)
     print*, "The Y coord for grid ", grid_int, " is ", grid_y_wlbnd(1:5)
@@ -773,6 +780,13 @@ program schism_driver_test
             " to use pointer vars are not implemented"
  
 
+  ! Wait for all processes to finish demonstrating BMI functionality
+  ! before finalizing the SCHISM BMI run and shutting down BMI
+    call MPI_BARRIER(MPI_COMM_WORLD, mpi_err)
+    if (mpi_err /= MPI_SUCCESS) then
+       print*, "MPI_BARRIER call failed during BMI functionality demonstration"
+    end if
+    
   !---------------------------------------------------------------------
   ! Finalize with BMI
   !---------------------------------------------------------------------

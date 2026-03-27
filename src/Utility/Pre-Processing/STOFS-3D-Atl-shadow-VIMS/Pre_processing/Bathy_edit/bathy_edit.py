@@ -129,9 +129,12 @@ def prepare_dir(wdir: Path, tasks: str):
     else:
         print(f'Copying the script and the subdirectories to {wdir}')
         for task in tasks:
-            shutil.copytree(
-                f'{script_dir}/{task}/', f'{wdir}/{task}/',
-                symlinks=False, dirs_exist_ok=True)
+            if Path(f'{script_dir}/{task}/').samefile(Path(f'{wdir}/{task}/')):
+                print(f'Skipping copying {task}, already in the working directory.')
+            else:
+                shutil.copytree(
+                    f'{script_dir}/{task}/', f'{wdir}/{task}/',
+                    symlinks=False, dirs_exist_ok=True)
 
     # copy larger files not in the Git repository
     for task, file_path_list in LARGE_FILES.items():
@@ -177,7 +180,7 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         from Levee.set_levees import set_levees
         hgrid_base_name += '_levee'
         os.chdir(f'{wdir}/Levee')  # to set the directory
-        hgrid_obj = set_levees(hgrid_obj=hgrid_obj, wdir=f'{wdir}/Levee/')
+        hgrid_obj = set_levees(min_levee_height_meters=2, hgrid_obj=hgrid_obj, wdir=f'{wdir}/Levee/')
         grd2sms(hgrid_obj, f'{wdir}/Levee/{hgrid_base_name}.2dm')
         print("Finished setting levees.\n")
 

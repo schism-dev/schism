@@ -214,7 +214,7 @@
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
      &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,istemp,relax_2_airt, &
-     &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
+     &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_cw, &
      &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
      &drown_marsh,create_marsh_min,create_marsh_max,age_marsh_min
 
@@ -517,7 +517,7 @@
       veg_vert_scale_cd=(/(1.0d0,i=1,nbins_veg_vert+1)/) !scaling [-]
       veg_vert_scale_N=(/(1.0d0,i=1,nbins_veg_vert+1)/)
       veg_vert_scale_D=(/(1.0d0,i=1,nbins_veg_vert+1)/)
-      veg_lai=1.d0; veg_cw=1.5d0
+      veg_cw=3.6d0 !s/m
       veg_di0=1.d-2 !m
       veg_h0=0.3d0 !m
       veg_nv0=10.d0 !/m^2
@@ -722,7 +722,7 @@
 !        call get_param('param.in','coriolis',2,itmp,coricoef,stringvalue)
       endif
 
-!     Wind (use nws=2 and USE_ATMOS for coupling directly to atmos model)
+!     Wind (use nws=4 and USE_ATMOS for coupling directly to atmos model)
       if(nws<-1.or.nws>6.or.nws==3) then
         write(errmsg,*)'Unknown nws',nws
         call parallel_abort(errmsg)
@@ -771,9 +771,9 @@
       if(ihconsv/=0.and.nws/=2.and.nws/=4) call parallel_abort('Heat budge model must have nws>=2')
 
 #ifdef USE_BULK_FAIRALL
-      if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Fairall et al.(03)'
+      if(ihconsv/=0.and.myrank==0) write(16,*)'Turb. Fluxes: Fairall et al.(03)'
 #else
-      if(ihconsv/=0.and.nws==2.and.myrank==0) write(16,*)'Turb. Fluxes: Zeng et al.(98)'
+      if(ihconsv/=0.and.myrank==0) write(16,*)'Turb. Fluxes: Zeng et al.(98)'
 #endif
 
 #ifdef USE_ATMOS
@@ -955,7 +955,7 @@
       endif
 
 !...  Surface T,S relax for long-term simulations
-      if(iref_ts/=0.and.iref_ts/=1) then
+      if(iref_ts<0.or.iref_ts>2) then
         write(errmsg,*)'Wrong iref_ts:',iref_ts
         call parallel_abort(errmsg)
       endif
@@ -1157,7 +1157,7 @@
         call parallel_abort(errmsg)
       endif
 
-      if(iveg==1) then !specify vertical variation
+      if(iveg>0) then !specify vertical variation
         do k=1,nbins_veg_vert
           if(veg_vert_z(k)>=veg_vert_z(k+1)) then
             write(errmsg,*)'INIT: veg_vert_z not ascending,',veg_vert_z
@@ -1455,6 +1455,10 @@
       if(iref_ts/=0) then
         allocate(ref_ts1(npa,2),ref_ts2(npa,2),ref_ts(npa,2),stat=itmp)
         if(itmp/=0) call parallel_abort('INIT: alloc failed (57)')
+        if(iref_ts==2) then
+          allocate(ref_ts_scale(npa),stat=itmp)
+          if(itmp/=0) call parallel_abort('INIT: alloc failed (57.0)')
+        endif
       endif
 
 !     Offline transport
@@ -1694,9 +1698,29 @@
 #endif
 
 #ifdef USE_FIB
-       allocate(kk_fib(nea,2),sink_fib(nea),fraction_fib(nea))
-       allocate(sink0(npa),fraction0(npa),kk10(npa),kk20(npa))
+         allocate(kk_fib(nea,2),sink_fib(nea),fraction_fib(nea))
+         allocate(sink0(npa),fraction0(npa),kk10(npa),kk20(npa))
 #endif
+
+#ifdef USE_CICE
+        allocate(aice(npa),tau_oi(2,npa),fresh_wa_flux(npa),salinity_flux(npa),net_heat_flux(npa), &
+               srad_o(npa),srad_th_ice(npa),srad_ocn(npa),sflux_ocn(npa),fluxprc_ocn(npa),fluxevp_ocn(npa),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: ice frac allocation failure')
+        aice(:)          = real(0)
+        tau_oi(:,:)      = real(0)
+        fresh_wa_flux(:) = real(0)
+        salinity_flux(:) = real(0)
+        net_heat_flux(:) = real(0)
+        srad_o(:)        = real(0)
+        srad_th_ice(:)   = real(0)
+      
+        fluxprc_ocn(:)   = real(0)
+        fluxevp_ocn(:)   = real(0)
+        sflux_ocn(:)     = real(0)
+        srad_ocn(:)      = real(0)
+#endif
+!        allocate(sflux_o(npa),stat=istat)
+!        sflux_o(:)     = real(0)
 
 #ifdef USE_MICE
         allocate(tau_oi(2,npa),fresh_wa_flux(npa),net_heat_flux(npa), &
@@ -2855,7 +2879,7 @@
         endif !myrank
         call mpi_bcast(ieg_source_ngen,max(1,nsources_bmi),itype,0,comm,istat)
         call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
-        call mpi_bcast(ieg_source_flowpath_ids,max(1,nsources),itype,0,comm,istat)
+        call mpi_bcast(ieg_source_flowpath_ids,max(1,nsources_bmi),itype,0,comm,istat)
         call mpi_bcast(nsinks,1,itype,0,comm,istat)
 
         ! Now define the time step interval for sources and sinks here
@@ -3999,7 +4023,32 @@
         if(j/=NF90_NOERR) call parallel_abort('init: surface_restore.nc not found')
       endif !iref_ts
 
-!     Vegetation inputs: veg_*.gr3
+!     Read in ref_ts_scale.gr3
+      if(iref_ts==2) then
+        if(myrank==0) then
+          open(10,file=in_dir(1:len_in_dir)//'ref_ts_scale.gr3',status='old')
+          read(10,*)
+          read(10,*) itmp1,itmp2
+          if(itmp1/=ne_global.or.itmp2/=np_global) &
+     &call parallel_abort('Check ref_ts_scale.gr3')
+          do i=1,np_global
+            read(10,*)j,xtmp,ytmp,tmp1
+            if(tmp1<0.d0.or.tmp1>1.d0) then
+              write(errmsg,*)'Wrong relax scale at node:',i,tmp1
+              call parallel_abort(errmsg)
+            endif
+            buf3(i)=tmp1
+          enddo !i
+          close(10)
+        endif !myrank
+        call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+
+        do i=1,np_global
+          if(ipgl(i)%rank==myrank) ref_ts_scale(ipgl(i)%id)=buf3(i)
+        enddo !i
+      endif !iref_ts==2
+
+!     Vegetation inputs (unbent): veg_*.gr3
       veg_alpha0=0.d0 !=D*Nv*Cdv/2; init; D is diameter or leaf width; Cdv is form drag (veg_cd)
       veg_h=0.d0 !veg height; not used at 2D sides
       veg_nv=0.d0 !Nv: # of stems per m^2
@@ -4075,14 +4124,7 @@
           endif
         enddo !i
 
-        !Save unbent (original) values
-        veg_h_unbent=veg_h
-        veg_nv_unbent=veg_nv
-        veg_di_unbent=veg_di
-
 #ifdef USE_MARSH
-        !Reset
-        !veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha0=0.d0; veg_cd=0.d0
         do i=1,nea
           if(imarsh(i)>0) then !imarsh<=nmarsh_types
             veg_di(elnode(1:i34(i),i))=veg_di0(imarsh(i)) 
@@ -4093,6 +4135,11 @@
           endif
         enddo !i
 #endif
+
+        !Save unbent (original) values
+        veg_h_unbent=veg_h
+        veg_nv_unbent=veg_nv
+        veg_di_unbent=veg_di
       endif !iveg/=0
 
 !...  Surface min. mixing length for f.s. and max. for all; inactive 
@@ -6062,6 +6109,7 @@
           enddo
         enddo
         
+!       CICE/Icepack will init many vars via step_icepack() in _step. Cf. init_icepack in mice_init.F90
         lice_free_gb=.false.
         t_oi(:)=0
         fresh_wa_flux(:)=0
@@ -6073,109 +6121,109 @@
         ice_evap(:)=0
         srad_th_ice(:)=0
         srad_o(:) = 0
-        if(lice_free_gb) then
-          j=nf90_inq_varid(ncid2,"ice_free_flag",mm)
-          if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag')
-          j=nf90_get_var(ncid2,mm,itmp)
-          if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag2')
-          if(itmp==0) then
-            lice_free_gb=.false.
-          else
-            lice_free_gb=.true.
-          endif
-          if(myrank==0) write(16,*)'hotstart with lice_free_gb=',lice_free_gb
-
-          !gfortran requires all chars have same length
-          ar_name(1:5)=(/'ice_surface_T ','ice_water_flux','ice_heat_flux ','ice_velocity_x','ice_velocity_y'/)
-          do k=1,5 !# of 1D node arrays
-            if(myrank==0) then
-              j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
-              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE1')
-              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
-              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE2')
-            endif
-            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-            do i=1,np_global
-              if(ipgl(i)%rank==myrank) then
-                ip=ipgl(i)%id
-                if(k==1) then
-                  t_oi(ip)=buf3(i)
-                else if(k==2) then
-                  fresh_wa_flux(ip)=buf3(i)
-                else if(k==3) then
-                  net_heat_flux(ip)=buf3(i)
-                else if(k==4) then
-                  u_ice(ip)=buf3(i)
-                else if(k==5) then
-                  v_ice(ip)=buf3(i)
-                endif
-              endif !ipgl
-            enddo !i
-          enddo !k
-
-          ar_name(1:3)=(/'ice_sigma11','ice_sigma12','ice_sigma22'/)
-          do k=1,3 !# of 1D elem arrays
-            if(myrank==0) then
-              j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
-              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE3')
-              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
-              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE4')
-            endif
-            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-            do i=1,ne_global
-              if(iegl(i)%rank==myrank) then
-                ie=iegl(i)%id
-                if(k==1) then
-                  sigma11(ie)=buf3(i)
-                else if(k==2) then
-                  sigma12(ie)=buf3(i)
-                else if(k==3) then
-                  sigma22(ie)=buf3(i)
-                endif
-              endif !ipgl
-            enddo !i
-          enddo !k
-
-          if(myrank==0) then
-            j=nf90_inq_varid(ncid2,"ice_ocean_stress",mm)
-            if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress')
-          endif
-          do m=1,2
-            if(myrank==0) then
-              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
-              if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress2')
-            endif
-            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-            do i=1,np_global
-              if(ipgl(i)%rank==myrank) then
-                ip=ipgl(i)%id
-                tau_oi(m,ip)=buf3(i)
-              endif !iegl
-            enddo !i
-          enddo !m
-
-          if(myrank==0) then
-            j=nf90_inq_varid(ncid2,"ice_tracers",mm)
-            if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers')
-          endif
-          do m=1,ntr_ice
-            if(myrank==0) then
-              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
-              if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers2')
-            endif
-            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
-
-            do i=1,np_global
-              if(ipgl(i)%rank==myrank) then
-                ip=ipgl(i)%id
-                ice_tr(m,ip)=buf3(i)
-              endif !iegl
-            enddo !i
-          enddo !m
-        endif !lice_free_gb
+!        if(lice_free_gb) then
+!          j=nf90_inq_varid(ncid2,"ice_free_flag",mm)
+!          if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag')
+!          j=nf90_get_var(ncid2,mm,itmp)
+!          if(j/=NF90_NOERR) call parallel_abort('init: nc ice_free_flag2')
+!          if(itmp==0) then
+!            lice_free_gb=.false.
+!          else
+!            lice_free_gb=.true.
+!          endif
+!          if(myrank==0) write(16,*)'hotstart with lice_free_gb=',lice_free_gb
+!
+!          !gfortran requires all chars have same length
+!          ar_name(1:5)=(/'ice_surface_T ','ice_water_flux','ice_heat_flux ','ice_velocity_x','ice_velocity_y'/)
+!          do k=1,5 !# of 1D node arrays
+!            if(myrank==0) then
+!              j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+!              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE1')
+!              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/1/),(/np_global/))
+!              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE2')
+!            endif
+!            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+!
+!            do i=1,np_global
+!              if(ipgl(i)%rank==myrank) then
+!                ip=ipgl(i)%id
+!                if(k==1) then
+!                  t_oi(ip)=buf3(i)
+!                else if(k==2) then
+!                  fresh_wa_flux(ip)=buf3(i)
+!                else if(k==3) then
+!                  net_heat_flux(ip)=buf3(i)
+!                else if(k==4) then
+!                  u_ice(ip)=buf3(i)
+!                else if(k==5) then
+!                  v_ice(ip)=buf3(i)
+!                endif
+!              endif !ipgl
+!            enddo !i
+!          enddo !k
+!
+!          ar_name(1:3)=(/'ice_sigma11','ice_sigma12','ice_sigma22'/)
+!          do k=1,3 !# of 1D elem arrays
+!            if(myrank==0) then
+!              j=nf90_inq_varid(ncid2,trim(adjustl(ar_name(k))),mm)
+!              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE3')
+!              j=nf90_get_var(ncid2,mm,buf3(1:ne_global),(/1/),(/ne_global/))
+!              if(j/=NF90_NOERR) call parallel_abort('init: nc ICE4')
+!            endif
+!            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+!
+!            do i=1,ne_global
+!              if(iegl(i)%rank==myrank) then
+!                ie=iegl(i)%id
+!                if(k==1) then
+!                  sigma11(ie)=buf3(i)
+!                else if(k==2) then
+!                  sigma12(ie)=buf3(i)
+!                else if(k==3) then
+!                  sigma22(ie)=buf3(i)
+!                endif
+!              endif !ipgl
+!            enddo !i
+!          enddo !k
+!
+!          if(myrank==0) then
+!            j=nf90_inq_varid(ncid2,"ice_ocean_stress",mm)
+!            if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress')
+!          endif
+!          do m=1,2
+!            if(myrank==0) then
+!              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
+!              if(j/=NF90_NOERR) call parallel_abort('init: nc oi_stress2')
+!            endif
+!            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+!
+!            do i=1,np_global
+!              if(ipgl(i)%rank==myrank) then
+!                ip=ipgl(i)%id
+!                tau_oi(m,ip)=buf3(i)
+!              endif !iegl
+!            enddo !i
+!          enddo !m
+!
+!          if(myrank==0) then
+!            j=nf90_inq_varid(ncid2,"ice_tracers",mm)
+!            if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers')
+!          endif
+!          do m=1,ntr_ice
+!            if(myrank==0) then
+!              j=nf90_get_var(ncid2,mm,buf3(1:np_global),(/m,1/),(/1,np_global/))
+!              if(j/=NF90_NOERR) call parallel_abort('init: nc ice_tracers2')
+!            endif
+!            call mpi_bcast(buf3,ns_global,rtype,0,comm,istat)
+!
+!            do i=1,np_global
+!              if(ipgl(i)%rank==myrank) then
+!                ip=ipgl(i)%id
+!                ice_tr(m,ip)=buf3(i)
+!              endif !iegl
+!            enddo !i
+!          enddo !m
+!        endif !lice_free_gb
 #endif /*USE_MICE*/
 
 #ifdef USE_ICE

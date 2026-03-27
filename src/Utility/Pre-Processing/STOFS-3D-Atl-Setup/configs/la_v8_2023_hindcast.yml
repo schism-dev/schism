@@ -1,0 +1,34 @@
+profile: "la_subdomain"   # or whatever recipe name you wire to
+
+run:
+  project_dir: "/sciclone/schism10/feiye/STOFS3D-v8/"
+  runid: "30"
+  hgrid_path: "/sciclone/schism10/feiye/STOFS3D-v8/I29f/hgrid.gr3"
+  vgrid_path: "/sciclone/schism10/feiye/STOFS3D-v8/I30/Vgrid/vgrid.in"
+
+model:
+  version: "v8_louisianna"
+  rnday: 250
+  startdate: "2023-04-13"
+  nwm_cache_folder: '/sciclone/schism10/feiye/STOFS3D-v7.3/I21g/NWM_20221201_realigned/'
+  replace_nwm_with_usgs: True
+
+runtime:
+  # optional scratch target for outputs symlink:
+  scr_dir: "/sciclone/scr10/feiye/STOFS3D-v8/"
+
+inputs:
+  bctides: true
+  vgrid: false
+  gr3: false
+  nudge_gr3: false
+  shapiro: false
+  drag: false
+  elev_ic: false
+  source_sink: false
+  soil: false
+  "hotstart.nc": true
+  "3D.th.nc": false
+  "elev2D.th.nc": false
+  "*nu.nc": false
+  "*.prop": false

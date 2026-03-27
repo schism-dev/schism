@@ -620,14 +620,15 @@
 
 !-----------------------------------------------------------------------
 ! Surface T,S restoration (for large-scale long-term runs). If invoked, 
-! the input is surface_restore.nc
+! the input is surface_restore.nc. If iref_ts=2, additional input ref_ts_scale.gr3
+! specifies scaling factors in [0,1] (ramp-down nearshore).
 !-----------------------------------------------------------------------
-  iref_ts = 0 !on/off
+  iref_ts = 0 !off (0); 1 (scaling factor from depths below); 2 (scaling factor from ref_ts_scale.gr3)
   ref_ts_restore_depth = 50. !restoration depth [m]
   ref_ts_tscale = 100. !restoration time scale [days]
-  ref_ts_h1 = 100. !ramp-down depth 1 [m] (to turn off restoration in shallows)
-  ref_ts_h2 = 60. !ramp-down depth 2 [m]; must <ref_ts_h1
   ref_ts_dt = 30. !time step in surface_restore.nc [days]
+  ref_ts_h1 = 100. !ramp-down depth 1 [m] (to turn off restoration in shallows). Used if iref_ts=1
+  ref_ts_h2 = 60. !ramp-down depth 2 [m]; must <ref_ts_h1
 
 !-----------------------------------------------------------------------
 ! Cut-off depth for cubic spline interpolation near bottom when computing horizontal gradients
@@ -673,6 +674,30 @@
   flag_fib = 1
 
 !----------------------------------------------------------------------
+! Vegetation model
+! If iveg/=0, need 4 extra inputs (for unbent stems): (1) veg_D.gr3 (depth is stem diameter in meters);
+! (2) veg_N.gr3 (depth is # of stems per m^2);
+! (3) veg_h.gr3 (height of canopy in meters);
+! (4) veg_cd.gr3 (form drag coefficient).
+! If one of these depths=0 at a node, the code will set all to 0. 
+
+! With iveg/=0, the vertical scaling is given by veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1) below.
+! veg_vert_z(1:nbins_veg_vert+1) specify the distance from bed for each bin (ascending 
+! order starting from 0; const extrapolation is done beyond largest height).
+! iveg=2: flex vegeation using Ganthy fomulation.
+! For all options, the cross section of leaf can be circular or rectangular; in 
+! the latter case, the input 'diameter' is leaf width.
+!----------------------------------------------------------------------
+  iveg = 0 !on/off flag
+  veg_vert_z = 0.,0.5,1. ![m] starting from 0.; used if iveg=1
+  veg_vert_scale_cd = 1.,1.,1. !scaling [-]; used if iveg=1
+  veg_vert_scale_N = 1.,1.,1. !scaling [-]; used if iveg=1
+  veg_vert_scale_D = 1.,1.,1. !scaling [-]; used if iveg=1
+
+!  veg_lai = 1. !Leaf Area Index [-]; used if iveg=2. Ganthy suggests 0-10?
+  veg_cw = 3.6 !scaling coefficient with iveg=2 [exp(-veg_cw*|U|)]. Ganthy suggests 3.6 s/m
+
+!----------------------------------------------------------------------
 ! Marsh model parameters (only if USE_MARSH is on, and in this case
 ! iveg must /=0)
 !----------------------------------------------------------------------
@@ -687,27 +712,6 @@
   create_marsh_max = 0. ![m] 
   age_marsh_min = 1. ![days] min marsh age threshold of surrounding cells to allow migration.
                      !Needs to account for morph acceleration
-
-!----------------------------------------------------------------------
-! Vegetation model
-! If iveg/=0, need 4 extra inputs: (1) veg_D.gr3 (depth is stem diameter in meters);
-! (2) veg_N.gr3 (depth is # of stems per m^2);
-! (3) veg_h.gr3 (height of canopy in meters);
-! (4) veg_cd.gr3 (form drag coefficient).
-! If one of these depths=0 at a node, the code will set all to 0. 
-
-! With iveg/=0, the vertical scaling is given by veg_vert_scale_[cd,N,D](1:nbins_veg_vert+1) below.
-! veg_vert_z(1:nbins_veg_vert+1) specify the distance from bed for each bin (ascending order starting from 0).
-! iveg=2: flex vegeation using Ganthy (2011) fomulation
-!----------------------------------------------------------------------
-  iveg = 0 !on/off flag
-  veg_vert_z = 0.,0.5,1. ![m] starting from 0.; used if iveg=1
-  veg_vert_scale_cd = 1.,1.,1. !scaling [-]; used if iveg=1
-  veg_vert_scale_N = 1.,1.,1. !scaling [-]; used if iveg=1
-  veg_vert_scale_D = 1.,1.,1. !scaling [-]; used if iveg=1
-
-  veg_lai = 1. !Leaf Area Index [-]; used if iveg=2. Ganthy suggests 0-10?
-  veg_cw = 1.5 !calibration coefficient in diameter of bent leaf [-]; used if iveg=2. Ganthy suggests 0-25?
 
 !-----------------------------------------------------------------------
 ! Fraction of vertical flux closure adjustment applied at surface, then subtracted
@@ -864,7 +868,7 @@
   iof_hydro(2) = 0 !air pressure [Pa]  {airPressure}  2D
   iof_hydro(3) = 0 !air temperature [C] {airTemperature}  2D
   iof_hydro(4) = 0 !Specific humidity [-] {specificHumidity}  2D
-  iof_hydro(5) = 0 !Net downward solar (shortwave) radiation after albedo [W/m/m] {solarRadiation}  2D
+  iof_hydro(5) = 0 !Net downward solar (shortwave) radiation AFTER albedo [W/m/m] {solarRadiation}  2D
   iof_hydro(6) = 0 !sensible flux (positive upward) [W/m/m]  {sensibleHeat}  2D
   iof_hydro(7) = 0 !latent heat flux (positive upward) [W/m/m] {latentHeat}  2D
   iof_hydro(8) = 0 !upward longwave radiation (positive upward) [W/m/m] {upwardLongwave}  2D

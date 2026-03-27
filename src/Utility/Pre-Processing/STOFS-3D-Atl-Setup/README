@@ -1,0 +1,63 @@
+# STOFS-3D Setup Scripts
+
+This repository provides setup scripts for **compound flood simulations**, including **STOFS-3D-Atlantic**.
+It implements a configuration-driven workflow for preparing, running, and managing STOFS-3D model experiments.
+
+This repository **supersedes** `STOFS-3D-Atl-shadow-VIMS`. While the older repository is retained for continuity, **only this repository is actively developed** and receives new features and updates.
+
+---
+
+## Repository structure
+
+```
+configs/                  Case-specific YAML configuration files
+src/
+└── stofs3d_setup/
+    ├── config/            Configuration schema and validation
+    ├── core/              Core setup logic
+    ├── ops/               File generation and operational utilities
+    ├── recipes/           High-level setup workflows (recipes)
+    ├── utils/             Shared helper functions
+    └── __init__.py
+make_inputs.py             Convenience entry script
+pyproject.toml             Package metadata
+```
+
+---
+
+## Configuration files (`configs/`)
+
+Each YAML file in `configs/` defines a **single setup case** and maps to a recipe under
+`src/stofs3d_setup/recipes/`.
+
+A configuration typically specifies:
+- the recipe to use (`profile:`),
+- model parameters (e.g., `rnday`, `startdate`, `version`),
+- paths to mesh, project, and scratch directories,
+- switches controlling which inputs are generated.
+
+---
+
+## Running a case
+
+### Command line
+From the repository root:
+```bash
+stofs3d-setup run --config configs/la_v8_2024_reforecast.yml
+```
+
+### Python
+```python
+from stofs3d_setup.config.schema import Settings
+from stofs3d_setup.recipes.la_subdomain import build
+
+cfg = Settings.from_yaml("configs/la_v8_2024_reforecast.yml")
+build(cfg)
+```
+
+---
+
+## Notes
+
+- Users familiar with `STOFS-3D-Atl-shadow-VIMS` will find the functionality largely similar, with improved organization and modularity.
+- New development should target **this repository only**.

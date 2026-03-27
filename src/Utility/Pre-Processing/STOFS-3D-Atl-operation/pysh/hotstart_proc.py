@@ -1,4 +1,4 @@
-from pylib import zdata, schism_grid, schism_vgrid, WriteNC, inside_polygon  # from ZG's pylib: pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pylibs4schism==0.1.10
+from pylib import zdata, schism_grid, schism_vgrid, WriteNC, inside_polygon  # from ZG's pylib: https://github.com/wzhengui/pylibs/tree/master#
 from scipy import spatial
 from scipy.interpolate import griddata
 from scipy.sparse import csc_matrix
@@ -45,7 +45,7 @@ class Hotstart():
             If str, the directory containing hgrid.gr3 and vgrid.in files
             If dict, it should contain keys 'np', 'ne', 'ns', 'nvrt' representing the grid dimensions,
              e.g., {'np': 4, 'ne': 2, 'ns': 5, 'nvrt': 4}.
-        
+
         ntracers: int, number of tracers (default is 2).
 
         hot_file: str or None

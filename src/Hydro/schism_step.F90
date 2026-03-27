@@ -529,17 +529,37 @@
 !$OMP end parallel
 
       if(nws==4) then !include USE_ATMOS
+
+#ifdef USE_ATMOS
+        !ESMF not extended to ghosts
+        !ESMF only update '2' (at the current time)
+        call exchange_p2d(windx2)
+        call exchange_p2d(windy2)
+        call exchange_p2d(pr2)
+        call exchange_p2d(airt2) !centigrade
+        call exchange_p2d(shum2)
+        call exchange_p2d(srad)
+        call exchange_p2d(hradd)
+#ifdef PREC_EVAP
+        call exchange_p2d(fluxprc)
+        call exchange_p2d(prec_snow)
+#endif 
+        do i=1,npa
+          !ESMF only update within range np NOT npa by ele-itp, therefore some airt2 are still init value (C)
+          if (airt2(i)>100.d0) airt2(i)=airt2(i)-273.15d0 !Conv K to C, ESMF send with unit K
+        enddo !i
+
+        !Update wind and pres at current time
+        windx=windx2
+        windy=windy2
+        pr=pr2
+#endif /*USE_ATMOS*/
+
         if(time>wtime2) then
 !...      Heat budget & wind stresses
           if(ihconsv/=0) then
             !Assume all vars in sflux*.nc are available from atmos model or read in from atmos.nc,
             !and this routine compute other fluxes
-#ifdef USE_ATMOS
-            do i=1,npa
-               !ESMF only update within range np NOT npa by ele-itp, therefore some airt2 are still init value (C)
-               if (airt2(i)>100.d0) airt2(i)=airt2(i)-273.15d0 !Conv K to C, ESMF send with unit K
-            end do
-#endif
             call surf_fluxes2 (wtime2,windx2,windy2,pr2,airt2, &
      &shum2,srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
 #ifdef PREC_EVAP
@@ -582,6 +602,7 @@
             if(myrank==0) write(16,*)'heat budge model completes...'
           endif !ihconsv.ne.0
 
+#ifndef USE_ATMOS
           wtime1=wtime2
           wtime2=wtime2+wtiminc
           windx1=windx2
@@ -591,7 +612,6 @@
           shum1=shum2
 
           !Read in next record
-#ifndef USE_ATMOS
           itmp2=wtime2/wtiminc+1
           if(myrank==0) then
             j=nf90_inq_varid(ncid_atmos, "uwind",mm)
@@ -658,24 +678,11 @@
               endif !isconsv/
             endif !ipgl
           enddo !i
-#endif /*USE_ATMOS*/
+#endif /*not USE_ATMOS*/
 
-#ifdef USE_ATMOS
-          !ESMF may not extend to ghosts
-          call exchange_p2d(windx2)
-          call exchange_p2d(windy2)
-          call exchange_p2d(pr2)
-          call exchange_p2d(airt2) !centigrade
-          call exchange_p2d(shum2)
-          call exchange_p2d(srad)
-          call exchange_p2d(hradd)
-#ifdef PREC_EVAP
-          call exchange_p2d(fluxprc)
-          call exchange_p2d(prec_snow)
-#endif 
-#endif /*USE_ATMOS*/
         endif !time>wtime2
 
+#ifndef USE_ATMOS
         wtratio=(time-wtime1)/wtiminc
 !$OMP parallel do default(shared) private(i)
         do i=1,npa
@@ -684,7 +691,16 @@
           pr(i)=pr1(i)+wtratio*(pr2(i)-pr1(i))
         enddo !i
 !$OMP end parallel do
+#endif /*not USE_ATMOS*/
 
+#ifdef USE_CICE
+        do i=1,npa
+          fluxprc_ocn(i) = fluxprc(i)
+          fluxevp_ocn(i) = fluxevp(i)
+          sflux_ocn(i)   = sflux(i)
+          srad_ocn(i)    = srad(i)
+        enddo
+#endif /*USE_CICE*/
       endif !nws=4
 
 #ifdef USE_SIMPLE_WIND
@@ -987,6 +1003,104 @@
       endif !icou_elfe_wwm
 #endif
 !$OMP end parallel
+
+!$OMP   do
+
+
+#ifdef USE_CICE
+  !>--------------------------------------------------------
+  !>              Imported values from CICE
+  !>         CICE-UFS coupling importing variables
+  !>--------------------------------------------------------
+  
+  !>--------------------------------------------------------
+  !>  Boundary points zeroing out fluxes that might effect
+  !>--------------------------------------------------------
+
+  do i = 1,np
+      if((isbnd(1,i)>0))  then
+        tau_oi(1,i) = real(0)
+        tau_oi(2,i) = real(0)
+        fresh_wa_flux(i)=real(0)
+        salinity_flux(i)= real(0)
+      endif
+  enddo 
+
+  !>--------------------------------------------------------
+  !> updating ghost region for incoming variables from CICE
+  !>--------------------------------------------------------
+ 
+  call exchange_p2d(aice)
+  call exchange_p2d(CdnIO)
+  !call exchange_p2d(tau_oi)
+  call exchange_p2d(uvice)
+  call exchange_p2d(vvice)
+  call exchange_p2d(fresh_wa_flux)
+  call exchange_p2d(srad_th_ice)
+  call exchange_p2d(net_heat_flux)
+
+  swild(1:npa)=tau_oi(1,:)
+  call exchange_p2d(swild)
+  tau_oi(1,:)=swild(1:npa)
+  swild(1:npa)=tau_oi(2,:)
+  call exchange_p2d(swild)
+  tau_oi(2,:)=swild(1:npa)
+
+  do i = 1,npa
+    if (aice(i) > real(1e-8)) then
+      !>-------------------------------------------------
+      !> Ice ocean stress
+      !> tau_oi is in units of [N/m/m] (1=x, 2=y)
+      !>-------------------------------------------------
+
+        tau(1,i)   = (1-aice(i))*tau(1,i) + aice(i)*(tau_oi(1,i)/real(1025.0)) 
+        tau(2,i)   = (1-aice(i))*tau(2,i) + aice(i)*(tau_oi(2,i)/real(1025.0))
+     
+      !>-------------------------------------------------
+      !> Fresh water flux 
+      !> fresh_wa_fluxs is in units of [kg/s/m/m]
+      !> Salinity flux is incoded as eq fresh water flux [kg/s/m/m]
+      !>-------------------------------------------------
+        
+        fluxprc(i) = (1-aice(i))*fluxprc_ocn(i) + aice(i)*(fresh_wa_flux(i)+salinity_flux(i)) !*real(0.5)
+      
+      !>-------------------------------------------------
+      !> Scaling the evaporation flux to account for ice
+      !> This is done to keep consistent with fluxprcp
+      !>-------------------------------------------------
+       
+       fluxevp(i) = (1-aice(i))*fluxevp_ocn(i)      
+
+      !>-------------------------------------------------
+      !>Heat flux ice to ocean  (multiplied by aice)
+      !> net_heat_flux is in units of [W/m/m]
+      !>-------------------------------------------------
+
+        sflux(i)   =  (1-aice(i))*sflux_ocn(i)  + aice(i)*net_heat_flux(i)
+
+      !>-------------------------------------------------
+      !>Short-wave pen. flux 
+      !>srad_th_ice is in units of [W/m/m]
+      !>------------------------------------------------
+         
+         srad(i)   =   (1-aice(i))*srad_ocn(i) + aice(i)*srad_th_ice(i)
+
+        if(idry(i)==1) then
+          fluxprc(i)=0;
+          sflux(i)=0;
+          fluxevp(i)=0;
+          srad(i)=0;
+          tau(1,i)=0;
+          tau(2,i)=0;
+        endif
+     end if !aice
+  end do
+!$OMP   end do
+
+  !>--------------------------------------------------------
+  !> end CICE import
+  !>--------------------------------------------------------
+#endif /*USE_CICE*/
 
 #ifdef USE_MICE
       !Exchange variables btw hydro and ice:
@@ -1664,7 +1778,7 @@
 !     may require different init. T,S: -9999 (junk) so ambient values will be
 !     used to avoid 'ice rain' (if randrop falls on a source_sink.in elem, vsource will be combined and
 !     values in msource.th will be used. If outside, ambient values are used and
-!     note that evap/precip is handled separately for S outside source method). later
+!     note that evap/precip is handled separately for S outside source method). Later
 !     air T may be used also.
 !     Other tracers: 0 (otherwise additional nutrients from rain will fall onto
 !     water) 
@@ -2476,64 +2590,75 @@
       enddo !i
 !$OMP end do
 
-!     Add vertical variation to veg_alpha and compute vertical mean etc
+!...  Veg
       if(iveg/=0) then
-        if(iveg==1) then !specify vertical variation
-!$OMP     do
-          do i=1,npa
-            if(idry(i)==1) then
-              veg_alpha3D(:,i)=veg_alpha0(i)
-            else !wet
-              do k=kbp(i),nvrt
-                rl10=znl(k,i)-znl(kbp(i),i) !>=0
-                if(rl10>=veg_vert_z(nbins_veg_vert+1)) then
-                  cff1=veg_vert_scale_cd(nbins_veg_vert+1)
-                  cff2=veg_vert_scale_N(nbins_veg_vert+1)
-                  cff3=veg_vert_scale_D(nbins_veg_vert+1)
-                else
-                  ifl=0
-                  do kk=1,nbins_veg_vert
-                    if(rl10>=veg_vert_z(kk).and.rl10<=veg_vert_z(kk+1)) then
-                      zrat=(rl10-veg_vert_z(kk))/(veg_vert_z(kk+1)-veg_vert_z(kk))
-                      ifl=kk
-                      exit
-                    endif !znl
-                  enddo !kk
-                  if(ifl==0) then
-                    write(errmsg,*)'STEP: veg vert failed,',veg_vert_z
-                    call parallel_abort(errmsg) 
-                  endif
-                  cff1=veg_vert_scale_cd(ifl)*(1.d0-zrat)+veg_vert_scale_cd(ifl+1)*zrat
-                  cff2=veg_vert_scale_N(ifl)*(1.d0-zrat)+veg_vert_scale_N(ifl+1)*zrat
-                  cff3=veg_vert_scale_D(ifl)*(1.d0-zrat)+veg_vert_scale_D(ifl+1)*zrat
-                endif !rl10
-  
-                veg_alpha3D(k,i)=veg_alpha0(i)*cff1*cff2*cff3
-              enddo !k
-            endif !idry
-          enddo !i=1,npa
-!$OMP     end do
+        !Init veg_alpha3D
+!$OMP   do
+        do i=1,npa
+          veg_alpha3D(:,i)=veg_alpha0(i)
+        enddo !i
+!$OMP end do
 
-        else !Ganthy (iveg=2)
+        if(iveg>=2) then !Ganthy's flex stem option
           !Modify canopy height, diameter, and density
 !$OMP     do
           do i=1,npa
             !Make sure there is veg on this node
             if(veg_h_unbent(i)>0.d0) then
-              wtmp2=sqrt(dav(1,i)**2.d0+dav(2,i)**2.d0)*100.d0 !cm/s
-              veg_h(i)=0.72d-2*(4.657d0-0.158d0*wtmp2+0.262d0*veg_lai-0.011d0*veg_lai*wtmp2+ &
-     &0.0022d0*wtmp2*wtmp2+0.048d0*veg_lai*veg_lai)-0.00784d0
+              wtmp2=sqrt(dav(1,i)**2.d0+dav(2,i)**2.d0)
+              veg_h(i)=veg_h_unbent(i)*exp(-veg_cw*wtmp2) 
+!0.72d-2*(4.657d0-0.158d0*wtmp2+0.262d0*veg_lai-0.011d0*veg_lai*wtmp2+ &
+!     &0.0022d0*wtmp2*wtmp2+0.048d0*veg_lai*veg_lai)-0.00784d0
               veg_h(i)=max(veg_h(i),1.d-2) !impose min of 1cm
+              veg_di(i)=veg_di_unbent(i)*veg_h_unbent(i)/veg_h(i)
+              veg_nv(i)=veg_nv_unbent(i)*veg_h_unbent(i)/veg_h(i)
 
-              wtmp2=veg_cw*veg_di_unbent(i)*veg_h_unbent(i)/veg_h(i) !\phi_b
-              veg_di(i)=(veg_di_unbent(i)+wtmp2)*0.5d0
-              wtmp2=max(0.d0,veg_h_unbent(i)-veg_h(i)) !surplus height
-              veg_nv(i)=veg_nv_unbent(i)*(1.d0+wtmp2/veg_h(i))
+!              wtmp2=veg_cw*veg_di_unbent(i)*veg_h_unbent(i)/veg_h(i) !\phi_b
+!              veg_di(i)=(veg_di_unbent(i)+wtmp2)*0.5d0
+!              wtmp2=max(0.d0,veg_h_unbent(i)-veg_h(i)) !surplus height
+!              veg_nv(i)=veg_nv_unbent(i)*(1.d0+wtmp2/veg_h(i))
             endif !veg_h_unbent
             veg_alpha3D(:,i)=0.5d0*veg_di(i)*veg_nv(i)*veg_cd(i)
           enddo !i
 !$OMP     end do
-        endif !iveg
+        endif !iveg>=2
+
+!       Add vertical variation to veg_alpha and compute vertical mean 
+!$OMP   do
+        do i=1,npa
+          if(idry(i)==1) then
+            veg_alpha3D(:,i)=veg_alpha0(i)
+          else !wet
+            do k=kbp(i),nvrt
+              rl10=znl(k,i)-znl(kbp(i),i) !>=0
+              if(rl10>=veg_vert_z(nbins_veg_vert+1)) then
+                cff1=veg_vert_scale_cd(nbins_veg_vert+1)
+                cff2=veg_vert_scale_N(nbins_veg_vert+1)
+                cff3=veg_vert_scale_D(nbins_veg_vert+1)
+              else
+                ifl=0
+                do kk=1,nbins_veg_vert
+                  if(rl10>=veg_vert_z(kk).and.rl10<=veg_vert_z(kk+1)) then
+                    zrat=(rl10-veg_vert_z(kk))/(veg_vert_z(kk+1)-veg_vert_z(kk))
+                    ifl=kk
+                    exit
+                  endif !znl
+                enddo !kk
+                if(ifl==0) then
+                  write(errmsg,*)'STEP: veg vert failed,',veg_vert_z
+                  call parallel_abort(errmsg) 
+                endif
+                cff1=veg_vert_scale_cd(ifl)*(1.d0-zrat)+veg_vert_scale_cd(ifl+1)*zrat
+                cff2=veg_vert_scale_N(ifl)*(1.d0-zrat)+veg_vert_scale_N(ifl+1)*zrat
+                cff3=veg_vert_scale_D(ifl)*(1.d0-zrat)+veg_vert_scale_D(ifl+1)*zrat
+              endif !rl10
+  
+              !veg_alpha3D(k,i)=veg_alpha0(i)*cff1*cff2*cff3
+              veg_alpha3D(k,i)=veg_alpha3D(k,i)*cff1*cff2*cff3
+            enddo !k
+          endif !idry
+        enddo !i=1,npa
+!$OMP   end do
   
         !Compute mean
 !$OMP   do
@@ -7386,7 +7511,11 @@
             if(iref_ts/=0) then
               tmp=sum(ref_ts(elnode(1:i34(i),i),2))/real(i34(i),rkind)
               if(tmp>0.d0) then
-                tmp2=max(0.d0,min(1.d0,(dpe(i)-ref_ts_h2)/(ref_ts_h1-ref_ts_h2)))
+                if(iref_ts==1) then
+                  tmp2=max(0.d0,min(1.d0,(dpe(i)-ref_ts_h2)/(ref_ts_h1-ref_ts_h2)))
+                else !=2
+                  tmp2=sum(ref_ts_scale(elnode(1:i34(i),i)))/real(i34(i),rkind) !\in [0,1]
+                endif !iref_ts
                 flx_sf(2,i)=flx_sf(2,i)+ref_ts_restore_depth/ref_ts_tscale/86400.d0*tmp2* &
                         &(tmp-tr_el(2,nvrt,i))
               endif !tmp>
@@ -7415,7 +7544,12 @@
             if(iref_ts/=0) then
               tmp=sum(ref_ts(elnode(1:i34(i),i),1))/real(i34(i),rkind)
               if(tmp>-99.d0) then
-                tmp2=max(0.d0,min(1.d0,(dpe(i)-ref_ts_h2)/(ref_ts_h1-ref_ts_h2)))
+                if(iref_ts==1) then
+                  tmp2=max(0.d0,min(1.d0,(dpe(i)-ref_ts_h2)/(ref_ts_h1-ref_ts_h2)))
+                else !=2
+                  tmp2=sum(ref_ts_scale(elnode(1:i34(i),i)))/real(i34(i),rkind) !\in [0,1]
+                endif !iref_ts
+
                 flx_sf(1,i)=flx_sf(1,i)+ref_ts_restore_depth/ref_ts_tscale/86400.d0*tmp2* &
                         &(tmp-tr_el(1,nvrt,i))
               endif !tmp>
@@ -7852,7 +7986,7 @@
 
             if(ze(nvrt,i)-ze(kbe(i),i)<hmin_airsea_ex.and.(nws==2.or.nws==4)) then !shallow wet
               tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
-              tr_el(1,:,i)=tr_el(1,:,i)*(1-relax_2_airt)+tmp2*relax_2_airt
+              tr_el(1,:,i)=max(tempmin,min(tempmax,tr_el(1,:,i)*(1-relax_2_airt)+tmp2*relax_2_airt))
             endif !shallow
           enddo !i
 !$OMP     enddo
@@ -8245,6 +8379,7 @@
 !$OMP end master
 
       !Set Cd etc for marsh and also drowned marsh
+      !These may be overwritten by veg algo
 !$OMP workshare
       veg_di=0.d0; veg_h=0.d0; veg_nv=0.d0; veg_alpha0=0.d0
 !$OMP end workshare
@@ -9634,7 +9769,6 @@
             endif
           endif !iof
         enddo !i
-        call io_icepack(noutput)
 #endif /*USE_MICE*/
 
         !Check total # of vars

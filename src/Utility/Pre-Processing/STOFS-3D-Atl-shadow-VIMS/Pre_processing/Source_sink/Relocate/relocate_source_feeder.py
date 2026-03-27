@@ -14,10 +14,8 @@ import json
 import numpy as np
 from scipy import spatial
 
-from pylib import schism_grid
+from pylib import schism_grid, inside_polygon, schism_bpfile
 from pylib_experimental.schism_file import source_sink, TimeHistory
-from pylib_essentials.schism_file import schism_bpfile
-from pylib_essentials.utility_functions import inside_polygon
 
 # Global Var
 # [About the mandatory_sources_coor array]
@@ -361,7 +359,7 @@ def relocate_sources2(
             This is used to restrict the relocation to specific regions.
 
     outputs:
-        sources.json, sinks.json
+        sources.json, sinks.json based on the new hgrid (main hgrid)
     """
 
     if (not allow_neglection) and region_list is not None:

@@ -734,6 +734,14 @@
   irouse_test = 0
 
 !-----------------------------------------------------------------------
+! Fraction of vertical flux closure adjustment applied at surface, then subtracted
+! from all vertical fluxes. This is currently done for T,S only
+! 0.0 <= vclose_surf_frac < 1.0
+! 1: fully from surface (i.e. no correction as before); 0: fully from bottom
+!-----------------------------------------------------------------------
+  vclose_surf_frac=1.0
+
+!-----------------------------------------------------------------------
 ! Flag to choose FIB model for bacteria decay (used with USE_FIB)
 ! flag_fib = 1 - Constant decay rate (/day) in .gr3 format
 !                (kkfib_1.gr3 and kkfib_2.gr3)
@@ -888,7 +896,7 @@
   iof_hydro(22) = 0 !vertical eddy viscosity [m^2/s] {viscosity}  3D
   iof_hydro(23) = 0 !turbulent kinetic energy {turbulentKineticEner}   3D
   iof_hydro(24) = 0 !turbulent mixing length [m] {mixingLength}  3D
-!  iof_hydro(25) = 1 !z-coord {zCoordinates} 3D - this flag should be on for visIT etc
+  iof_hydro(25) = 1 !z-coord {zCoordinates} 3D - this flag should be on for visIT etc
   iof_hydro(26) = 1 !horizontal vel vector [m/s] {horizontalVelX,Y} 3D vector
   iof_hydro(27) = 0 !horizontal vel vector defined @side [m/s] {horizontalSideVelX,Y} 3D vector
   iof_hydro(28) = 0 !vertical vel. @elem [m/s] {verticalVelAtElement} 3D
