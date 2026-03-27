@@ -6723,7 +6723,8 @@
         real(rkind), intent(out) :: self(i1:i2, j1:j2)
   
         ! Local parameters
-        real(rkind), parameter :: Me = 5.9726e24, R = 6371e3, g = 9.81, pi = 4.0 * atan(1.0), rhow = 1.0240164e3, rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
+        real(rkind), parameter :: Me = 5.9726e24, R = 6371e3, g = 9.81, pi = 4.0 * atan(1.0) &
+     &                          , rhow = 1.0240164e3, rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
         integer :: nlat, nlon, lsave
         integer :: i, j, ierror, isym, nt, l, mdab, ndab, k1
         real(rkind), dimension(:), allocatable :: llnh, llnk
