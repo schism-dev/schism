@@ -141,6 +141,7 @@ if (BLD_STANDALONE)
     set(NetCDF_FORTRAN_DIR $ENV{NETCDF_FORTRAN_DIR})
   endif()
   
+  message(STATUS "going to find_package(NetCDF ${comp_lang_list}")
   find_package(NetCDF REQUIRED COMPONENTS ${comp_lang_list})
   if(NetCDF_NEEDS_HDF5)
     set( HDF5_USE_STATIC_LIBRARIES 1 )
@@ -152,10 +153,14 @@ if (BLD_STANDALONE)
     if(HDF5_FOUND)
       message(STATUS "HDF5 found")
     endif(HDF5_FOUND)
+  else(NetCDF_NEEDS_HDF5)
+    message(STATUS "HDF5 not needed")
   endif(NetCDF_NEEDS_HDF5)
   include_directories( ${NetCDF_INCLUDE_DIRS} )
 
   set (NetCDFLIBS ${NetCDF_LIBRARIES} ${HDF_LIB_NAMES})
+  message(STATUS "NetCDF found: ${NetCDF_LIBRARIES} | ${NetCDF_INCLUDE_DIRS}")
+
 endif()
 
 # this might help to use old or pre-compiled GOTM versions:

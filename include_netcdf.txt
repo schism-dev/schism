@@ -1,0 +1,184 @@
+docs/modules/fabm.md:47: 3. **write specific output** The routine `fabm_schism_write_output_netcdf` is called for the output timesteps. The diagnostic variables to be written are collected before, which includes temporal averaging, if required. This step can be merged into the SCHISM output infrastructure.
+docs/input-output/sflux.md:1:The `sflux/` dir is required if `nws=2`. In this case, atmoserpic forcings include wind, air pressure and temperature, precipitation, humidity and longwave and shortwave fluxes. These are specified in the netcdf files inside `sflux/` dir, and conform to the NetCDF Climate and Forecast (CF) Metadata Convention 1.0.
+
+src/CMakeLists.txt:156:  include_directories( ${NetCDF_INCLUDE_DIRS} )
+src/Hydro/sflux_9c.F90:2058:!        include 'netcdf.inc'
+src/Hydro/sflux_9c.F90:2221:!        include 'netcdf.inc'
+src/Hydro/sflux_9c.F90:2351:!        include 'netcdf.inc'
+src/Hydro/sflux_9c.F90:2417:!        include 'netcdf.inc'
+src/Hydro/sflux_9c.F90:2468:!        include 'netcdf.inc'
+
+src/Core/schism_io.F90:32:!    include 'netcdf.inc'
+src/gfortran_notes:56:  CDFMOD = -I/home/kyle/selfe/modified/V3.1d/netcdf/include # modules for netcdf
+src/gfortran_notes:74:  CDFMOD = -I/usr/include # modules for netcdf
+src/gfortran_notes:111:  CDFMOD = -I/home/kyle/selfe/modified/V3.1d/netcdf/include # modules for netcdf
+cmake/README:71:* If you set the environment variable NETCDF_DIR (all caps) or put it in /usr/lib /usr/include detection is automatic. 
+cmake/README:83:If you use a Linux "environment module" system, the XXX_DIR etc may be automatically set (just watch out for case). Alternatively, the libraries should be found if they are in system lib and include directories as well (e.g. /usr/lib). Finally, XXX_DIR is not the only environment variable that can be used as a hint to cmake. You can also set up pointers to the libraries and includes individually. See the file FindNetCDF.cmake for examples ... but the easiest way is just NetCDF_DIR.
+cmake/SCHISM.local.stampede2:10:set(NetCDF_INCLUDE_DIR "$ENV{TACC_NETCDF_INC}" CACHE PATH "Path to NetCDF include")
+cmake/SCHISM.ymir.intel:35:#set(NetCDF_INCLUDE_DIRS /Calcul/Apps/netcdf/fortran-4.2.ifort/include/ CACHE PATH "Path to NetCDF include files")
+cmake/SCHISM.ymir.intel:39:set(NetCDF_INCLUDE_DIR /Calcul/Apps/netcdf/fortran-4.2.ifort/include/ CACHE PATH "Path to NetCDF include files")
+
+cmake/modules/FindNetCDF.cmake:12:#     * Find NetCDF C/C++/Fortran libraries and include files in a basic
+cmake/modules/FindNetCDF.cmake:25:# Try to find NetCDF includes and library.
+cmake/modules/FindNetCDF.cmake:31:#   - NetCDF_INCLUDE_DIRS         - the NetCDF include directories
+cmake/modules/FindNetCDF.cmake:52:#   - NetCDF_<comp>_INCLUDE_DIRS  - the include directories for specified component
+cmake/modules/FindNetCDF.cmake:60:# The search process begins with locating NetCDF Include headers.  If these are in a non-standard location,
+cmake/modules/FindNetCDF.cmake:63:#  - NetCDF_INCLUDE_DIR or NetCDF_${comp}_INCLUDE_DIR
+cmake/modules/FindNetCDF.cmake:64:#  - NetCDF_INCLUDE_DIRS or NetCDF_${comp}_INCLUDE_DIR
+cmake/modules/FindNetCDF.cmake:84:set( NetCDF_C_INCLUDE_NAME          netcdf.h )
+cmake/modules/FindNetCDF.cmake:85:set( NetCDF_CXX_INCLUDE_NAME        netcdf )
+cmake/modules/FindNetCDF.cmake:86:set( NetCDF_Fortran_INCLUDE_NAME    netcdf.mod )
+cmake/modules/FindNetCDF.cmake:131:set(NetCDF_INCLUDE_DIRS)
+cmake/modules/FindNetCDF.cmake:137:  find_file(NetCDF_${_comp}_INCLUDE_FILE
+cmake/modules/FindNetCDF.cmake:138:    NAMES ${NetCDF_${_comp}_INCLUDE_NAME}
+cmake/modules/FindNetCDF.cmake:139:    DOC "NetCDF ${_comp} include directory"
+cmake/modules/FindNetCDF.cmake:141:    PATH_SUFFIXES include include/netcdf
+cmake/modules/FindNetCDF.cmake:143:  mark_as_advanced(NetCDF_${_comp}_INCLUDE_FILE)
+cmake/modules/FindNetCDF.cmake:144:  message(DEBUG "NetCDF_${_comp}_INCLUDE_FILE: ${NetCDF_${_comp}_INCLUDE_FILE}")
+cmake/modules/FindNetCDF.cmake:145:  if( NetCDF_${_comp}_INCLUDE_FILE )
+cmake/modules/FindNetCDF.cmake:146:    get_filename_component(NetCDF_${_comp}_INCLUDE_FILE ${NetCDF_${_comp}_INCLUDE_FILE} ABSOLUTE)
+cmake/modules/FindNetCDF.cmake:147:    get_filename_component(NetCDF_${_comp}_INCLUDE_DIR ${NetCDF_${_comp}_INCLUDE_FILE} DIRECTORY)
+cmake/modules/FindNetCDF.cmake:148:    list(APPEND NetCDF_INCLUDE_DIRS ${NetCDF_${_comp}_INCLUDE_DIR})
+cmake/modules/FindNetCDF.cmake:151:if(NetCDF_INCLUDE_DIRS)
+cmake/modules/FindNetCDF.cmake:152:    list(REMOVE_DUPLICATES NetCDF_INCLUDE_DIRS)
+cmake/modules/FindNetCDF.cmake:154:set(NetCDF_INCLUDE_DIRS "${NetCDF_INCLUDE_DIRS}" CACHE STRING "NetCDF Include directory paths" FORCE)
+cmake/modules/FindNetCDF.cmake:168:    HINTS ${NetCDF_INCLUDE_DIRS} ${_include_search_hints} ${_search_hints}
+cmake/modules/FindNetCDF.cmake:215:    HINTS ${NetCDF_${_comp}_INCLUDE_DIRS} ${_search_hints}
+cmake/modules/FindNetCDF.cmake:248:  netcdf_config( ${NetCDF_${_comp}_CONFIG_EXECUTABLE} ${_${_comp}_includes_flag} _val )
+cmake/modules/FindNetCDF.cmake:251:    set( NetCDF_${_comp}_INCLUDE_DIRS ${_val} )
+cmake/modules/FindNetCDF.cmake:253:    set( NetCDF_${_comp}_INCLUDE_DIRS ${NetCDF_${_comp}_INCLUDE_DIR} )
+cmake/modules/FindNetCDF.cmake:256:    list( APPEND NetCDF_INCLUDE_DIRS  ${NetCDF_${_comp}_INCLUDE_DIRS} )
+cmake/modules/FindNetCDF.cmake:259:  if( NetCDF_${_comp}_LIBRARIES AND NetCDF_${_comp}_INCLUDE_DIRS )
+cmake/modules/FindNetCDF.cmake:265:        INTERFACE_INCLUDE_DIRECTORIES "${NetCDF_${_comp}_INCLUDE_DIRS}"
+cmake/modules/FindNetCDF.cmake:277:## Remove duplicate entries (if any) from NetCDF_INCLUDE_DIRS and NetCDF_LIBRARIES
+cmake/modules/FindNetCDF.cmake:278:if(NetCDF_INCLUDE_DIRS)
+cmake/modules/FindNetCDF.cmake:279:  list(REMOVE_DUPLICATES NetCDF_INCLUDE_DIRS)
+cmake/modules/FindNetCDF.cmake:284:set(NetCDF_INCLUDE_DIRS "${NetCDF_INCLUDE_DIRS}" CACHE STRING "NetCDF include targets" FORCE)
+cmake/modules/FindNetCDF.cmake:288:if (NetCDF_INCLUDE_DIRS)
+cmake/modules/FindNetCDF.cmake:295:    foreach( _dir IN LISTS NetCDF_INCLUDE_DIRS)
+cmake/modules/FindNetCDF.cmake:319:        REQUIRED_VARS NetCDF_INCLUDE_DIRS NetCDF_LIBRARIES
+cmake/modules/FindNetCDF.cmake:341:      get_filename_component(_root ${NetCDF_${_comp}_INCLUDE_DIR}/.. ABSOLUTE)
+cmake/modules/FindNetCDF.cmake:352:  set( ${_prefix}_INCLUDE_DIRS ${NetCDF_INCLUDE_DIRS} )
+cmake/modules/FindNetCDF.cmake:370:    set( ${_prefix}_${_comp}_INCLUDE_DIRS     ${NetCDF_${_comp}_INCLUDE_DIRS} )
+cmake/modules/FindNetCDF.cmake:371:    set( ${_prefix}_${_COMP}_INCLUDE_DIRS     ${NetCDF_${_comp}_INCLUDE_DIRS} )
+cmake/modules/FindNetCDF.cmake:372:    set( ${_prefix}_${_arg_comp}_INCLUDE_DIRS ${NetCDF_${_comp}_INCLUDE_DIRS} )
+cmake/modules/FindNetCDF.cmake.0:15:#    NetCDF_INCLUDE_DIR      (PATH)       Path to the NetCDF include file
+cmake/modules/FindNetCDF.cmake.0:16:#    NetCDF_INCLUDE_DIRS     (LIST)       List of all required include files
+cmake/modules/FindNetCDF.cmake.0:40:if ( NetCDF_LIBRARIES AND NetCDF_INCLUDE_DIRS )
+cmake/modules/FindNetCDF.cmake.0:43:else(NetCDF_LIBRARIES AND NetCDF_INCLUDE_DIRS)
+cmake/modules/FindNetCDF.cmake.0:47:        set(NetCDF_DIR "${NetCDF_DIR}" CACHE PATH "Path to search for NetCDF include and library files")
+cmake/modules/FindNetCDF.cmake.0:50:    if(NetCDF_INCLUDE_DIR)
+cmake/modules/FindNetCDF.cmake.0:51:        set(NetCDF_INCLUDE_DIR "${NetCDF_INCLUDE_DIR}" CACHE PATH "Path to search for NetCDF include files")
+cmake/modules/FindNetCDF.cmake.0:61:    #  (1) NetCDF_INCLUDE_DIR - check existence of path AND if the include files exist
+cmake/modules/FindNetCDF.cmake.0:62:    #  (2) NetCDF_DIR/<include>
+cmake/modules/FindNetCDF.cmake.0:66:    if (NetCDF_INCLUDE_DIR)
+cmake/modules/FindNetCDF.cmake.0:68:        if (EXISTS "${NetCDF_INCLUDE_DIR}")
+cmake/modules/FindNetCDF.cmake.0:72:                      HINTS ${NetCDF_INCLUDE_DIR}
+cmake/modules/FindNetCDF.cmake.0:75:                message(SEND_ERROR "Can not locate ${netcdf_inc_names} in ${NetCDF_INCLUDE_DIR}")
+cmake/modules/FindNetCDF.cmake.0:77:            set(NetCDF_INCLUDE_DIR "${cdf_test_include_path}")
+cmake/modules/FindNetCDF.cmake.0:80:            message(SEND_ERROR "NetCDF_INCLUDE_DIR=${NetCDF_INCLUDE_DIR} does not exist")
+cmake/modules/FindNetCDF.cmake.0:81:            set(NetCDF_INCLUDE_DIR "NetCDF_INCLUDE_DIR-NOTFOUND")
+cmake/modules/FindNetCDF.cmake.0:86:        set(netcdf_inc_suffixes "include")
+cmake/modules/FindNetCDF.cmake.0:91:                find_path(NetCDF_INCLUDE_DIR
+cmake/modules/FindNetCDF.cmake.0:99:                 set(NetCDF_INCLUDE_DIR "NetCDF_INCLUDE_DIR-NOTFOUND")
+cmake/modules/FindNetCDF.cmake.0:107:                find_path(NetCDF_INCLUDE_DIR
+cmake/modules/FindNetCDF.cmake.0:115:                 set(NetCDF_INCLUDE_DIR "NetCDF_INCLUDE_DIR-NOTFOUND")
+cmake/modules/FindNetCDF.cmake.0:120:            find_path(NetCDF_INCLUDE_DIR
+cmake/modules/FindNetCDF.cmake.0:129:    if ( NOT NetCDF_INCLUDE_DIR )
+cmake/modules/FindNetCDF.cmake.0:130:        message(SEND_ERROR "Can not locate NetCDF include directory")
+cmake/modules/FindNetCDF.cmake.0:134:    if ( NetCDF_INCLUDE_DIR ) 
+cmake/modules/FindNetCDF.cmake.0:136:        set(netcdf_h "${NetCDF_INCLUDE_DIR}/netcdf.inc" )
+cmake/modules/FindNetCDF.cmake.0:137:        message(STATUS "NetCDF include file ${netcdf_h} will be searched for define values")
+cmake/modules/FindNetCDF.cmake.0:165:    #  (1) NetCDF_LIBRARY_DIR - check existence of path AND if the include files exist
+cmake/modules/FindNetCDF.cmake.0:279:    set(NetCDF_INCLUDE_DIRS ${NetCDF_INCLUDE_DIR})
+cmake/modules/FindNetCDF.cmake.0:333:endif(NetCDF_LIBRARIES AND NetCDF_INCLUDE_DIRS )    
+cmake/modules/FindNetCDF.cmake.0:338:                                           NetCDF_INCLUDE_DIRS)
+cmake/modules/FindNetCDF.cmake.0:341:if ( NetCDF_LIBRARIES AND NetCDF_INCLUDE_DIRS)
+cmake/modules/FindNetCDF.cmake.0:348:  NetCDF_INCLUDE_DIR
+cmake/modules/FindNetCDF.cmake.0:349:  NetCDF_INCLUDE_DIRS
+
+cmake/SCHISM.local.stampede3:10:set(NetCDF_INCLUDE_DIR "$ENV{TACC_NETCDF_INC}" CACHE PATH "Path to NetCDF include")
+cmake/Hydro/CMakeFiles/hydro.dir/depend.make:55:	$(CMAKE_COMMAND) -E cmake_copy_f90_mod include/netcdf_io.mod Hydro/CMakeFiles/hydro.dir/netcdf_io.mod.stamp GNU
+cmake/Hydro/CMakeFiles/hydro.dir/cmake_clean_Fortran.cmake:3:  "../include/netcdf_io.mod"
+cmake/Hydro/CMakeFiles/hydro.dir/cmake_clean_Fortran.cmake:4:  "../include/NETCDF_IO.mod"
+cmake/SCHISM.local.cmake.win:38:set(NetCDF_INCLUDE_DIR D:/devtools/netCDF432/include CACHE PATH "Path of NetCDF include files")
+cmake/SCHISM.local.cmake.win:41:set(HDF5_C_INCLUDE_DIR D:/devtools/netCDF432/deps/x64/include CACHE PATH "HDF5 include folder")
+cmake/SCHISM.local.cmake.win:42:set(HDF5_INCLUDE_DIRS D:/devtools/netCDF432/deps/x64/include CACHE PATH "HDF5 include folder")
+cmake/SCHISM.local.frontera.hybrid:10:set(NetCDF_INCLUDE_DIR "$ENV{TACC_NETCDF_INC}" CACHE PATH "Path to NetCDF include")
+cmake/CMakeCache.txt:567://NetCDF C include directory
+cmake/CMakeCache.txt:568:NetCDF_C_INCLUDE_FILE:FILEPATH=/usr/include/netcdf.h
+cmake/CMakeCache.txt:582://NetCDF Fortran include directory
+cmake/CMakeCache.txt:583:NetCDF_Fortran_INCLUDE_FILE:FILEPATH=/usr/lib64/gfortran/modules/netcdf.mod
+cmake/CMakeCache.txt:588://NetCDF include targets
+cmake/CMakeCache.txt:589:NetCDF_INCLUDE_DIRS:STRING=/usr/include;/usr/lib64/gfortran/modules
+cmake/CMakeCache.txt:1008:FIND_PACKAGE_MESSAGE_DETAILS_NetCDF:INTERNAL=[/usr/include;/usr/lib64/gfortran/modules][/usr/lib64/libnetcdf.so;/usr/lib64/libnetcdff.so][cfound components: C Fortran ][v4.7.0()]
+cmake/CMakeCache.txt:1091://ADVANCED property for variable: NetCDF_C_INCLUDE_FILE
+cmake/CMakeCache.txt:1092:NetCDF_C_INCLUDE_FILE-ADVANCED:INTERNAL=1
+cmake/CMakeCache.txt:1095://ADVANCED property for variable: NetCDF_Fortran_INCLUDE_FILE
+cmake/CMakeCache.txt:1096:NetCDF_Fortran_INCLUDE_FILE-ADVANCED:INTERNAL=1
+cmake/Utility/Combining_Scripts/CMakeFiles/combine_output11.dir/build.make:88:	cd /home/Wyrwa/SCHISM/schism/cmake/Utility/Combining_Scripts && /usr/lib64/mvapich2-psm2/bin/mpif90 $(Fortran_DEFINES) $(Fortran_INCLUDES) $(Fortran_FLAGS) -c /home/Wyrwa/SCHISM/schism/src/Utility/Combining_Scripts/netcdf_var_names.f90 -o CMakeFiles/combine_output11.dir/netcdf_var_names.f90.o
+cmake/Utility/Combining_Scripts/CMakeFiles/combine_output11.dir/build.make:92:	cd /home/Wyrwa/SCHISM/schism/cmake/Utility/Combining_Scripts && /usr/lib64/mvapich2-psm2/bin/mpif90 $(Fortran_DEFINES) $(Fortran_INCLUDES) $(Fortran_FLAGS) -E /home/Wyrwa/SCHISM/schism/src/Utility/Combining_Scripts/netcdf_var_names.f90 > CMakeFiles/combine_output11.dir/netcdf_var_names.f90.i
+cmake/Utility/Combining_Scripts/CMakeFiles/combine_output11.dir/build.make:96:	cd /home/Wyrwa/SCHISM/schism/cmake/Utility/Combining_Scripts && /usr/lib64/mvapich2-psm2/bin/mpif90 $(Fortran_DEFINES) $(Fortran_INCLUDES) $(Fortran_FLAGS) -S /home/Wyrwa/SCHISM/schism/src/Utility/Combining_Scripts/netcdf_var_names.f90 -o CMakeFiles/combine_output11.dir/netcdf_var_names.f90.s
+cmake/SCHISM.local.frontera:10:set(NetCDF_INCLUDE_DIR "$ENV{TACC_NETCDF_INC}" CACHE PATH "Path to NetCDF include")
+list_mod.txt:1:./cmake/include/netcdf_var_names.mod
+list_mod.txt:14:./cmake/include/netcdf_io.mod
+list_mod.txt:143:./src/GOTM3.2.5/netcdf_include/typesizes.mod
+list_mod.txt:144:./src/GOTM3.2.5/netcdf_include/netcdf.mod
+mk/Make.defs.dkrz.intelmpi:55:CDFMOD = -I/sw/rhel6-x64/netcdf/netcdf_fortran-4.4.2-intel14/include
+mk/Make.defs.JUROPA:53:CDFMOD = -I/usr/local/netcdf/v4.1.1_classic/include #-I$(NETCDF_HOME)/include/ #-I$(NETCDFHOME)/include/
+mk/Make.defs.fedora.gnu.ompi:61:CDFMOD = -I/usr/include/ -I/usr/lib64/gfortran/modules/ # modules for netcdf
+mk/Make.defs.vortex.intel:65:CDFMOD = -I$(NETCDF_C)/include/ -I$(NETCDF_FORTRAN)/include # modules for netcdf
+mk/Make.defs.edison:67:CDFMOD = -I$(NETCDF)/include/ # modules for netcdf
+mk/Make.defs.femto:67:CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include # modules for netcdf
+mk/Make.defs.vortex:71:CDFMOD = -I$(NETCDF)/include # modules for netcdf
+mk/Make.defs.whirlwind.intel:68:CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include # modules for netcdf
+mk/Make.defs.whirlwind.intel:71:#CDFMOD = -I$(NETCDF)/include/ # modules for netcdf
+mk/Make.defs.pleiades_knl:70:CDFMOD = -I/nasa/netcdf/4.4.1_serial/include/ # modules for netcdf
+mk/Make.defs.dan.fx100:54:CDFMOD = -I/package/fx100/netcdf-3.6.3/include # modules for netcdf
+mk/Make.defs.yellowstone:57:CDFMOD = -I/glade/apps/opt/netcdf/4.2/intel/default/include # modules for netcdf
+mk/Make.defs.ubuntu.intel.mpich:68:CDFMOD = -I/usr/include/ # modules for netcdf
+mk/Make.defs.dwr.intel:61:CDFMOD      = -I${NETCDF_FORTRAN_DIR}/include
+mk/Make.defs.ubuntu.gnu.ompi:64:CDFMOD = -I/usr/include/ # modules for netcdf
+mk/Make.defs.bebop:62:CDFMOD = -I/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-18.0.3/netcdf-4.6.1-2gzedijmixtvgaspv2plrlb3yms6svlx/include/ -I/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-18.0.3/netcdf-fortran-4.4.4-nc364y7zbv3mhr3l6bcn6ansthqabu5x/include/
+mk/Make.defs.bebop:64:#CDFMOD = -I/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-17.0.4/netcdf-4.4.1.1-prsuusl3t5bfhbamqgobax2fxzvez6d2/include/ -I/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-17.0.4/netcdf-fortran-4.4.4-ojwazvy6v6rpluveb25gaaachgk6wwuf/include/
+mk/Make.defs.bora:69:CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include # modules for netcdf
+mk/Make.defs.james:62:CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include # modules for netcdf
+mk/Make.defs.james:65:#CDFMOD = -I$(NETCDF)/include # modules for netcdf
+mk/Make.defs.HZG:53:CDFMOD = -I/opt/intel/netcdf-3.6.3/include/ # modules for netcdf
+mk/Make.defs.vortex.gnu:73:CDFMOD = -I$(NETCDF)/include # modules for netcdf
+mk/Make.defs.ches:65:CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include # modules for netcdf
+mk/Make.defs.centos.gnu.ompi:69:CDFMOD = -I/usr/include/ -I/usr/lib64/gfortran/modules/ # modules for netcdf
+mk/Make.defs.ches.gnu:70:CDFMOD = -I$(NETCDF)/include # modules for netcdf
+mk/Make.defs.dkrz.openmpi:55:CDFMOD = -I/sw/rhel6-x64/netcdf/netcdf_fortran-4.4.2-intel14/include
+mk/Make.defs.dan.cluster:54:CDFMOD = -I/opt/netcdf_pgi32/include # modules for netcdf
+mk/Make.defs.centos.gnu.mpi:58:CDFMOD = -I/usr/include/ -I/usr/lib64/gfortran/modules/ # modules for netcdf
+mk/Make.defs.orion:61:CDFMOD = -I$(NETCDF)/include 
+mk/Make.defs.ubuntu.gnu.mpich:71:CDFMOD = -I/usr/include/ # modules for netcdf
+mk/Make.defs.ches.intel:64:CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include # modules for netcdf
+mk/Make.defs.ches.intel:67:#CDFMOD = -I$(NETCDF)/include/ # modules for netcdf
+mk/Make.defs.cyclops:54:CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include
+mk/Make.defs.aron.gnu:63:CDFMOD = -I/home/aron/opt/netcdf_gfortran/include/ # modules for netcdf
+mk/Make.defs.ymir.gnu:56:CDFMOD = -I/Calcul/Apps/netcdf411/include # -I/Calcul/Apps/netcdf/4.2.1.1.ifort/include   # modules for netcdf
+mk/Make.defs.whirlwind:65:CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include # modules for netcdf
+mk/Make.defs.jeanzay:54:CDFMOD = -I/gpfslocalsup/spack_soft/netcdf-fortran/4.4.5/intel-19.0.4-nm7vlsr6edc7yqkb2v7l4p6mu4dcgkoy/include # modules for netcdf
+mk/Make.defs.bfg.gnu:71:#CDFMOD = -I/usr/include -I/opt/netcdf-fortran/include # modules for netcdf 
+mk/Make.defs.bfg.gnu:74:CDFMOD = -I/usr/include -I$(NETCDFF_HOME)/include # modules for netcdf 
+mk/Make.defs.levante.openmpi:70:#/sw/rhel6-x64/netcdf/netcdf_fortran-4.4.2-intel14/include
+mk/Make.defs.ivica:78:CDFMOD = -I$(NETCDF_PATH)/include # modules for netcdf
+mk/Make.defs.maine:74:#CDFMOD = -I/opt/netcdf/intel/include # modules for netcdf
+mk/Make.defs.maine:77:#CDFMOD = -I$(NETCDF)/include # modules for netcdf
+mk/Make.defs.lnec.ws.gnu:55:CDFMOD = -I/usr/include -I/usr/lib64/gfortran/modules # modules for netcdf
+mk/Make.defs.comet:68:CDFMOD = -I${NETCDFHOME}/include # modules for netcdf
+mk/Make.defs.anvil:64:#CDFMOD = -I/soft/spack-0.10.1/opt/spack/linux-centos6-x86_64/intel-18.0.3/netcdf-4.6.2-b2ikacatjnjjeuwajzmkzz3d4rrh5tr3/include/ -I/soft/spack-0.10.1/opt/spack/linux-centos6-x86_64/intel-18.0.3/netcdf-fortran-4.4.4-x2wtfpgcyy7g5br6anfyny765db7f2ym/include/
+mk/Make.defs.anvil:67:CDFMOD= -I/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-18.0.3/netcdf-fortran-4.4.4-yvauamj7vlgck3q36clnmiknrcyhn3cg/include -I/blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-18.0.3/netcdf-4.6.1-2gzedijmixtvgaspv2plrlb3yms6svlx/include/
+mk/Make.defs.ymir.intel:56:CDFMOD = -I/Calcul/Apps/netcdf/fortran-4.2.ifort/include # -I/Calcul/Apps/netcdf/4.2.1.1.ifort/include   # modules for netcdf
+mk/Make.defs.grace:68:CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include # modules for netcdf
+mk/Make.defs.pleiades:73:CDFMOD = -I/nasa/netcdf/4.4.1.1_serial/include/ # modules for netcdf
+mk/Make.defs.franzius:59:CDFMOD = -I/home/jan/netcdf//include/ # modules for netcdf
+mk/Make.defs.sirius:55:CDFMOD = -I/share/apps/netcdf/include/ # modules for netcdf
+mk/Make.defs.whirlwind.gnu:70:CDFMOD = -I$(NETCDF)/include -I$(NETCDF_FORTRAN)/include # modules for netcdf
+mk/Make.defs.Thor:74:#CDFMOD  =-I${NETCDF}/include -I${NETCDF_FORTRAN}/include
+mk/Make.defs.Thor:80:CDFMOD  =-I${NETCDF}/include -I${NETCDF_FORTRAN}/include
+mk/Make.defs.cori2:66:CDFMOD = -I$(NETCDF)/include/ # modules for netcdf
+mk/Make.defs.lnec.medusa:55:CDFMOD = -I$(NETCDFHOME)/include # modules for netcdf
+mk/Make.defs.tsunami:65:CDFMOD = -I/share/apps/netcdf/include/ # modules for netcdf

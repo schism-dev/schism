@@ -1,4 +1,5 @@
 
+compile commands in: ./cmake/SCHISM.local.phil.bfg
 
 wenn in ~/SCHISM/schism/src/Fabm/CMakeLists.txt
     set(FABM_INCLUDE_DIRS ${FABM_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR}/fabm_src/models/uzweijens)
