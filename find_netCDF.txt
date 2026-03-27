@@ -1,0 +1,27 @@
+
+### Configuring NetCDF
+-- going to find_package(NetCDF C;Fortran
+-- Found NetCDF: /usr/include;/usr/lib64/gfortran/modules (found version "4.7.0") found components: C Fortran
+-- FindNetCDF defines targets:
+--   - NetCDF_VERSION [4.7.0]
+--   - NetCDF_PARALLEL [FALSE]
+--   - NetCDF_C_CONFIG_EXECUTABLE [/usr/bin/nc-config]
+--   - NetCDF::NetCDF_C [SHARED] [Root: /usr] Lib: /usr/lib64/libnetcdf.so
+--   - NetCDF_Fortran_CONFIG_EXECUTABLE [/usr/bin/nf-config]
+--   - NetCDF::NetCDF_Fortran [SHARED] [Root: /] Lib: /usr/lib64/libnetcdff.so
+-- HDF5 not needed
+-- NetCDF found: /usr/lib64/libnetcdf.so;/usr/lib64/libnetcdff.so | /usr/include;/usr/lib64/gfortran/modules
+--
+
+netcdf library version 4.7.0 of Jul 16 2023 05:24:29 $
+
+### Configuring NetCDF
+-- Found NetCDF: /usr/include;/usr/lib64/gfortran/modules (found version "4.7.0") found components: C Fortran
+-- FindNetCDF defines targets:
+--   - NetCDF_VERSION [4.7.0]
+--   - NetCDF_PARALLEL [FALSE]
+--   - NetCDF_C_CONFIG_EXECUTABLE [/usr/bin/nc-config]
+--   - NetCDF::NetCDF_C [SHARED] [Root: /usr] Lib: /usr/lib64/libnetcdf.so
+--   - NetCDF_Fortran_CONFIG_EXECUTABLE [/usr/bin/nf-config]
+--   - NetCDF::NetCDF_Fortran [SHARED] [Root: /] Lib: /usr/lib64/libnetcdff.so
+-

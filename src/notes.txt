@@ -1,0 +1,273 @@
+
+Wyrwa@phil-hpc.hpc:~/SCHISM/schism/cmake> make
+[  0%] Linking C static library ../lib/libmetis.a
+[ 17%] Built target metis
+[ 18%] Linking C static library ../../lib/libparmetis.a
+[ 28%] Built target parmetis
+[ 28%] Built target sversion
+[ 28%] Building Fortran object Core/CMakeFiles/core.dir/schism_version.F90.o
+f951: Warnung: »-Werror=« argument »-Werror=format-security« is not valid for Fortran
+[ 28%] Linking Fortran static library ../lib/libcore.a
+[ 30%] Built target core
+[ 31%] Built target yaml
+[ 35%] Built target fabm_base
+[ 36%] Built target fabm_models_uzweijens
+[ 38%] Built target fabm_models_akvaplan
+[ 39%] Built target fabm_models_au
+[ 40%] Built target fabm_models_bb
+[ 41%] Built target fabm_models_csiro
+[ 44%] Built target fabm_models_examples
+[ 46%] Built target fabm_models_gotm
+[ 47%] Built target fabm_models_iow
+[ 48%] Built target fabm_models_jrc
+[ 48%] Built target fabm_models_msi
+[ 49%] Built target fabm_models_nersc
+[ 51%] Built target fabm_models_niva
+[ 52%] Built target fabm_models_pml
+[ 53%] Built target fabm_models_selma
+[ 55%] Built target fabm_models_su
+[ 59%] Built target fabm_models_uhh
+[ 60%] Linking Fortran static library ../../lib/libfabm.a
+[ 63%] Built target fabm
+[ 63%] Linking Fortran static library ../lib/libfabm_schism.a
+[ 63%] Built target fabm_schism
+[ 64%] Linking Fortran static library ../lib/libhydro.a
+[ 66%] Built target hydro
+[ 67%] Linking Fortran executable ../bin/pschism_bfg_FABM_BULK_FAIRALL_BLD_STANDALONE_SH_MEM_COMM_BUILD_TOOLS_TVD-VL
+[ 67%] Built target pschism
+[ 67%] Linking Fortran static library ../../lib/libutillib.a
+[ 69%] Built target utillib
+[ 69%] Linking Fortran executable ../../bin/combine_gr3
+
+
+--------------------------------------------------------------------------------------------------------
+Wyrwa@phil-hpc.hpc:~/SCHISM/schism/cmake> cmake -C ../cmake/SCHISM.local.build -C ../cmake/SCHISM.local.phil.bfg -DUSE_QSIM=ON -DUSE_FABM=ON -DFABM_BASE=/beegfs/home/Wyrwa/FABM/fabm4schism -DFABM_EXTRA_INSTITUTES=uzweijens -DFABM_UZWEIJENS_BASE=../src/QSim/ ../src/
+loading initial cache file ../cmake/SCHISM.local.build
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:15 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:16 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:19 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:25 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:27 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:28 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:29 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:30 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:34 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:35 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:36 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:37 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:42 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:44 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:45 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:46 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:49 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:50 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:51 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:52 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:53 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:54 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:55 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:57 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:62 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:64 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.build:65 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+loading initial cache file ../cmake/SCHISM.local.phil.bfg
+CMake Warning (dev) at /home/Wyrwa/SCHISM/schism/cmake/SCHISM.local.phil.bfg:73 (set):
+  implicitly converting 'BOOLEAN' to 'STRING' type.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Deprecation Warning at CMakeLists.txt:9 (cmake_policy):
+  The OLD behavior for policy CMP0074 will be removed from a future version
+  of CMake.
+
+  The cmake-policies(7) manual explains that the OLD behaviors of all
+  policies are deprecated and that a policy should be set to OLD only under
+  specific short-term circumstances.  Projects should be ported to the NEW
+  behavior and not rely on setting a policy to OLD.
+
+
+--
+################   Begin SCHISM Configuration   ################
+-- In-source builds not allowed
+--
+### Compiler combination and executables
+-- Compiler ID is GNU-GNU
+-- Fortran compiler is /usr/lib64/mvapich2-psm2/bin/mpif90
+-- C compiler is /usr/bin/cc
+--
+### No CMAKE_BUILD_TYPE selected in command or cache, default to Release.
+Alternatives are Debug and RelWithDebInfo
+--
+### Processing algorithmic switches and build options involving functionality for main project
+-- USE_BULK_FAIRALL OPTION IS ON
+-- BLD_STANDALONE OPTION IS ON
+-- SH_MEM_COMM OPTION IS ON
+-- BUILD_TOOLS OPTION IS ON
+-- Build definition tags set to _BULK_FAIRALL_BLD_STANDALONE_SH_MEM_COMM_BUILD_TOOLS_TVD-VL
+--
+### Configuring MPI Library
+-- MPIVERSION = 2
+--
+### Configuring NetCDF
+-- FindNetCDF defines targets:
+--   - NetCDF_VERSION [4.7.0]
+--   - NetCDF_PARALLEL [FALSE]
+--   - NetCDF_C_CONFIG_EXECUTABLE [/usr/bin/nc-config]
+--   - NetCDF::NetCDF_C [SHARED] [Root: /usr] Lib: /usr/lib64/libnetcdf.so
+--   - NetCDF_Fortran_CONFIG_EXECUTABLE [/usr/bin/nf-config]
+--   - NetCDF::NetCDF_Fortran [SHARED] [Root: /usr/lib64/gfortran] Lib: /usr/lib64/libnetcdff.so
+--
+### Assigning output directories for binaries (bin), modules (include) and libraries (lib)
+--
+### Adding enabled libraries to project
+--
+### Configuring ParMETIS
+-- Using SCHISM's internal ParMETIS library.
+-- checking for thread-local storage - found
+-- PARMETIS_DIR: /home/Wyrwa/SCHISM/schism/src/ParMetis-4.0.3
+-- PARMETIS_VER: ParMetis-4.0.3
+-- Using FABM_BASE=/home/Wyrwa/FABM/fabm4schism
+-- Forcing FABM_HOST=schism
+-- Forcing FABM_REAL_KIND=8
+CMake Warning at /home/Wyrwa/FABM/fabm4schism/CMakeLists.txt:66 (message):
+  Forcing FABM_USE_CONTIGUOUS to OFF to work around GCC 8 bug
+
+
+--
+### USE_QSIM in src/Fabm/CMakeList.txt
+-- Added Fabm
+-- hydro_extra_src=
+-- Mod libraries: fabm_schism
+-- Added Hydro
+--  SCHISM version: develop
+--  GIT commit: 558ff7dc
+-- Added Core
+-- All defines:
+--
+### Configuring Driver
+Using schism module libraries core;hydro;fabm_schism
+-- START: pschism_bfg:pschism_bfg
+-- Executable name with this configuration will be pschism_bfg_FABM_BULK_FAIRALL_BLD_STANDALONE_SH_MEM_COMM_BUILD_TOOLS_TVD-VL
+--
+### Configuring Utilities 2
+-- In /Utility NetCDF_LIBS /usr/lib64/libnetcdf.so;/usr/lib64/libnetcdff.so
+-- In /Utility NetCDF_LIBS /usr/lib64/libnetcdf.so;/usr/lib64/libnetcdff.so
+-- In Utility/Gen_Hotstart
+-- In Utility/Grid_Scripts
+--
+### USE_QSIM in src/CMakeList.txt
+-- Configuring done (3.6s)
+-- Generating done (1.1s)
+-- Build files have been written to: /home/Wyrwa/SCHISM/schism/cmake
+Wyrwa@phil-hpc.hpc:~/SCHISM/schism/cmake>
+
+
+
+
+
+--
+### USE_QSIM in FABM ?
+-- Added Fabm
+CMake Error at QSim/CMakeLists.txt:1 (add_library):
+  add_library cannot create target "fabm_models_uzweijens" because another
+  target with the same name already exists.  The existing target is created
+  in source directory "/home/Wyrwa/SCHISM/schism/src/QSim".  See
+  documentation for policy CMP0002 for more details.
+
+
+CMake Error at QSim/CMakeLists.txt:8 (target_link_libraries):
+  Attempt to add link library "fabm_base" to target "fabm_models_uzweijens"
+  which is not built in this directory.
+
+  This is allowed only when policy CMP0079 is set to NEW.
+
+
+-- Added QSim
+-- hydro_extra_src=
+-- Mod libraries: fabm_schism
+-- Added Hydro
+--  SCHISM version: develop
+--  GIT commit: 558ff7dc
+-- Added Core
+-- All defines:
+--

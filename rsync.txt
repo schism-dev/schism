@@ -1,0 +1,2 @@
+
+Wyrwa@phil-hpc.hpc:~/SCHISM/qsim_fabm_schism_tracerzone/entwicklung> rsync -va . /beegfs/home/Wyrwa/SCHISM/qsim_fabm_schism_tracerzone

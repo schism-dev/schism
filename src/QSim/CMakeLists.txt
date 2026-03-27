@@ -8,6 +8,7 @@ add_library(fabm_models_uzweijens OBJECT
             qsim_variables.F90
             qsim_age.F90
             qsim_tracerzone.F90
+            qsim_decay.F90
            )
 
 # target_link_libraries(fabm_models_uzweijens PRIVATE fabm_base)
