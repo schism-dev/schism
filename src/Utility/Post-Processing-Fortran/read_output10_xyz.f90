@@ -63,7 +63,8 @@
       read(*,*)ibp
       if(ibp/=1.and.ibp/=2) stop 'Unknown format'
 
-      print*, 'Input ics (1-linear interp; 2-nearest neighbor interp. 2 for node-based variables only! 2 is suggested for sub-meter resolution!):'
+      print*, 'Input ics (1-linear interp; 2-nearest neighbor interp. 2 for node-based variables only! &
+      &       2 is suggested for sub-meter resolution!):'
       read(*,*)ics
 
       print*, 'Input variable name to read from nc (e.g. elevation):'
