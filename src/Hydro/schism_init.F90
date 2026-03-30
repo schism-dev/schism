@@ -4289,7 +4289,7 @@
 
 !       Open output file from rank 0
         if(myrank==0) then
-          do i=1,nvar_sta
+          do i=1,nvar_sta+1 !add an extra output zcor at the end
             write(ifile_char,'(i03)')i
             ifile_char=adjustl(ifile_char)  !place blanks at end
             ifile_len=len_trim(ifile_char)

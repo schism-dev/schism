@@ -10327,7 +10327,7 @@
 
 !...  Station outputs
       if(iout_sta/=0) then
-        do j=1,nvar_sta
+        do j=1,nvar_sta !excluding zcor
           if(iof_sta(j)==0.or.mod(it,nspool_sta)/=0) cycle
 
           do i=1,nout_sta
@@ -10439,8 +10439,10 @@
 
         if(myrank==0) then
 !          write(290,*)nwild2(1:nout_sta)
-          do i=1,nvar_sta
+          ltmp=.false. !init zcor output
+          do i=1,nvar_sta !excl zcor
             if(iof_sta(i)==0.or.mod(it,nspool_sta)/=0) cycle
+
             do j=1,nout_sta
               if(nwild2(j)==0) then !outside domain
                 sta_out_gb(j,i)=1.d7 !-9999.d0
@@ -10457,8 +10459,17 @@
               endif
             enddo !j
             write(250+i,'(e24.16,6000(1x,e14.6))')time,sta_out_gb(:,i)
-            if(iout_sta==2.and.i>4) write(250+i,'(e24.16,300000(1x,e14.6))')time,sta_out3d_gb(:,:,i),zta_out3d_gb(:,:,i)
-          enddo !i
+            if(iout_sta==2.and.i>4) then
+              write(250+i,'(e24.16,300000(1x,e14.6))')time,sta_out3d_gb(:,:,i) !,zta_out3d_gb(:,:,i)
+              !Add zcor output: do it only once
+              if(.not.ltmp) then
+                ltmp=.true.
+                write(250+nvar_sta+1,*) !empty line to be in consistent form as other 3D 
+                write(250+nvar_sta+1,'(e24.16,300000(1x,e14.6))')time,zta_out3d_gb(:,:,i)
+              endif !
+            endif !iout_sta
+          enddo !i=1,nvar_sta
+
           write(16,*)'done station outputs...'
         endif !myrank
       endif !iout_sta/=0
