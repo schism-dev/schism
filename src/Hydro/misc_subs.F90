@@ -211,7 +211,7 @@
 !     Init time history in/outputs
 !     Station output
       if(iout_sta/=0.and.myrank==0) then
-        do i=1,nvar_sta
+        do i=1,nvar_sta+1 !extra output for zcor
           rewind(250+i)    
           do it=1,it_now !iths_main
             if(iof_sta(i)==1.and.mod(it,nspool_sta)==0) then

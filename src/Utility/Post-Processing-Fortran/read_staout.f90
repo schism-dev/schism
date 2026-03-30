@@ -1,10 +1,10 @@
 ! Read in 3D station outputs (iout_sta=2) and combine all vars into staout.nc
 ! Inputs: vgrid.in,station.in, outputs/staout_*
-! Outputs: outputs/staout.nc
+! Outputs: outputs/staout.nc; fort.99 as diagnostic
 ! ifx -mcmodel=medium -O2 -o read_staout read_staout.f90 -I$NETCDF/include -I$NETCDF_FORTRAN/include -L$NETCDF_FORTRAN/lib -L$NETCDF/lib -lnetcdf -lnetcdff
 
   use netcdf
-  integer, parameter :: nfiles=9 !# of ASCII outputs
+  integer, parameter :: nfiles=9 !# of ASCII outputs (excluding zcor)
   character(len=10) :: mychar
   character(len=30) :: fname
   integer :: time_dim,ndims(100),nwild(100)
@@ -90,7 +90,7 @@
   !Check all station outputs to find out min # of records (discarding empty ones)
   ntime=huge(1)
   iempty=1 !init as empty
-  do i=1,nfiles
+  do i=1,nfiles+1 !1 extra for zcor
     write(mychar,'(i10)')i
     fname='outputs/staout_'//trim(adjustl(mychar))
     inquire(file=fname,exist=ltmp)
@@ -101,7 +101,7 @@
         nt0=nt0+1
         read(10,*,end=98,err=98) !time,wild0(:)
         if(i>4) then !3D
-          read(10,*,end=97,err=97) time,wild(:,:),zcor(:,:)
+          read(10,*,end=97,err=97) time,wild(:,:) !,zcor(:,:)
         endif !i>4
       enddo
 97    print*, 'staout_* does not have profile!',nt0-1
@@ -114,10 +114,11 @@
       close(10)
     endif !ltmp
   enddo !i=1,nfiles
+  if(iempty(nfiles+1)==1) stop 'zcor is empty'
   print*, 'Minimum # of time records read=',ntime
 
   !Re-read and output
-  do i=1,nfiles
+  do i=1,nfiles+1 !including zcor
     if(iempty(i)==1) cycle
 
     write(mychar,'(i10)')i
@@ -129,31 +130,38 @@
       nt0=0
       do it=1,ntime
         nt0=nt0+1
-        read(10,*,end=99,err=99)time,wild0(:)
-        if(i>4) then !3D
-          read(10,*,end=99,err=99)time,wild(:,:),zcor(:,:)
+        !odd lines are empty for zcor
+        if(i<=nfiles) then
+          read(10,*,end=99,err=99)time,wild0(:)
+        else !empty line for zcor
+          read(10,*,end=99,err=99)
+        endif
+        if(i>4) then !3D (incl zcor)
+          read(10,*,end=99,err=99)time,wild(:,:) !,zcor(:,:)
 
           !Check
           do m=1,nsta
-            if(all(abs(wild(:,m))>1.e6)) write(99,*)'WHole column dry:',i,m,it,wild(:,m)
+            if(all(abs(wild(:,m))>1.e6)) write(99,*)'Whole column dry:',i,m,it,wild(:,m)
           enddo !m
         endif !i>4
 
         !Output
-        a1d(1)=time
-        j=nf90_put_var(ncid,nwild(1),a1d,(/nt0/),(/1/))
-        j=nf90_put_var(ncid,nwild(i+1),wild0,(/1,nt0/),(/nsta,1/))
-        if(i>4) then !3D
-          j=nf90_put_var(ncid,nwild(i+6),wild(:,:),(/1,1,nt0/),(/nvrt,nsta,1/))
-          !Overwrite zcor
-          j=nf90_put_var(ncid,nwild(16),zcor(:,:),(/1,1,nt0/),(/nvrt,nsta,1/))
-        endif !i
-      enddo !it
+        if(i<=nfiles) then !not zcor
+          a1d(1)=time
+          j=nf90_put_var(ncid,nwild(1),a1d,(/nt0/),(/1/))
+          j=nf90_put_var(ncid,nwild(i+1),wild0,(/1,nt0/),(/nsta,1/))
+          if(i>4) then !3D (not zcor)
+            j=nf90_put_var(ncid,nwild(i+6),wild(:,:),(/1,1,nt0/),(/nvrt,nsta,1/))
+          endif !i
+        else !zcor
+          j=nf90_put_var(ncid,nwild(16),wild(:,:),(/1,1,nt0/),(/nvrt,nsta,1/))
+        endif !i<=nfiles
+      enddo !it=1,ntime
 
       !nt0=nt0-1
       close(10)
     endif !ltmp
-  enddo !i=1,nfiles
+  enddo !i=1,nfiles+1
 
   iret=nf90_close(ncid)
   stop
