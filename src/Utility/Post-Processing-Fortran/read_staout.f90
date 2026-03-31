@@ -9,6 +9,7 @@
   character(len=30) :: fname
   integer :: time_dim,ndims(100),nwild(100)
   logical :: ltmp,lfirst
+  integer, allocatable :: idry_sta(:)
   real, allocatable :: wild0(:),wild(:,:),zcor(:,:),xsta(:),ysta(:),zsta(:)
   real :: a1d(1)
   integer :: iempty(nfiles)
@@ -20,7 +21,7 @@
 
   open(9,file='station.in',status='old')
   read(9,*); read(9,*)nsta
-  allocate(wild0(nsta),wild(nvrt,nsta),zcor(nvrt,nsta),xsta(nsta),ysta(nsta),zsta(nsta))
+  allocate(wild0(nsta),wild(nvrt,nsta),zcor(nvrt,nsta),xsta(nsta),ysta(nsta),zsta(nsta),idry_sta(nsta))
   do i=1,nsta
     read(9,*)j,xsta(i),ysta(i),zsta(i)
   enddo !i
@@ -78,6 +79,11 @@
   j=nf90_def_var(ncid,'station_location_z',NF90_FLOAT,ndims(1),nwild(19))
   j=nf90_put_att(ncid,nwild(19),'name','Z coorinates at each station in meters')
 
+  !Dry flags
+  ndims(1)=nsta_dim; ndims(2)=time_dim
+  j=nf90_def_var(ncid,'Station_dry_flags',NF90_INT,ndims(1:2),nwild(20))
+  j=nf90_put_att(ncid,nwild(20),'name','Non-zero if dry at station')
+
   do i=1,19 !nfiles+1+6
     j=nf90_def_var_deflate(ncid,nwild(i),0,1,4)
   enddo !i
@@ -130,11 +136,11 @@
       nt0=0
       do it=1,ntime
         nt0=nt0+1
-        !odd lines are empty for zcor
+        !odd lines are dry flags for zcor
         if(i<=nfiles) then
           read(10,*,end=99,err=99)time,wild0(:)
         else !empty line for zcor
-          read(10,*,end=99,err=99)
+          read(10,*,end=99,err=99)idry_sta(:)
         endif
         if(i>4) then !3D (incl zcor)
           read(10,*,end=99,err=99)time,wild(:,:) !,zcor(:,:)
@@ -155,6 +161,7 @@
           endif !i
         else !zcor
           j=nf90_put_var(ncid,nwild(16),wild(:,:),(/1,1,nt0/),(/nvrt,nsta,1/))
+          j=nf90_put_var(ncid,nwild(20),idry_sta,(/1,nt0/),(/nsta,1/))
         endif !i<=nfiles
       enddo !it=1,ntime
 

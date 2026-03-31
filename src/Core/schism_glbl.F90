@@ -604,8 +604,8 @@ module schism_glbl
   real(rkind),save,allocatable :: xsta(:),ysta(:),zstal(:),zsta(:),arco_sta(:,:), &
                                   xsta_bmi(:),ysta_bmi(:),zsta_bmi(:), &
                                   &sta_out(:,:),sta_out_gb(:,:),sta_out3d(:,:,:), &
-                                  &zta_out3d(:,:,:),sta_out3d_gb(:,:,:),zta_out3d_gb(:,:,:)
-  integer,save,allocatable :: iep_sta(:),iep_flag(:),iof_sta(:),indx_out(:,:),indx_wwm_out(:)
+                                  &zta_out3d(:,:),sta_out3d_gb(:,:,:),zta_out3d_gb(:,:)
+  integer,save,allocatable :: idry_sta(:),iep_sta(:),iep_flag(:),iof_sta(:),indx_out(:,:),indx_wwm_out(:)
 
   ! Message passing arrays used in main
   integer,save,allocatable :: srqst(:),sstat(:,:),rrqst(:),rstat(:,:)
