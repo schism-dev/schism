@@ -4191,11 +4191,12 @@
 
 !       Allocate: zstal is vertical up; xsta, ysta, zsta are global coord. if ics=2
         if(iorder==0) then
-          allocate(xsta(nout_sta),ysta(nout_sta),zstal(nout_sta),zsta(nout_sta),iep_sta(nout_sta),iep_flag(nout_sta), &
+          allocate(xsta(nout_sta),ysta(nout_sta),zstal(nout_sta),zsta(nout_sta), &
+     &idry_sta(nout_sta),iep_sta(nout_sta),iep_flag(nout_sta), &
      &arco_sta(nout_sta,4),sta_out(nout_sta,nvar_sta),sta_out_gb(nout_sta,nvar_sta), &
      &sta_out3d(nvrt,nout_sta,nvar_sta),sta_out3d_gb(nvrt,nout_sta,nvar_sta), &
      &xsta_bmi(nout_sta),ysta_bmi(nout_sta),zsta_bmi(nout_sta), &
-     &zta_out3d(nvrt,nout_sta,nvar_sta),zta_out3d_gb(nvrt,nout_sta,nvar_sta),stat=istat)
+     &zta_out3d(nvrt,nout_sta),zta_out3d_gb(nvrt,nout_sta),stat=istat)
           if(istat/=0) call parallel_abort('MAIN: sta. allocation failure')
           iep_flag=0
           sta_out=0.0_rkind
