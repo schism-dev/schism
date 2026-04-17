@@ -1698,20 +1698,6 @@
          allocate(kk_fib(nea,2),sink_fib(nea),fraction_fib(nea))
          allocate(sink0(npa),fraction0(npa),kk10(npa),kk20(npa))
 #endif
-      allocate(aice(npa),tau_oi(2,npa),fresh_wa_flux(npa),salinity_flux(npa),net_heat_flux(npa), &
-               srad_o(npa),srad_th_ice(npa),stat=istat)
-      if(istat/=0) call parallel_abort('INIT: ice frac allocation failure')
-      aice(:)          = real(0)
-      tau_oi(:,:)      = real(0)
-      fresh_wa_flux(:) = real(0)
-      salinity_flux(:) = real(0)
-      net_heat_flux(:) = real(0)
-      srad_o(:)        = real(0)
-      srad_th_ice(:)   = real(0)
-
-
-       allocate(sflux_o(npa),stat=istat)
-       sflux_o(:)     = real(0)
 
 #ifdef USE_CICE
         allocate(aice(npa),tau_oi(2,npa),fresh_wa_flux(npa),salinity_flux(npa),net_heat_flux(npa), &
@@ -1730,8 +1716,6 @@
         sflux_ocn(:)     = real(0)
         srad_ocn(:)      = real(0)
 #endif
-!        allocate(sflux_o(npa),stat=istat)
-!        sflux_o(:)     = real(0)
 
 #ifdef USE_MICE
         allocate(tau_oi(2,npa),fresh_wa_flux(npa),net_heat_flux(npa), &
