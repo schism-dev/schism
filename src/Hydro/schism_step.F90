@@ -174,6 +174,10 @@
       real(rkind) :: dtrdz,apTpxy_up,apTpxy_do,epsffs,epsfbot !8022 +epsffs,epsfbot
 !0821...
 
+real (rkind), parameter  :: rhowat= 1025.0        ! Water density
+real (rkind), parameter  :: Cdocn = 0.00536       ! Ice-ocean drag coef
+real (rkind) :: aux                               ! ustar
+
 !     Output handles
       character(len=72) :: it_char
       character(len=72) :: fgb  ! Processor specific global output file name
