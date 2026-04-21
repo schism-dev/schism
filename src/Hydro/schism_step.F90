@@ -10331,18 +10331,20 @@ real (rkind) :: aux                               ! ustar
 
 !...  Station outputs
       if(iout_sta/=0) then
-        do j=1,nvar_sta
+        do j=1,nvar_sta !excluding zcor
           if(iof_sta(j)==0.or.mod(it,nspool_sta)/=0) cycle
 
+          idry_sta(:)=0 !init
           do i=1,nout_sta
             ie=iep_sta(i)
             if(ie==0) then !no parent in this rank
               iep_flag(i)=0 !for comm. later
               sta_out(i,j)=0.d0
               sta_out3d(:,i,j)=0.d0
-              zta_out3d(:,i,j)=0.d0
+              zta_out3d(:,i)=0.d0 !same for all j
             else !is parent
               iep_flag(i)=1
+              idry_sta(i)=idry_e(ie) !save for comm later
               sta_out(i,j)=0.d0 !initialize
               if(j==1) then !elev.
                 swild2(1,1:i34(ie))=eta2(elnode(1:i34(ie),ie))
@@ -10375,7 +10377,7 @@ real (rkind) :: aux                               ! ustar
                 if(idry_e(ie)==1) then !dry
                   sta_out(i,j)=-1.d7 !-999.d0
                   sta_out3d(:,i,j)=-1.d7 !-999.d0
-                  zta_out3d(:,i,j)=-1.d7 !-999.d0
+                  zta_out3d(:,i)=-1.d7 !same for all j
                 else !wet
                   do m=1,i34(ie) !wet nodes
                     nd=elnode(m,ie)
@@ -10408,7 +10410,7 @@ real (rkind) :: aux                               ! ustar
                   itmp=minval(kbp(elnode(1:i34(ie),ie)))
                   do k=1,nvrt
                     if(k<itmp) then
-                      zta_out3d(k,i,j)=-1.d7
+                      zta_out3d(k,i)=-1.d7
                       sta_out3d(k,i,j)=-1.d7
                     else !at least 1 node has valid value
                       do m=1,i34(ie)
@@ -10423,7 +10425,7 @@ real (rkind) :: aux                               ! ustar
 !                          swild4(2,m)=swild2(k,m)
 !                        endif
                       enddo !m
-                      zta_out3d(k,i,j)=sum(arco_sta(i,1:i34(ie))*swild4(1,1:i34(ie)))
+                      zta_out3d(k,i)=sum(arco_sta(i,1:i34(ie))*swild4(1,1:i34(ie)))
                       sta_out3d(k,i,j)=sum(arco_sta(i,1:i34(ie))*swild4(2,1:i34(ie)))
                     endif !k
                   enddo !k
@@ -10436,35 +10438,50 @@ real (rkind) :: aux                               ! ustar
         enddo !j=1,nvar_sta
 
 !       Output by rank 0
+        call mpi_reduce(idry_sta,nwild2,nout_sta,itype,MPI_SUM,0,comm,ierr)
+        !Save back to idry_sta to free up nwild2; /=0 => dry
+        if(myrank==0) idry_sta=nwild2(1:nout_sta)
+
         call mpi_reduce(iep_flag,nwild2,nout_sta,itype,MPI_SUM,0,comm,ierr)
         call mpi_reduce(sta_out,sta_out_gb,nout_sta*nvar_sta,rtype,MPI_SUM,0,comm,ierr)
         call mpi_reduce(sta_out3d,sta_out3d_gb,nvrt*nout_sta*nvar_sta,rtype,MPI_SUM,0,comm,ierr)
-        call mpi_reduce(zta_out3d,zta_out3d_gb,nvrt*nout_sta*nvar_sta,rtype,MPI_SUM,0,comm,ierr)
+        call mpi_reduce(zta_out3d,zta_out3d_gb,nvrt*nout_sta,rtype,MPI_SUM,0,comm,ierr)
 
         if(myrank==0) then
 !          write(290,*)nwild2(1:nout_sta)
-          do i=1,nvar_sta
+          ltmp=.false. !init zcor output
+          do i=1,nvar_sta !excl zcor
             if(iof_sta(i)==0.or.mod(it,nspool_sta)/=0) cycle
+
             do j=1,nout_sta
               if(nwild2(j)==0) then !outside domain
                 sta_out_gb(j,i)=1.d7 !-9999.d0
                 if(i>4) then !3D only
                   sta_out3d_gb(:,j,i)=1.d7 !-9999.d0
-                  zta_out3d_gb(:,j,i)=1.d7 !-9999.d0
+                  zta_out3d_gb(:,j)=1.d7 !-9999.d0
                 endif
               else
                 sta_out_gb(j,i)=sta_out_gb(j,i)/dble(nwild2(j))
                 if(i>4) then !3D only
                   sta_out3d_gb(:,j,i)=sta_out3d_gb(:,j,i)/dble(nwild2(j))
-                  zta_out3d_gb(:,j,i)=zta_out3d_gb(:,j,i)/dble(nwild2(j))
+                  zta_out3d_gb(:,j)=zta_out3d_gb(:,j)/dble(nwild2(j))
                 endif
               endif
             enddo !j
-            write(250+i,'(e24.16,6000(1x,e14.6))')time,sta_out_gb(:,i)
-            if(iout_sta==2.and.i>4) write(250+i,'(e24.16,300000(1x,e14.6))')time,sta_out3d_gb(:,:,i),zta_out3d_gb(:,:,i)
-          enddo !i
+            write(250+i,'(e24.16,6000(1x,e15.6e3))')time,sta_out_gb(:,i)
+            if(iout_sta==2.and.i>4) then
+              write(250+i,'(e24.16,300000(1x,e15.6e3))')time,sta_out3d_gb(:,:,i) !,zta_out3d_gb(:,:,i)
+              !Add zcor output: do it only once
+              if(.not.ltmp) then
+                ltmp=.true.
+                write(250+nvar_sta+1,'(300000(1x,i5))')idry_sta(:)
+                write(250+nvar_sta+1,'(e24.16,300000(1x,e15.6e3))')time,zta_out3d_gb(:,:)
+              endif !
+            endif !iout_sta
+          enddo !i=1,nvar_sta
+
           write(16,*)'done station outputs...'
-        endif !myrank
+        endif !myrank==0
       endif !iout_sta/=0
 
 #ifdef USE_HA
