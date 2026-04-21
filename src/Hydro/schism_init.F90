@@ -1716,8 +1716,6 @@
         sflux_ocn(:)     = real(0)
         srad_ocn(:)      = real(0)
 #endif
-!        allocate(sflux_o(npa),stat=istat)
-!        sflux_o(:)     = real(0)
 
 #ifdef USE_MICE
         allocate(tau_oi(2,npa),fresh_wa_flux(npa),net_heat_flux(npa), &
