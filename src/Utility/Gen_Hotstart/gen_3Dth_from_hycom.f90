@@ -1007,7 +1007,7 @@
               endif
 
 !             Enforce lower bound for temp. for eqstate
-              tempout(k,i)=max(0.,tempout(k,i))
+              tempout(k,i)=max(-2.,tempout(k,i))
               saltout(k,i)=min(40.,saltout(k,i))
 
 !             Enforce lower bound for salt (this is the only occurence in the code)

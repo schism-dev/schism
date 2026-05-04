@@ -6719,7 +6719,7 @@
   
         ! Input\Output parameter
         integer, intent(in) :: i1, i2, j1, j2, jaselfal
-        real(rkind), intent(in) :: avhs(i1:i2, j1:j2)
+        real(rkind), intent(in) :: avhs(i1:i2, j1:j2) !gathered SSH and interpolated onto 1 deg grid
         real(rkind), intent(out) :: self(i1:i2, j1:j2)
   
         ! Local parameters
@@ -6805,6 +6805,8 @@
            end do
            k1 = k1 + 1
         end do
+
+        !TODO: scatter and interpolate back to UG; calculate tidal potential
 
         !Dealloc
       end subroutine selfattraction

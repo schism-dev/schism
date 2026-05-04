@@ -737,7 +737,7 @@
               endif
 
 !             Enforce lower bound for temp. for eqstate
-              tempout(k,i)=max(0.,tempout(k,i))
+              tempout(k,i)=max(-2.,tempout(k,i))
             enddo !k=1,nvrt
           endif !ixy(i,1)==0.or.
         enddo !i=1,np
