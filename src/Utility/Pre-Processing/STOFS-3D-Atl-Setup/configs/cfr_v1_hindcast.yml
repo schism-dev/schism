@@ -1,0 +1,37 @@
+profile: "cfr_subdomain"   # or whatever recipe name you wire to
+
+run:
+  project_dir: "/expanse/lustre/projects/unc107/liuquncw/cfr_flooding/"
+  runid: "01"
+  #hgrid_path: "/home/liuquncw/CFR_Flooding/hgrid.ll"
+  hgrid_path: "/home/liuquncw/CFR_Flooding/hgrid.gr3"
+  #vgrid_path: "/sciclone/schism10/feiye/STOFS3D-v8/I30/Vgrid/vgrid.in"
+
+model:
+  version: "v1_capefear" # basic settings 
+  rnday: 90
+  startdate: "2019-08-10"
+  nwm_cache_folder: /expanse/lustre/projects/unc107/liuquncw/cfr_flooding/NWM_cache/
+  #nww_cache_folder: None 
+  #nwm data will be used as water flow. Downloading needs time. So do not need to redownload if already downloaded 
+  replace_nwm_with_usgs: False #use usgs to correct NWM
+
+runtime:
+  # optional scratch target for outputs symlink:
+  #scr_dir: "/sciclone/scr10/feiye/STOFS3D-v8/"
+
+inputs:
+  bctides: false #worked if use lon and lat in hgrid #still not worked after put fes2014 to ./local/share: /home/liuquncw/.local/share/fes2014/ocean_tide_extrapolated/m2.nc
+  vgrid: false # worked
+  gr3: false # worked
+  nudge_gr3: false # not work: 
+  soil: false # worked; #soil as heat resvior; for shallow pond, there is heat source/sink through soil
+  shapiro: false # not worked, same error with nudge_gr3: simple_tasks.py line 58: index 1 is out of bounds for axis 0 with size 1
+  drag: false # worked 
+  "*.prop": false # worked
+  elev_ic: false #worked #download data from aviso
+  source_sink: false #need to download data from nwm
+  "3D.th.nc": true
+  "elev2D.th.nc": false
+  "*nu.nc": false
+  "hotstart.nc": false # elevation based on aviso; s and t based on hycom
