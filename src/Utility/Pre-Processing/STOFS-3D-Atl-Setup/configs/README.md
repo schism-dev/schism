@@ -13,7 +13,7 @@ Run a case from the project root:
 ```bash
 stofs3d-setup run --config configs/la_v8_2024_reforecast.yml
 ```
-or inside Python (see test_recipe.py under the root folder):
+or inside Python (see make_inputs.py under the root folder):
 
 ```python
 Copy code

@@ -397,17 +397,32 @@ if __name__ == "__main__":
         use_smooth_freeze=True,   # recommended
     )
 
-    q_surf.isel(time=0).plot()
-    q_perc.isel(time=0).plot()
-
+    # interpolate to SCHISM grid
     schism_gd.compute_ctr()
     schism_xctr_ldas, schism_yctr_ldas = lonlat_to_ldas_xy(schism_gd.xctr, schism_gd.yctr)
-    # interpolate to SCHISM grid
-    q_surf_schism = q_surf.interp(
-        x=xr.DataArray(schism_xctr_ldas, dims="nface"),
-        y=xr.DataArray(schism_yctr_ldas, dims="nface"),
-        method="linear"
-    )
-    schism_gd.plot(fmt=1, value=q_surf_schism.isel(time=0).values)
+    q_dict = {
+        "q_surf": {'nwm': q_surf, 'schism': None},
+        "q_perc": {'nwm': q_perc, 'schism': None }
+    }
+    for q_name, q_data in q_dict.items():
+        q = q_data['nwm']
+        q_schism = q.interp(
+            x=xr.DataArray(schism_xctr_ldas, dims="nface"),
+            y=xr.DataArray(schism_yctr_ldas, dims="nface"),
+            method="linear"
+        )
+        q_data['schism'] = q_schism
+
+    fig, ax = plt.subplots(2, 2, figsize=(14, 6))
+    ax = ax.flatten()
+    for i, (q_name, q_data) in enumerate(q_dict.items()):
+        plt.sca(ax[i*2])
+        plt.title(f"{q_name} (time=0) - Original LDAS Grid")
+        q_data['nwm'].isel(time=0).plot()
+
+        plt.sca(ax[i*2+1]) 
+        plt.title(f"{q_name} (time=0) - Interpolated to SCHISM Grid")
+        schism_gd.plot(fmt=1, value=q_data['schism'].isel(time=0).values)
     plt.show()
+
     print('Done.')

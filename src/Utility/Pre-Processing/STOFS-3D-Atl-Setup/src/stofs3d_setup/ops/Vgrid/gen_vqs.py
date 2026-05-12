@@ -42,6 +42,120 @@ def read_hgrid_gr3(fname: str | Path) -> HGrid:
     return HGrid(ne=ne, np=np_, x=x, y=y, dp=dp, i34=i34, elnode=elnode)
 
 
+def build_master_vgrid33b():
+    """
+    Alternative implementation of build_master_vgrid using more numpy features.
+    """
+    hsm_dict = {
+        "1.0": 3, "2.0": 5, "3.0": 7,
+        "4.0": 9, "6.0": 13, "8.0": 17, "12.0": 25, "18.0": 37,
+        "25.0": 51, "33.0": 60, "42.0": 67, "52.0": 74, "67.0": 77,
+        "83.0": 80, "100.0": 81, "150.0": 82, "230.0": 83, "350.0": 84,
+        "1050.0": 93, "2000.0": 98, "5000.0": 103, "8500.0": 107,
+    }
+    m_vqs = len(hsm_dict)
+    n_sd = 18
+    dz_bot_min = 0.1
+    a_vqs0 = 0.0
+    etal = 0.0
+    theta_b = 0.2
+
+    hsm = np.array([float(k) for k in hsm_dict.keys()], dtype=float)
+    nv_vqs = np.zeros(m_vqs, dtype=int)
+    nv_vqs = np.array(list(hsm_dict.values()), dtype=int)
+
+    if m_vqs < 2:
+        raise ValueError("Check vgrid.in: m_vqs<2")
+    if hsm[0] < 0:
+        raise ValueError("hsm(1)<0")
+    if np.any(np.diff(hsm) <= 0):
+        raise ValueError("Check hsm: not strictly increasing")
+
+    if etal <= -hsm[0]:
+        raise ValueError("elev<hsm(1)")
+
+    nvrt_m = int(nv_vqs[-1])
+    z_mas = np.full((nvrt_m, m_vqs), -1.0e5, dtype=float)
+
+    # Build first n_sd master grids using Dukhovskoy-like stretching
+    for m in range(1, n_sd + 1):  # 1..n_sd in Fortran
+        # theta_f logic (m is 1-based here)
+        if m <= 7:
+            theta_f = 0.0001
+        elif m <= 17:
+            theta_f = min(1.0, max(0.0001, (m - 4) / 10.0)) * 3.0
+        else:
+            theta_f = 4.4
+
+        if m == 14: theta_f -= 0.1
+        if m == 15: theta_f += 0.1
+        if m == 16: theta_f += 0.55
+        if m == 17: theta_f += 0.97
+
+        nm = nv_vqs[m - 1]  # levels for this master
+        for k in range(1, nm + 1):  # 1..nm
+            sigma = (k - 1.0) / (1.0 - nm)  # same as Fortran
+            # guard for extremely small theta_f
+            sinh_tf = np.sinh(theta_f) if theta_f != 0 else 1.0
+            cs = (1 - theta_b) * np.sinh(theta_f * sigma) / sinh_tf \
+                 + theta_b * (np.tanh(theta_f * (sigma + 0.5)) - np.tanh(theta_f * 0.5)) / (2 * np.tanh(theta_f * 0.5))
+            z_mas[k - 1, m - 1] = etal * (1 + sigma) + hsm[0] * sigma + (hsm[m - 1] - hsm[0]) * cs
+
+    # Force downward steps for m=2..6 (Fortran)
+    # Careful with indices: Fortran m=2..6 corresponds to 1..5 in 0-based
+    for m in range(2, 7):  # 2..6 inclusive
+        m0 = m - 1
+        prev = m - 2
+        nprev = nv_vqs[prev]
+        nm = nv_vqs[m0]
+
+        # z_mas(k,m)=min(z_mas(k,m),z_mas(k,m-1)) for k=1..nv_vqs(m-1)
+        z_mas[:nprev, m0] = np.minimum(z_mas[:nprev, m0], z_mas[:nprev, prev])
+
+        tmp = (z_mas[nm - 1, m0] - z_mas[nprev - 1, m0]) / (nm - nprev)
+        for k in range(nprev + 1, nm + 1):  # k=nprev+1..nm
+            z_mas[k - 1, m0] = z_mas[k - 2, m0] + tmp
+
+    # Last 4 master grids copying + hard-coded deep z's
+    # In Fortran: columns n_sd+1..n_sd+4 are 19..22 (1-based)
+    col19 = n_sd      # 0-based index 18
+    col20 = n_sd + 1  # 19
+    col21 = n_sd + 2  # 20
+    col22 = n_sd + 3  # 21
+
+    # Copy top part from column n_sd (18, 1-based) => index n_sd-1 (17, 0-based)
+    src = n_sd - 1
+    z_mas[:nv_vqs[n_sd - 1], col19] = z_mas[:nv_vqs[n_sd - 1], src]
+    z_mas[:nv_vqs[n_sd - 1], col20] = z_mas[:nv_vqs[n_sd - 1], src]
+    z_mas[:nv_vqs[n_sd - 1], col21] = z_mas[:nv_vqs[n_sd - 1], src]
+    z_mas[:nv_vqs[n_sd - 1], col22] = z_mas[:nv_vqs[n_sd - 1], src]
+
+    # Fill deep parts (exact arrays from Fortran)
+    def fill_deep(col, arr):
+        start = nv_vqs[n_sd - 1]  # index where "-400 ..." begins (1+nv_vqs(n_sd) in Fortran)
+        z_mas[start:start + len(arr), col] = np.array(arr, dtype=float)
+
+    fill_deep(col19, [-400,-460,-520,-590,-660,-740,-830,-930,-1050])
+    fill_deep(col20, [-400,-460,-520,-590,-660,-740,-830,-930,-1050,-1200,-1400,-1600,-1800,-2000])
+    fill_deep(col21, [-400,-460,-520,-590,-660,-740,-830,-930,-1050,-1200,-1400,-1600,-1800,-2000,-2400,-2900,-3500,-4200,-5001])
+    fill_deep(col22, [-400,-460,-520,-590,-660,-740,-830,-930,-1050,-1200,-1400,-1600,-1800,-2000,-2400,-2900,-3500,-4200,-5001,-6000,-7000,-8000,-9000])
+
+    # Sanity: master nvrt
+    nvrt_m = int(nv_vqs.max())
+
+    return {
+        "m_vqs": m_vqs,
+        "n_sd": n_sd,
+        "dz_bot_min": dz_bot_min,
+        "a_vqs0": a_vqs0,
+        "etal": etal,
+        "hsm": hsm,
+        "nv_vqs": nv_vqs,
+        "nvrt_m": nvrt_m,
+        "z_mas": z_mas,
+    }
+
+
 def build_master_vgrid2():
     """
     Alternative implementation of build_master_vgrid using more numpy features.
@@ -58,7 +172,7 @@ def build_master_vgrid2():
     dz_bot_min = 0.1
     a_vqs0 = 0.0
     etal = 0.0
-    theta_b = 0.0
+    theta_b = 0
 
     hsm = np.array([float(k) for k in hsm_dict.keys()], dtype=float)
     nv_vqs = np.zeros(m_vqs, dtype=int)

@@ -385,11 +385,11 @@ def plot_VQS(
 
 if __name__ == "__main__":
     plot_VQS(
-        vgrid_master="/sciclone/schism10/feiye/STOFS3D-v8/I30/Vgrid/vgrid_master.out",
-        hgrid="/sciclone/schism10/feiye/STOFS3D-v8/I30/Vgrid/hgrid.gr3",
-        vgrid="/sciclone/schism10/feiye/STOFS3D-v8/I30/Vgrid/vgrid.in.old",
+        vgrid_master="/sciclone/schism10/feiye/STOFS3D-v8/I33b/Vgrid/vgrid_master.out",
+        hgrid="/sciclone/schism10/feiye/STOFS3D-v8/I33b/Vgrid/hgrid.gr3",
+        vgrid="/sciclone/schism10/feiye/STOFS3D-v8/I33b/Vgrid/vgrid.in.old",
         transect_bp="/sciclone/schism10/feiye/STOFS3D-v8/I30/Vgrid0/transect.bp",
-        transect1_out="/sciclone/schism10/feiye/STOFS3D-v8/I30/Vgrid/transect1.out",
-        save_png="/sciclone/schism10/feiye/STOFS3D-v8/I30/Vgrid/vqs_diagnostics.png",
+        transect1_out="/sciclone/schism10/feiye/STOFS3D-v8/I33b/Vgrid/transect1.out",
+        save_png="/sciclone/schism10/feiye/STOFS3D-v8/I33b/Vgrid/vqs_diagnostics.png",
         show=True,
     )
