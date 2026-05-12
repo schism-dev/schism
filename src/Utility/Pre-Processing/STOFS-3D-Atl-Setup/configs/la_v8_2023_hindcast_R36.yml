@@ -1,0 +1,33 @@
+profile: "la_subdomain"   # or whatever recipe name you wire to
+
+run:
+  project_dir: "/sciclone/schism10/feiye/STOFS3D-v8/"
+  runid: "36"
+  hgrid_path: "/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v54/Split_quads/hgrid_split_quads.gr3"
+
+model:
+  version: "v8_louisianna"
+  rnday: 250
+  startdate: "2023-04-13"
+  nwm_cache_folder: '/sciclone/schism10/feiye/STOFS3D-v7.3/I21g/NWM_20221201_realigned/'
+  replace_nwm_with_usgs: True
+
+runtime:
+  # optional scratch target for outputs symlink:
+  scr_dir: "/sciclone/scr10/feiye/STOFS3D-v8/"
+
+inputs:
+  bctides: false
+  vgrid: false
+  gr3: true
+  nudge_gr3: false
+  shapiro: true
+  drag: true
+  elev_ic: false
+  source_sink: false
+  soil: true
+  "hotstart.nc": false
+  "3D.th.nc": false
+  "elev2D.th.nc": false
+  "*nu.nc": false
+  "*.prop": true

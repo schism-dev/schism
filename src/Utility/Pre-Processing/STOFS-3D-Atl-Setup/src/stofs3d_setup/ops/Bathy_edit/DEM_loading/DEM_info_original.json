@@ -1,0 +1,117 @@
+{
+    "gebco": {
+        "Annotation": "General Bathymetric Chart of the Oceans",
+        "Note": "",
+        "File": "/sciclone/schism10/lcui01/schism20/DEM/GEBCO/gebco_2020_n90.0_s0.0_w-90.0_e0.0.asc"
+    },
+    "etopo1": {
+        "Annotation": "ETOPO1 1 Arc-Minute Global Relief Model",
+        "Note": "",
+        "File": "/sciclone/data10/whuang07/NWM/DEM/DEM/etopo1.asc"
+    },
+    "crm": {
+        "Annotation": "CRM (Coastal Relief Model) 3 arc seconds",
+        "Note": "",
+        "File": "/sciclone/data10/whuang07/NWM/NOAA/3arcs/central_gom_crm_v[1-5].asc"
+    },
+    "cdem": {
+        "Annotation": "Coastal 1/3 arc seconds DEM from NOAA NGDC",
+        "Note": "https://docs.google.com/document/d/1IsLhZchWqg6F03vapwfjqbd1Ho_c5nrZcz2Gp3dOzu8/edit?usp=sharing",
+        "File": "/sciclone/schism10/Hgrid_projects/DEMs/CDEM/; /ches/data10/whuang07/NWM/NOAA/13arcs/"
+    },
+    "CoNED_North_Carolina": {
+        "Annotation": "Coastal National Elevation Database: North Carolina region, coarsened to 3m, projected to lon/lat",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/OneNote.aspx?id=%2Fpersonal%2Ffeiye_vims_edu%2FDocuments%2FNotebooks%2FNOAA%20TWL%20project%E2%80%8B&wd=target%28DEM.one%7CAE181E84-4618-4FAF-8AF2-32FE3A6C3D29%2FCoNED%7CC017A206-7C6F-4EED-8414-6244AB1BCFB8%2F%29",
+        "File": "/sciclone/data10/whuang07/NWM/CONED/NorthCarolina_USGS_CoNED_3m/North_Carolina_USGS_3m_*"
+    },
+    "CuDEM_NCEI_al": {
+        "Annotation": "CuDEM (Continously updated DEM): Alabama",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
+        "File": "/sciclone/schism10/Hgrid_projects/DEMs/CuDEM2/CuDEM_NCEI_al_ll*.asc"
+    },
+    "CuDEM_NCEI_nc": {
+        "Annotation": "CuDEM (Continously updated DEM): North Carolina",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
+        "File": "/sciclone/schism10/Hgrid_projects/DEMs/CuDEM2/CuDEM_NCEI_nc_ll*.asc"
+    },
+    "CuDEM_NCEI_fl": {
+        "Annotation": "CuDEM (Continously updated DEM): Florida",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
+        "File": "/sciclone/schism10/Hgrid_projects/DEMs/CuDEM2/CuDEM_NCEI_fl_ll*.asc"
+    },
+    "CoNED_gulf_1": {
+        "Annotation": "Coastal National Elevation Database: DEM for Gulf region 1, coarsened to 3m",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/OneNote.aspx?id=%2Fpersonal%2Ffeiye_vims_edu%2FDocuments%2FNotebooks%2FNOAA%20TWL%20project%E2%80%8B&wd=target%28DEM.one%7CAE181E84-4618-4FAF-8AF2-32FE3A6C3D29%2FCoNED%7CC017A206-7C6F-4EED-8414-6244AB1BCFB8%2F%29",
+        "File": "/sciclone/schism10/Hgrid_projects/DEMs/CoNED/CoNED_gulf1*; /sciclone/data10/whuang07/NWM/CONED/Northern_Gulf_of_Mexico/Gulf_1"
+    },
+    "CoNED_gulf_3": {
+        "Annotation": "Coastal National Elevation Database: DEM for Gulf region 3, coarsened to 3m",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FDelaware%20Bay%7Cb4b569d1-6f88-459e-9acd-f381f7d897a9%2F%29&wdorigin=703",
+        "File": "/sciclone/schism10/Hgrid_projects/DEMs/CoNED/CoNED_gulf3*; /sciclone/data10/whuang07/NWM/CONED/Northern_Gulf_of_Mexico/Gulf_3"
+    },
+    "CuDEM_NCEI_ge": {
+        "Annotation": "CuDEM (Continously updated DEM): Georgia",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
+        "File": "/sciclone/schism10/Hgrid_projects/DEMs/CuDEM2/CuDEM_NCEI_ge_ll*.asc"
+    },
+    "CuDEM_NCEI_sc": {
+        "Annotation": "CuDEM (Continously updated DEM): South Carolina",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
+        "File": "/sciclone/schism10/Hgrid_projects/DEMs/CuDEM2/CuDEM_NCEI_sc_ll*.asc"
+    },
+    "CoNED_cb_ll": {
+        "Annotation": "Coastal National Elevation Database: Chesapeake Bay region, coarsened to 3m",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/OneNote.aspx?id=%2Fpersonal%2Ffeiye_vims_edu%2FDocuments%2FNotebooks%2FNOAA%20TWL%20project%E2%80%8B&wd=target%28DEM.one%7CAE181E84-4618-4FAF-8AF2-32FE3A6C3D29%2FCoNED%7CC017A206-7C6F-4EED-8414-6244AB1BCFB8%2F%29",
+        "File": "/sciclone/data10/whuang07/NWM/DEM/DEM/cb_ll*"
+    },
+    "CoNED_db_ll": {
+        "Annotation": "Coastal National Elevation Database: DEM for Delaware Bay, coarsened to 3m",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/OneNote.aspx?id=%2Fpersonal%2Ffeiye_vims_edu%2FDocuments%2FNotebooks%2FNOAA%20TWL%20project%E2%80%8B&wd=target%28DEM.one%7CAE181E84-4618-4FAF-8AF2-32FE3A6C3D29%2FCoNED%7CC017A206-7C6F-4EED-8414-6244AB1BCFB8%2F%29",
+        "File": "/sciclone/data10/whuang07/NWM/DEM/DEM/db_*"
+    },
+    "CoNED_new_england": {
+        "Annotation": "Coastal National Elevation Database: New England region, coarsened to 3m",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/OneNote.aspx?id=%2Fpersonal%2Ffeiye_vims_edu%2FDocuments%2FNotebooks%2FNOAA%20TWL%20project%E2%80%8B&wd=target%28DEM.one%7CAE181E84-4618-4FAF-8AF2-32FE3A6C3D29%2FCoNED%7CC017A206-7C6F-4EED-8414-6244AB1BCFB8%2F%29",
+        "File": "/sciclone/schism10/Hgrid_projects/DEMs/CoNED/CoNED_new_england_topobathy_dem_3m_dd*; /sciclone/data10/whuang07/NWM/CONED/New_England_USGS_CoNED_1m"
+    },
+    "FEMA": {
+        "Annotation": "FEMA Region III DEM",
+        "Note": "",
+        "File": "/sciclone/data10/whuang07/NWM/CUDEM/FEMA-10m/Tile3_R3_DEMv2_3.asc"
+    },
+    "chesbay_v3.1": {
+        "Annotation": "DEM v3.1 for Chesapeake Bay from the CB database",
+        "Note": "https://docs.google.com/document/d/1NhGplKh7OyEXmo1EwN6pElrP-seZbWzKuzjvKJC9ew8/edit?usp=sharing",
+        "File": "/sciclone/data10/feiye/data20/ChesBay/DEM_version3/bay_dem_v3.1.grd; /sciclone/data10/wangzg/DEM/ChesBay/bay_dem_v3.1.npz"
+    },
+    "CuDEM_NCEI_pr": {
+        "Annotation": "CuDEM (Continously updated DEM): Puerto Rico",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
+        "File": "/sciclone/data10/wangzg/DEM/Puerto_Rico/tif/"
+    },
+    "CuDEM_NCEI_tx": {
+        "Annotation": "CuDEM (Continously updated DEM): Texas",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
+        "File": "/sciclone/data10/whuang07/NWM/CUDEM/TX_all/"
+    },
+    "CuDEM_NCEI_ms_la": {
+        "Annotation": "CuDEM (Continously updated DEM): Mississippi and Louisiana",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
+        "File": "/sciclone/data10/whuang07/NWM/CUDEM/MS_LA/"
+    },
+    "CuDEM_NCEI_ma_nh_ne": {
+        "Annotation": "CuDEM (Continously updated DEM): MA, NH, and NE",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
+        "File": "/sciclone/schism10/lcui01/schism20/DEM/CUDEM/MA_NH_ME/"
+    },
+    "CuDEM_NCEI_al_nwfl": {
+        "Annotation": "CuDEM (Continously updated DEM): Alabama and Northwest Florida",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
+        "File": "/sciclone/schism10/lcui01/schism20/DEM/CUDEM/AL_nwFL/"
+    },
+    "CuDEM_NCEI19_FL": {
+        "Annotation": "CuDEM (Continously updated DEM): Updated Florida",
+        "Note": "https://vims0-my.sharepoint.com/personal/feiye_vims_edu/_layouts/15/Doc.aspx?sourcedoc={d6aa1259-6a28-4b12-9caf-58f05600b3b5}&action=edit&wd=target%28DEM.one%7Cae181e84-4618-4faf-8af2-32fe3a6c3d29%2FCuDEM%7C7ed05443-5395-4dee-81b2-a8f7b0d530f2%2F%29&wdorigin=703&wdpreservelink=1",
+        "File": "/sciclone/schism10/lcui01/schism20/DEM/CUDEM/FL/"
+    }
+}

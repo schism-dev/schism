@@ -1,0 +1,37 @@
+profile: "v7.3_2008_atlas"   # *
+
+run:
+  project_dir: "/sciclone/schism10/feiye/STOFS3D-v7.3/"
+  runid: "21u"  # *
+  hgrid_path: "/sciclone/schism10/feiye/STOFS3D-v8/v7.3_static_inputs_2025_09_09/hgrid.gr3"
+  vgrid_path: "/sciclone/schism10/feiye/STOFS3D-v8/v7.2_static_inputs_2025_04_12/vgrid.in"
+
+model:
+  version: "v7p2"
+  rnday: 397
+  startdate: "2007-12-01"  # *
+  nwm_cache_folder: '/sciclone/schism10/feiye/STOFS3D-v8/NWM/CONUS/netcdf/CHRTOUT/for_2008_hindcast/'  # *
+  existing_source_json_path: '/sciclone/schism10/feiye/STOFS3D-v8/I15k_v7/Source_sink/original_source_sink/'
+  replace_nwm_with_usgs: True
+
+
+runtime:
+  # optional scratch target for outputs symlink:
+  scr_dir: "/sciclone/scr10/feiye/STOFS3D-v7.3/"
+
+inputs:
+  bctides: false
+  vgrid: false
+  gr3: false
+  nudge_gr3: false
+  shapiro: false
+  drag: false
+  elev_ic: false
+  source_sink: true
+  soil: false
+  "hotstart.nc": false
+  flux_th: false
+  "3D.th.nc": false
+  "*nu.nc": false
+  "elev2D.th.nc": false
+  "*.prop": false
