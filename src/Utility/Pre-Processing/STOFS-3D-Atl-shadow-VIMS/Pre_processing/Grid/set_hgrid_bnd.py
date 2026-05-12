@@ -1,8 +1,5 @@
 import numpy as np
-try:
-    from pylib_experimental.schism_file import cread_schism_hgrid as schism_read
-except ImportError:
-    from pylib import read_schism_hgrid as schism_read
+from pylib import read_schism_hgrid as schism_read
 
 
 def convert_boundary_dict(boundary_dict):
@@ -21,7 +18,7 @@ def convert_boundary_dict(boundary_dict):
         boundary_points = np.array(boundary_dict[key])
         if boundary_points.shape != (2, 2):
             raise ValueError(
-                'Each boundary should have two points' 
+                'Each boundary should have two points'
                 ' (start and end, going counterclosewise along the boundary).'
             )
         boundary_list.append(
@@ -57,7 +54,7 @@ def make_stofsv8_boundary(hgrid_obj, output_dir='./', write_hgrid=False):
 
 
 if __name__ == '__main__':
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I15a_v7/FeederDp/'
-    hg = schism_read(f'{wdir}/hgrid.feeder_dp.ll')
+    wdir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32c/Improve/'
+    hg = schism_read(f'{wdir}/hgrid.ll')
     # hg.proj(prj0='esri:102008', prj1='epsg:4326')
     make_stofsv8_boundary(hg, output_dir=wdir)
