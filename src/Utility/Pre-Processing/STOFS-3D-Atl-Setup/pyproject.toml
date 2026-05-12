@@ -4,9 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stofs3d-setup"
-version = "0.1.0"
-requires-python = ">=3.9"
-dependencies = ["pydantic>=2", "pyyaml>=6"]
+version = "0.1.1"
+requires-python = ">=3.10"
+
+dependencies = [
+    "pydantic>=2",
+    "pyyaml>=6",
+    "fiona",
+    "gsw",
+    "pyshp",
+    "pylibs-ocean",
+]
 
 [project.scripts]
 stofs3d-setup = "stofs3d_setup.cli:app"

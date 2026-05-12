@@ -4,18 +4,13 @@ Scripts for setting up **STOFS-3D Atlantic** and related compound flooding model
 
 These scripts automate common preprocessing tasks such as mesh preparation, forcing setup, and workflow configuration.
 
-This package replaces the legacy STOFS-3D-Atl-shadow-VIMS package. Previous versions of the original implementation can be retrieved from commit 71dd94b9fd764f2004c6b12279ec3bd8f53df3ae and earlier Git history.
+This package replaces the legacy STOFS-3D-Atl-shadow-VIMS package. Previous versions of the original implementation can be retrieved from commit 71dd94b9 and earlier Git history.
+
 ---
 
 ## Dependencies
 
-The scripts are tested on Python 3.10.
-
-The following Python packages are required:
-
-- `fiona`
-- `gsw`
-- `pyshp` *(temporary; will be removed in a future update)*
+The scripts are tested on Python 3.10. 
 
 ---
 
@@ -35,17 +30,8 @@ The `--no-build-isolation` flag is currently required due to packaging issues in
 
 ---
 
-### 2. Install `pylibs-ocean`
 
-Only the core functionality is required:
-
-```bash
-pip install pylibs-ocean
-```
-
----
-
-### 3. Install experimental pylibs utilities
+### 2. Install experimental pylibs utilities
 
 ```bash
 pip install git+https://github.com/wzhengui/pylibs.git#subdirectory=pylib_experimental
@@ -53,13 +39,15 @@ pip install git+https://github.com/wzhengui/pylibs.git#subdirectory=pylib_experi
 
 ---
 
-### 4. Temporary dependency
+### 3. Temporary dependency
 
 This dependency will be removed in a future update:
 
 ```bash
 pip install git+https://github.com/feiye-vims/schism_py_pre_post.git
 ```
+### 4. This package:
+pip install "git+https://github.com/schism-dev/schism.git@master#subdirectory=src/Utility/Pre-Processing/STOFS-3D-Atl-Setup"
 
 ---
 
