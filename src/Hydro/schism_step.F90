@@ -7960,7 +7960,7 @@ real (rkind) :: aux                               ! ustar
             if(idry_e(i)==1) then !use air T if available; soil-air exchange
               if(nws==2.or.nws==4) then
                 tmp2=sum(airt2(elnode(1:i34(i),i)))/i34(i)
-                !tmp1=(tmp2-stemp(i))*dt*stemp_stc2 !heat [J/m^2]
+                !tmp1=(tmp2-stemp(i))*dt*stemp_stc2 !heat transfer [J/m^2]
                 !4.184e6=\rho*C_p is the heat capacity of water (J.m-3/K), which happens 
                 !to be similar to soil b/c of the differences in density and C_p
                 tmp1=dt*tmp0/max(tmp,1.d-2)/4.184d6 ![-] like blending factor; >=0

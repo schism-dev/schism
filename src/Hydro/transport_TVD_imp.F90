@@ -1896,7 +1896,7 @@
       do i=1,ne
         if(idry_e(i)==1) cycle
 
-!       Wet elements with 3 wet nodes
+!       Wet elements with wet nodes
         ndim=nvrt-kbe(i) !# of eqs/unknowns
         do m=1,ntr !cycle through tracers
           ! Vertical movement of POM (by Richard Hofmeister)
