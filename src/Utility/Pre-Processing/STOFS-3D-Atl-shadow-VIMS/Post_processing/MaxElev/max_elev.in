@@ -1,7 +1,0 @@
-elevation
-0       !switch for node/ele based vars: 0,node; 1,ele
-000 000 !start and end stacks
-0 1 1   !switches for min, max, avg
--999999 !threshold for outputing violators.bp, where violaters are nodes/eles with var values < threshold
-0       !initialization flag: (0) do nothing;  (1) intialized to -dp (useful for maxelev)
-
