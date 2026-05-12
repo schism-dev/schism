@@ -77,7 +77,7 @@ subroutine ice_thermodynamics
       ug=sqrt(windx(i)**2+windy(i)**2)
     endif !ice_tests
 
-    ustar=sqrt(cdwat*((u_ice(i)-u_ocean(i))**2+(v_ice(i)-v_ocean(i))**2)) !ice-ocean frictional vel
+    ustar=sqrt(cdwat(i)*((u_ice(i)-u_ocean(i))**2+(v_ice(i)-v_ocean(i))**2)) !ice-ocean frictional vel
 !YJZ
 !    h_ml=0.1 !Mixed layer (ML) depth [m]
 

@@ -92,7 +92,7 @@ subroutine ice_init
      &sigma11(nea),sigma12(nea),sigma22(nea),weit_elem2node(mnei,np),u_ocean(npa), &
      &v_ocean(npa),area_median(np),voltriangle(nea),bafux(3,nea),bafuy(3,nea), &
      &ice_matrix(0:mnei_p,np),lump_ice_matrix(npa),delta_ice(nea),t_oi(npa), &
-     &ice_fct_flag(npa),stat=istat)
+     &ice_fct_flag(npa),cdwat(npa),stat=istat)
   if(istat/=0) call parallel_abort('ice_init: alloc (1)')
 !  if(ice_therm_on==1) then
 !    allocate(t_oi(npa),stat=istat)
@@ -110,6 +110,15 @@ subroutine ice_init
   do i=1,npa
     if(dp(i)<=depth_ice_fct) ice_fct_flag(i)=0
   enddo !i
+
+  !Read in cd_icewater.gr3
+  open(10,file=in_dir(1:len_in_dir)//'cd_icewater.gr3',status='old')
+  read(10,*); read(10,*)
+  do i=1,np_global
+    read(10,*)j,sum1,sum1,tmp
+    if(ipgl(i)%rank==myrank) cdwat(ipgl(i)%id)=tmp
+  enddo !i
+  close(10)
 
   t_oi=0 !init T @snow/ice surface in C
   u_ice=0; v_ice=0; sigma11=0; sigma12=0; sigma22=0

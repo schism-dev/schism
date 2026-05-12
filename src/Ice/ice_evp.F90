@@ -134,7 +134,7 @@ subroutine ice_evp
       !RHS
 !Error: tri only
       umod=sqrt((u_ice(i)-u_ocean(i))**2+(v_ice(i)-v_ocean(i))**2)
-      gam1=ice_tr(2,i)/mass*cdwat*rho0*umod
+      gam1=ice_tr(2,i)/mass*cdwat(i)*rho0*umod
       rxp=ice_tr(2,i)*stress_atm_ice(1,i)/mass
       ryp=ice_tr(2,i)*stress_atm_ice(2,i)/mass
       !Pressure gradient

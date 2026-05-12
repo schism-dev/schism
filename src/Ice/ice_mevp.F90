@@ -138,7 +138,7 @@ subroutine ice_mevp
 !Error: tri only
       umod=sqrt((u_ice(i)-u_ocean(i))**2+(v_ice(i)-v_ocean(i))**2)
       dt_by_mass=dt_ice/mass
-      gam1=ice_tr(2,i)*dt_by_mass*cdwat*rho0*umod
+      gam1=ice_tr(2,i)*dt_by_mass*cdwat(i)*rho0*umod
       rx=beta0*u_ice(i)+u_ice_0(i)+gam1*(u_ocean(i)*cos_io-v_ocean(i)*sin_io)+ &
     &dt_by_mass*ice_tr(2,i)*stress_atm_ice(1,i)
       ry=beta0*v_ice(i)+v_ice_0(i)+gam1*(u_ocean(i)*sin_io+v_ocean(i)*cos_io)+ &
