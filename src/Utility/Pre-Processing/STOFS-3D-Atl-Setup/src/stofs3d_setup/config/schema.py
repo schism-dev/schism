@@ -27,6 +27,7 @@ class Inputs(BaseModel):
     nudge_gr3: bool = False
     shapiro: bool = False
     drag: bool = False
+    diffmin: bool = False
     flux_th: bool = False
     elev_ic: bool = False
     soil: bool = False

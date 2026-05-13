@@ -1,0 +1,34 @@
+profile: "v7.4_sample"  # give any name
+
+run:
+  project_dir: "/sciclone/schism10/feiye/STOFS3D-v7.4/"
+  runid: "100x"
+  hgrid_path: "/sciclone/schism10/hjyoo/task/task10_Atlantic/RUN100d/src/hgrid/hgrid.gr3"
+
+model:
+  version: "v7p4"  # defined in src/stofs3d_setup/config/stofs3d_atl_config.py
+  rnday: 3
+  startdate: "2016-12-01"  # *
+  replace_nwm_with_usgs: True
+  nwm_cache_folder: None  # Use None or delete this line if you don't have saved NWM product
+
+runtime:
+  scr_dir: "/sciclone/scr10/feiye/STOFS3D-v7.4/"  # Use None if you don't want to save the outputs on a scratch disk.
+
+inputs:
+  bctides: false
+  vgrid: false
+  gr3: false
+  nudge_gr3: false
+  shapiro: false
+  drag: false
+  diffmin: true
+  elev_ic: false
+  flux_th: false
+  source_sink: false
+  soil: false
+  "hotstart.nc": false
+  "3D.th.nc": false
+  "*nu.nc": false
+  "elev2D.th.nc": false
+  "*.prop": false
