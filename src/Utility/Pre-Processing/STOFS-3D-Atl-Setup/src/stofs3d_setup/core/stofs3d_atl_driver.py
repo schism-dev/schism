@@ -1,36 +1,5 @@
 '''
 This is the driver script to set up the STOFS-3D-ATL model.
-Simpler tasks such as generating uniform *.gr3 are included in this script.
-More complex tasks such as generating source_sink are imported as modules from subfolders.
-
-Some scripts are written in Fortran and C++ for speed.
-You may need to compile them before running this driver script.
-See compile instructions at the beginning of each script:
-
-- Vgrid/: gen_vqs.f90, change_vgrid.f90
-
-Usage:
-    see sample_usage.py in the same folder.
-
-The script will prepare the model folders and keep a record of itself in the
-model input folder.
-
-For the author, there are a few "todo" items in the script.
-1) The second call to gen_sourcesink_nwm is not optimal, because it downloads
-    the NWM data again if config.nwm_cache_folder is not set.
-    This cost time for longer runs.
-    It is better to directly use generated sources/sinks.
-    As a temporary solution, run the script with config.relocate_source = False,
-    locate the downloaded data in {model_input_path}/Source_sink/original_source_sink/,
-    symlink all downloaded NWM data in a single folder and set config.nwm_cache_folder.
-    The symlink is necessary because NWM data may be stored in subfolders of different years.
-
-2) hotstart.nc
-
-Temporary changes to be tested:
-1) admit more BlueTopo in DEM_loading, see bluetopo_region.shp
-2) adopted regional depth tweaks from SECOFS, added DEFAULT_REGIONAL_TWEAKS2 in regional_tweaks.py
-3) adopted drag tweaks from SECOFS, added a few regions in gen_drag()
 '''
 
 
@@ -53,15 +22,15 @@ from pyschism.mesh import Hgrid as pyschism_Hgrid
 
 # Import from the sub folders. These are not from installed packages.
 from ..ops.simple_tasks import gen_nudge_coef, gen_shapiro_strength, gen_soil, gen_drag, gen_elev_ic
-from ..ops.simple_tasks import gen_3dbc, gen_elev2d, gen_nudge_stofs
+from ..ops.simple_tasks import gen_3dbc, gen_elev2d, gen_nudge_stofs, gen_diffmin
 from ..ops.Vgrid.gen_vqs import gen_vqs
 from ..ops.River.gen_Canada_river_flux_th import gen_Canada_river_flux_th
-from ..utils.utils import mkcd_new_dir, try_remove, prep_run_dir
+from ..utils.utils import mkcd_new_dir, try_remove, prep_run_dir, write_metadata
 from ..ops.Prop.gen_tvd import gen_tvd_prop
 from ..ops.Bctides.bctides.bctides import Bctides  # temporary, bctides.py will be merged into pyschism
 # from pyschism.forcing.bctides import Bctides
 from ..ops.Source_sink.assemble_source_sink import assemble_source_sink
-#from ..ops.Hotstart.gen_hotstart_nc import gen_hotstart_nc
+# from ..ops.Hotstart.gen_hotstart_nc import gen_hotstart_nc
 
 # Import configuration
 from ..config.stofs3d_atl_config import ConfigStofs3dAtlantic
@@ -114,6 +83,13 @@ def stofs3d_atl_driver(
     os.system(f'cp -rf {script_path} {model_input_path}/Pre_processing_scripts_backup')
     # make a copy of the hgrid to the model_input_path
     os.system(f'cp {hgrid_path} {model_input_path}/hgrid.gr3')
+
+    write_metadata(
+        script_path=script_path,
+        metadata_path=f"{model_input_path}/metadata.yml",
+        project_dir=project_dir,
+        runid=runid,
+    )
 
     # ------------------vgrid---------------------
     if vgrid_path is not None:
@@ -281,6 +257,19 @@ def stofs3d_atl_driver(
         os.chdir(run_dir)
         os.system(f'ln -sf ../I{runid}/{sub_dir}/drag.gr3 .')
         os.chdir(model_input_path)
+    
+    # -------------------------diffmin.gr3-------------------------
+    if input_files['diffmin']:
+        sub_dir = 'Diffmin'
+        print(f'{DRIVER_PRINT_PREFIX}Generating diffmin.gr3 ...')
+        mkcd_new_dir(f'{model_input_path}/{sub_dir}')
+        diffmin = gen_diffmin(hgrid)
+
+        hgrid.save(f'{model_input_path}/{sub_dir}/diffmin.gr3', value=diffmin)
+
+        os.chdir(run_dir)
+        os.system(f'ln -sf ../I{runid}/{sub_dir}/diffmin.gr3 .')
+        os.chdir(model_input_path)
 
     # -----------------elev_ic---------------------
     if input_files['elev_ic']:
@@ -324,7 +313,7 @@ def stofs3d_atl_driver(
     # -----------------source_sink---------------------
     # Note:
 
-    # Normal case: main hgrid has pseudo channels as feeders.
+    # v7.3 and earlier versions: main hgrid has pseudo channels as feeders.
     # An "hgrid_without_feeders" needs to be provided in the stofs3d_atl_config.py
     # to generate the original sources/sinks.
     # This is necessary because the feeder channels are not real channels
@@ -333,9 +322,7 @@ def stofs3d_atl_driver(
     # NWM segments weaving in and out of the schism domain.
     # The script will then relocate the original sources to the head of each feeder channel.
 
-    # Special case: main hgrid has no feeders or has real channels as feeders.
-    # In this case, the original sources/sinks are generated based on the main hgrid directly,
-    # and the option "hgrid_without_feeders" should be set to None.
+    # v7.4 and higher: feeders are removed from the mesh to simplify mesh generation and model setup
 
     if input_files['source_sink']:
         sub_dir = 'Source_sink'
@@ -372,10 +359,9 @@ def stofs3d_atl_driver(
         print(f'{DRIVER_PRINT_PREFIX}Generating hotstart.nc ...')
         mkcd_new_dir(f'{model_input_path}/{sub_dir}')
 
-        # generate hotstart.nc
-        gen_hotstart_nc(
-            start_date=config.startdate
-        )
+        raise NotImplementedError(f'{DRIVER_PRINT_PREFIX}Need to update to the latest USGS api; otherwise the download is not stable')
+        # uncomment below if you have existing observation data to generate initial condition
+        # gen_hotstart_nc(start_date=config.startdate)
 
         os.chdir(run_dir)
         os.system(f'ln -sf ../I{runid}/{sub_dir}/hotstart.nc .')
@@ -393,7 +379,8 @@ def stofs3d_atl_driver(
             outdir=f'{model_input_path}/{sub_dir}',
             rnday=config.rnday, start_date=config.startdate,
             ocean_bnd_ids=config.ocean_bnd_ids,
-            # use pre-downloaded files to speed up
+
+            # uncomment below to use pre-downloaded files to speed up
             # hycom_download_dir='/sciclone/schism10/feiye/STOFS3D-v8/HYCOM_DOWNLOADS_Nudge/',
             # hycom_download_dir=None,
         )
@@ -414,6 +401,7 @@ def stofs3d_atl_driver(
             outdir=f'{model_input_path}/{sub_dir}',
             start_date=config.startdate, rnday=config.rnday,
             ocean_bnd_ids=config.ocean_bnd_ids,
+            # uncomment below if you have pre-downloaded HYCOM files
             # hycom_download_dir='/sciclone/schism10/feiye/STOFS3D-v8//HYCOM_DOWNLOADS_3Dth/',
         )
 

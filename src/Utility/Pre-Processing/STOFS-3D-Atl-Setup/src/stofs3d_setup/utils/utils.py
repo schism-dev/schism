@@ -108,3 +108,28 @@ def prep_run_dir(parent_dir, runid, scr_dir=None):
     return model_input_path, rundir, output_dir
 
 
+def write_metadata(
+    script_path,
+    metadata_path,
+    project_dir,
+    runid,
+):
+    import subprocess
+    import yaml
+    from datetime import datetime
+
+    git_commit = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"],
+        cwd=script_path,
+        text=True,
+    ).strip()
+
+    metadata = {
+        "runid": str(runid),
+        "project_dir": str(project_dir),
+        "generated_on": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+        "setup_git_commit": git_commit,
+    }
+
+    with open(metadata_path, "w") as f:
+        yaml.safe_dump(metadata, f, sort_keys=False)

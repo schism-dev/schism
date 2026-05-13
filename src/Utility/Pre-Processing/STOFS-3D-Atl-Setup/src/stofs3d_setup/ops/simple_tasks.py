@@ -248,6 +248,29 @@ def gen_soil(hgrid: pylib.schism_grid):
     return [soil_conductivity, soil_thick]
 
 
+def gen_diffmin(hgrid: pylib.schism_grid):
+    """ generate diffmin, background value with local tweaks"""
+    diffmin = hgrid.dp * 0 + 1e-6  # background value
+
+    region_tweaks = {
+        'Shap_Thimble.rgn': {
+            'diffmin': 0.001,
+            'region_file': f'{script_path}/Gr3/Diffmin/Shap_Thimble.rgn'
+        },
+        'Shap_Narrows.rgn': {
+            'diffmin': 0.001,
+            'region_file': f'{script_path}/Gr3/Diffmin/Shap_Narrows.rgn'
+        },
+    }
+    for _, tweak in region_tweaks.items():
+        print(f"Applying diffmin {tweak['diffmin']} in {tweak['region_file']}")
+        reg = read_schism_reg(tweak['region_file'])
+        idx = inside_polygon(np.c_[hgrid.x, hgrid.y], reg.x, reg.y).astype(bool)
+        diffmin[idx] = tweak['diffmin']
+
+    return diffmin
+
+
 def gen_drag(hgrid: pylib.schism_grid):
     '''generate drag coefficient based on the depth and regions'''
 
@@ -401,6 +424,52 @@ def gen_drag(hgrid: pylib.schism_grid):
         river = hgrid.dp > 0
         drag[idx & river] = tweak['drag']
 
+    # simple replacement throughout the regions
+    region_tweaks2 = {
+        'Cd_Bridgport.rgn': {
+            'drag': 0,
+            'region_file': f'{script_path}/Gr3/Drag/Cd_Bridgport.rgn'
+        },
+        'Cd_ConnRiver.rgn': {
+            'drag': 0,
+            'region_file': f'{script_path}/Gr3/Drag/Cd_ConnRiver.rgn'
+        },
+        'Cd_OregonInlet.rgn': {
+            'drag': 0.01,
+            'region_file': f'{script_path}/Gr3/Drag/Cd_OregonInlet.rgn'
+        },
+        'Cd_Peconic.rgn': {
+            'drag': 0,
+            'region_file': f'{script_path}/Gr3/Drag/Cd_Peconic.rgn'
+        },
+        'Cd_ReynoldsChan.rgn': {
+            'drag': 0,
+            'region_file': f'{script_path}/Gr3/Drag/Cd_ReynoldsChan.rgn'
+        },
+        'Cd_Hudson.rgn': {
+            'drag': 0,
+            'region_file': f'{script_path}/Gr3/Drag/Cd_Hudson.rgn'
+        },
+    }
+    for _, tweak in region_tweaks2.items():
+        print(f"Applying drag {tweak['drag']} in {tweak['region_file']}")
+        reg = read_schism_reg(tweak['region_file'])
+        idx = inside_polygon(np.c_[hgrid.x, hgrid.y], reg.x, reg.y).astype(bool)
+        drag[idx] = tweak['drag']
+
+    # scale the value inside the regions
+    region_tweaks3 = {
+        'Cd_DEBay_up.rgn': {  # *= 0.01
+            'drag': 0.01,
+            'region_file': f'{script_path}/Gr3/Drag/Cd_DEBay_up.rgn'
+        },
+    }
+    for _, tweak in region_tweaks3.items():
+        print(f"Applying drag scale {tweak['drag']} in {tweak['region_file']}")
+        reg = read_schism_reg(tweak['region_file'])
+        idx = inside_polygon(np.c_[hgrid.x, hgrid.y], reg.x, reg.y).astype(bool)
+        drag[idx] *= tweak['drag']
+
     return drag
 
 
@@ -436,12 +505,21 @@ def gen_shapiro_strength(hgrid: pylib.schism_grid, init_shapiro_dist: np.ndarray
         'coastal_buffer_3:': {
             'filename': f'{script_path}/Gr3/Shapiro/coastal_0.5_2.lonlat.reg',
             'strength': 300
+        },
+        'Shapiro_Thimble': {
+            'filename': f'{script_path}/Gr3/Shapiro/Shapiro_Thimble.rgn',
+            'strength': 1000
+        },
+        'Shap_Narrows': {
+            'filename': f'{script_path}/Gr3/Shapiro/Shap_Narrows.rgn',
+            'strength': 1000
         }
     }
-    for _, tweak in region_tweaks.items():
+    for region, tweak in region_tweaks.items():
         reg = read_schism_reg(tweak['filename'])
         idx = inside_polygon(np.c_[hgrid.x, hgrid.y], reg.x, reg.y).astype(bool)
         shapiro_region[idx] = tweak['strength']
+        print(f"Applying shapiro {tweak['strength']} in {region}")
 
     # -------- combine all shapiro tweaks ---------
     shapiro = shapiro_region + shapiro_ocean_bnd

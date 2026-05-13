@@ -46,6 +46,9 @@ This dependency will be removed in a future update:
 ```bash
 pip install git+https://github.com/feiye-vims/schism_py_pre_post.git
 ```
+
+---
+
 ### 4. This package:
 pip install "git+https://github.com/schism-dev/schism.git@master#subdirectory=src/Utility/Pre-Processing/STOFS-3D-Atl-Setup"
 
@@ -114,7 +117,7 @@ def v7p4(cls):
     )
 ```
 
-#### Why this matters
+#### Rationale
 - Keeps **version logic centralized**
 - Prevents silent divergence between runs
 - Enables clear comparison across versions (e.g., v7.3 vs v7.4)
@@ -125,44 +128,46 @@ def v7p4(cls):
 
 All run-specific settings must be defined in a YAML file rather than hard-coded or scripted ad hoc.
 
-Example: `v7p4_2017.yml`
+Example: `v7p4_sample.yml`
 
 ```yaml
-profile: "v7.4_2017"
+profile: "v7.4_sample"  # give any name
 
 run:
   project_dir: "/sciclone/schism10/feiye/STOFS3D-v7.4/"
-  runid: "R01"
-  hgrid_path: "/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/I01/hgrid.gr3"
+  runid: "100x"
+  hgrid_path: "/sciclone/schism10/hjyoo/task/task10_Atlantic/RUN100d/src/hgrid/hgrid.gr3"
 
 model:
-  version: "v7p4"
-  rnday: 396
-  startdate: "2016-12-01"
+  version: "v7p4"  # defined in src/stofs3d_setup/config/stofs3d_atl_config.py
+  rnday: 3
+  startdate: "2016-12-01"  # *
   replace_nwm_with_usgs: True
+  nwm_cache_folder: None  # Use None or delete this line if you don't have saved NWM product
 
 runtime:
-  scr_dir: "/sciclone/scr10/feiye/STOFS3D-v7.4/"
+  scr_dir: "/sciclone/scr10/feiye/STOFS3D-v7.4/"  # Use None if you don't want to save the outputs on a scratch disk.
 
 inputs:
-  bctides: true
+  bctides: false
   vgrid: false
-  gr3: false
+  gr3: true
   nudge_gr3: false
-  shapiro: false
-  drag: false
+  shapiro: true
+  diffmin: true
+  drag: true
   elev_ic: false
-  flux_th: true
-  source_sink: true
+  flux_th: false
+  source_sink: false
   soil: false
-  "hotstart.nc": true
-  "3D.th.nc": true
-  "*nu.nc": true
-  "elev2D.th.nc": true
+  "hotstart.nc": false
+  "3D.th.nc": false
+  "*nu.nc": false
+  "elev2D.th.nc": false
   "*.prop": false
 ```
 
-#### Why this matters
+#### Rationale
 - Provides a **single source of truth** for each run
 - Makes experiments **portable and reproducible**
 - Enables systematic comparison across scenarios
@@ -179,23 +184,42 @@ Example:
 from stofs3d_setup.config.schema import Settings
 from stofs3d_setup.recipes.generic import build 
 
-cfg = Settings.from_yaml("/sciclone/data10/feiye/stofs3d-setup/configs/v7p4_2017.yml")
+cfg = Settings.from_yaml("/sciclone/data10/feiye/stofs3d-setup/configs/v7p4_sample.yml")
 build(cfg)
 ```
 
-#### Why this matters
+This will generate three folders under the project directory, for example:
+
+```bash
+/sciclone/schism10/feiye/STOFS3D-v7.4/I01/
+```
+
+The `I` folder (`Inputs`) contains:
+
+- a copy of all scripts
+- the generated model input files
+- a metadata.yml file containing version information (e.g., git commit hash and tag), which can be used to retrieve the exact script version from git
+
+This folder serves as a reproducible snapshot of the input-generation workflow.
+
+```bash
+/sciclone/schism10/feiye/STOFS3D-v7.4/R01/
+```
+
+The `R` folder (`Run`) is where the model simulation is executed.  
+It mainly contains symbolic links to the input files stored in the corresponding `I` folder.
+
+```bash
+/sciclone/schism10/feiye/STOFS3D-v7.4/O01/
+```
+
+The `O` folder (`Outputs`) is intended for post-processing products and analysis outputs.  
+You may ignore this folder if you prefer to store post-processed results elsewhere.
+
+#### Rationale
 - Ensures **all preprocessing steps are executed consistently**
 - Avoids missing or inconsistent inputs
 - Keeps logic aligned with repository updates
-
----
-
-### ❗ Important Requirement
-
-**Do NOT:**
-- Copy and modify individual scripts to generate inputs independently  
-- Mix configurations from different versions manually  
-- Bypass the YAML + factory method + recipe workflow  
 
 ---
 
@@ -207,4 +231,13 @@ Factory Method (version definition)
 YAML Config (run definition)
         ↓
 Recipe Build (execution)
+```
+
+### Notes
+
+- For STOFS version `v7.4` and later, use the latest `master` branch.
+
+- For STOFS version `v7.3` and earlier, check out the corresponding historical setup scripts:
+```bash
+git checkout d769b3c66d6
 ```

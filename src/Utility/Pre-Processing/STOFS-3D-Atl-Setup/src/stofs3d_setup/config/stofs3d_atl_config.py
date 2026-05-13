@@ -15,7 +15,7 @@ from ..ops.Source_sink.Relocate import relocate_source_feeder as rsf
 
 # ---------------------------------------------------------------------
 #                               Classes
-# ---------------------------------------------------------------------
+# -----------------------------------------------------
 
 class ConfigStofs3dAtlantic(BaseModel):
     """
@@ -87,7 +87,7 @@ class ConfigStofs3dAtlantic(BaseModel):
         default_factory=lambda: {
             "albedo": 0.1,
             "diffmax": 1.0,
-            "diffmin": 1e-6,
+            # "diffmin": 1e-6,
             "watertype": 1.0,
             "windrot_geo2proj": 0.0,
         }
@@ -321,7 +321,7 @@ class ConfigStofs3dAtlantic(BaseModel):
                 '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v32/Feeder/'
                 'feeder_heads_bases.xy'
             ),
-            hgrid_without_feeders=None,
+            hgrid_without_feeders=None,  # feeders are removed in v7.4, set this to None and the main hgrid will be used.
             relocate_source=True,
             mandatory_sources_coor=rsf.v19p2_for_sms_v32c_mandatory_sources_coor,
             nwm_cache_folder=None,
