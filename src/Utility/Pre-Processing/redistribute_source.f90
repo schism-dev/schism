@@ -6,7 +6,7 @@
 !     Works for mixed tri/quads, lon/lat or proj. The code will look for neigboring bnd cells 
 !     (with at least 1 node on land bnd) to spread flow.
 !     Inputs: redistribute_source.in, constants below, hgrid.gr3, source_sink.in.0, vsource.th.0
-!     Output: source_sink.in,vsource.th, msource.th (-9999 for T),vsource.bp.out (depth of 1=> new sources)
+!     Output: source_sink.in (no changes for sinks),vsource.th, msource.th (-9999 for T),vsource.bp.out (depth of 1=> new sources)
 !             Warning messages in warning.out; fatal on screen
 
 !     ifx -CB -O2 -g -traceback -o redistribute_source redistribute_source.f90
@@ -385,7 +385,7 @@
         endif
         xtmp=sum(x(elnode(1:i34(ie),ie)))/i34(ie)
         ytmp=sum(y(elnode(1:i34(ie),ie)))/i34(ie)
-        write(19,*)i,xtmp,ytmp,hout
+        write(19,*)i,real(xtmp),real(ytmp),real(hout)
       enddo !i
       close(19)
 
