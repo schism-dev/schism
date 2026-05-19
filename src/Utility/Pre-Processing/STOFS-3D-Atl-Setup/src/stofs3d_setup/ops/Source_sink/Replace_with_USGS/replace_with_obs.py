@@ -28,7 +28,7 @@ import geopandas as gpd
 from schism_py_pre_post.Grid.Prop import Prop
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
 from schism_py_pre_post.Utilities.util import b_in_a
-from schism_py_pre_post.Download.download_usgs import \
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS.download_usgs import \
     download_stations, usgs_var_dict, convert_to_ObsData, \
     get_usgs_stations_from_state, detect_data_gap
 from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
