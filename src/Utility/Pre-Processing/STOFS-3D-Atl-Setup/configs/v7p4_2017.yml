@@ -1,9 +1,9 @@
 profile: "v7.4_2017"   # *
 
 run:
-  project_dir: "/sciclone/schism10/feiye/STOFS3D-v7.4/"
-  runid: "100x"  # *
-  hgrid_path: "/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32/v32b.gr3"
+  project_dir: "/sciclone/schism10/hjyoo/task/task10_Atlantic/stofs3d-setup_v7p4/"
+  runid: "test"  # *
+  hgrid_path: "/sciclone/schism10/hjyoo/task/task10_Atlantic/stofs3d-setup_v7p4/hgrid_input/hgrid_02f.gr3"
 
 model:
   version: "v7p4"
@@ -15,16 +15,16 @@ model:
 
 
 runtime:
-  scr_dir: "/sciclone/scr10/feiye/STOFS3D-v7.4/"  # Use None if you don't want to save the outputs on a scratch disk.
+  scr_dir: "/sciclone/schism10/hjyoo/task/task10_Atlantic/stofs3d-setup_v7p4/"  # Use None if you don't want to save the outputs on a scratch disk.
 
 inputs:
   bctides: false
   vgrid: false
-  gr3: true
+  gr3: false
   nudge_gr3: false
-  shapiro: true
-  diffmin: true
-  drag: true
+  shapiro: false
+  diffmin: false
+  drag: false
   elev_ic: false
   flux_th: false
   source_sink: false
@@ -33,4 +33,4 @@ inputs:
   "3D.th.nc": false
   "*nu.nc": false
   "elev2D.th.nc": false
-  "*.prop": false
+  "*.prop": true

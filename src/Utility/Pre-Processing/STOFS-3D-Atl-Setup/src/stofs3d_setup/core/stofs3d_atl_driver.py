@@ -26,7 +26,8 @@ from ..ops.simple_tasks import gen_3dbc, gen_elev2d, gen_nudge_stofs, gen_diffmi
 from ..ops.Vgrid.gen_vqs import gen_vqs
 from ..ops.River.gen_Canada_river_flux_th import gen_Canada_river_flux_th
 from ..utils.utils import mkcd_new_dir, try_remove, prep_run_dir, write_metadata
-from ..ops.Prop.gen_tvd import gen_tvd_prop
+from ..ops.Prop.gen_tvd_v1 import gen_tvd_prop
+#from ..ops.Prop.gen_tvd import gen_tvd_prop
 from ..ops.Bctides.bctides.bctides import Bctides  # temporary, bctides.py will be merged into pyschism
 # from pyschism.forcing.bctides import Bctides
 from ..ops.Source_sink.assemble_source_sink import assemble_source_sink
@@ -348,7 +349,8 @@ def stofs3d_atl_driver(
         mkcd_new_dir(f'{model_input_path}/{sub_dir}')
 
         os.system(f'cp {script_path}/Prop/* .')
-        gen_tvd_prop(hgrid, config.tvd_regions)
+        gen_tvd_prop(hgrid, config.tvd_regions, config.tvd_hmin) #HJ edit
+        #gen_tvd_prop(hgrid, config.tvd_regions)
 
         os.chdir(run_dir)
         os.system(f'ln -sf ../I{runid}/{sub_dir}/tvd.prop .')

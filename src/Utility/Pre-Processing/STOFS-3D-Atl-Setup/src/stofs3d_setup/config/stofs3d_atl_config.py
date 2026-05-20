@@ -93,6 +93,7 @@ class ConfigStofs3dAtlantic(BaseModel):
         }
     )
     tvd_regions: List[str] = Field(default_factory=list)
+    tvd_hmin: Optional[float] = None # HJ add
 
     # === Factory methods for different configurations ===
     @classmethod
@@ -341,7 +342,17 @@ class ConfigStofs3dAtlantic(BaseModel):
                 [None, None, 0.5, 0.5],  # Gulf of St. Lawrence
                 [None, None, 0.01, 1.0],  # St. Lawrence River
             ],
-            tvd_regions=[]
+            tvd_regions=[
+                'iso_10m_edited.rgn',
+                'Ches2.rgn',
+                'DEBay.rgn',
+                'Hudson.rgn',
+                'upwind_Honduras.reg',
+                'upwind_east_Caribbean.rgn',
+                'upwind_west_Caribbean.rgn',
+            ],
+
+            tvd_hmin = 6.0
         )
 
     @classmethod
