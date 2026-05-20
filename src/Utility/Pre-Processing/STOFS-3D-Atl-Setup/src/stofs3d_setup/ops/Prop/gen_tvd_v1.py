@@ -354,7 +354,7 @@ def sample_usage():
         'Ches2.rgn',
         'DEBay.rgn',
         'Hudson.rgn',
-        'upwind_Honduras.rgn',
+        'upwind_Honduras.reg',
         'upwind_east_Caribbean.rgn',
         'upwind_west_Caribbean.rgn',
     ]
