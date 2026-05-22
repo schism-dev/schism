@@ -975,9 +975,9 @@
       !Define chunk size (contiguous block for access) for deflation: each chunk
       !must be < 4GB in size.
       !nchunk_vrt (param.nml, SCHOUT) controls vertical chunking:
-      !  <=0 : legacy behaviour, one chunk = whole volume at one time step
+      !  =0 : default behaviour, one big chunk for the whole 3D mesh loaded at one time step
       !  >0  : group nchunk_vrt layers per chunk along the vertical dimension
-      !        (default 1 = one layer per chunk; best for level-wise reads)
+      !        (example: 1 = one layer per chunk; best for level-wise reads)
       if(nchunk_vrt<=0) then
         chunks(1)=idim1; chunks(2)=idim2; chunks(3)=1
       else
