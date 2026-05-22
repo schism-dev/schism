@@ -533,7 +533,7 @@
       iof_icm_core=0; iof_icm_silica=0; iof_icm_zb=0; iof_icm_ph=0; iof_icm_srm=0; iof_icm_sav=0
       iof_icm_marsh=0; iof_icm_sfm=0; iof_icm_ba=0; iof_icm_clam=0; iof_cos=0; iof_fib=0; iof_sed2d=0
       iof_ice=0; iof_mice=0; iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
-      nchunk_vrt=0 !default: legacy whole-volume chunk (>0 = N layers per chunk)
+      nchunk_vrt=0 !default: whole-volume chunk (>0 = N layers per chunk)
 
       read(15,nml=OPT)
       read(15,nml=SCHOUT)
