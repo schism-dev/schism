@@ -1224,6 +1224,7 @@
 !                            (2,:) when the block is active, it points to the face # or -1 (inside the block);!                             0 means it's either on an inactive block or never part of a block.
 !     q_block(1:nhtblocks): flow from face "1" to "2" at a step. If structures(istruct)%install is false, the block is deactivated; 
 !                           otherwise the block is active.
+! Evan here is the mpi messaging example
 
       if(ihydraulics/=0.and.nhtblocks>0) then
         ! reads time varying parameters
@@ -8214,7 +8215,6 @@
         if (idry_e(i)==0) then
               nwet_inun(i)=nwet_inun(i)+1
         endif
-        !ts = ts + 1 wet_frac = dble(nwet_inun(i)) / ts I think this doesn't work, changing to elem calc to b mpi safe
         wet_frac = dble(nwet_inun(i)) / dble(nt_inun(i))
         
         !not barrier
@@ -8279,8 +8279,8 @@
 #ifdef USE_SED
         !To do: combine all these ifs into one. keepng them apart for ez disabling for now 
         !gates for each marsh type. Waits to kill marsh to allow for warm up
-        if(imarsh(i)>0 .and. nt_inun(i)>step_min) then
-                if (wet_frac>wet_thr(imarsh(i))) then !maybe clean up? Will this explode the code with an error?
+        if(imarsh(i)>0 .and. time_stamp>veg_morph_time*86400) then
+                if (wet_frac>wet_thr(imarsh(i)).and.inundation_opt==1) then 
                         imarsh(i)=0
                         age_marsh(i)=0.d0
                         tau_sum_wet(i)=0.d0
@@ -8293,21 +8293,21 @@
                  endif
          endif
 
-         ! kill immature marsh if stress threshold exceeded during 29.5-day window or if established marsh threshold exceedd
-         if (age_marsh(i) < marsh_maturity_days .and. tau_avg_wet  > kill_tau_imm) then
+         ! kill young marsh if average bed shear stress too high
+         if (age_marsh(i) < marsh_maturity_days .and. tau_avg_wet  > kill_tau_imm .and. shear_opt==1) then
                 imarsh(i)    = 0
                 age_marsh(i) = 0.d0
                 tau_sum_wet(i) = 0.d0
                 nwet(i)= 0
                 marsh_dep_chg(i)=0.d0
                 imarsh_dead(i)=1
-                !marsh_ban_track(i)=2
+                marsh_ban_track(i)=5
                 cycle
          endif
 
 
          !Kill if too much sediment has been lost. Reset counters
-         if (kill_dep_chg < marsh_dep_chg(i)) then
+         if (kill_dep_chg < marsh_dep_chg(i) .and. age_marsh(i) < marsh_maturity_days .and. erosion_opt==1) then
                 imarsh(i)    = 0
                 age_marsh(i) = 0.d0
                 tau_sum_wet(i) = 0.d0
@@ -8317,16 +8317,52 @@
                 imarsh_dead(i)=1
                 cycle
          endif
-          
-         !if(elem_tau_pa>marsh_tau_thresh_pa) then !seems this is leading to anomolous kills
-         !killss mature marsh if beyond a threshold
-         if (age_marsh(i) > marsh_maturity_days .and. tau_avg_wet > marsh_tau_thresh_pa) then
+
+
+         !Kill if too much sediment has been lost. Reset counters
+         if (kill_dep_chg_mature < marsh_dep_chg(i) .and. age_marsh(i) >= marsh_maturity_days .and. erosion_opt==1 ) then
                 imarsh(i)    = 0
                 age_marsh(i) = 0.d0
                 tau_sum_wet(i) = 0.d0
                 nwet(i)= 0
                 marsh_dep_chg(i)=0.d0
                 marsh_ban_track(i)=4
+                imarsh_dead(i)=1
+                cycle
+         endif
+          
+         !Kill if critical shear stress exceeds young threshold
+         if(elem_tau_pa<marsh_tau_thresh_pa .and. age_marsh(i) < marsh_maturity_days .and. shear_opt==2) then
+                imarsh(i)    = 0
+                age_marsh(i) = 0.d0
+                tau_sum_wet(i) = 0.d0
+                nwet(i)= 0
+                marsh_dep_chg(i)=0.d0
+                marsh_ban_track(i)=5
+                imarsh_dead(i)=1
+         endif
+
+         !Kill if critical shear stress exceeds mature threshold
+         if(elem_tau_pa<marsh_tau_thresh_pa .and. age_marsh(i) >= marsh_maturity_days .and. shear_opt==2) then
+                imarsh(i)    = 0
+                age_marsh(i) = 0.d0
+                tau_sum_wet(i) = 0.d0
+                nwet(i)= 0
+                marsh_dep_chg(i)=0.d0
+                marsh_ban_track(i)=5
+                imarsh_dead(i)=1
+         endif
+
+
+         !kills mature marsh if beyond a threshold
+         !delaying this since it takes a while to calculate average
+         if (age_marsh(i) > marsh_maturity_days .and. tau_avg_wet > marsh_tau_thresh_pa .and. time_stamp>veg_morph_time*86400 .and. shear_opt==1) then
+                imarsh(i)    = 0
+                age_marsh(i) = 0.d0
+                tau_sum_wet(i) = 0.d0
+                nwet(i)= 0
+                marsh_dep_chg(i)=0.d0
+                marsh_ban_track(i)=5
                 imarsh_dead(i)=1
          endif
 
@@ -8339,7 +8375,7 @@
             tau_sum_wet(i)=0.d0
             nwet(i)=0
             marsh_dep_chg(i)=0.d0
-            marsh_ban_track(i)=5
+            marsh_ban_track(i)=6
             imarsh_dead(i)=1
           endif !smax
 
@@ -8383,7 +8419,7 @@
             if(icount2>0) then
               tmp2=tmp2/dble(icount2)
               if(tmp2>age_marsh_min) then
-                  if(wet_frac>wet_thr(ifl) .and. step_min<nt_inun(i)) then !skip the loop if too wet
+                  if(wet_frac>wet_thr(ifl) .and. time_stamp>veg_morph_time*86400) then !skip the loop if too wet
                         cycle
                   endif
                   imarsh(i)=ifl
@@ -8394,6 +8430,12 @@
                   imarsh_dead_timer(i)=0.d0
               endif
             endif !icount2
+
+            ! mangrove option - only settle if x meters away from another mangrove
+            !if (smax<=create_marsh_max.and.smin>=create_marsh_min.and.marshspread_opt==3) then
+                
+
+            !endif
           endif !smax
         endif !nwild
       enddo !i=1,ne
@@ -8410,7 +8452,6 @@
 !$OMP end workshare
 
 ! NODE-BASED veg assignment: only assign veg if the contributing element is a marsh
-! AND that element has matured (age >= marsh_maturity_days). Otherwise leave zeros.
 !$OMP do
       if (marsh_grow_opt==1) then !marsh has no values until mature
         do i=1,np
@@ -8466,7 +8507,23 @@
             endif !imarsh matured
           enddo !j
         enddo !i np
-
+     else if (marsh_grow_opt==4) then !marsh is immediately mature
+        do i=1,np
+          do j=1,nne(i)
+            ie=indel(j,i)
+            if(imarsh(ie)>0) then 
+              if(imarsh(ie)>nmarsh_types) then                             
+                write(errmsg,*)'STEP: imarsh(i)>nmarsh_',iplg(i),imarsh(ie)  
+                call parallel_abort(errmsg)
+              endif
+              veg_di(i)=veg_di0(imarsh(ie))       
+              veg_h(i)=veg_h0(imarsh(ie))         
+              veg_nv(i)=veg_nv0(imarsh(ie))       
+              veg_cd(i)=veg_cd0(imarsh(ie))       
+              veg_alpha0(i)=veg_di0(imarsh(ie))*veg_nv0(imarsh(ie))*veg_cd0(imarsh(ie))/2.d0  
+            endif 
+          enddo !j
+        enddo !i np
       else
         write(errmsg,*)'STEP: marsh_grow_opt is illegal: ',marsh_grow_opt
         call parallel_abort(errmsg)
@@ -9508,19 +9565,6 @@
                 call writeout_nc(id_out_var(noutput+5), 'marsh_flag',4,1,nea,dble(imarsh))
                 noutput=noutput+1
         endif
-        ! ---- write wet frac ----
-        !if(iof_marsh(2)==1) then
-        !        do i=1,nea
-        !                if (nt_inun(i) > 0) then
-        !                        tmpout(i) = (dble(nwet_inun(i)) / dble(nt_inun(i)))*100  ! fraction
-        !                        ! tmpout(i) = 100.d0 * dble(nwet_inun(i)) / dble(nt_inun(i))  ! percent
-        !                else
-        !                        tmpout(i) = 0.d0
-        !                endif
-        !        enddo
-        !        call writeout_nc(id_out_var(noutput+6), 'wetFrac', 1, 1, nea, dble(tmpout))
-        !        noutput = noutput + 1
-        !endif
 #endif
 
 #ifdef USE_MICE

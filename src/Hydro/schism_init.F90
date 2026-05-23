@@ -183,7 +183,7 @@
 #ifdef USE_OIL
 #endif
 
-!     Name list
+!     Name list - Evan Adding here for param.nml
       integer :: ntracer_gen,ntracer_age,sed_class,eco_class !,flag_fib
       namelist /CORE/ipre,ibc,ibtp,ntracer_gen,ntracer_age,sed_class,eco_class, &
      &nspool,ihfskip,msc2,mdc2,dt,rnday,nbins_veg_vert,nmarsh_types
@@ -214,7 +214,9 @@
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,istemp,relax_2_airt, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_lai,veg_cw, &
      &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
-     &drown_marsh,create_marsh_min,create_marsh_max,age_marsh_min
+     &drown_marsh,create_marsh_min,create_marsh_max,age_marsh_min,marshspread_opt,opt2_max,opt2_min,&
+     &marsh_grow_opt,marsh_maturity_days,imarsh_death_lag,veg_morph_time,marsh_tau_thresh_pa,kill_tau_imm,&
+     &kill_dep_chg,kill_dep_chg_mature,wet_thr,shear_opt,erosion_opt,inundation_opt
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm, &
@@ -450,7 +452,8 @@
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
      &veg_vert_scale_N(nbins_veg_vert+1),veg_vert_scale_D(nbins_veg_vert+1), &
-     &veg_di0(nmarsh_types),veg_h0(nmarsh_types),veg_nv0(nmarsh_types),veg_cd0(nmarsh_types),drown_marsh(nmarsh_types),stat=istat)
+     &veg_di0(nmarsh_types),veg_h0(nmarsh_types),veg_nv0(nmarsh_types),veg_cd0(nmarsh_types),drown_marsh(nmarsh_types),&
+     &opt2_min(nmarsh_types),opt2_max(nmarsh_types),wet_thr(nmarsh_types),stat=istat)
         if(istat/=0) call parallel_abort('INIT: iof failure')
         srqst7(:)=MPI_REQUEST_NULL
         !Global output on/off flags
@@ -524,7 +527,25 @@
       age_marsh_min=0.d0
       istemp=0
       relax_2_airt=5.d-2
-      
+      !Evan Variable Init
+      marshspread_opt=1             
+      opt2_max = -1              
+      opt2_min = 0
+      shear_opt=1
+      inundation_opt=1
+      erosion_opt=1
+      marsh_grow_opt=3             
+      marsh_maturity_days = 90d0     
+      imarsh_death_lag= 0d0          
+      veg_morph_time= 0d0            
+      marsh_tau_thresh_pa = 0.3d0    
+      kill_tau_imm=0.15d0          
+      kill_dep_chg=0.05d0    
+      kill_dep_chg_mature=0.1d0     
+      wet_thr = 0d0           
+
+
+        
       !Output elev, hvel by default
       nc_out=1
       iof_hydro=0; iof_wwm=0; iof_gen=0; iof_age=0; iof_sed=0; iof_eco=0; iof_dvd=0
@@ -1162,7 +1183,9 @@
       endif
 
 #ifdef USE_MARSH
-      if(iveg==0) call parallel_abort('INIT: marsh needs vegetation option')
+
+      if(iveg/=0) call parallel_abort('INIT: Marsh module use marsh_init for vegetation extent, cannot use veg_*.gr3') 
+      !based
       if(create_marsh_min>create_marsh_max.or.age_marsh_min<0.d0) call parallel_abort('INIT: marsh_min>marsh_max')
       !SLR rate in mm/year
       !Convert to m/s
@@ -1486,22 +1509,10 @@
 
 #ifdef USE_MARSH
       !Evan changing how allocating works
-      allocate(imarsh(nea),ibarrier_m(nea),age_marsh(nea),tau_sum_wet(ne), &
-        &nwet(nea),nwet_inun(nea),nt_inun(nea),marsh_ban(nea),marsh_ban_tau(nea),wet_thr(nmarsh_types),&
-        &tmpout(nea),tau_max(nea),marsh_dep_chg(nea),marsh_ban_track(nea),opt2_max(nmarsh_types),opt2_min(nmarsh_types),&
+      allocate(imarsh(nea),ibarrier_m(nea),age_marsh(nea),tau_sum_wet(nea), &
+        &nwet(nea),nwet_inun(nea),nt_inun(nea),marsh_ban(nea),marsh_ban_tau(nea),&
+        &tmpout(nea),tau_max(nea),marsh_dep_chg(nea),marsh_ban_track(nea),&
         imarsh_dead(nea),imarsh_dead_timer(nea),stat=istat)
-        !toggle options
-        marshspread_opt=2 !1=spread at any elevation, 2=spread only adjacent
-        marsh_grow_opt=3 !1=no value until marsh is mature,2= linear growth,3= exponential growth
-
-        !params
-        marsh_maturity_days = 90!29.5d0
-        marsh_tau_thresh_pa   = 0.25d0 !was 3.5, but I think that was broken? 0.1 was wayyy too low. trying 0.3
-        kill_dep_chg=0.1 !depth of sediment loss that kills marsh (m)
-        kill_tau_imm=0.25 !was 0.35, likely too conservative
-        imarsh_death_lag=3 !# of days until colonization of marsh can try again
-        veg_morph_time=20 ! # of days until marsh module begins
-        !arrays - do not edit these are for initializng
         marsh_ban_track=0
         tau_sum_wet = 0.d0
         nwet = 0
@@ -1514,20 +1525,7 @@
         marsh_dep_chg = 0 !tracks depth of the marsh element elevation
         imarsh_dead = 2 !2 indicates it was never marsh. 1 is dead and 0 is alive 
         imarsh_dead_timer=0 !array that tracks the time an element has dead marsh 
-        !initial test .3 works for all if bounded by lower drowning
 
-        !Assign arrays
-        !wet_thr(1) = 0.9d0!0.7d0 !0.3 ->.33 !throw your wetness % thresholds. 100% is wet all of the time
-        !wet_thr(2) = 0.9d0!0.7d0 !0.18 ->.30
-        !wet_thr(3) =  0.9d0!0.7d0 !0.14 ->.30
-        !wet_thr(4) =  0.9d0!1d0 
-        wet_thr = [0.9d0, 0.9d0, 0.9d0, 0.9d0]
-        opt2_max = [-1.95d0,-2.32d0,-3.0264d0, -3.3164d0]
-        opt2_min = [-2.32d0, -3.0264d0, -3.3164d0, -3.5164d0]
-              
-
-        
-      
       
       if(istat/=0) call parallel_abort('INIT: MARSH allocation failure')
 #endif
@@ -2267,6 +2265,11 @@
           if(ibarrier_m(ie)==1) imarsh(ie)=0
         endif
       enddo !i
+
+      !Mangrove - Distance Calculate Input to Arrays
+      !if(myrank==0 .and. mangrove==1) then
+      !  open(10,file=in_dir(1:len_in_dir)//'dist_table.in',status='old')
+ 
 #endif      
 
 !... Read lat/lon for spectral spatial interpolation in WWM or WW3

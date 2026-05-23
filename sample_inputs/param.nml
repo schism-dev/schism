@@ -30,11 +30,11 @@
 ! Define # of tracers in tracer modules (if enabled)
   ntracer_gen = 2 !user defined module (USE_GEN)
   ntracer_age = 4 !age calculation (USE_AGE). Must be =2*N where N is # of age tracers
-  sed_class = 5 !SED3D (USE_SED)
+  sed_class = 1 !SED3D (USE_SED)
   eco_class = 27 !EcoSim (USE_ECO): must be between [25,60]
 
 ! # of vertical bins in vegetation module (used only if iveg/=0)
-  nbins_veg_vert = 2
+  nbins_veg_vert = 1
   
 ! # of marsh types (used only if USE_MARSH)
   nmarsh_types = 2
@@ -88,8 +88,8 @@
   loadtide_coef = 0.1 !only used if iloadtide=2,3 (for '3', the default should be 0.12)
 
 ! Starting time
-  start_year = 2000 !int
-  start_month = 1 !int
+  start_year = 2017 !int
+  start_month = 4 !int
   start_day = 1 !int
   start_hour = 0 !double
   utc_start = 0 !double
@@ -309,7 +309,7 @@
 !           Cd=Cdmax, where Cdmax=Cd(dzb=dzb_min).
 !           If iwbl/=0, nchi must =1.
 !-----------------------------------------------------------------------
-  nchi = 0 
+  nchi = -1 
   dzb_min = 0.5 !needed if nchi=1; min. bottom boundary layer thickness [m].
 !  dzb_decay = 0. !needed if nchi=1; a decay const. [-]. should =0
   hmin_man = 1. !needed if nchi=-1: min. depth in Manning's formulation [m]
@@ -564,7 +564,7 @@
 ! Turbulence closure.
 ! itur=4 requires building with GOTM (input in gotmturb.nml). In this case, mid, stab are not used. 
 !-----------------------------------------------------------------------
-  itur = 3 !Default: 0
+  itur = 0 !Default: 0
   dfv0 = 1.e-2 !needed if itur=0
   dfh0 = 1.e-4 !needed if itur=0
   mid = 'KL' !needed if itur=3,5. Use KE if itur=5 
@@ -674,50 +674,47 @@
 
 !----------------------------------------------------------------------
 ! Marsh model parameters (only if USE_MARSH is on, and in this case
-! iveg must /=0)
+! iveg must = 0, vegetation assignment is element based
+!
 !----------------------------------------------------------------------
-  slr_rate = 120. !sea-level rise rate in mm/yr, times morphological acceleration if used
-! Veg Age Parameters
-  age_marsh_min = 1.,2. ![days] min marsh age threshold of surrounding cells to allow migration.
-                     !Needs to account for morph acceleration
-  age_lifecycles = 3.,2. ! # of growth stages for each marsh zone
-  age_growth = [10,15,60],[20,90] 
-
+  slr_rate = 120.             !sea-level rise rate in mm/yr, times morphological acceleration if used
 
 ! Veg physical parameters
-  veg_di0 = 0.1,0.1 !(1:nmarsh_types) [m]; diamters for each marsh type
-  veg_h0 = 0.1,0.1 ![m] heights for each marsh type
-  veg_nv0 = 0.1,0.1 ![m^-2] density for each marsh type
-  veg_cd0 = 1.,1. ![-] form drag coefficients for each marsh type
+  veg_di0 = 0.1,0.1             !(1:nmarsh_types) [m]; diamters for each marsh type
+  veg_h0 = 0.1,0.1              ![m] heights for each marsh type
+  veg_nv0 = 0.1,0.1             ![m^-2] density for each marsh type
+  veg_cd0 = 1.,1.               ![-] form drag coefficients for each marsh type
 
-! Veg Death/Creation Zonation
-! marsh_control_vertical Determines mode which vegetation expands/die
-! marsh_control_vertical = 1 - Marsh extent controlled in reference to hgrid verical datum
-! marsh_control_vertical = 2 - Marsh extent controlled by % inundation
-! marsh_control_vertical = 3 - Marsh extent controlled by % inundation and vdatum
+! Marsh spread options
+  marshspread_opt= 1            !1=spread to any elevation within range, 2=spread only adjacent
+  !marshspread_opt=1 ONLY, ranges must not overlap
+  opt2_max = 1,2                !For each marsh class, maximum vertical extent [m] 
+  opt2_min = 0,1               !For each marsh class, minimum vertical extent [m]
+  !marshspread_opt=2 ONLY
+  age_marsh_min = 1             ![days] min marsh age threshold of surrounding cells to allow migration.
 
-  marsh_control = 1 
-  drown_marsh = 0.5,0. ![m] depth at which marsh will be drowned
-  !min/max bottom elev (including SLR) interval favorable for marsh creation/migration
-  create_marsh_min = -1.,-2. ![m] vertical datum
-  create_marsh_max = 0.5,0 ![m] vertical datum
-  create_marsh_min_inun = .5, .7 ![%]
-  create_marsh_max_inun = .7, .8 ![%]
+! Marsh Growth Options
+  marsh_grow_opt=4 		!1=no value until marsh is mature,2= linear growth,3= exponential grow,4= immediately mature
+  marsh_maturity_days = 90	!Time [days] it takes for marsh to reach maturity
+  imarsh_death_lag= 0 		!Lag time [days] for marsh to attempt to establish again in an element after mortality
+  veg_morph_time= 0 		!Time [days] until marsh model begins (spin up time)
+  create_marsh_min = 0 	        ![m] minimum elevation marsh can exist
+  create_marsh_max = 2 	![m] maximum elevation marsh can exist
 
-! Veg Death Shear
-! marsh_control_shear determines mode that kills vegetation with shear stress
-! marsh_control_shear = 1 - maximum shear stress causes vegetation mortality
-! marsh_control_shear = 2 - average bed shear stress causes mortality 
-! marsh_control_shear = 3 - maximum and average bed shear stess used
-  marsh_control_shear = 3
-
-
-
-  age_marsh_min = 1. ![days] min marsh age threshold of surrounding cells to allow migration.
-                     !Needs to account for morph acceleration
+! Marsh Mortality Options
+  drown_marsh = 3,3. 		![m] depth at which marsh will be drowned
+  veg_morph_time= 0             !Time [days] until marsh that rely on averages begins (inundation %, average bed shear stress) 
+  shear_opt = 1			!1 = Average bed shear stress while element is wet, 2=critical bed shear stress
+  marsh_tau_thresh_pa = 0.3 	!bed shear stress [Pa] required to kill mature plants
+  kill_tau_imm=0.15 		!bed shear stress [Pa] required to kill young vegetation
+  erosion_opt=1                 !0=Disabled,1=Enabled
+  kill_dep_chg=0.05 		!depth of sediment loss [m] that kills young vegetation 
+  kill_dep_chg_mature=0.15 	!depth of sediment loss [m] to kill mature vegetation
+  inundation_opt=0		!0=Disabled,1=Enabled
+  wet_thr = 0.8, 0.8		!% time inundated that results in mortality and lack of colonization
 
 !----------------------------------------------------------------------
-! Vegetation model - Do not use if using marsh model
+! Vegetation model - DO NOT use if using marsh model
 ! If iveg/=0, need 4 extra inputs: (1) veg_D.gr3 (depth is stem diameter in meters);
 ! (2) veg_N.gr3 (depth is # of stems per m^2);
 ! (3) veg_h.gr3 (height of canopy in meters);
@@ -729,10 +726,10 @@
 ! iveg=2: flex vegeation using Ganthy (2011) fomulation
 !----------------------------------------------------------------------
   iveg = 0 !on/off flag
-  veg_vert_z = 0.,0.5,1. ![m] starting from 0.; used if iveg=1
-  veg_vert_scale_cd = 1.,1.,1. !scaling [-]; used if iveg=1
-  veg_vert_scale_N = 1.,1.,1. !scaling [-]; used if iveg=1
-  veg_vert_scale_D = 1.,1.,1. !scaling [-]; used if iveg=1
+  veg_vert_z = 0.,0.5 ![m] starting from 0.; used if iveg=1
+  veg_vert_scale_cd = 1.,1. !scaling [-]; used if iveg=1
+  veg_vert_scale_N = 1.,1. !scaling [-]; used if iveg=1
+  veg_vert_scale_D = 1.,1. !scaling [-]; used if iveg=1
 
   veg_lai = 1. !Leaf Area Index [-]; used if iveg=2. Ganthy suggests 0-10?
   veg_cw = 1.5 !calibration coefficient in diameter of bent leaf [-]; used if iveg=2. Ganthy suggests 0-25?
@@ -1077,12 +1074,12 @@
 !-----------------------------------------------------------------------
 !  iof_sed2d(1)  = 0 !bottom depth _change_ from init. condition (m) {SED2D_depth_change}
 !  iof_sed2d(2)  = 0 !drag coefficient used in transport formulae SED2D_Cd{}
-!  iof_sed2d(3) = 0 !Courant number (b.qtot.dt / h.dx) {SED2D_cflsed}
-!  iof_sed2d(4)    = 0 !Top layer d50 (m) {SED2D_d50}
-!  iof_sed2d(5)   = 0 !total transport rate vector (kg/m/s) {SED2D_total_transport}
-!  iof_sed2d(6)   = 0 !suspended tranport rate vector (kg/m/s) {SED2D_susp_load}
-!  iof_sed2d(7)   = 0 !bedload transport rate vector (kg/m/s) {SED2D_bed_load}
-!  iof_sed2d(8)    = 0 !time averaged total transport rate vector (kg/m/s) {SED2D_average_transport}
+!  iof_sed2d(3)  = 0 !Courant number (b.qtot.dt / h.dx) {SED2D_cflsed}
+!  iof_sed2d(4)  = 0 !Top layer d50 (m) {SED2D_d50}
+!  iof_sed2d(5)  = 0 !total transport rate vector (kg/m/s) {SED2D_total_transport}
+!  iof_sed2d(6)  = 0 !suspended tranport rate vector (kg/m/s) {SED2D_susp_load}
+!  iof_sed2d(7)  = 0 !bedload transport rate vector (kg/m/s) {SED2D_bed_load}
+!  iof_sed2d(8)  = 0 !time averaged total transport rate vector (kg/m/s) {SED2D_average_transport}
 !  iof_sed2d(9)  = 0 !bottom slope vector (m/m); negative uphill {SED2D_bottom_slope}
 !  iof_sed2d(10) = 0 !Total roughness length @elem (m) (z0eq) {z0eq}
 !  iof_sed2d(11) = 0 !current-ripples roughness length @elem (m) (z0cr) {z0cr}
@@ -1092,16 +1089,18 @@
 !-----------------------------------------------------------------------
 !  marsh flags (USE_MARSH on)
 !-----------------------------------------------------------------------
-!  iof_marsh(1) = 0 ! {marshFlag}  2D elem
-!  iof_marsh(2) = 0 ! {wetFrac} % of time element is wet
-!  iof_marsh(3) = 0 ! {AvgBss} Average bed shear stress (Pa) while wet
-!  iof_marsh(4) = 0 ! {MaxBss} Maximum bed shear stress (Pa) in run
-!  iof_marsh(5) = 0 ! {BanTau} If bed shear stress (Pa) > tolerance, ban (1)
-!  iof_marsh(6) = 0 ! {BanInun} If % inun > tolerance, ban (1)
-!  iof_marsh(7) = 0 ! {MarshAge} Age of marsh elem (days)
-!  iof_marsh(8) = 0 ! {MarshDepChg} Sediment elevation change on marsh (m)
-!  iof_marsh(9) = 0 ! {MarshKillTrack} Records reason on marsh mortality
-!	MKT:1=inundation kill, 2=immature shear, 3=erosion,4=max shear ,5=below min elev
+  iof_marsh(1) = 1 ! {marshFlag}  2D elem
+  iof_marsh(2) = 1 ! {wetFrac} % of time element is wet
+  iof_marsh(3) = 1 ! {AvgBss} Average bed shear stress [Pa] while wet
+  iof_marsh(4) = 1 ! {MaxBss} Maximum bed shear stress [Pa] in run
+  iof_marsh(5) = 1 ! {BanTau} If bed shear stress [Pa] > tolerance, ban (1)
+  iof_marsh(6) = 1 ! {BanInun} If % inun > tolerance, ban (1)
+  iof_marsh(7) = 1 ! {MarshAge} Age of marsh elem [days]
+  iof_marsh(8) = 1 ! {MarshDepChg} Sediment elevation change on marsh (m)
+  iof_marsh(9) = 1 ! {MarshKillTrack} Records reason on marsh mortality
+!	MKT:1=inundation kill,3=erosion,4=erosion,5=shear stress,6=below minumum elevation  
+  iof_marsh(10) = 1 ! {MarshDeadTimer} Time [days] since vegetation mortality
+  iof_marsh(11) = 1 ! {VegDrag} Vegetation Alpha [-]
 
 
 !-----------------------------------------------------------------------

@@ -681,8 +681,8 @@ module schism_glbl
   integer,save,allocatable     :: imarsh(:),ibarrier_m(:),nwet_inun(:), nt_inun(:), &
   &  marsh_ban(:),marsh_ban_tau(:),nwet(:),marsh_ban_track(:),imarsh_dead(:)
   real(8), save, allocatable :: tau_sum_wet(:),wet_thr(:),tmpout(:),tau_max(:),marsh_dep_chg(:),imarsh_dead_timer(:),opt2_max(:),opt2_min(:)
-  integer, save         ::       step_min,marsh_grow_opt,marshspread_opt !gate for drowning
-  real(8),save               ::       tau_avg_wet,ts, wet_frac,kill_dep_chg,max_dep_chg,imarsh_death_lag,kill_tau_imm,veg_morph_time
+  integer, save         ::       inundation_opt,erosion_opt,shear_opt,marsh_grow_opt,marshspread_opt !gate for drowning
+  real(8),save               :: tau_avg_wet,ts, wet_frac,kill_dep_chg,max_dep_chg,imarsh_death_lag,kill_tau_imm,veg_morph_time,kill_dep_chg_mature
   real(kind=8),save  :: tsum, elem_tau_pa, marsh_maturity_days, marsh_tau_thresh_pa
   REAL(rkind),save, allocatable :: dhnd(:) !total depth change in dt (=sus+bedload) ported from sed
 
