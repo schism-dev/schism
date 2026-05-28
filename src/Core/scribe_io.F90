@@ -55,7 +55,7 @@
     integer,save :: ifile,ihfskip,nspool,nc_out,nvrt,nproc_compute,np_global,ne_global,ns_global, &
   &np_max,ne_max,ns_max,ncount_2dnode,ncount_2delem,ncount_2dside,ncount_3dnode,ncount_3delem,ncount_3dside, &
   &iths0,ncid_schism_2d,ncid_schism_3d,istart_sed_3dnode,start_year,start_month,start_day, ics,iof_ugrid, &
-  &nchunk_vrt
+  &chunk_size_vrt
     !Output flag dim must be same as schism_init!
     integer,save :: ntrs(natrm),iof_hydro(40),iof_wwm(40),iof_cos(20),iof_fib(5), &
   &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),counter_out_name,nout_icm_3d(2)
@@ -142,7 +142,7 @@
 #endif
       call mpi_recv(ics,1,itype,0,146,comm_schism,rrqst,ierr)
       call mpi_recv(iof_ugrid,1,itype,0,147,comm_schism,rrqst,ierr)
-      call mpi_recv(nchunk_vrt,1,itype,0,148,comm_schism,rrqst,ierr)
+      call mpi_recv(chunk_size_vrt,1,itype,0,148,comm_schism,rrqst,ierr)
 
       if(myrank_scribe==0) then
         write(16,*)'Scribe ',myrank_scribe,myrank_schism,nproc_scribe,nproc_compute
@@ -974,14 +974,14 @@
 
       !Define chunk size (contiguous block for access) for deflation: each chunk
       !must be < 4GB in size.
-      !nchunk_vrt (param.nml, SCHOUT) controls vertical chunking:
-      !  =0 : default behaviour, one big chunk for the whole 3D mesh loaded at one time step
-      !  >0  : group nchunk_vrt layers per chunk along the vertical dimension
+      !chunk_size_vrt controls vertical chunking:
+      !  <=0 : default behaviour, one big chunk for the whole 3D mesh loaded at one time step
+      !  >0  : group chunk_size_vrt layers per chunk along the vertical dimension
       !        (example: 1 = one layer per chunk; best for level-wise reads)
-      if(nchunk_vrt<=0) then
+      if(chunk_size_vrt<=0) then
         chunks(1)=idim1; chunks(2)=idim2; chunks(3)=1
       else
-        chunks(1)=min(nchunk_vrt,idim1); chunks(2)=idim2; chunks(3)=1
+        chunks(1)=min(chunk_size_vrt,idim1); chunks(2)=idim2; chunks(3)=1
       endif
       !Outputs are in 4 bytes; 4GB is in binary not decimal - not precise.
       !Auto-shrink horizontal chunk on huge meshes instead of aborting.
