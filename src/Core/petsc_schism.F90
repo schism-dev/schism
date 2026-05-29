@@ -88,7 +88,7 @@ contains
 
 subroutine init_petsc
   use schism_glbl, only : np,np_global,rtol0,mxitn0,lelbc,nnp,indnd
-  use schism_msgp, only : myrank, parallel_abort,parallel_finalize
+  use schism_msgp, only : comm,myrank, parallel_abort,parallel_finalize
 
   AO :: aoout
   IS :: isout
@@ -96,6 +96,9 @@ subroutine init_petsc
 
   PetscInt :: zero = 0
   PetscInt :: i,i_npi,j,nd,istat
+
+!  Pass on comm to PETSc 
+  PETSC_COMM_WORLD= comm
 
 ! Initialize PETSc and structures
   call PetscInitialize(PETSC_NULL_CHARACTER, perr); CHKERRQ(perr)
@@ -105,9 +108,6 @@ subroutine init_petsc
 !  call PetscOptionsGetString(PETSC_NULL_CHARACTER, "-print", print_status, & 
 !                             view, perr)
 !  CHKERRQ(perr)
-
-!  Pass on comm to PETSc (not working)
-!  PETSC_COMM_WORLD= comm
 
   call gen_mappings
 
