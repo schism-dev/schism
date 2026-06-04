@@ -57,8 +57,8 @@ FCPFLAGS = $(PPFLAGS) -O3 -mcmodel=medium -march=x86-64-v3 -init=zero
 FLDFLAGS = -O3 -mcmodel=medium -march=x86-64-v3 -init=zero
 
 #Hybrid 
-#FCPFLAGS = $(PPFLAGS) -O2 -mcmodel=medium -assume byterecl -ipo -axCORE-AVX2 -xSSE4.2 -qopenmp
-#FLDFLAGS = -O2 -mcmodel=medium -ipo -axCORE-AVX2 -xSSE4.2 -qopenmp
+#FCPFLAGS =$(PPFLAGS) -O2 -mcmodel=medium -march=x86-64-v3 -init=zero -qopenmp
+#FLDFLAGS = -O2 -mcmodel=medium -march=x86-64-v3 -init=zero -qopenmp
 #EXEC := $(EXEC)_OMP
 
 #####Libraries

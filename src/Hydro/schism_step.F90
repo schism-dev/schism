@@ -1008,7 +1008,7 @@ real (rkind) :: aux                               ! ustar
 #endif
 !$OMP end parallel
 
-!$OMP   do
+!!$OMP   do
 
 
 #ifdef USE_CICE
@@ -1099,7 +1099,7 @@ real (rkind) :: aux                               ! ustar
         endif
      end if !aice
   end do
-!$OMP   end do
+!!$OMP   end do
 
   !>--------------------------------------------------------
   !> end CICE import
