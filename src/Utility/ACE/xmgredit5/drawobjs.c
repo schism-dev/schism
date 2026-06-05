@@ -61,6 +61,7 @@ extern int display_shapiro;
 
 void do_drawobjects(void);
 void dolegend(Isolparms ip, int *cmap, int nmap);
+extern void draw_shapefile(void);
 
 int grid_color = 1;
 int bound_color = 2;
@@ -203,6 +204,8 @@ void do_drawobjects(void)
 	DrawPNodeLists(curgrid);
     }
     draw_adcirc();
+    setcolor(1);
+    draw_shapefile();
     setcolor(1);
     if (display_mapscale) {
 	drawscale();

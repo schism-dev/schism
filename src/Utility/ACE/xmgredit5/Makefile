@@ -16,7 +16,7 @@ INSTALLDIR = /usr/local/ace
 
 ############################################
 # LINUX
-LIBS = -L/usr/X11R6/lib64 -L/opt/local/lib -lXm -lXp -lXt -lXext -lXpm -lX11 -lICE -lSM -lm
+LIBS = -L/usr/X11R6/lib64 -L/opt/local/lib -lXm -lXt -lXext -lXpm -lX11 -lICE -lSM -lm
 INCLUDES = -I/usr/X11R6/include  -I/opt/local/include
 CC = gcc -g
 
@@ -87,6 +87,7 @@ OBJS = main.o\
 	chersh.o\
 	draw.o\
 	image_f_io.o\
+	shapefile.o\
 	ps.o\
 	xvlib.o
 
@@ -152,6 +153,7 @@ SRCS = main.c\
 	chersh.c\
 	draw.c\
 	image_f_io.c\
+	shapefile.c\
 	ps.c\
 	xvlib.c
 
@@ -234,5 +236,5 @@ getrcs:
 	strings xmgredit | grep Id
 
 clean:
-	/bin/rm *.o xmgredit5
+	/bin/rm -f *.o xmgredit5
 
