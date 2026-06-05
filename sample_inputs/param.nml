@@ -515,7 +515,7 @@
 !  input file is needed: hurricane-track.dat, in addition to a few parameters below.
 !
 ! Stress calculation:
-! If nws=2, ihconsv=1 and iwind_form=0, the stress is calculated from heat exchange
+! If nws=2 or 4, ihconsv=1 and iwind_form=0, the stress is calculated from heat exchange
 ! routine.
 ! Otherwise if iwind_form=-1, the stress is calculated from Pond & Pichard formulation;
 ! if iwind_form=1, Hwang (2018) formulation (Cd tapers off at high wind).

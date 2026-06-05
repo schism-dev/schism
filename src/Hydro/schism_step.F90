@@ -557,6 +557,12 @@ real (rkind) :: aux                               ! ustar
         windx=windx2
         windy=windy2
         pr=pr2
+        !For outputs
+        windx1=windx2
+        windy1=windy2
+        pr1=pr2
+        airt1=airt2
+        shum1=shum2
 #endif /*USE_ATMOS*/
 
         if(time>wtime2) then
@@ -940,7 +946,7 @@ real (rkind) :: aux                               ! ustar
         if(nws==0) then
           tau(1,i)=0.d0
           tau(2,i)=0.d0
-        else if(nws==2.and.ihconsv==1.and.iwind_form==0) then !tauxz and tauyz defined
+        else if((nws==2.or.nws==4).and.ihconsv==1.and.iwind_form==0) then !tauxz and tauyz defined
           if(idry(i)==1) then
             tau(1,i)=0.d0
             tau(2,i)=0.d0
