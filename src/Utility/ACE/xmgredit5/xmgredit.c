@@ -153,6 +153,7 @@ void do_random_placement();
 void write_mode_str(char *buf);
 void invert_pixmap(Pixmap p, int flag);
 void create_image_frame(Widget w, XtPointer client_data, XtPointer call_data);
+void create_shape_frame(Widget w, XtPointer client_data, XtPointer call_data);
 void create_world_frame(Widget w, XtPointer client_data, XtPointer call_data);
 void create_view_frame(Widget w, XtPointer client_data, XtPointer call_data);
 void create_adjd_frame(Widget w, XtPointer client_data, XtPointer call_data);
@@ -589,6 +590,9 @@ static Widget CreateMenuBar(Widget parent)
     XtAddCallback(button, XmNactivateCallback, (XtCallbackProc) create_view_frame, (XtPointer) 0);
     button = XtVaCreateManagedWidget("Read image...", xmPushButtonWidgetClass, menu_pane, NULL);
     XtAddCallback(button, XmNactivateCallback, (XtCallbackProc) create_image_frame, (XtPointer) 0);
+
+    button = XtVaCreateManagedWidget("Shapefiles (.shp)...", xmPushButtonWidgetClass, menu_pane, NULL);
+    XtAddCallback(button, XmNactivateCallback, (XtCallbackProc) create_shape_frame, (XtPointer) 0);
 
     button = XtVaCreateManagedWidget("Colors...", xmPushButtonWidgetClass, menu_pane,
 				     NULL);
