@@ -15,3 +15,8 @@ add_executable(mergegrid5 mergegrid5.f90)
 target_link_libraries(mergegrid5 utillib)
 target_include_directories(mergegrid5 PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../UtilLib)
 add_dependencies(mergegrid5 utillib)
+
+# Add dependency on utillib for executables that define their own modules
+# to ensure utillib modules are built first and avoid race conditions
+# when multiple targets write .mod files to the shared include directory
+add_dependencies(interpolate_unstructured utillib)

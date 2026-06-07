@@ -58,3 +58,15 @@ target_link_libraries(gen_nudge_from_hycom utillib ${NetCDFLIBS} ${HDF5_LIBRARIE
 target_include_directories(gen_vqs_1 PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../UtilLib)
 target_include_directories(gen_vqs_2masters PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../UtilLib)
 target_include_directories(gen_nudge_from_hycom PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../UtilLib)
+
+# Add dependencies on utillib for targets that use utillib modules
+# to ensure Fortran .mod files exist before compilation
+add_dependencies(convert_3Dth_nc utillib)
+add_dependencies(convert_nudge_nc utillib)
+add_dependencies(gen_vqs_1 utillib)
+add_dependencies(gen_vqs_2masters utillib)
+add_dependencies(gen_nudge_from_hycom utillib)
+
+# Add dependency for gen_source which defines its own 'module global'
+# to avoid race conditions with other modules in the shared include directory
+add_dependencies(gen_source utillib)

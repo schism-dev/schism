@@ -4,9 +4,8 @@ cmake_minimum_required (VERSION 3.12)
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
-# This policy has to do with variables called <module>_ROOT
-# and possible collisions with module-finding.
-cmake_policy(SET CMP0074 OLD)
+# CMP0074: find_package() uses <PackageName>_ROOT variables
+cmake_policy(SET CMP0074 NEW)
 
 
 enable_testing()
