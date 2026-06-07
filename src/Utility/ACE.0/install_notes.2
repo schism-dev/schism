@@ -1,0 +1,68 @@
+
+(0) Notes and troubleshooting
+    You may need to  increase MAXBOUNDS and MAXGRIDBOUNDS in xmvis6/defines.h and xmgredit5/defines
+    for very lange grid.
+
+    xmvis6 xmgredit5 errors:
+      /usr/bin/ld: cannot find -lXp
+      Edit xmvis6/Makefile and remove "-lXp" from LIBS variable in line 33
+
+
+      If the make causes a problem, do:
+      rm gram.c gram.h 
+      This is related to bison parsing util
+
+(1) Install sequence:
+    elio
+    lib
+    xmgredit5
+    xmvis6
+    xmgr5
+
+(2) needs libs: 
+    X11 pixmap library                libxpm-dev
+    X11 client-side library           libx11-6
+    Motif - X/Motif shared library:   libxm4
+    X11 miscellaneous utility library libxmu-dev
+    Motif - development files         libmotif-dev
+    GD Graphics Library version 2:    libgd-dev. Don't use the version in lib/graphics its too old
+
+    xmgr5 may also need postgres, netcdf (comment out in Makefile if not needed)
+
+(3) Install steps on linux:
+   Compile libraries
+   cd ACE/
+   cd elio/
+   make
+   cd ../lib
+   make
+   cd ..
+   cp lib/fli/libfpp.a lib/
+   cp elio/libelio.a lib/ 
+   mkdir include
+   cp lib/fli/fpfli.h include/
+   cp ../elio/elio.h include/
+   cd ..
+
+   Compile xmgredit5
+   cd xmgredit5/ 
+   make
+   cd ..
+
+   Compile xmvis6
+    cd /xmvis6/ 
+    make clean
+    make
+
+   Compile xmgr5
+     cd ../xmgr5
+     rm -f pars.c pars.h 
+     make pars.c (generate new pars.c with bison)
+     vi Makefile (make sure NETCDF and PGSQL are commented out)
+     make clean
+     make
+
+(4) The steps above can be followed for windows running cygwin and a X server (Xming, Exceed etc).
+    You need to do a FULL installation of cygwin (with all packages).
+
+

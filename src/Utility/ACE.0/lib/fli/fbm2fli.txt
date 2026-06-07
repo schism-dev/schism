@@ -1,0 +1,189 @@
+/* fbm2fli.txt */
+
+Copyright (C) 1993 by Klaus Ehrenfried. 
+
+Permission to use, copy, modify, and distribute this software
+is hereby granted, provided that the above copyright notice appears 
+in all copies and that the software is available to all free of charge. 
+The author disclaims all warranties with regard to this software, 
+including all implied warranties of merchant-ability and fitness. 
+The code is simply distributed as it is.
+
+About FBM2FLI:
+
+The program FBM2FLI allows to generate FLI-animations  
+from series of single images. FBM2FLI uses the standard function from the 
+FBM library to read the image files. Thus it can handle various 
+file formats including GIF, SUN-raster and FBM. See the FBM 
+documentation about which other graphic formats are supported. 
+The program requires that the images are mapped and have 8 bit per pixel. 
+In contrast to the very popular "DTA" program for MS-DOS the 
+quantization of true-color images (eg. POV output images) 
+has to be done separately. FBM2FLI simply puts the prepared images 
+together. If true-color pictures should be processed, the 
+the quantization has to be done before FBM2FLI is called.
+For example the quantization can be done by the FBQUANT utility from 
+the FBM package. Together with the FBM package it should be possible 
+to deal with most of the graphic standards and file formats. 
+I have tested FBM2FLI on a PC running Linux and on SUN workstations and
+I always used version 1.0 of the FBM package. 
+
+Usage:
+
+fbm2fli [options] list animation
+
+Parameters:
+
+"list" is the name of a file which contains line by line a list of names 
+of image files which are merged together in the given order. 
+"animation" is simply the name of the generated animation file. 
+
+Options overview:
+
+	-b*	:	border color = *
+	-fxxxx	:	FLI-file name = xxxx
+	-lxxxx	:	list-file name = xxxx
+	-mxxxx	:	map-file name = xxxx
+	-n	:	no double buffering
+	-r*	:	resolution mode = *
+	-s*	:	animation speed = * (in msec)
+	-x*	:	horizontal origin = *
+	-y*	:	vertical origin = *
+
+("*" represents an integer value and "xxxx" a string)
+
+Options details:
+
+-b* (border color):
+  In regions where no input data is available, because the input image 
+  doesn't cover the hole display area of the animation, 
+  the pixel value is set to the given value. By default zero is used. 
+  See also the "-x" option. 
+
+-fxxxx (animation file):
+  This option can be used to define the output file name instead 
+  of using the second parameter.
+
+-lxxxx (list file):
+  This option can be used to define the input file name instead 
+  of using the first parameter.
+
+-mxxxx (map file):
+  The color table of the given image file is used for all images
+  in the animation. The original color table in the animated images is 
+  ignored. The map file itself becomes not part of the animation. 
+  Only its color table is read. This option is useful in many 
+  circumstances. E.g: it is possible to change the colors in the 
+  hole animation simply by manipulating the table of one file. 
+
+-n (no double buffer):
+  This indicates that the generated FLI chunks only hold the update 
+  information with respect to the last frame. My default is that 
+  the FLI chunks additionally provide the update information with respect 
+  to the frame before the last. In both cases the FLI animations 
+  works with standard players. But if "-n" is given it can't be played 
+  by a player which uses double buffering technique. If you have 
+  no such player it is useful to give this option, because the 
+  generated file become slightly smaller. See also the remark
+  on the double buffering topic below.
+
+-r* (resolution mode):
+  FBM2FLI only supports a certain set of VGA and SVGA resolutions. 
+  The valid numbers are:
+	-----------------------------------------
+	!    mode : pixels			!
+	-----------------------------------------
+	!	0 : 320x200			!
+	!	1 : 640x400			!
+	!	2 : 640x480			!
+	!	3 : 800x600			!
+	!	4 : 1024x768 (not tested)	!
+	!	5 : 1280x1024 (not tested)	!
+        -----------------------------------------
+
+-s* (speed):
+  In the header of the FLI file a default value for the animation speed
+  is stored (Actually not directly the speed but the delay time between 
+  two frames is stored).
+  This default value is used by some players if no other speed
+  is set at playing time. If this option is omitted 72 msec are used, 
+  which results in approx. 15 frames per seconds when used by the player. 
+
+-x* (horizontal origin):
+  This value defines the horizontal position of the left border of the 
+  input images in the display of the animation. By default the input 
+  images are centered in the display. If the width of a input image 
+  is less than the chosen resolution, borders are inserted on both 
+  sides of the image symmetrically. The border area is filled with the 
+  pixel value given by the "-b" option. If the width of a input image 
+  has a higher value than the chosen resolution, an equal amount of pixels is 
+  omitted from both sides of the input image. Thus, when the size of the 
+  animated images varies, the left border of the images is at different 
+  locations in the display. If the "-x" option is given, 
+  no automatically centering is done and the left border of the input 
+  image is kept fixed at the given horizontal position. This can be 
+  used to place small input images at a certain in the display, or to 
+  animate only a certain section of larger input images. 
+
+-y* (vertical origin):
+  Same as "-x" but for the vertical position with respect to the upper 
+  border of the input image. 
+
+Remarks about double buffering (PC players only):
+[About the sense of the "-n" option]
+
+One special feature of FBM2FLI is that the program can generate 
+animations for players which use double buffering. The advantage of 
+players which use double buffering is that they allow a smooth 
+and undisturbed display even in cases where almost all pixels are 
+changing from one frame to the next. Most players write directly to 
+the visible part of the video memory. The FLI-file holds the update
+information for the next frame. The player waits until the beginning 
+of the vertical blank period of the video signal (this is the time 
+in which the electron beam in the monitor moves from the bottom to 
+the top) and then it starts to update the video memory. If too much 
+pixels have to be updated or the access to the video memory it too 
+slow (ISA bus and higher resolution ...) one gets disturbances in the 
+display. The reason for this is that an image is shortly visible on 
+the screen which has a part at the top already updated to the next 
+frame but the remainder at the bottom still shows the information from the 
+previous frame. Only if the player writes faster to the video 
+memory than the video chip reads this memory one gets 
+an undisturbed animation. But this can only be archived by very fast 
+graphic boards (50 MHz local bus and low resolution) or by animations where 
+not more than a certain amount of new pixels has to be updated 
+between the frames. 
+Double buffering simply overcomes these restrictions by using a 
+second buffer and writing to an invisible part of the video memory. 
+When the update of one buffer is complete the player switches the 
+display to the ready buffer and starts to process the next frame in 
+the other -- now invisible -- buffer. 
+But in this case the player needs the update information with 
+respect to the frame which previously was located in the same 
+buffer. And this frame is not the last one, which was processed in 
+exactly the other buffer, but the frame before the last. 
+Because I mostly use a player which works this way,
+the FBM2FLI program was designed to generate FLI-animations for 
+such players as default. If one doesn't need this feature the "-n" 
+option should be used. It keeps the FLI files smaller and ordinary 
+players run faster with them. 
+
+Installation:
+
+Necessary requirement for FBM2FLI is the correct installation of 
+the FBM package from Michael Mauldin (mlm@nl.cs.cmu.edu).
+Is is available via FTP as "nl.cs.cmu.edu:/usr/mlm/ftp/fbm.tar.Z", 
+"ftp.uu.net:/pub/fbm.tar.Z", and "ucsd.edu:/usr/mlm/ftp/fbm.tar.Z".
+Probably some changes in the makefile are required to indicate 
+where the FBM stuff is located on your machine and which compiler 
+is used. I have tested the code only with GCC 2.*.*. Because 
+I didn't use any dirty tricks it should also work with other 
+standard compilers.
+
+History:
+   25-April-93    Initial Release.
+   28-May-93      Corrected one bug in fppcolor.c. Now the -m option
+                  should work correctly. 
+
+-- Klaus Ehrenfried (klaus@spock.es.go.dlr.de)
+

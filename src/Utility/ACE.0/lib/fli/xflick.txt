@@ -1,0 +1,52 @@
+
+About xflick:
+
+	xflick allows to play fli-animations on a X11 machine.
+	The original program was written by Ron Schell. 
+	Some improvements were done by Michael Pall. 
+	I just added extensions to play new fli-animations 
+	which use higer resolution (mostly 640x480). 
+	Example animations for this can be found at phoenix.oulu.fi
+	in the directory ~/pub/bigflis. I tested the program 
+	on workstations from SUN (SPARC 2 and 10) using some 
+	examples from there. 
+
+	-- Klaus Ehrenfried (klaus@spock.es.go.dlr.de)
+
+History:
+
+        xflick - Ron Schnell, March, 1991
+	This code is provided as is, with no warrantees, expressed
+        or implied.  I believe this code to be free of encumbrance,
+        and offer it to the public domain.  I ask, however, that
+	this paragraph and my name be retained in any modified
+	versions of the file you may make, and that you notify me
+	of any improvements you make to the code.
+
+	Ron Schnell (ronnie@sos.com)
+
+
+	The following changes are from Michael Pall
+	(pall@rz.uni-karlsruhe.de) Mar 25-28 1991:
+
+	Lots of bugfixes and changes to the structure of the files.
+	The file is interpreted before we display it.
+	Moved the interpretation part to read.c.
+	We use Pixmaps and/or XImages.
+	Added interactive input to change the speed/single step.
+
+
+	The following extensions are from Klaus Ehrenfried
+	(klaus@spock.es.go.dlr.de) Oct 23-24 1992:
+
+	Add handling of FLI_DELTA and FLI_256_COLOR chunks.
+	Recognize magic number FLC_MAGIC = 0xaf12 for newer 
+	flic files.
+
+Usage: xflick [-v] [-r<count>] [-d<delay>] [-i] [-n] file
+ -v Verbose Debugging info
+ -r<count>  Repeat count times
+ -d<delay>  Delay between frames in 1/70s
+ -i         Use XImages instead of Pixmaps (slower but some servers need it)
+ -n         Don't interpret file before display (slower but uses less memory)
+

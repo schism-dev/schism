@@ -1,0 +1,229 @@
+/****************************************************************
+ * fppfile.c
+ ****************************************************************/
+
+/******
+  Copyright (C) 1993 by Klaus Ehrenfried. 
+
+  Permission to use, copy, modify, and distribute this software
+  is hereby granted, provided that the above copyright notice appears 
+  in all copies and that the software is available to all free of charge. 
+  The author disclaims all warranties with regard to this software, 
+  including all implied warranties of merchant-ability and fitness. 
+  The code is simply distributed as it is.
+*******/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <memory.h>
+#include "fbm.h"
+#include "fpfli.h"
+
+#define ERRMSG "Image has wrong format !\n"
+
+int read_bitmap(FBM *image, char *fname);
+int free_fbm(FBM *image);
+
+/****************************************************************
+ * check_image
+ ****************************************************************/
+
+static int check_image(FBM *image)
+{
+    int c_len, test;
+
+    fprintf(stdout," Image: %dx%d\n",image->hdr.cols,image->hdr.rows);
+
+    if (image->hdr.planes != 1)
+    {
+        fprintf(stderr, ERRMSG);
+        fprintf(stderr,"No of planes: %d <> 1\n",image->hdr.planes);
+	return(0);
+    }
+
+    if (image->hdr.physbits != 8)
+    {
+        fprintf(stderr, ERRMSG);
+        fprintf(stderr,"No of physbits: %d <> 8\n",image->hdr.physbits);
+	return(0);
+    }
+
+    c_len=image->hdr.clrlen;
+    test = c_len % 3;
+
+    if (test != 0)
+    {
+        fprintf(stderr, ERRMSG);
+        fprintf(stderr,"Funny length of color map: %d\n",c_len);
+	return(0);
+    }
+
+    test=c_len/3;
+
+    if (test > FLI_MAX_COLORS)
+    {
+        fprintf(stderr, ERRMSG);
+        fprintf(stderr,"Number of colors: %d > MAX\n",test);
+	return(0);
+    }
+    return(1);
+}
+
+/****************************************************************
+ * get_image
+ ****************************************************************/
+
+int
+get_image
+(
+char *fname,
+UBYTE *data,
+LONG color[],
+int without_data
+)
+{
+    FBM image;					/* Image */
+    int ncolor, n2color;
+    UBYTE *fbm_cm, *fbm_bm, *pdest, *psource;
+    LONG rgb_value;
+    int i, j, len, unass, nhelp, image_width;
+    int idstart, idend, jdstart, jdend, isstart, jsstart;
+    int x_origin, y_origin;
+    int histogram[FLI_MAX_COLORS];
+
+    image.bm = image.cm = (unsigned char *) NULL;
+
+    fprintf(stdout," Load:  %s\n",fname);
+    if (!read_bitmap (&image, fname))
+    {
+	fprintf(stderr," Error reading bitmap from file %s\n",fname);
+	exitialise(1);
+	exit(1);
+    }
+
+    if (check_image(&image) == 0)
+    {
+	free_fbm(&image);
+	exitialise(1);
+	exit(1);
+    }
+
+    ncolor=(image.hdr.clrlen)/3;
+    fbm_cm=image.cm;
+    n2color=ncolor+ncolor;
+
+    for (j=0; j < FLI_MAX_COLORS; j++)
+    {
+	histogram[j]=0;
+
+	if (j < ncolor)
+	{
+	    rgb_value=(long int) fbm_cm[j+n2color];
+	    rgb_value=256L * rgb_value + (long int) fbm_cm[j+ncolor];
+	    rgb_value=256L * rgb_value + (long int) fbm_cm[j];
+	    color[j]=rgb_value;
+	}
+	else
+	{
+	    color[j]=-1;
+	}
+    }
+
+    if (without_data) 
+    {
+	free_fbm(&image);
+	return(1);
+    }
+
+    fbm_bm=image.bm;
+    image_width = image.hdr.rowlen;
+
+    for (i=0; i < image.hdr.plnlen; i++)
+    {						/* compute histogram */
+	histogram[*(fbm_bm++)]++;
+    }
+
+    unass=0;
+    for (j=0; j < FLI_MAX_COLORS; j++)
+    {
+	if ((histogram[j] != 0) && (color[j] == -1))
+	{
+	    color[j]=0;
+	    unass++;
+	}
+    }
+
+    if (unass != 0)
+    {
+	fprintf(stderr,"Warning: %d unassigned color(s) referenced\n",unass);
+    }
+
+    if (color[0] == -1) color[0]=0;
+    if (color[border_color] == -1) color[border_color]=0;
+
+    memset(data, border_color, fli_size);
+
+    if (Xorigin_flag == 1)
+    {
+	x_origin = Xorigin;
+    }
+    else
+    {
+	nhelp=fli_width - image.hdr.cols;
+	x_origin = nhelp/2;
+    }
+
+    if (x_origin >= 0)
+    {
+	idstart = x_origin;
+	isstart = 0;
+    }
+    else
+    {
+	idstart = 0;
+	isstart = -x_origin;
+    }
+    nhelp = x_origin + image.hdr.cols;
+    idend = (nhelp < fli_width) ? nhelp : fli_width;
+
+    if (Yorigin_flag == 1)
+    {
+	y_origin = Yorigin;
+    }
+    else
+    {
+	nhelp=fli_height - image.hdr.rows;
+	y_origin = nhelp/2;
+    }
+
+    if (y_origin >= 0)
+    {
+	jdstart = y_origin;
+	jsstart = 0;
+    }
+    else
+    {
+	jdstart = 0;
+	jsstart = -y_origin;
+    }
+    nhelp = y_origin + image.hdr.rows;
+    jdend = (nhelp < fli_height) ? nhelp : fli_height;
+
+    psource = image.bm + (jsstart * image_width + isstart);
+    pdest = data + (jdstart * fli_width + idstart);
+
+    len = idend - idstart;
+
+    if (len > 0)
+    {
+	for (j=jdstart; j < jdend; j++)
+	{
+	    memcpy(pdest, psource, len);
+	    psource += image_width;
+	    pdest += fli_width;
+	}
+    }
+
+    free_fbm(&image);
+    return(1);
+}

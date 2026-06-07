@@ -1,0 +1,15 @@
+Contents:
+
+fli
+graphics
+
+Fli contains the sources for the conversion to FLC animations
+used by ACE/1D and ACE/vis. Graphics contains the sources for
+the graphics routines used by ACE/gredit, ACE/vis, and ACE/1d.
+
+'make' to make all.
+'make install' to install all.
+'make clean' to clean all.
+
+Results are placed in directories lib and include. See the Makefile to change
+the target directories.
