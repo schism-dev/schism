@@ -1,6 +1,7 @@
 !     Compute equivalent diameter/radius of a tri-quad grid, and dx/dz (aspect ratio; dx is min edge length @ node)
-!     Input: hgrid.gr3 (projection or lon/lat)
-!     Output: fort.12 (*.prop format, eq. radius) and asrat.gr3 (aspect ratio for h>5m; 9999 otherwise. A.R.<1 indicates problem)
+!     Input: hgrid.gr3 (projection or lon/lat; works with global mesh); threshold below
+!     Output: fort.12 (*.prop format, eq. radius) and asrat.gr3 (aspect ratio for h>5m; 9999 otherwise. 
+!             A.R.<1 indicates problem. 2nd depth is max slope at node. Use awk to find all problematic nodes)
 !     ifx -Bstatic -O3 -o eq_diameter_aspect_ratio eq_diameter_aspect_ratio.f90
 !
 !     Below is matlab code for plotting histogram for radii
@@ -23,7 +24,7 @@
       integer :: nwild(3)
       real*8 :: lframe(3,3),xloc(3),yloc(3)
       allocatable :: x(:),y(:),dp(:),nm(:,:),rad_node(:),i34(:), &
-    &xnd(:),ynd(:),znd(:)
+    &xnd(:),ynd(:),znd(:),slp_max(:)
 
       print*, 'Input coord system (1: Cartesian; 2: lon/lat):'
       read*, ics
@@ -32,7 +33,8 @@
       open(14,file='hgrid.gr3',status='old')
       read(14,*)
       read(14,*) ne,np
-      allocate(x(np),y(np),dp(np),nm(ne,4),i34(ne),rad_node(np),xnd(np),ynd(np),znd(np),stat=istat)
+      allocate(x(np),y(np),dp(np),nm(ne,4),i34(ne),rad_node(np),xnd(np),ynd(np),znd(np), &
+              &slp_max(np),stat=istat)
       if(istat/=0) stop 'Failed to allocate'
 
       do i=1,np
@@ -51,6 +53,7 @@
       av_rad=0
       rad_max=0 !max. radius
       rad_min=1.e25 !min. radius
+      slp_max=-1.d0 !max slope around a node
       do i=1,ne
         read(14,*) j,i34(i),(nm(i,k),k=1,i34(i))
 
@@ -84,6 +87,11 @@
             rl=sqrt((x(n1)-x(n2))**2+(y(n1)-y(n2))**2)
             rad_node(n1)=min(rad_node(n1),rl)
             rad_node(n2)=min(rad_node(n2),rl)
+            !slope
+            if(rl==0.d0) stop '0 edge'
+            slp=abs(dp(n1)-dp(n2))/rl
+            slp_max(n1)=max(slp,slp_max(n1))
+            slp_max(n2)=max(slp,slp_max(n2))
           enddo !j
 
         else !ics=2
@@ -149,6 +157,12 @@
               n2=nm(i,nwild(j2))
               rad_node(n1)=min(rad_node(n1),rl)
               rad_node(n2)=min(rad_node(n2),rl)
+
+              !slope
+              if(rl==0.d0) stop '0 edge(2)'
+              slp=abs(dp(n1)-dp(n2))/rl
+              slp_max(n1)=max(slp,slp_max(n1))
+              slp_max(n2)=max(slp,slp_max(n2))
             enddo !j
           enddo !m=1,i34(i)-2
         endif !ics
@@ -173,7 +187,12 @@
         else
           ar=rad_node(i)/dp(i)
         endif
-        write(13,*)i,real(x(i)),real(y(i)),ar 
+        write(13,*)i,real(x(i)),real(y(i)),real(ar ),real(slp_max(i))
+
+        !Potentialy problematic nodes
+!        if(ar<1.d0) then
+!          write(17,*)i,real(x(i)),real(y(i)),real(ar),real(slp_max(i))
+!        endif !ar
       enddo !i
       do i=1,ne
         write(13,*) i,i34(i),(nm(i,k),k=1,i34(i))
