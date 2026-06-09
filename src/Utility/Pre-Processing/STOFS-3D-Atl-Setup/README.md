@@ -31,9 +31,10 @@ The `--no-build-isolation` flag is currently required due to packaging issues in
 ---
 
 
-### 2. Install experimental pylibs utilities
+### 2. Install pylib-ocean and experimental pylibs utilities
 
 ```bash
+pip install pylibs-ocean
 pip install git+https://github.com/wzhengui/pylibs.git#subdirectory=pylib_experimental
 ```
 

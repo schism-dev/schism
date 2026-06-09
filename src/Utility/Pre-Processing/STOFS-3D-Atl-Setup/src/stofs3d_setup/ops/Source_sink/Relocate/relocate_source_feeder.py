@@ -228,7 +228,7 @@ v19p2_for_sms_v32c_mandatory_sources_coor = np.array([
     [-72.625735, 41.656137666666666, np.nan, np.nan],  # Connecticut River, CT
     [-72.64970633333333, 41.572111666666665, np.nan, np.nan],  # Mattabesset River, CT
     [-72.470818, 41.47020933333334, np.nan, np.nan],  # Salmon River, CT
-    [-72.090553, 41.535118000000004, np.nan, np.nan],  # Yantic River, CT
+    # [-72.090553, 41.535118000000004, np.nan, np.nan],  # Yantic River, CT; temporarily disabled for v7.4 mesh because gen_source_nwm failed to identify the source location for unknown reasons
     [-72.06195833333334, 41.525600000000004, np.nan, np.nan],  # Quinebaug River, CT
 ]).reshape(-1, 4)
 

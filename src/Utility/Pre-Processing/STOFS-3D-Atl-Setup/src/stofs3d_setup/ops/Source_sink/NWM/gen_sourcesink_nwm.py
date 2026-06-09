@@ -14,6 +14,7 @@ import logging
 
 from pyschism.forcing.source_sink.nwm import NationalWaterModel, NWMElementPairings
 from pyschism.mesh import Hgrid
+from ....utils.utils import descend_single_folder
 
 
 # Configure logging
@@ -61,6 +62,8 @@ def gen_sourcesink_nwm(hgrid_fname: str, startdate: datetime, rnday: float, cach
 
     nwm.write(output_directory, hgrid, startdate, rnday, overwrite=True)
     logger.info('Generating source/sink files took %.2f seconds', time()-t0)
+
+    cache = descend_single_folder(cache)  # if cache has only one folder, use that folder as cache
 
     return cache.resolve()  # absolute path of the cache folder
 

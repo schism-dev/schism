@@ -12,6 +12,7 @@ def dredge_river_transects(
     region_gdf: gpd.GeoDataFrame = None,
     hgrid_obj=None,  # schism_hgrid object read by the read() function in pylib
     min_channel_depth=1.0,
+    measured_from_high_bank=True,
     output_dir='./'
 ):
     '''
@@ -25,6 +26,7 @@ def dredge_river_transects(
     - hgrid_obj: schism_hgrid object with bathymetry loaded, assuming lon/lat
     - min_channel_depth: float, minimum channel depth to dredge.
         The depth is measured from the higher bank elevation to an inner arc node.
+    - measured_from_high_bank: bool, whether the channel depth is measured from the higher bank elevation.
     - output_dir: str, directory to save the dredged mesh and diagnostic files
     '''
 
@@ -35,6 +37,7 @@ def dredge_river_transects(
     dredged_points = rivers.dredge_inner_arcs(
         region_gdf=region_gdf, min_channel_depth=min_channel_depth,
         inner_most_dredge=False,  # dredge all inner arcs, won't work if outer arcs are present
+        measured_from_high_bank=measured_from_high_bank
     )
 
     print('mapping dredged points to the mesh ...')
@@ -54,7 +57,7 @@ def dredge_river_transects(
 
 
 def ensure_channel_connectivity(
-    hgrid_obj, min_channel_depth=1.0,
+    hgrid_obj, min_channel_depth=1.0, measured_from_high_bank=True,
     river_extra_info_map_file=None,
     region_gdf_file=None, exclude_region_gdf_file_list=None,
     output_dir=None
@@ -108,6 +111,7 @@ def ensure_channel_connectivity(
     hgrid_dredged = dredge_river_transects(
         rivers, region_gdf=watershed, hgrid_obj=hgrid_obj,
         min_channel_depth=1.0, output_dir=output_dir,
+        measured_from_high_bank=measured_from_high_bank
     )
 
     return hgrid_dredged

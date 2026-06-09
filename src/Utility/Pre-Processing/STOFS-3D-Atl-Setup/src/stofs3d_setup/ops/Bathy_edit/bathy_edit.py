@@ -260,18 +260,19 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         hgrid_obj.write_hgrid(f'{wdir}/Dredge/{hgrid_base_name}.gr3')
         print("Finished loading dredging depth.\n")
 
-    if 'Ensure_channel_connectivity' in tasks:  # ensure channel connectivity by dredging river transects defined by RiverMapper
+    if 'Ensure_channel_connectivity' in tasks:  # dredging river transects defined by RiverMapper
         from Ensure_channel_connectivity.ensure_channel_connectivity import ensure_channel_connectivity
-        DREDGE_DEPTH = 1
+        DREDGE_DEPTH = 1.5
         hgrid_obj = ensure_channel_connectivity(
             hgrid_obj, min_channel_depth=DREDGE_DEPTH,
+            measured_from_high_bank=False,  # more agreesive, target channel depth measured from lower bank to thalweg
             river_extra_info_map_file=(
                 '/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v19_RiverMapper/Outputs/'
                 'bora_v19.1.v19_ie_v18_3_nwm_clipped_in_cudem_missing_tiles_20-core/'
                 'total_river_arcs_extra.map'
             ),
             region_gdf_file=(
-                '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32c/Clip/outputs/watershed.shp'
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32d/Clip/outputs/watershed.shp'
             ),
             exclude_region_gdf_file_list=[
                 '/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Bathy_edit/RiverArc_Dredge/watershed_ME.shp'
@@ -340,9 +341,9 @@ def sample_usage():
     a record of the scripts and the larger files used.
     Then set the paths below and run this function.
     '''
-    WDIR = Path('/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32c/Bathy_edit/').resolve(strict=True)
+    WDIR = Path('/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32d/Bathy_edit/').resolve(strict=True)
     HGRID_FNAME = Path(  # Typically, this is the DEM-loaded hgrid, use absolute path
-        '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32c/Bathy_edit/DEM_loading/'
+        '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32d/Bathy_edit/DEM_loading/'
         'hgrid.ll.dem_loaded.mpi.gr3'
     )
     TASKS = {

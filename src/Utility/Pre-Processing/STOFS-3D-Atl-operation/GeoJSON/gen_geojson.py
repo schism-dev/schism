@@ -13,9 +13,8 @@ from shapely.geometry import Polygon, MultiPolygon
 from shapely.validation import make_valid
 from geopandas import GeoDataFrame
 
-#from STOFS3D_scripts.Utility import utils
-#from validation import make_valid
-import utils as utils
+import utils as utils  # assuming utils.py is in the same directory as this script
+
 
 def get_disturbance(elevation, depth, levels, fill_value, out_filename):
 
@@ -115,15 +114,37 @@ def contour_to_gdf(disturbance, levels, triangulation):
 
 if __name__ == "__main__":
 
-    my_fillvalue = -99999.0
-
-    #input arguments
+    # input arguments
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--input_filename', help='file name in SCHISM format')
+    argparser.add_argument("--input_filename", required=True, help="file name in SCHISM format")
+    argparser.add_argument(
+        "--pond_mask_filename", nargs="?", const="__USE_INPUT_FILE__", default=None,
+        help=(
+            "Optional NetCDF file containing isolatedPondNode mask. "
+            "If omitted, no pond mask is used. "
+            "If provided without filename, read isolatedPondNode from input_filename. "
+            "If provided with filename, read isolatedPondNode from that file."
+        ),
+    )
     args = argparser.parse_args()
 
     input_filename = args.input_filename
-    input_fileindex = os.path.basename(input_filename).replace("_", ".").split(".")[1]    
+
+    input_fileindex = os.path.basename(input_filename).replace("_", ".").split(".")[1]
+
+    # optional: read pond mask from a NetCDF file
+    pond_mask = None
+    if args.pond_mask_filename is None:
+        pond_mask_filename = None
+    elif args.pond_mask_filename == "__USE_INPUT_FILE__":
+        pond_mask_filename = input_filename
+    else:
+        pond_mask_filename = args.pond_mask_filename
+
+    if pond_mask_filename is not None:
+        ds_mask = Dataset(pond_mask_filename)
+        pond_mask = ds_mask["isolatedPondNode"][:, :].astype(bool)
+        ds_mask.close()
 
     #reading netcdf dataset
     ds = Dataset(input_filename)
@@ -147,9 +168,15 @@ if __name__ == "__main__":
     dates = nc.num2date(times, ds['time'].units)
 
     #get elevation
+    elevation_fill_value = ds["elevation"].missing_value
     elev = ds['elevation'][:, :]
-    idxs = np.where(elev > 100000)
-    elev[idxs] = my_fillvalue
+    dryFlagNode = ds['dryFlagNode'][:, :]
+    # fill missing values and invalid values
+    elev[dryFlagNode[:,:] == 1] = elevation_fill_value
+    elev[np.isnan(elev)] = elevation_fill_value
+    elev[abs(elev) > 100000] = elevation_fill_value
+    if pond_mask is not None:
+        elev[pond_mask] = elevation_fill_value
 
     #calculate max elevation for this stack
     maxelev = np.max(elev, axis=0)
@@ -162,7 +189,7 @@ if __name__ == "__main__":
     #t0 = time()
     levels = [round(i, 1) for i in np.arange(0.3, 2.1, 0.1)]
     #print(levels)
-    #get_disturbance(maxelev, depth, levels, my_fillvalue, filename_output)
+    #get_disturbance(maxelev, depth, levels, elevation_fill_value, filename_output)
     #print(f'Calculating and masking disturbance took {time()-t0} seconds')
 
 
@@ -177,7 +204,7 @@ if __name__ == "__main__":
     t0 =  time()
 
     pool = mp.Pool(npool)
-    pool.starmap(get_disturbance, [(np.squeeze(elev[i,:]), depth, levels, my_fillvalue, filenames[i]) for i in range(len(times))])
+    pool.starmap(get_disturbance, [(np.squeeze(elev[i,:]), depth, levels, elevation_fill_value, filenames[i]) for i in range(len(times))])
 
     pool.close()
     del pool

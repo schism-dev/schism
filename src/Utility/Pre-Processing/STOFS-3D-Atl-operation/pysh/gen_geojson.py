@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import argparse
 import copy
@@ -14,9 +13,8 @@ from shapely.geometry import Polygon, MultiPolygon
 from shapely.validation import make_valid
 from geopandas import GeoDataFrame
 
-#from STOFS3D_scripts.Utility import utils
-#from validation import make_valid
-import utils as utils
+import utils as utils  # assuming utils.py is in the same directory as this script
+
 
 def get_disturbance(elevation, depth, levels, fill_value, out_filename):
 
@@ -52,7 +50,7 @@ def contour_to_gdf(disturbance, levels, triangulation):
 
     #MinMax = [(-99999, levels[0])]
     MinMax = [(disturbance.min(), levels[0])]
-    for i in np.arange(len(levels)-1):
+    for i in np.arange(len(levels)-1): 
         MinMax.append((levels[i], levels[i+1]))
     #MinMax.append((levels[-1], np.max(disturbance)))
 
@@ -88,13 +86,13 @@ def contour_to_gdf(disturbance, levels, triangulation):
             mpoly = MultiPolygon(mpoly)
             polygons.append(mpoly)
             colors.append(polygon.get_facecolor().tolist()[0])
-            data.append({'id': i+1, 'minWaterLevel': MinMax[i][0], 'maxWaterLevel': MinMax[i][1],
-                    'verticalDatum': 'XGEOID20B', 'units': 'meters', 'geometry': mpoly})
+            data.append({'id': i+1, 'minWaterLevel': MinMax[i][0], 'maxWaterLevel': MinMax[i][1], 
+                    'verticalDatum': 'NAVD88', 'units': 'meters', 'geometry': mpoly})
         elif len(mpoly) == 1:
             polygons.append(mpoly[0])
             colors.append(polygon.get_facecolor().tolist()[0])
-            data.append({'id': i+1, 'minWaterLevel': MinMax[i][0], 'maxWaterLevel': MinMax[i][1],
-                    'verticalDatum': 'XGEOID20B', 'units': 'meters', 'geometry': mpoly[0]})
+            data.append({'id': i+1, 'minWaterLevel': MinMax[i][0], 'maxWaterLevel': MinMax[i][1], 
+                    'verticalDatum': 'NAVD88', 'units': 'meters', 'geometry': mpoly[0]})
     plt.close('all')
 
     gdf = GeoDataFrame(data)
@@ -116,15 +114,37 @@ def contour_to_gdf(disturbance, levels, triangulation):
 
 if __name__ == "__main__":
 
-    my_fillvalue = -99999.0
-
-    #input arguments
+    # input arguments
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--input_filename', help='file name in SCHISM format')
+    argparser.add_argument("--input_filename", required=True, help="file name in SCHISM format")
+    argparser.add_argument(
+        "--pond_mask_filename", nargs="?", const="__USE_INPUT_FILE__", default=None,
+        help=(
+            "Optional NetCDF file containing isolatedPondNode mask. "
+            "If omitted, no pond mask is used. "
+            "If provided without filename, read isolatedPondNode from input_filename. "
+            "If provided with filename, read isolatedPondNode from that file."
+        ),
+    )
     args = argparser.parse_args()
 
     input_filename = args.input_filename
+
     input_fileindex = os.path.basename(input_filename).replace("_", ".").split(".")[1]
+
+    # optional: read pond mask from a NetCDF file
+    pond_mask = None
+    if args.pond_mask_filename is None:
+        pond_mask_filename = None
+    elif args.pond_mask_filename == "__USE_INPUT_FILE__":
+        pond_mask_filename = input_filename
+    else:
+        pond_mask_filename = args.pond_mask_filename
+
+    if pond_mask_filename is not None:
+        ds_mask = Dataset(pond_mask_filename)
+        pond_mask = ds_mask["isolatedPondNode"][:, :].astype(bool)
+        ds_mask.close()
 
     #reading netcdf dataset
     ds = Dataset(input_filename)
@@ -148,9 +168,15 @@ if __name__ == "__main__":
     dates = nc.num2date(times, ds['time'].units)
 
     #get elevation
+    elevation_fill_value = ds["elevation"].missing_value
     elev = ds['elevation'][:, :]
-    idxs = np.where(elev > 100000)
-    elev[idxs] = my_fillvalue
+    dryFlagNode = ds['dryFlagNode'][:, :]
+    # fill missing values and invalid values
+    elev[dryFlagNode[:,:] == 1] = elevation_fill_value
+    elev[np.isnan(elev)] = elevation_fill_value
+    elev[abs(elev) > 100000] = elevation_fill_value
+    if pond_mask is not None:
+        elev[pond_mask] = elevation_fill_value
 
     #calculate max elevation for this stack
     maxelev = np.max(elev, axis=0)
@@ -162,10 +188,8 @@ if __name__ == "__main__":
 
     #t0 = time()
     levels = [round(i, 1) for i in np.arange(0.3, 2.1, 0.1)]
-    levels.append(20)  # Add 20 as the maximum level
-
     #print(levels)
-    #get_disturbance(maxelev, depth, levels, my_fillvalue, filename_output)
+    #get_disturbance(maxelev, depth, levels, elevation_fill_value, filename_output)
     #print(f'Calculating and masking disturbance took {time()-t0} seconds')
 
 
@@ -173,19 +197,14 @@ if __name__ == "__main__":
     npool = len(times) if len(times) < mp.cpu_count() else mp.cpu_count()-1
     #print(npool)
 
-    #filenames = [f'./stofs3d_atlantic_disturbance_{dates[0].strftime("%Y%m%d")}' \
-    #    + f't00z_{dates[i].strftime("%Y%m%d")}t{dates[i].strftime("%H")}z.gpkg' for i in range(len(times))]
+    filenames = [f'./stofs3d_atlantic_disturbance_{dates[0].strftime("%Y%m%d")}' \
+        + f't00z_{dates[i].strftime("%Y%m%d")}t{dates[i].strftime("%H")}z.gpkg' for i in range(len(times))]
     #print(filenames)
-    filenames = [f'stofs_3d_atl.t12z.disturbance.n{i-1:03d}.gpkg' for i in range(24, 0,-1)]
-
-    #for i in range(48):
-    for i in range(96):
-        filenames.append(f'stofs_3d_atl.t12z.disturbance.f{i+1:03d}.gpkg')
 
     t0 =  time()
 
     pool = mp.Pool(npool)
-    pool.starmap(get_disturbance, [(np.squeeze(elev[i,:]), depth, levels, my_fillvalue, filenames[i]) for i in range(len(times))])
+    pool.starmap(get_disturbance, [(np.squeeze(elev[i,:]), depth, levels, elevation_fill_value, filenames[i]) for i in range(len(times))])
 
     pool.close()
     del pool

@@ -3,6 +3,7 @@ Utility functions for various tasks
 """
 import os
 import shutil
+from pathlib import Path
 import shapefile
 import numpy as np
 import subprocess
@@ -19,6 +20,28 @@ STOFS3D_ATL_STATES = [
 # ---------------------------------------------------------------------
 #                         Utility functions
 # ---------------------------------------------------------------------
+
+def descend_single_folder(p: Path) -> Path:
+    p = Path(p)
+
+    while True:
+        children = list(p.iterdir())
+        subdirs = [c for c in children if c.is_dir()]
+        files = [c for c in children if c.is_file()]
+
+        if len(subdirs) > 1:
+            raise RuntimeError(
+                f"Expected at most one subdirectory under {p}, "
+                f"but found {len(subdirs)}: {[d.name for d in subdirs]}"
+            )
+
+        if len(subdirs) == 1 and len(files) == 0:
+            p = subdirs[0]
+            continue
+
+        return p
+
+
 def mkcd_new_dir(path, remove=True):
     '''Make a new directory and change to it'''
     if remove:

@@ -319,7 +319,7 @@ class ConfigStofs3dAtlantic(BaseModel):
             shapiro_zone_width=11.5,  # default shapiro zone
             shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
             feeder_info_file=(
-                '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v32/Feeder/'
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32/Feeder/'
                 'feeder_heads_bases.xy'
             ),
             hgrid_without_feeders=None,  # feeders are removed in v7.4, set this to None and the main hgrid will be used.
