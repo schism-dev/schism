@@ -117,37 +117,21 @@ if __name__ == "__main__":
     # input arguments
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--input_filename", required=True, help="file name in SCHISM format")
-    argparser.add_argument(
-        "--pond_mask_filename", nargs="?", const="__USE_INPUT_FILE__", default=None,
-        help=(
-            "Optional NetCDF file containing isolatedPondNode mask. "
-            "If omitted, no pond mask is used. "
-            "If provided without filename, read isolatedPondNode from input_filename. "
-            "If provided with filename, read isolatedPondNode from that file."
-        ),
-    )
     args = argparser.parse_args()
 
     input_filename = args.input_filename
 
     input_fileindex = os.path.basename(input_filename).replace("_", ".").split(".")[1]
 
-    # optional: read pond mask from a NetCDF file
-    pond_mask = None
-    if args.pond_mask_filename is None:
-        pond_mask_filename = None
-    elif args.pond_mask_filename == "__USE_INPUT_FILE__":
-        pond_mask_filename = input_filename
-    else:
-        pond_mask_filename = args.pond_mask_filename
-
-    if pond_mask_filename is not None:
-        ds_mask = Dataset(pond_mask_filename)
-        pond_mask = ds_mask["isolatedPondNode"][:, :].astype(bool)
-        ds_mask.close()
-
-    #reading netcdf dataset
+    # reading netcdf dataset
     ds = Dataset(input_filename)
+
+    # check if the dataset has the pond mask variable
+    if "isolatedPondNode" in ds.variables:
+        pond_mask = ds["isolatedPondNode"][:, :].astype(bool)
+    else:
+        print("Warning: The dataset does not contain the variable 'isolatedPondNode'. Proceeding without the pond mask.")
+        pond_mask = None
 
     #get coordinates/bathymetry
     x = ds['SCHISM_hgrid_node_x'][:]

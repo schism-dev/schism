@@ -265,7 +265,7 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         DREDGE_DEPTH = 1.5
         hgrid_obj = ensure_channel_connectivity(
             hgrid_obj, min_channel_depth=DREDGE_DEPTH,
-            measured_from_high_bank=False,  # more agreesive, target channel depth measured from lower bank to thalweg
+            measured_from_high_bank=True,  # less agreesive, target channel depth measured from higher bank to thalweg
             river_extra_info_map_file=(
                 '/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v19_RiverMapper/Outputs/'
                 'bora_v19.1.v19_ie_v18_3_nwm_clipped_in_cudem_missing_tiles_20-core/'
