@@ -1,13 +1,14 @@
 #!/bin/bash --login
 
+##New Hercules-2 nodes
 #SBATCH -D .
-#SBATCH -J 03b
-#SBATCH -A nos-surge
-#SBATCH -p hercules
-##queues: 'windfall' max 450 nodes (no walltime limit but lower priority; for quick turn-around try <=8 hrs)
-###80 cores/node (mem 512GB/node)
-#SBATCH -N 10
-#SBATCH -n 800
+#SBATCH -J 40g
+#SBATCH --partition=hercules-2
+##SBATCH --reservation=hercules_exp
+##SBATCH --qos=windfall
+##80 cores/node
+#SBATCH -N 35
+#SBATCH -n 2800
 #SBATCH --exclusive
 #SBATCH -t 08:00:00  
 #SBATCH -o myout
@@ -20,7 +21,7 @@ ulimit -s unlimited
 
 source /home/yjzhang/modules.hercules
 
-#Ufuk suggested the following to avoid hang on large jobs for Intel MPI
+#Ufuk suggested the following to avoid hang on large jobs
 #export FI_MLX_INJECT_LIMIT=0
 
-srun ./pschism_HERCULES_NO_PARMETIS_PREC_EVAP_TVD-VL 7
+srun ./pschism_HERCULES_NO_PARMETIS_PREC_EVAP_BLD_STANDALONE_SH_MEM_COMM_TVD-VL 6
