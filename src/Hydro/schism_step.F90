@@ -6076,6 +6076,7 @@ real (rkind) :: aux                               ! ustar
               else
                 tmp2=bdef2(nd)-bdef1(nd)
               endif !imm 
+              !Error: 2nd term inconsistent with tri w/o wet/dry check?
               qel(i)=qel(i)+(eta2(nd)+tmp2)*swild10(1,l)-eta2(nd)*grav3*thetai*(1.d0-thetai)*dt*dt*hhatb*swild10(2,l)
             enddo !l
           endif !i34       
