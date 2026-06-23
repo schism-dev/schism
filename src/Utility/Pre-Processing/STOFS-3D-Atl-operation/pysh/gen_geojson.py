@@ -16,6 +16,28 @@ from geopandas import GeoDataFrame
 import utils as utils  # assuming utils.py is in the same directory as this script
 
 
+# Operational parameters
+DRY_NODE_TOLERANCE = 1.e-6
+LAND_DISTURBANCE_MASK_THRESHOLD = -5
+TRIANGULATION_MASK_THRESHOLD = -90000
+
+VERTICAL_DATUM = 'LMSL'
+UNITS = 'meters'
+OUTPUT_DRIVER = 'GPKG'
+OUTPUT_LAYER = 'disturbance'
+OUTPUT_PREFIX = 'stofs_3d_atl.t12z.disturbance'
+NOWCAST_OUTPUT_COUNT = 24
+FORECAST_OUTPUT_COUNT = 96
+
+CONTOUR_LEVEL_START = -0.5
+CONTOUR_LEVEL_STOP = 2.1
+CONTOUR_LEVEL_STEP = 0.1
+CONTOUR_LEVEL_MIN = -5
+CONTOUR_LEVEL_MAX = 20
+CRS_EPSG = 4326
+DEFAULT_FACE_COLOR = [0, 0, 0, 1]
+
+
 def get_disturbance(elevation, depth, levels, fill_value, out_filename):
 
     #disturbance
@@ -24,22 +46,22 @@ def get_disturbance(elevation, depth, levels, fill_value, out_filename):
     disturbance[idxs_land_node] = np.maximum(0, elevation[idxs_land_node] + depth[idxs_land_node])
 
     #set mask on dry nodes
-    idxs_dry = np.where(elevation + depth <= 1.e-6)
+    idxs_dry = np.where(elevation + depth <= DRY_NODE_TOLERANCE)
     disturbance[idxs_dry] = fill_value
 
-    #set mask on nodes with small max disturbance (<0.3 m) on land
-    idxs_small = disturbance < 0.3
+    #set mask on nodes with small max disturbance (<-5 m) on land
+    idxs_small = disturbance < LAND_DISTURBANCE_MASK_THRESHOLD
     idxs_mask_maxdist = idxs_small * idxs_land_node
     disturbance[idxs_mask_maxdist] = fill_value
 
     #get mask for triangulation
-    imask = disturbance < -90000
+    imask = disturbance < TRIANGULATION_MASK_THRESHOLD
     mask = np.any(np.where(imask[triangulation.triangles], True, False), axis=1)
     triangulation.set_mask(mask)
     gdf = contour_to_gdf(disturbance, levels, triangulation)
 
     #gdf.to_file(out_filename, driver="GeoJSON")
-    gdf.to_file(out_filename, driver="GPKG", layer='disturbance')
+    gdf.to_file(out_filename, driver=OUTPUT_DRIVER, layer=OUTPUT_LAYER)
     #gdf.to_file(out_filename)
 
 
@@ -50,7 +72,7 @@ def contour_to_gdf(disturbance, levels, triangulation):
 
     #MinMax = [(-99999, levels[0])]
     MinMax = [(disturbance.min(), levels[0])]
-    for i in np.arange(len(levels)-1): 
+    for i in np.arange(len(levels)-1):
         MinMax.append((levels[i], levels[i+1]))
     #MinMax.append((levels[-1], np.max(disturbance)))
 
@@ -58,41 +80,59 @@ def contour_to_gdf(disturbance, levels, triangulation):
     ax = fig.add_subplot()
 
     my_cmap = plt.cm.jet
-    contour = ax.tricontourf(triangulation, disturbance, vmin=MinVal, vmax=MaxVal,
+    contour = ax.tricontourf(
+        triangulation, disturbance, vmin=MinVal, vmax=MaxVal,
         levels=levels, cmap=my_cmap, extend='min')
 
-    #Transform a `matplotlib.contour.QuadContourSet` to a GeoDataFrame
     polygons, colors = [], []
     data = []
-    for i, polygon in enumerate(contour.collections):
-        mpoly = []
-        for path in polygon.get_paths():
-            try:
-                path.should_simplify = False
-                poly = path.to_polygons()
-                # Each polygon should contain an exterior ring + maybe hole(s):
-                exterior, holes = [], []
-                if len(poly) > 0 and len(poly[0]) > 3:
-                    # The first of the list is the exterior ring :
-                    exterior = poly[0]
-                    # Other(s) are hole(s):
-                    if len(poly) > 1:
-                        holes = [h for h in poly[1:] if len(h) > 3]
-                mpoly.append(make_valid(Polygon(exterior, holes)))
-            except:
-                print('Warning: Geometry error when making polygon #{}'.format(i))
 
-        if len(mpoly) > 1:
-            mpoly = MultiPolygon(mpoly)
-            polygons.append(mpoly)
-            colors.append(polygon.get_facecolor().tolist()[0])
-            data.append({'id': i+1, 'minWaterLevel': MinMax[i][0], 'maxWaterLevel': MinMax[i][1], 
-                    'verticalDatum': 'NAVD88', 'units': 'meters', 'geometry': mpoly})
-        elif len(mpoly) == 1:
-            polygons.append(mpoly[0])
-            colors.append(polygon.get_facecolor().tolist()[0])
-            data.append({'id': i+1, 'minWaterLevel': MinMax[i][0], 'maxWaterLevel': MinMax[i][1], 
-                    'verticalDatum': 'NAVD88', 'units': 'meters', 'geometry': mpoly[0]})
+    # Get paths and facecolors directly from the ContourSet
+    paths = contour.get_paths()
+    facecolors = contour.get_facecolor()
+
+    # Each path corresponds to a specific contour level/interval
+    for i, path in enumerate(paths):
+        mpoly = []
+        try:
+            path.should_simplify = False
+            poly_list = path.to_polygons()
+
+            if len(poly_list) > 0:
+                # Sort by area descending to ensure the largest polygon is the exterior ring
+                # (Matplotlib occasionally returns holes before exteriors)
+                poly_list = sorted(poly_list, key=lambda x: Polygon(x).area if len(x) > 3 else 0, reverse=True)
+
+                exterior = poly_list[0]
+                holes = [h for h in poly_list[1:] if len(h) > 3]
+
+                if len(exterior) > 3:
+                    mpoly.append(make_valid(Polygon(exterior, holes)))
+        except Exception as e:
+            print(f'Warning: Geometry error when making polygon #{i}: {e}')
+
+        # Skip adding to data if no valid geometry was generated
+        if not mpoly:
+            continue
+
+        # Combine into MultiPolygon if multiple discrete shapes exist for this level
+        geom = MultiPolygon(mpoly) if len(mpoly) > 1 else mpoly[0]
+
+        polygons.append(geom)
+
+        # Safely extract facecolor for this level
+        color = facecolors[i].tolist() if i < len(facecolors) else DEFAULT_FACE_COLOR
+        colors.append(color)
+
+        data.append({
+            'id': i + 1,
+            'minWaterLevel': MinMax[i][0],
+            'maxWaterLevel': MinMax[i][1],
+            'verticalDatum': VERTICAL_DATUM,
+            'units': UNITS,
+            'geometry': geom
+        })
+
     plt.close('all')
 
     gdf = GeoDataFrame(data)
@@ -108,7 +148,7 @@ def contour_to_gdf(disturbance, levels, triangulation):
     gdf['rgba'] = colors_elev
 
     #set crs
-    gdf = gdf.set_crs(4326)
+    gdf = gdf.set_crs(CRS_EPSG)
 
     return  gdf
 
@@ -117,34 +157,11 @@ if __name__ == "__main__":
     # input arguments
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--input_filename", required=True, help="file name in SCHISM format")
-    argparser.add_argument(
-        "--pond_mask_filename", nargs="?", const="__USE_INPUT_FILE__", default=None,
-        help=(
-            "Optional NetCDF file containing isolatedPondNode mask. "
-            "If omitted, no pond mask is used. "
-            "If provided without filename, read isolatedPondNode from input_filename. "
-            "If provided with filename, read isolatedPondNode from that file."
-        ),
-    )
     args = argparser.parse_args()
 
     input_filename = args.input_filename
 
     input_fileindex = os.path.basename(input_filename).replace("_", ".").split(".")[1]
-
-    # optional: read pond mask from a NetCDF file
-    pond_mask = None
-    if args.pond_mask_filename is None:
-        pond_mask_filename = None
-    elif args.pond_mask_filename == "__USE_INPUT_FILE__":
-        pond_mask_filename = input_filename
-    else:
-        pond_mask_filename = args.pond_mask_filename
-
-    if pond_mask_filename is not None:
-        ds_mask = Dataset(pond_mask_filename)
-        pond_mask = ds_mask["isolatedPondNode"][:, :].astype(bool)
-        ds_mask.close()
 
     #reading netcdf dataset
     ds = Dataset(input_filename)
@@ -169,14 +186,22 @@ if __name__ == "__main__":
 
     #get elevation
     elevation_fill_value = ds["elevation"].missing_value
+
+    # get pond mask
     elev = ds['elevation'][:, :]
     dryFlagNode = ds['dryFlagNode'][:, :]
+    if "isolatedPondNode" in ds.variables:
+        print("Found variable 'isolatedPondNode' in dataset, applying pond mask")
+        pond_mask = ds["isolatedPondNode"][:, :].astype(bool)
+    else:
+        print("Variable 'isolatedPondNode' not found in dataset, proceeding without pond mask")
+        pond_mask = np.zeros(elev.shape, dtype=bool)
+
     # fill missing values and invalid values
     elev[dryFlagNode[:,:] == 1] = elevation_fill_value
     elev[np.isnan(elev)] = elevation_fill_value
-    elev[abs(elev) > 100000] = elevation_fill_value
-    if pond_mask is not None:
-        elev[pond_mask] = elevation_fill_value
+    elev[abs(elev) >= abs(elevation_fill_value)] = elevation_fill_value
+    elev[pond_mask] = elevation_fill_value
 
     #calculate max elevation for this stack
     maxelev = np.max(elev, axis=0)
@@ -187,7 +212,12 @@ if __name__ == "__main__":
     #    + f't01z_{dates[-1].strftime("%Y%m%d")}t00z.shp'
 
     #t0 = time()
-    levels = [round(i, 1) for i in np.arange(0.3, 2.1, 0.1)]
+    levels = [
+        round(i, 1)
+        for i in np.arange(CONTOUR_LEVEL_START, CONTOUR_LEVEL_STOP, CONTOUR_LEVEL_STEP)
+    ]
+    levels.append(CONTOUR_LEVEL_MAX)
+    levels.insert(0, CONTOUR_LEVEL_MIN)
     #print(levels)
     #get_disturbance(maxelev, depth, levels, elevation_fill_value, filename_output)
     #print(f'Calculating and masking disturbance took {time()-t0} seconds')
@@ -197,8 +227,12 @@ if __name__ == "__main__":
     npool = len(times) if len(times) < mp.cpu_count() else mp.cpu_count()-1
     #print(npool)
 
-    filenames = [f'./stofs3d_atlantic_disturbance_{dates[0].strftime("%Y%m%d")}' \
-        + f't00z_{dates[i].strftime("%Y%m%d")}t{dates[i].strftime("%H")}z.gpkg' for i in range(len(times))]
+    filenames = [
+        f'{OUTPUT_PREFIX}.n{i-1:03d}.gpkg'
+        for i in range(NOWCAST_OUTPUT_COUNT, 0, -1)
+    ]
+    for i in range(FORECAST_OUTPUT_COUNT):
+        filenames.append(f'{OUTPUT_PREFIX}.f{i+1:03d}.gpkg')
     #print(filenames)
 
     t0 =  time()
