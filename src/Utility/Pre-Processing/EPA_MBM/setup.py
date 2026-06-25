@@ -18,7 +18,7 @@ p=zdata(); p.flag={}
 p.StartT=datenum(1991,1,1);  p.EndT=datenum(1995,12,31) #simulation time
 
 p.base= 'None' # reference run
-p.grid_dir='/sciclone/data10/wangzg/CBP/grid/v9b' #directory of hgrid & vgrid; p.grid_dir=p.base if it is None
+p.grid_dir='/sciclone/data10/wangzg/CBP/grid/v9d' #directory of hgrid & vgrid; p.grid_dir=p.base if it is None
 
 #models
 p.flag['ICM']= 0  #ICM   model (1: 21 variables; 10: 21-variable offline mode; 2: 17 variables; 20: 17-variable offline mode)
@@ -68,7 +68,7 @@ p.schism='/sciclone/data10/wangzg/schism'  #SCHISM repository
 #databases
 p.bdir='/sciclone/data10/wangzg/CBP/database/'         #MBM database dir
 p.MBM_init  = p.bdir+'MBM_init.npz'                    #MBM database: multiple datasets
-p.source    = p.bdir+'load_p7_v4.npz'                  #CBP watershed sources
+p.source    = p.bdir+'load_p7_v8.npz'                  #CBP watershed sources
 p.atmdep    = p.bdir+'atm_p7_v1.npz'                   #CBP atmospheric deposition
 p.hycom     = p.bdir+'hycom_dist.nc'                   #HYCOM database
 p.sflux     = p.bdir+'sflux_ERA5'                      #sflux database
@@ -322,7 +322,7 @@ if p.flag[fname]!=0:
 fname='watertype.gr3'
 if p.flag[fname]!=0:
    print('writing '+fname)
-   vi=M.f2(gd.xy,value=M.watertype.clip(0,7) if p.flag[fname]==1 else M.watertype)
+   vi=M.f2(gd.xy,value=M.watertype.clip(1,7) if p.flag[fname]==1 else M.watertype)
    gd.save(fname,value=round(vi).astype('int'),outfmt='{:d}')
 
 fname='diffmin.gr3'
@@ -804,18 +804,73 @@ fPB3  = [0.01,      0.01,         0.01,     0.01,      0.01,   0.01,  0.01,     
 #Phase-7 WSM loading
 #--------------------------------------------------------------------------
 if p.flag[fname]==1 and ('p7' in p.source): 
-   print('writing '+fname)
+   print('writing '+fname); C=read(p.source,1); ver=int(p.source.replace('_','.').split('.')[-2][1:])
+
+   #-------------------------------------------------------
+   #distribution WSM loading for version>=8
+   #-------------------------------------------------------
+   if C.hasattr('shp'): #loading associated with river network
+      #function to search loading point in the downstream
+      def search_downstream(sid):
+          x,y=S.xys[sid].T; cxy=x+1j*y; flag=S.flag[sid]; sidn=S.next[sid]; P=zdata(); P.xy=[]; t0=sid
+          if 1 in flag: #reach grid's boundary: P.xy is the path from init pt to last pt to schism grid
+             i0=pindex(flag==1)[0]+1; P.xy=cxy[:i0]
+          else:
+             pns=[search_downstream(sid) for sid in sidn]; dist=array([sum(abs(diff(i.xy))) for i in pns])
+             if len(dist)==0: print(sidn,pns,t0); sys.exit('hanging points out of schism grid')
+             P.xy=r_[cxy[:-1],pns[dist.argmin()].xy]; P.dist=sum(abs(diff(P.xy))) #shortest path
+          return P
+
+      #get boundary elem: (be, bn, bxy) are boundary elem, side_node,side_xy
+      fp=pindex(gd.isdel[:,1]==-1); be=gd.isdel[fp,0]; bn=gd.isidenode[fp]; bxy0=gd.xy[bn].mean(axis=1)
+      bxy=vstack([r_[gd.xy[bn[i]],ones([1,2])*nan] for i in arange(len(be))])
+
+      #add flag of inside/outside grid for each points of river network
+      S=C.shp; flag=gd.inside_grid(vstack(S.xys)); S.flag=zeros(S.ns,'O')
+      for i,xy in enumerate(S.xys): n=len(xy); S.flag[i]=flag[:n]; flag=flag[n:]
+
+      #move flow to river heads (e.g. york)
+      rxy=array([[289323.92660350, 4185441.87010731],[305270.77371730, 4195137.15596283]]); rns=['YP4_6750_0001','YM4_6620_0001'] #Pamunkey, Mattaponi
+      for xy,rn in zip(rxy,rns):  S.s1.xy[pindex(S.s1.sname==rn)[0]]=gd.exy[be][near_pts(xy[None,:],gd.exy[be])[0]]
+
+      #loading
+      nrec=len(C.sname); sinde=zeros(nrec,'int'); fpm=C.stype=='terminal'; fpt=~fpm
+
+      #search for stream points
+      print('   searching discharge pts for terminal loads')
+      xy0=S.s1.xy[[pindex(S.s1.sname==i)[0] for i in C.sname[fpm]]] #original discharge points of terminal flow
+      fpn=gd.inside_grid(xy0)==1; sindm=zeros(len(xy0),'int')
+      sindm[fpn]=be[mdist(xy0[fpn],bxy,1,1).argmin(axis=1)] #find the nearest boundary side/elem for pts inside grid
+      x,y=xy0[~fpn].T; sindp=abs((x+1j*y)[None,:]-S.p0[:,None]).argmin(axis=0); pxy=[] #sindp is the starting index
+      for i in sindp: P=search_downstream(i); pxy.extend(c_[P.xy[-2:].real,P.xy[-2:].imag]); pxy.append(ones(2)*nan)
+      sindm[~fpn]=be[mdist(array(pxy),bxy,2,1).argmin(axis=1)]; sinde[fpm]=sindm  #pts outside of domain
+
+      #search for tidal loads
+      print('   searching discharge pts for tidal loads')
+      s=S.p0[[pindex(S.sname==i)[0] for i in C.sname[fpt]]]; xy0=c_[s.real,s.imag]
+      fpn=gd.inside_grid(xy0)==1; sindt=zeros(len(xy0),'int')
+      sindt[fpn]=be[mdist(xy0[fpn],bxy,1,1).argmin(axis=1)] #pts inside grid
+      x,y=xy0[~fpn].T; sindp=abs((x+1j*y)[None,:]-S.p0[:,None]).argmin(axis=0); pxy=[]
+      for i in sindp: P=search_downstream(i); pxy.extend(c_[P.xy[-2:].real,P.xy[-2:].imag]); pxy.append(ones(2)*nan)
+      sindt[~fpn]=be[mdist(array(pxy),bxy,2,1).argmin(axis=1)]; sinde[fpt]=sindt #pts outside of domain
+
+      #compute sid, srat, sxy
+      ie=unique(sinde); C.sxy=bxy0[[pindex(be==i)[0] for i in ie]]
+      C.sid=array([pindex(ie==i) for i in sinde]); C.srat=array([[1.0] for i in sinde])
+
+   #-------------------------------------------------------
+   #mapping WSM loading to MBM cells
+   #-------------------------------------------------------
    #read data
-   C=read(p.source,1)
    if hasattr(C,'wsm'): [C.attr(i,C.wsm.attr(i)) for i in C.wsm.attr()];  [C.attr('sho_'+i,C.sho.attr(i)) for i in C.sho.attr()] #old format
 
    #move largest source to river head
-   sxy=C.sxy[:]; xy=gd.exy[read(p.region+'river_head_rappahannock.reg').inside(gd.exy)]
-   if len(xy)!=0: ip=C.sid[list(C.sname).index('RU5_6030_0001')]; sxy[ip]=xy[abs(xy[:,0]+1j*xy[:,1]-sxy[ip[0],0]-1j*sxy[ip[0],1]).argmax()]
+   #sxy=C.sxy[:]; xy=gd.exy[read(p.region+'river_head_rappahannock.reg').inside(gd.exy)]
+   #if len(xy)!=0: ip=C.sid[list(C.sname).index('RU5_6030_0001')]; sxy[ip]=xy[abs(xy[:,0]+1j*xy[:,1]-sxy[ip[0],0]-1j*sxy[ip[0],1]).argmax()]
 
    #find source element
-   ie=gd.ie(); sinde=unique(ie[near_pts(r_[sxy,C.sho_sxy],gd.exy[ie])]) #sinde is source element
-   eid=near_pts(sxy,gd.exy[sinde]); C.eid=array([[eid[i] for i in sid] for sid in C.sid],'O')
+   ie=gd.ie(); sinde=unique(ie[near_pts(r_[C.sxy,C.sho_sxy],gd.exy[ie])]) #sinde is source element
+   eid=near_pts(C.sxy,gd.exy[sinde]); C.eid=array([[eid[i] for i in sid] for sid in C.sid],'O')
 
    #-----------------------------------
    #watershed loading
