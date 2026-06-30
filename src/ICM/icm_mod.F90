@@ -65,7 +65,7 @@ module icm_mod
   real(rkind),save,target :: FCP(3,4),FNP(3,5),FPP(3,5),FCM(3,4),FNM(3,5),FPM(3,5)
   real(rkind),save,target :: Nit,TNit,KTNit(2),KhDOn,KhNH4n,KhDOox,KhNO3dn
   real(rkind),save,target,dimension(3) :: KC0,KN0,KP0,KCalg,KNalg,KPalg,TRM,KTRM,KSR0,TRSR,KTRSR
-  real(rkind),save,target :: KCD,TRCOD,KTRCOD,KhCOD,KPIP
+  real(rkind),save,target :: KCD,TRCOD,KTRCOD,KhCOD,KhDOp
   real(rkind),save,target,dimension(3) :: KhN,KhP,KhSal,c2chl,n2c,p2c,KhDO,PBmin
   real(rkind),save,target :: o2c,o2n,dn2c,an2c,KPO4p,WRea,WDOs,dz_flux(2)
 

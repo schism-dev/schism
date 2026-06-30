@@ -225,7 +225,7 @@ KhDOn  = 1.0                      !DO half saturation for nitrification (mg/L)
 KhDOox  = 0.5                     !DO half saturation for dentrification & DOC's oxic respiration (mg/L)
 KhNO3dn = 0.1                     !NO3 half saturation for denitrification (mg/L)
 
-!decay coefficients for organic matters (C,N,P); SRM module: (KSR,TRSR,KTRSR,KPIP)
+!decay coefficients for organic matters (C,N,P); SRM module: (KSR,TRSR,KTRSR)
 KC0   = 0.005  0.075  0.2         !minimum decay rate of RPOC,LPOC,DOC (day-1)
 KN0   = 0.005  0.075  0.2         !minimum decay rate of RPON,LPON,DON (day-1)
 KP0   = 0.005  0.075  0.2         !minimum decay rate of RPOP,LPOP,DOP (day-1)
@@ -237,7 +237,7 @@ KTRM  = 0.069  0.069  0.069       !temp. dependence for (RPOM,LPOM,DOM) decay (o
 KSR0  = 0.001  0.001  0.001       !decay rates of SRPOC,SRPON,SRPOP (day-1)
 TRSR  = 20.0   20.0   20.0        !reference temp. for (SRPOC,SRPON,SRPOP) decay (oC)
 KTRSR = 0.069  0.069  0.069       !temp. dependence for (SRPOC,SRPON,SRPOP) decay (oC-1)
-KPIP  = 0.0                       !dissolution rate of PIP (day-1)
+KhDOp = 5.0                       !DO half saturation for PO4 sorption converting to PIP (mg[O2]/L)
 
 !decay coefficient for chemical oxygen demand (COD)
 KCD   = 1.0                       !oxidation rate of COD at TRCOD (day-1)

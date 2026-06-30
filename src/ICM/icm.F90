@@ -88,7 +88,7 @@ subroutine ecosystem(it)
   integer :: i,j,k,m,istat,isub
   integer :: id,kb
   real(rkind), parameter :: hmin=0.01
-  real(rkind) :: tmp,time,rat,s,z1,z2,dzb,zs,T
+  real(rkind) :: tmp,time,rat,tPO4,s,z1,z2,dzb,zs,T
   real(rkind) :: xT,xS,rKSR(3),aKe0,sKeC,vKeC(nmarsh),vLight(nmarsh)
   real(rkind) :: usf,wspd,rIa,tdep,mKhN,mKhP,rKa,DOsat,dDOX,APB,rKTM,rKSUA,shtz,vhtz(nmarsh)
   real(rkind),dimension(nvrt) :: zid,dz,Light,rKe,rKeh,rKe0,rKeS,rKeV,mLight,sLight,chl
@@ -150,7 +150,12 @@ subroutine ecosystem(it)
 #endif
           do i=1,i34(id); btau=btau+rho0*btaun(elnode(i,id))/dble(i34(id)); enddo
         endif
-        rat=1.0/(1.0+KPO4p*TSS(k)); PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k)
+        if(iSRM==1) then !phase change between dissolved and particulate PO4
+          rat=1.0*KhDOp/((1.0+KPO4p*TSS(k))*(KhDOp+DOX(k)+1.d-8))
+          tPO4=PO4(k)+PIP(k); PO4(k)=rat*tPO4; PIP(k)=(1.0-rat)*tPO4; PO4d(k)=PO4(k); PO4p(k)=0.d0
+        else
+          rat=1.0/(1.0+KPO4p*TSS(k)); PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k)
+        endif
         if(iSilica==1) then
           rat=1.0/(1.0+KSAp*TSS(k));  SAd(k)=rat*SA(k); SAp(k)=(1.0-rat)*SA(k)
         endif
@@ -433,7 +438,6 @@ subroutine ecosystem(it)
           dwqc(iDOC,k)=dwqc(iDOC,k)+rKSR(1)*SRPOC(k)
           dwqc(iDON,k)=dwqc(iDON,k)+rKSR(2)*SRPON(k)
           dwqc(iDOP,k)=dwqc(iDOP,k)+rKSR(3)*SRPOP(k)
-          dwqc(iPO4,k)=dwqc(iPO4,k)+KPIP*PIP(k)
           dwqc(iSRPOC,k)=-rKSR(1)*SRPOC(k)
           dwqc(iSRPOC,k)=-rKSR(2)*SRPON(k)
           dwqc(iSRPOP,k)=-rKSR(3)*SRPOP(k)
@@ -442,7 +446,6 @@ subroutine ecosystem(it)
             dwqc(iSRPON,k)=dwqc(iSRPON,k)+FNP(m,5)*PR(m,k)+FNM(m,5)*MT(m,k)
             dwqc(iSRPOP,k)=dwqc(iSRPOP,k)+FPP(m,5)*PR(m,k)+FPM(m,5)*MT(m,k)
           enddo
-          dwqc(iPIP,k)=-KPIP*PIP(k)
         endif !iSRM=1
       enddo !k
 
