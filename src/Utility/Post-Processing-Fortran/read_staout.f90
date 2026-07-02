@@ -113,7 +113,8 @@
 97    print*, 'staout_* does not have profile!',nt0-1
       stop
 98    continue
-      if(nt0>1) then !!not empty
+      if(nt0>1) then !not empty
+        print*, 'File ',i,' has records=',nt0-1
         ntime=min(ntime,nt0-1)
         iempty(i)=0
       endif
@@ -139,7 +140,7 @@
         !odd lines are dry flags for zcor
         if(i<=nfiles) then
           read(10,*,end=99,err=99)time,wild0(:)
-        else !empty line for zcor
+        else !zcor
           read(10,*,end=99,err=99)idry_sta(:)
         endif
         if(i>4) then !3D (incl zcor)
@@ -150,6 +151,7 @@
             if(all(abs(wild(:,m))>1.e6)) write(99,*)'Whole column dry:',i,m,it,wild(:,m)
           enddo !m
         endif !i>4
+!        write(98,*)'Time=',it,i,time/86400
 
         !Output
         if(i<=nfiles) then !not zcor

@@ -10456,7 +10456,7 @@ real (rkind) :: aux                               ! ustar
 
         if(myrank==0) then
 !          write(290,*)nwild2(1:nout_sta)
-          ltmp=.false. !init zcor output
+!          ltmp=.false. !init zcor output
           do i=1,nvar_sta !excl zcor
             if(iof_sta(i)==0.or.mod(it,nspool_sta)/=0) cycle
 
@@ -10478,14 +10478,20 @@ real (rkind) :: aux                               ! ustar
             write(250+i,'(e24.16,6000(1x,e15.6e3))')time,sta_out_gb(:,i)
             if(iout_sta==2.and.i>4) then
               write(250+i,'(e24.16,300000(1x,e15.6e3))')time,sta_out3d_gb(:,:,i) !,zta_out3d_gb(:,:,i)
-              !Add zcor output: do it only once
-              if(.not.ltmp) then
-                ltmp=.true.
-                write(250+nvar_sta+1,'(300000(1x,i5))')idry_sta(:)
-                write(250+nvar_sta+1,'(e24.16,300000(1x,e15.6e3))')time,zta_out3d_gb(:,:)
-              endif !
+!              !Add zcor output: do it only once
+!              if(.not.ltmp) then
+!                ltmp=.true.
+!                write(250+nvar_sta+1,'(300000(1x,i5))')idry_sta(:)
+!                write(250+nvar_sta+1,'(e24.16,300000(1x,e15.6e3))')time,zta_out3d_gb(:,:)
+!              endif !
             endif !iout_sta
           enddo !i=1,nvar_sta
+
+          !Always output zcor if iout_sta=2
+          if(iout_sta==2.and.mod(it,nspool_sta)==0) then
+            write(250+nvar_sta+1,'(300000(1x,i5))')idry_sta(:)
+            write(250+nvar_sta+1,'(e24.16,300000(1x,e15.6e3))')time,zta_out3d_gb(:,:)
+          endif !iout_sta
 
           write(16,*)'done station outputs...'
         endif !myrank==0
