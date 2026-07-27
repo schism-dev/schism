@@ -1,0 +1,11 @@
+name: stofs3d_v6
+workdir: /sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_test/Bathy_edit/DEM_loading
+input_grid: hgrid.ll
+output_grid: hgrid.ll.dem_loaded.mpi.gr3
+dem_dir: /sciclone/schism10/Hgrid_projects/DEMs/npz2
+reverse_sign: true
+copy_provenance: true
+sources:
+  - name: original
+    dem_json: DEM_info_original.json
+merge_rules: []

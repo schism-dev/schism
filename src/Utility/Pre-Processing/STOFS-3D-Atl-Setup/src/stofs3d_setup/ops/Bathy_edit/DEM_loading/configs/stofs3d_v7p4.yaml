@@ -1,0 +1,31 @@
+name: stofs3d_v7p4
+workdir: /sciclone/schism10/hjyoo/task/task10_Atlantic/stofs3d-setup_v7p4/stofs3d-setup_v1/src/stofs3d_setup/ops/Bathy_edit/DEM_loading
+input_grid: hgrid.ll
+output_grid: hgrid.ll.dem_loaded.mpi.gr3
+dem_dir: /sciclone/schism10/Hgrid_projects/DEMs/npz3
+reverse_sign: true
+copy_provenance: true
+sources:
+  - name: original_patched_v7p4
+    dem_json: DEM_info_original_patched_v7p4.json
+  - name: bluetopo
+    dem_json: DEM_info_with_bluetopo.json
+  - name: v3a
+    dem_json: DEM_info_v3a.json
+  - name: statewide
+    dem_json: DEM_info_Statewide.json
+  - name: nyh
+    dem_json: DEM_info_NYH.json
+merge_rules:
+  - name: deeper_bluetopo_region
+    method: max_depth
+    sources: [original_patched_v7p4, bluetopo, v3a, statewide]
+    region: bluetopo_regions4.shp
+  - name: shallower_breakwaters_from_nyh
+    method: min_depth
+    sources: [current, nyh]
+    region: breakwaters_poly.shp
+  - name: direct_nyh_replacement
+    method: direct_replace
+    replacement: nyh
+    region: nyh_region.shp

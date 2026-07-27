@@ -1,0 +1,25 @@
+name: stofs3d_v8
+workdir: /sciclone/schism10/feiye/STOFS3D-v8/I15a_v7/Bathy_edit/DEM_loading
+input_grid: hgrid.ll
+output_grid: hgrid.ll.dem_loaded.mpi.gr3
+dem_dir: /sciclone/schism10/Hgrid_projects/DEMs/npz2
+reverse_sign: true
+copy_provenance: true
+sources:
+  - name: original_patched
+    dem_json: DEM_info_original_patched.json
+  - name: bluetopo
+    dem_json: DEM_info_with_bluetopo.json
+  - name: v3a
+    dem_json: DEM_info_v3a.json
+  - name: statewide
+    dem_json: DEM_info_Statewide.json
+merge_rules:
+  - name: deeper_bluetopo_region
+    method: max_depth
+    sources: [original_patched, bluetopo, v3a]
+    region: bluetopo_regions4.shp
+  - name: shallower_breakwaters_from_statewide
+    method: min_depth
+    sources: [current, statewide]
+    region: breakwaters_poly.shp

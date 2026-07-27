@@ -1,0 +1,17 @@
+name: stofs3d_v8_LA
+workdir: /sciclone/schism10/feiye/STOFS3D-v8/I20/Bathy_edit/DEM_loading
+input_grid: hgrid.ll
+output_grid: hgrid.ll.dem_loaded.mpi.gr3
+dem_dir: /sciclone/schism10/Hgrid_projects/DEMs/npz2
+reverse_sign: true
+copy_provenance: true
+sources:
+  - name: v2a
+    dem_json: DEM_info_v2a.json
+  - name: v3a
+    dem_json: DEM_info_v3a.json
+merge_rules:
+  - name: deeper_louisiana_v3a_region
+    method: max_depth
+    sources: [v2a, v3a]
+    region: v18_s2_v1_polys_dissolved.shp
