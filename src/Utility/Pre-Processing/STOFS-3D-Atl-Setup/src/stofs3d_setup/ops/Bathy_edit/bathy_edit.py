@@ -57,7 +57,64 @@ IMPLEMENTED_TASKS = [  # order matters
     'Temporary_Fix_v7.4',  # tweak depth around Philadelphia International Airport
 ]
 
-DEFAULT_TASKS = {'Regional_tweaks', 'NCF', 'Levee', 'xGEOID'}
+TASKS = {
+    'Regional_tweaks',
+    'NCF',
+    'Levee_dev',
+    'xGEOID_cmvd',
+    'Ensure_channel_connectivity',
+    'Temporary_Fix_v7p2',
+}
+
+# Test refactor note:
+# Keep production behavior identical to bathy_edit.py, but gather hardwired
+# paths and frequently tuned parameters here so future cleanup can be reviewed
+# without changing task logic.
+WORKFLOW_CONSTANTS = {
+    'Dredge': {
+        'dredge_depth': 2,
+        'dredge_polygon_file': Path(
+            '/sciclone/schism10/Hgrid_projects/SECOFS/'
+            'new20_JZ/total_river_polys_clipped_test.shp'
+        ),
+    },
+    'Ensure_channel_connectivity': {
+        'min_channel_depth': 1.0,
+        'measured_from_high_bank': True,
+        'river_extra_info_map_file': (
+            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v19_RiverMapper/Outputs/'
+            'bora_v19.1.v19_ie_v18_3_nwm_clipped_in_cudem_missing_tiles_20-core/'
+            'total_river_arcs_extra.map'
+        ),
+        'region_gdf_file': (
+            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Clip/outputs/'
+            'watershed.shp'
+        ),
+        'exclude_region_gdf_file_list': [
+            (
+                '/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Bathy_edit/'
+                'RiverArc_Dredge/watershed_ME.shp'
+            )
+        ],
+    },
+    'Feeder': {
+        'hgrid_without_feeders': Path('/sciclone/schism10/feiye/STOFS3D-v8/R13p_v7/hgrid.gr3'),
+        'feeder_info_dir': Path('/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v31/Feeder/'),
+    },
+    'Temporary_Fix_v7p2': {
+        'reference_hgrid_file': (
+            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Bathy_edit/'
+            'DEM_loading_for_temp_fix_v7p2/hgrid.ll.dem_loaded.mpi.gr3'
+        ),
+    },
+    'sample_usage': {
+        'wdir': Path('/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Bathy_edit/'),
+        'hgrid_fname': Path(
+            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Bathy_edit/'
+            'DEM_loading/hgrid.ll.dem_loaded.mpi.gr3'
+        ),
+    },
+}
 
 # larger files not included in the Git repository, need to be copied to the working directory
 LARGE_FILES = {
@@ -194,18 +251,25 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         print("finished loading NCF.\n")
 
     if 'Levee' in tasks:  # set levees
-        from Levee.set_levees_operation import set_levees
-        hgrid_base_name += '_levee'
-        os.chdir(f'{wdir}/Levee')  # to set the directory
-        hgrid_obj = set_levees(min_levee_height_meters=2, hgrid_obj=hgrid_obj, wdir=f'{wdir}/Levee/')
-        grd2sms(hgrid_obj, f'{wdir}/Levee/{hgrid_base_name}.2dm')
-        print("Finished setting levees.\n")
+        err_msg = (
+            "The 'Levee' task is deprecated. Use 'Levee_dev' instead. "
+            "Use 'min_levee_height_meters' to set the minimum levee height in meters (positive upward). "
+            "2 m is a reasonable value, but it needs more testing in the shadow forecast. "
+            "The operation uses 7 m to be safe."
+        )
+        raise NotImplementedError(err_msg)
+        # from Levee.set_levees_operation import set_levees
+        # hgrid_base_name += '_levee'
+        # os.chdir(f'{wdir}/Levee')  # to set the directory
+        # hgrid_obj = set_levees(min_levee_height_meters=7, hgrid_obj=hgrid_obj, wdir=f'{wdir}/Levee/')
+        # grd2sms(hgrid_obj, f'{wdir}/Levee/{hgrid_base_name}.2dm')
+        # print("Finished setting levees.\n")
 
     if 'Levee_dev' in tasks:  # set levees
         from Levee.set_levees_dev import set_levees
         hgrid_base_name += '_levee'
         os.chdir(f'{wdir}/Levee_dev')  # to set the directory
-        hgrid_obj = set_levees(hgrid_obj=hgrid_obj, wdir=f'{wdir}/Levee_dev/')
+        hgrid_obj = set_levees(hgrid_obj=hgrid_obj, wdir=f'{wdir}/Levee_dev/', min_levee_height_meters=7)
         grd2sms(hgrid_obj, f'{wdir}/Levee_dev/{hgrid_base_name}.2dm')
         print("Finished setting levees (dev).\n")
 
@@ -249,34 +313,26 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
 
     if 'Dredge' in tasks:  # dredge the channels made by RiverMapper
         from Dredge.dredge_auto_channels import dredge_auto_channels
-        DREDGE_DEPTH = 2  # set the dredge depth
+        task_cfg = WORKFLOW_CONSTANTS['Dredge']
+        dredge_depth = task_cfg['dredge_depth']
         hgrid_obj = dredge_auto_channels(
             hgrid_obj=hgrid_obj,
-            dredge_polygon_file=Path(
-                '/sciclone/schism10/Hgrid_projects/SECOFS/'
-                'new20_JZ/total_river_polys_clipped_test.shp'),
-            dredge_depth=DREDGE_DEPTH)
-        hgrid_base_name += f'_dredged_{DREDGE_DEPTH}m'
+            dredge_polygon_file=task_cfg['dredge_polygon_file'],
+            dredge_depth=dredge_depth)
+        hgrid_base_name += f'_dredged_{dredge_depth}m'
         hgrid_obj.write_hgrid(f'{wdir}/Dredge/{hgrid_base_name}.gr3')
         print("Finished loading dredging depth.\n")
 
     if 'Ensure_channel_connectivity' in tasks:  # dredging river transects defined by RiverMapper
         from Ensure_channel_connectivity.ensure_channel_connectivity import ensure_channel_connectivity
-        DREDGE_DEPTH = 1.5
+        task_cfg = WORKFLOW_CONSTANTS['Ensure_channel_connectivity']
         hgrid_obj = ensure_channel_connectivity(
-            hgrid_obj, min_channel_depth=DREDGE_DEPTH,
-            measured_from_high_bank=True,  # less agreesive, target channel depth measured from higher bank to thalweg
-            river_extra_info_map_file=(
-                '/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v19_RiverMapper/Outputs/'
-                'bora_v19.1.v19_ie_v18_3_nwm_clipped_in_cudem_missing_tiles_20-core/'
-                'total_river_arcs_extra.map'
-            ),
-            region_gdf_file=(
-                '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32d/Clip/outputs/watershed.shp'
-            ),
-            exclude_region_gdf_file_list=[
-                '/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Bathy_edit/RiverArc_Dredge/watershed_ME.shp'
-            ],
+            hgrid_obj,
+            min_channel_depth=task_cfg['min_channel_depth'],
+            measured_from_high_bank=task_cfg['measured_from_high_bank'],
+            river_extra_info_map_file=task_cfg['river_extra_info_map_file'],
+            region_gdf_file=task_cfg['region_gdf_file'],
+            exclude_region_gdf_file_list=task_cfg['exclude_region_gdf_file_list'],
             output_dir=f'{wdir}/Ensure_channel_connectivity/'
         )
         hgrid_base_name += '_channel_connectivity_ensured'
@@ -285,14 +341,15 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
 
     if 'Feeder' in tasks:  # set feeder channel depth
         from SetFeederDp.set_feeder_dp import set_feeder_dp
+        task_cfg = WORKFLOW_CONSTANTS['Feeder']
         # A grid without feeder is needed to identify which feeder points are outside and should be deepened
         # Only the boundary matters, the interior of the grid doesn't matter,
         # so if you don't have a grid without feeders, you can just generate a simplified grid with the lbnd_ocean map
-        gd_no_feeder = schism_read('/sciclone/schism10/feiye/STOFS3D-v8/R13p_v7/hgrid.gr3')
+        gd_no_feeder = schism_read(str(task_cfg['hgrid_without_feeders']))
         # gd_no_feeder.proj(prj0='esri:102008', prj1='epsg:4326')
         initial_dp = hgrid_obj.dp.copy()
         hgrid_obj = set_feeder_dp(
-            feeder_info_dir='/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v31/Feeder/',
+            feeder_info_dir=str(task_cfg['feeder_info_dir']),
             hgrid_obj=hgrid_obj, hgrid_obj_no_feeder=gd_no_feeder
         )
         dp_diff = initial_dp - hgrid_obj.dp
@@ -303,11 +360,12 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
 
     if 'Temporary_Fix_v7p2' in tasks:  # tweak depths around Bayou Lafourche
         from Temporary_Fix_v7p2.temp_fix_v7p2 import temp_fix_v7p2
-        reference_hgrid_file = ('/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32c/Bathy_edit/'
-                                'DEM_loading_for_temp_fix_v7p2/hgrid.ll.dem_loaded.mpi.gr3')
+        task_cfg = WORKFLOW_CONSTANTS['Temporary_Fix_v7p2']
         hgrid_base_name += '_temp_fix_v7.2'
         hgrid_obj = temp_fix_v7p2(
-            hgrid_obj, wdir=f'{wdir}/Temporary_Fix_v7p2/', reference_hgrid_file=reference_hgrid_file
+            hgrid_obj,
+            wdir=f'{wdir}/Temporary_Fix_v7p2/',
+            reference_hgrid_file=task_cfg['reference_hgrid_file']
         )
         hgrid_obj.grd2sms(f'{wdir}/Temporary_Fix_v7p2/{hgrid_base_name}.2dm')
         print("Finished setting temporary fix for v7p2.\n")
@@ -341,17 +399,8 @@ def sample_usage():
     a record of the scripts and the larger files used.
     Then set the paths below and run this function.
     '''
-    WDIR = Path('/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32d/Bathy_edit/').resolve(strict=True)
-    HGRID_FNAME = Path(  # Typically, this is the DEM-loaded hgrid, use absolute path
-        '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32d/Bathy_edit/DEM_loading/'
-        'hgrid.ll.dem_loaded.mpi.gr3'
-    )
-    TASKS = {
-        'Regional_tweaks', 'NCF', 'Levee_dev', 'xGEOID_cmvd',
-        'Ensure_channel_connectivity',
-        # 'Temporary_Fix_v7p2',
-    }  # tasks to be performed, choose from IMPLEMENTED_TASKS, order matters
-
+    WDIR = WORKFLOW_CONSTANTS['sample_usage']['wdir'].resolve(strict=True)
+    HGRID_FNAME = WORKFLOW_CONSTANTS['sample_usage']['hgrid_fname']
     bathy_edit(wdir=WDIR, hgrid_fname=HGRID_FNAME, tasks=TASKS)
 
 

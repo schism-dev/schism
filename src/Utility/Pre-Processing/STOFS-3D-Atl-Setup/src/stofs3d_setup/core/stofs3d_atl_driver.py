@@ -66,7 +66,7 @@ def stofs3d_atl_driver(
             'vgrid': True,
             'bctides': True,
             'gr3': True, 'nudge_gr3': True, 'shapiro': True, 'drag': True, 'elev_ic': True,
-            'tvd.prop': True,
+            '*.prop': True,
             'flux_th': True, 'source_sink': True,
             'hotstart.nc': False,
             '3D.th.nc': True, 'elev2D.th.nc': True, '*nu.nc': True,

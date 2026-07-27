@@ -1,4 +1,7 @@
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import argparse
 from glob import glob
 from pathlib import Path
@@ -41,6 +44,111 @@ def flood_fill_connected_wet_nodes(wet_mask, seed_mask, inp):
                 visited[nb] = True
 
     return visited
+
+
+def flood_fill_connected_wet_sides(wet_mask, seed_mask, isidenode):
+    """
+    Find wet nodes connected to wet seed nodes through actual mesh sides.
+
+    A side is wet only when both of its endpoint nodes are wet.  Unlike
+    ``flood_fill_connected_wet_nodes``, this does not connect nodes that share
+    an element without sharing a side (for example, opposite nodes of a quad).
+
+    Parameters
+    ----------
+    wet_mask : ndarray of bool, shape (nnode,)
+        True for wet nodes.
+    seed_mask : ndarray of bool, shape (nnode,)
+        True for seed nodes.
+    isidenode : ndarray of int, shape (nside, 2)
+        Endpoint node indices for every mesh side.
+
+    Returns
+    -------
+    ndarray of bool, shape (nnode,)
+        True for wet nodes connected to at least one wet seed by wet sides.
+    """
+    from collections import deque
+
+    visited = np.zeros_like(wet_mask, dtype=bool)
+
+    seeds = np.where(wet_mask & seed_mask)[0]
+    q = deque(seeds)
+    visited[seeds] = True
+
+    # Retain only sides whose two endpoint nodes are wet, then build the
+    # adjacency needed by the BFS.  This deliberately excludes element
+    # diagonals that may be present in node-neighbor connectivity.
+    wet_sides = isidenode[np.all(wet_mask[isidenode], axis=1)]
+    neighbors = [[] for _ in range(wet_mask.size)]
+    for node1, node2 in wet_sides:
+        neighbors[node1].append(node2)
+        neighbors[node2].append(node1)
+
+    while q:
+        node = q.popleft()
+        for neighbor in neighbors[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                q.append(neighbor)
+
+    return visited
+
+
+def flood_fill_connected_wet_elements(wet_mask, seed_mask, ine, elnode):
+    """
+    Find wet nodes connected to wet seeds through fully wet elements.
+
+    An element is wet only when all of its valid nodes are wet.  The flood
+    fill uses the node-to-element mapping ``ine`` to enter wet elements and
+    then connects all nodes belonging to those elements.
+
+    Parameters
+    ----------
+    wet_mask : ndarray of bool, shape (nnode,)
+        True for wet nodes.
+    seed_mask : ndarray of bool, shape (nnode,)
+        True for seed nodes.
+    ine : ndarray of int, shape (nnode, max_neighbor_elements)
+        Neighboring element indices for each node, padded with negative values.
+    elnode : ndarray of int, shape (nelement, max_nodes_per_element)
+        Node indices for each element, padded with negative values.
+
+    Returns
+    -------
+    ndarray of bool, shape (nnode,)
+        True for wet nodes connected to a wet seed through fully wet elements.
+    """
+    from collections import deque
+
+    visited_nodes = np.zeros_like(wet_mask, dtype=bool)
+    visited_elements = np.zeros(elnode.shape[0], dtype=bool)
+
+    seeds = np.where(wet_mask & seed_mask)[0]
+    q = deque(seeds)
+    visited_nodes[seeds] = True
+
+    # Ignore negative padding when determining whether every real node of an
+    # element is wet.  This supports both triangles and quadrilaterals.
+    valid_element_nodes = elnode >= 0
+    wet_elements = np.ones(elnode.shape[0], dtype=bool)
+    for column in range(elnode.shape[1]):
+        valid = valid_element_nodes[:, column]
+        wet_elements[valid] &= wet_mask[elnode[valid, column]]
+
+    while q:
+        node = q.popleft()
+        for element in ine[node]:
+            if element < 0 or visited_elements[element] or not wet_elements[element]:
+                continue
+
+            visited_elements[element] = True
+            nodes = elnode[element, valid_element_nodes[element]]
+            new_nodes = nodes[~visited_nodes[nodes]]
+            visited_nodes[new_nodes] = True
+            q.extend(new_nodes)
+
+    return visited_nodes
 
 
 def get_seed_mask(hg, seed_region_file_list, output_dir, read_cache=False, write_cache=False):
@@ -193,30 +301,66 @@ def output_isolated_ponds_mask(pond_mask, time, output_file):
 
 if __name__ == "__main__":
     # usage:
+    # Serial, all output files:
     # python filter_isolated_ponds.py --schism_input_dir /path/to/input --schism_output_dir /path/to/output
     #
-    # the schism_input_dir should contain hgrid.gr3 and seed region shapefiles (e.g., coastal.shp, lakes.shp)
-    # the schism_output_dir should contain SCHISM output files (e.g., *out2d_*.nc)
+    # MPI, all output files distributed across ranks:
+    # mpiexec -n 10 python filter_isolated_ponds.py --schism_input_dir /path/to/input --schism_output_dir /path/to/output
     #
-    # MPI mode is not recommended since the mask generation is fast enough. And most of the time is spent on
-    # reading hgrid
+    # Single output file, useful for job arrays or launching independent processes:
+    # python filter_isolated_ponds.py --schism_input_dir /path/to/input --schism_output_dir /path/to/output --id_seq_no 1
+    #
+    # the schism_input_dir should contain hgrid.gr3 and seed region shapefiles (e.g., coastal.shp, lakes.shp)
+    # the schism_output_dir should contain SCHISM output files (e.g., *out2d_*.nc or out2d_{id_seq_no}.nc)
 
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
 
     # input arguments
-    argparser = argparse.ArgumentParser()
+    argparser = argparse.ArgumentParser(
+        description="Append isolated pond node masks to SCHISM out2d NetCDF files.",
+        epilog=(
+            "Examples:\n"
+            "  Serial, all output files:\n"
+            "    python filter_isolated_ponds.py --schism_input_dir /path/to/input --schism_output_dir /path/to/output\n\n"
+            "  MPI, all output files distributed across ranks:\n"
+            "    mpiexec -n 10 python filter_isolated_ponds.py --schism_input_dir /path/to/input --schism_output_dir /path/to/output\n\n"
+            "  Single output file, useful for job arrays or independent processes:\n"
+            "    python filter_isolated_ponds.py --schism_input_dir /path/to/input --schism_output_dir /path/to/output --id_seq_no 1"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     argparser.add_argument("--schism_input_dir", help="Path to the SCHISM input directory", required=True)
     argparser.add_argument("--schism_output_dir", help="Path to the SCHISM output directory", required=True)
+    argparser.add_argument(
+        "--id_seq_no",
+        help=(
+            "Optional output file sequence number string (e.g., '1' or '0001'). "
+            "If omitted, all *out2d_*.nc files in schism_output_dir are processed."
+        ),
+        required=False,
+        default=None,
+    )
+    argparser.add_argument(
+        "--flood-fill-connectivity",
+        choices=("nodes", "sides", "elements"),
+        default="sides",
+        help=(
+            "Connectivity used by the flood fill: 'sides' uses only wet "
+            "sides from hg.isidenode (default), 'elements' uses only elements "
+            "whose nodes are all wet, and 'nodes' uses hg.inp."
+        ),
+    )
     args = argparser.parse_args()
 
     schism_input_dir = Path(args.schism_input_dir)
     schism_output_dir = Path(args.schism_output_dir)
+    id_seq_no = args.id_seq_no
 
     # ---------------------------------------------------------------------
-    # schism_input_dir = Path('/sciclone/schism10/feiye/STOFS3D-v7.2/Remove_ponds/Inputs/')
-    # schism_output_dir = Path('/sciclone/schism10/feiye/STOFS3D-v7.2/Remove_ponds/Outputs/')
+    # schism_input_dir = Path('/sciclone/schism10/feiye/STOFS3D-v7.2/Remove_ponds/SCHISM_inputs2/')
+    # schism_output_dir = Path('/sciclone/schism10/feiye/STOFS3D-v7.2/Remove_ponds/SCHISM_outputs2/')
     # ---------------------------------------------------------------------
 
     for path_name, path in [
@@ -240,11 +384,25 @@ if __name__ == "__main__":
     # ---------------end input parameters----------------
 
     time_start = time.time()
-    schism_output_files = sorted(glob(f"{schism_output_dir}/*out2d_[nf]???_???.nc"))
+
+    if id_seq_no is None:
+        schism_output_files = sorted(glob(f"{schism_output_dir}/*out2d_*.nc"))
+        if len(schism_output_files) == 0:
+            raise FileNotFoundError(f"No SCHISM output files found in {schism_output_dir}")
+        print(f"Found {len(schism_output_files)} SCHISM output files in {schism_output_dir}")
+    else:
+        schism_output_files = sorted(glob(f"{schism_output_dir}/out2d_{id_seq_no}.nc"))
+        if len(schism_output_files) == 0:
+            raise FileNotFoundError(
+                f"No SCHISM output files found matching pattern: out2d_{id_seq_no}.nc in {schism_output_dir}"
+            )
+        print(f"Found {len(schism_output_files)} SCHISM output file(s) matching sequence {id_seq_no} in {schism_output_dir}")
+
+    print(f"Rank {rank}: {schism_output_files}\n")
 
     t0 = time.time()
     hg = read(hgrid_file)
-    hg.compute_all()  # ensure hg.inp is available for flood fill
+    hg.compute_all()  # ensure hg.inp, hg.isidenode, and hg.ine are available for flood fill
     print(f"Rank {rank}: Read hgrid and computed connectivity in {time.time() - t0:.2f} seconds")
 
     if rank == 0:
@@ -279,9 +437,18 @@ if __name__ == "__main__":
             time0 = time.time()
             wet_mask = dryFlagNode[it, :] == 0
             # hg.plot(value=wet_mask.astype(int), fmt=1);  import matplotlib.pyplot as plt; plt.show()
-            connected_wet_mask = flood_fill_connected_wet_nodes(
-                wet_mask=wet_mask, seed_mask=seed_mask, inp=hg.inp,
-            )
+            if args.flood_fill_connectivity == "sides":
+                connected_wet_mask = flood_fill_connected_wet_sides(
+                    wet_mask=wet_mask, seed_mask=seed_mask, isidenode=hg.isidenode,
+                )
+            elif args.flood_fill_connectivity == "elements":
+                connected_wet_mask = flood_fill_connected_wet_elements(
+                    wet_mask=wet_mask, seed_mask=seed_mask, ine=hg.ine, elnode=hg.elnode,
+                )
+            else:
+                connected_wet_mask = flood_fill_connected_wet_nodes(
+                    wet_mask=wet_mask, seed_mask=seed_mask, inp=hg.inp,
+                )
             print(f"Rank {rank}: {my_file.split('/')[-1]} it={it}: flood fill time = {time.time() - time0:.2f} seconds")
 
             pond_mask = wet_mask & ~connected_wet_mask

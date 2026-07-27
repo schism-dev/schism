@@ -33,7 +33,7 @@ def dredge_river_transects(
     print('getting river arcs z from the mesh ...')
     rivers.mesh_dp2riverarc_z(hgrid_obj)
 
-    print('dredging river transects ...')
+    print(f'dredging river transects to maintain a minimum channel depth of {min_channel_depth} m ...')
     dredged_points = rivers.dredge_inner_arcs(
         region_gdf=region_gdf, min_channel_depth=min_channel_depth,
         inner_most_dredge=False,  # dredge all inner arcs, won't work if outer arcs are present
@@ -93,7 +93,7 @@ def ensure_channel_connectivity(
                 raise ValueError(f'exclude_region_gdf_file {exclude_region_gdf_file} must be a valid file path.')
 
     # Load extra information from the river arcs
-    rivers = Rivers(SMS_MAP(river_extra_info_map_file))  # default crs is 'epsg:4326', which is also the default for RiverMapper
+    rivers = Rivers(SMS_MAP(river_extra_info_map_file))  # default crs is 'epsg:4326', also the default for RiverMapper
 
     # Define region of interest
     watershed_origional = gpd.read_file(region_gdf_file)
@@ -110,7 +110,7 @@ def ensure_channel_connectivity(
     # Dredge the river transects
     hgrid_dredged = dredge_river_transects(
         rivers, region_gdf=watershed, hgrid_obj=hgrid_obj,
-        min_channel_depth=1.0, output_dir=output_dir,
+        min_channel_depth=min_channel_depth, output_dir=output_dir,
         measured_from_high_bank=measured_from_high_bank
     )
 

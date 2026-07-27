@@ -47,7 +47,7 @@ def set_levee_profile(gd=None, wdir='./', centerline_shp_dict=None, min_levee_he
 
     all top nodes of the levee will be attached to hgrid_obj as hgrid_obj.ilevee
 
-    min_levee_height: 
+    min_levee_height:
       if levee height < 1 ft, it may not be true, so clip it to 6.56168 ft = 2 m
       note that this is just a rough estimate, the resulting min levee height will be 1 ft,
       because only lower levees are adjusted
@@ -234,19 +234,25 @@ def set_local_levee_profile(gd_ll=None, local_levee_info=None, i_levee_top_node=
                 gd_ll.dp[i_top_local_levee] = np.minimum(gd_ll.dp[i_top_local_levee], local_levee_dp)
         else:  # overwrite local levee dp in the order of local_levee_info
             gd_ll.dp[i_top_local_levee] = local_levee_dp
-            
+
         # gd_ll.save(f'./hgrid_local_levee_loaded_ll.gr3')
         # gd_ll.save(f'./hgrid_local_levee_{levee_name}.gr3', value=i_top_local_levee.astype(int))
 
     return gd_ll
 
 
-def set_levees(hgrid_obj, wdir):
+def set_levees(hgrid_obj, wdir, min_levee_height_meters=-9999):
     """
-    A temporary levee setting script for the MTG levees.
-    The levee heights are in NAVD88, but the hgrid is in xGEOID20b,
-    so the conversion difference (output from the xGEOID20b conversion step)
-    is utilized to save time.
+    Set levee depths for the given hgrid object.
+    Levee heights are assumed to be on NAVD88
+
+    min_levee_height_meters: minimum levee height in meters (positive upward),
+      used to filter out very low levees that are not trustworthy in NLD.
+      A realistic value should be around 2 m, which still requires more
+      testing in the shadow forecast, and it has already be enforced in the
+      set_levee_profile function.
+      The operation uses 7 m to be safe, which should be set in this function call if needed.
+
 
     Levee heights are loaded in 3 steps:
     1) National Levee Database
@@ -327,8 +333,9 @@ def set_levees(hgrid_obj, wdir):
     hgrid_obj = set_levee_profile(gd=hgrid_obj, wdir=wdir, centerline_shp_dict=centerline_shp_dict)
     grd2sms(hgrid_obj, f'{wdir}/hgrid_with_NLD_levees.2dm')
 
-    # print('force minimum dp to be above -7 m for all levee top points')
-    # hgrid_obj.dp[hgrid_obj.ilevee] = np.minimum(hgrid_obj.dp[hgrid_obj.ilevee], -7)
+    print(f'force minimum dp to be above {-min_levee_height_meters} m for all levee top points')
+    # reverse the sign of min_levee_height_meters (positive upward), because dp is positive downward
+    hgrid_obj.dp[hgrid_obj.ilevee] = np.minimum(hgrid_obj.dp[hgrid_obj.ilevee], -min_levee_height_meters)
 
     print('loading additional tweaks on levee heights')
     hgrid_obj = set_additional_dp(gd_ll=hgrid_obj, additional_levee_info=additional_levee_info)
@@ -352,7 +359,7 @@ def v7p3():
     os.chdir(WDIR)  # to set the directory
     hg = schism_read(f'{WDIR}/v7.2_2025_04_12.gr3')
     hg_original = copy.deepcopy(hg)
-    
+
     # set levee heights
     hg.dp[:] = -9999  # initialize dp to -9999
     hg.save(f'{WDIR}/v7.2_2025_04_12_dp=-9999.gr3')

@@ -4,8 +4,9 @@ Load bathymetry for SCHISM hgrid
 
 Recommended usage:
 Run this script in the SCHISM source code folder where it originally resides.
-Select a suitable pre-configuration (e.g., stofs3d_v8()) or start a new one,
-set parameters at the beginning of the function, then call it in main()
+Select a suitable YAML recipe with --version or provide a custom recipe with
+--config. Version-specific source lists, working directories, and merge rules
+are kept in configs/*.yaml; Python implements the allowed operations.
 
 Needs to prepare the following files/folder:
    - hgrid.ll: hgrid in lon/lat
@@ -16,24 +17,32 @@ Needs to prepare the following files/folder:
          See samples in this folder.
 
    - region (optional): A polygon shapefile specifiying regions where special treatment is applied.
-        See sample procedure for STOFS-3D v7 in "def stofs_v7" in "pload_dem2.py".
         Sample *.shp is provided in this folder.
 
 
- See sample procedures in "def stofs3d_v6" and "def stofs3d_v7".
+Example:
+   mpirun -np 48 python pload_dem2.py --version stofs3d_v7p4
 '''
 
 
-import os
-import sys
-import socket
-import re
-import time
-import json
+import argparse
 import errno
-from pathlib import Path
+import json
+import os
+import re
+import shutil
+import socket
+import sys
+import time
 from copy import deepcopy
 from glob import glob
+from pathlib import Path
+from typing import Any
+
+try:
+    import yaml
+except ImportError:  # pragma: no cover - depends on runtime environment
+    yaml = None
 
 import numpy as np
 from mpi4py import MPI
@@ -52,6 +61,9 @@ else:
     print('Using python function to read hgrid')
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_DIR = Path(__file__).resolve().parent
+CONFIG_DIR = SCRIPT_DIR / "configs"
+DEFAULT_VERSION = "stofs3d_v7p4"
 
 
 # ---------------------- MPI Utilities ----------------------
@@ -318,335 +330,170 @@ def direct_replace_dp_in_region(base_grid, replacement_grid, region_file: str):
 
     return dp
 
-# ---------------------- Sample Usage ----------------------
-def sample_max_dp_usage():
-    '''Sample usage of the max_dp_in_region function.'''
-
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_test/Bathy_edit/DEM_loading/'
-    gd1 = schism_read(f'{wdir}/Original/hgrid.ll.dem_loaded.mpi.gr3')
-    gd2 = schism_read(f'{wdir}/BlueTopo/hgrid.ll.dem_loaded.mpi.gr3')
-
-    dp = max_dp_in_region([gd1, gd2], region_file=f'{wdir}/v18_s2_v1_polys_dissolved.shp')
-
-    gd1.save(f'{wdir}/hgrid_max_dp.gr3', value=dp)
-
-
-def stofs3d_v6():
-    """
-    Sample usage of the pload_dem function, corresponding to STOFS-3D v6
-    """
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_test/Bathy_edit/DEM_loading/'
-    pload_dem(
-        grd=f'{wdir}/hgrid.ll',
-        grdout=f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3',
-        dem_json=f'{wdir}/DEM_info_original.json',
-        dem_dir='/sciclone/schism10/Hgrid_projects/DEMs/npz2/',
-        reverse_sign=True
+# ---------------------- Config-driven workflow ----------------------
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description='Load SCHISM hgrid bathymetry from a YAML/JSON DEM recipe.'
     )
+    parser.add_argument(
+        '--config',
+        type=Path,
+        help='YAML or JSON workflow config. Overrides --version.',
+    )
+    parser.add_argument(
+        '--version',
+        default=DEFAULT_VERSION,
+        help=f'Named YAML recipe in {CONFIG_DIR}. Default: {DEFAULT_VERSION}',
+    )
+    parser.add_argument(
+        '--write-template',
+        type=Path,
+        help='Write the selected named recipe to a YAML/JSON template and exit.',
+    )
+    return parser.parse_args()
 
 
-def stofs3d_v7_hercules():
-    """
-    Similar to stofs3d_v7 below, but with minor tweaks
-    to resolve some unknown issues on Hercules.
-    """
-    # ----------- inputs -------------------
-    wdir = '/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/DEM_loading_example/'
-    dem_dir = '/work2/noaa/nos-surge/feiye/npz2/'
-    dem_json_list = [
-        f'{wdir}/DEM_info_original.json',
-        f'{wdir}/DEM_info_with_bluetopo.json',
-    ]
-    dem_region_shpfile = f'{wdir}/v18_s2_v1_polys_dissolved.shp'
-    output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
-    # ---------------------------------------
+def named_config_file(version: str) -> Path:
+    config_file = CONFIG_DIR / f'{version}.yaml'
+    if not config_file.exists():
+        versions = ', '.join(sorted(path.stem for path in CONFIG_DIR.glob('*.yaml')))
+        raise FileNotFoundError(f"Unknown DEM recipe '{version}'. Available recipes: {versions}")
+    return config_file
 
+
+def load_config(config_file: Path | None, version: str = DEFAULT_VERSION) -> dict[str, Any]:
+    if config_file is None:
+        config_file = named_config_file(version)
+
+    suffix = config_file.suffix.lower()
+    with config_file.open(encoding='utf-8') as stream:
+        if suffix == '.json':
+            config = json.load(stream)
+        elif suffix in {'.yaml', '.yml'}:
+            if yaml is None:
+                raise ImportError('PyYAML is required to read YAML configs. Use JSON or install yaml.')
+            config = yaml.safe_load(stream)
+        else:
+            raise ValueError(f'Unsupported config format: {config_file}')
+
+    config['_config_file'] = str(config_file)
+    return config
+
+
+def write_template(output_file: Path, config: dict[str, Any]) -> None:
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    config = {key: value for key, value in config.items() if not key.startswith('_')}
+    if yaml is not None:
+        text = yaml.safe_dump(config, sort_keys=False)
+    else:
+        text = json.dumps(config, indent=2)
+    output_file.write_text(text, encoding='utf-8')
+    print(f'Wrote template config: {output_file}')
+
+
+def as_path(path_value: str | Path, base_dir: Path) -> Path:
+    path = Path(path_value)
+    if path.is_absolute():
+        return path
+    return base_dir / path
+
+
+def copy_if_different(source_file: Path, target_file: Path) -> None:
+    source_file = source_file.resolve()
+    target_file = target_file.resolve()
+    if source_file == target_file:
+        return
+    shutil.copy2(source_file, target_file)
+
+
+def copy_provenance_files(config: dict[str, Any], workdir: Path) -> None:
+    copy_if_different(Path(__file__), workdir / Path(__file__).name)
+    if config.get('_config_file') is not None:
+        config_file = Path(config['_config_file'])
+        copy_if_different(config_file, workdir / config_file.name)
+
+    for source in config['sources']:
+        source_file = as_path(source['dem_json'], SCRIPT_DIR)
+        copy_if_different(source_file, workdir / source_file.name)
+
+    for rule in config.get('merge_rules', []):
+        region = rule.get('region')
+        if region is None:
+            continue
+        region_stem = as_path(region, SCRIPT_DIR).with_suffix('')
+        for region_file in SCRIPT_DIR.glob(f'{region_stem.name}.*'):
+            copy_if_different(region_file, workdir / region_file.name)
+
+
+def source_grid(rule_source: str, loaded_grids: dict[str, Any], current_grid: Any) -> Any:
+    if rule_source == 'current':
+        return current_grid
+    return loaded_grids[rule_source]
+
+
+def run_config(config: dict[str, Any]) -> None:
     comm, _, myrank = initialize_mpi()
 
-    loaded_grid_fnames = []
-    for dem_json in dem_json_list:
-        grdout = f'{dem_json}.gr3'
-        loaded_grid_fnames.append(grdout)
-        # Load grids in parallel
-        pload_dem(grd=f'{wdir}/hgrid.ll', grdout=grdout, dem_json=dem_json,
-                  dem_dir=dem_dir, reverse_sign=True)
+    workdir = Path(config['workdir'])
+    input_grid = as_path(config.get('input_grid', 'hgrid.ll'), workdir)
+    output_grid = as_path(config['output_grid'], workdir)
+    dem_dir = Path(config['dem_dir'])
+    reverse_sign = bool(config.get('reverse_sign', True))
 
+    if myrank == 0:
+        workdir.mkdir(parents=True, exist_ok=True)
+        if config.get('copy_provenance', True):
+            copy_provenance_files(config, workdir)
+        print(f"Running DEM recipe: {config.get('name', 'unnamed')}")
+        print(f'workdir: {workdir}')
+        print(f'DEM dir: {dem_dir}')
+        print(f"sources: {[source['name'] for source in config['sources']]}")
+
+    comm.Barrier()
+
+    loaded_grids = {}
+    for source in config['sources']:
+        source_name = source['name']
+        dem_json = as_path(source['dem_json'], workdir)
+        loaded_grids[source_name] = pload_dem(
+            grd=str(input_grid),
+            grdout=None,
+            dem_json=str(dem_json),
+            dem_dir=str(dem_dir),
+            reverse_sign=reverse_sign,
+        )
         comm.Barrier()
         if myrank == 0:
-            print(f'---------Loaded grid from {dem_json}----------\n')
-
-    # On root process, take the maximum depth from loaded_grids
-    if myrank == 0:
-        print(f'Taking the maximum depth from loaded grids: {loaded_grid_fnames}')
-        loaded_grids = [schism_read(f) for f in loaded_grid_fnames]
-        dp = max_dp_in_region(loaded_grids, region_file=dem_region_shpfile)
-        loaded_grids[0].save(output_fname, value=dp)
-
-    comm.Barrier()
-
-
-def stofs3d_v7():
-    """
-    Load bathymetry for STOFS3D-v7.
-
-    Two DEM sets are used to load bathymetry from different sources.
-    The first one corresponds to v6, the second one includes BlueTopo.
-    This leads to two bathymetry-loaded grids.
-
-    A region (Louisiana) is defined where the v6 grid seems too shallow.
-    The v7 grid depth takes the larger value from the two grids inside region,
-    i.e., where BlueTopo leads to deeper channels than v6.
-    And it takes the v6 value outside the region.
-    """
-    # ----------- inputs -------------------
-    # wdir = '/work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/DEM_loading_example/'
-    # dem_dir = '/work2/noaa/nos-surge/feiye/npz2/'
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I13b/Bathy_edit/DEM_loading/'
-    dem_dir = '/sciclone/schism10/Hgrid_projects/DEMs/npz2/'
-    dem_json_list = [
-        'DEM_info_original.json',
-        'DEM_info_with_bluetopo.json',
-    ]
-    dem_region_shpfile = 'v18_s2_v1_polys_dissolved.shp'
-    output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
-    # ---------------------------------------
-
-    comm, _, myrank = initialize_mpi()
-    if myrank == 0:  # copy this script to the working directory to keep a record
-        os.system(f'cp {__file__} {wdir}')
-        for dem_json_file in dem_json_list:
-            os.system(f'cp {dem_json_file} {wdir}')
-        os.system(f'cp {dem_region_shpfile} {wdir}')
-
-    loaded_grids = []
-    for dem_json in dem_json_list:
-        # Load grids in parallel
-        loaded_grids.append(
-            pload_dem(grd=f'{wdir}/hgrid.ll', grdout=None, dem_json=dem_json,
-                      dem_dir=dem_dir, reverse_sign=True)  # returns None for non-root
-        )  # On non-root processes, loaded_grids only contains None
-        comm.Barrier()  # wait for all cores to finish populating loaded_grids
-        if myrank == 0:
-            print(f'---------Loaded grid from {dem_json}----------\n')
-
-    # On root process, take the maximum depth from loaded_grids
-    if myrank == 0:
-        print(f'Taking the maximum depth from loaded grids: {loaded_grids}')
-        dp = max_dp_in_region(loaded_grids, region_file=dem_region_shpfile)
-        loaded_grids[0].save(output_fname, value=dp)
-
-    comm.Barrier()
-
-
-def stofs3d_v8_LA():
-    """
-    Load bathymetry for STOFS3D-v8 Louisiana.
-
-    Two DEM sets are used to load bathymetry from different sources: v2a and v3a.
-        DEM_info.json v2a: v1 (DEM_info_original.json, used for STOFS-3D-Atl v6) +
-                           Bluetopo, same as DEM_info_with_BlueTopo.json
-
-        DEM_info.json v3a: v1 + NGOM_CoNED_2022 (mostly LA, but including Mobile Bay, AL)¬
-
-        Take the maximum depth from the two grids
-
-        Note: since the first grid is the primary grid by default,
-        Bluetopo is applied in the entire domain where it has coverage for the first grid.
-        This is different from STOFS3D-v7 or STOFS3D-v8.
-    """
-    # dem_dir = '/work2/noaa/nos-surge/feiye/npz2/'
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I20/Bathy_edit/DEM_loading/'
-    dem_dir = '/sciclone/schism10/Hgrid_projects/DEMs/npz2/'
-    dem_json_list = ['DEM_info_v2a.json', 'DEM_info_v3a.json']
-    dem_region_shpfile = 'v18_s2_v1_polys_dissolved.shp'
-    output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
-    # ---------------------------------------
-
-    comm, _, myrank = initialize_mpi()
-    if myrank == 0:  # copy this script to the working directory to keep a record
-        os.system(f'cp {__file__} {wdir}')
-        for dem_json_file in dem_json_list:
-            os.system(f'cp {dem_json_file} {wdir}')
-        os.system(f'cp {dem_region_shpfile} {wdir}')
-
-    loaded_grids = []
-    for dem_json in dem_json_list:
-        # Load grids in parallel
-        loaded_grids.append(
-            pload_dem(grd=f'{wdir}/hgrid.ll', grdout=None, dem_json=dem_json,
-                      dem_dir=dem_dir, reverse_sign=True)  # returns None for non-root
-        )  # On non-root processes, loaded_grids only contains None
-        comm.Barrier()  # wait for all cores to finish populating loaded_grids
-        if myrank == 0:
-            print(f'---------Loaded grid from {dem_json}----------\n')
-
-    # On root process, take the maximum depth from loaded_grids
-    if myrank == 0:
-        print(f'Taking the maximum depth from loaded grids: {loaded_grids}')
-        dp = max_dp_in_region(loaded_grids, region_file=dem_region_shpfile)
-        loaded_grids[0].save(output_fname, value=dp)
-
-    comm.Barrier()
-
-
-def stofs3d_v7p2_original():
-    """
-    Load bathymetry for STOFS3D-v7.2, using the original set of DEMs only:
-    """
-    # ----------- inputs -------------------
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I15g_v7/Bathy_edit/DEM_loading/'
-    dem_dir = '/sciclone/schism10/Hgrid_projects/DEMs/npz2/'
-    dem_json_list = [
-        'DEM_info_original_patched.json',
-    ]
-    output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
-    # ---------------------------------------
-
-    comm, _, myrank = initialize_mpi()
-    if myrank == 0:  # copy this script to the working directory to keep a record
-        prep_dir(wdir, dem_json_list, region_shpfile_list=[])
-        print(f'preparing files in {wdir}, DEM list: {dem_json_list}')
-
-    comm.Barrier()
-
-    loaded_grids = []
-    for dem_json in dem_json_list:
-        # Load grids in parallel
-        loaded_grids.append(
-            pload_dem(grd=f'{wdir}/hgrid.ll', grdout=None, dem_json=f'{wdir}/{dem_json}',
-                      dem_dir=dem_dir, reverse_sign=True)  # returns None for non-root
-        )  # On non-root processes, loaded_grids only contains None
-        comm.Barrier()  # wait for all cores to finish populating loaded_grids
-        if myrank == 0:
-            print(f'---------Loaded grid from {dem_json}----------\n')
+            print(f'---------Loaded grid from {source_name}: {dem_json.name}----------\n')
 
     if myrank == 0:
-        print(f'processing loaded grids: {loaded_grids}')
-        hgrid_final = deepcopy(loaded_grids[0])
-        hgrid_final.save(output_fname)
+        first_source = config['sources'][0]['name']
+        current_grid = deepcopy(loaded_grids[first_source])
 
-    comm.Barrier()
+        for rule in config.get('merge_rules', []):
+            method = rule['method']
+            region = rule.get('region')
+            region_file = None if region is None else str(as_path(region, workdir))
+            print(f"Applying merge rule: {rule.get('name', method)} ({method})")
 
-def stofs3d_v7p4():
-    """
-    """
+            if method == 'max_depth':
+                grids = [source_grid(name, loaded_grids, current_grid) for name in rule['sources']]
+                current_grid.dp = max_dp_in_region(grids, region_file=region_file)
+            elif method == 'min_depth':
+                grids = [source_grid(name, loaded_grids, current_grid) for name in rule['sources']]
+                current_grid.dp = max_dp_in_region(grids, region_file=region_file, reverse_sign=True)
+            elif method == 'direct_replace':
+                replacement = source_grid(rule['replacement'], loaded_grids, current_grid)
+                current_grid.dp = direct_replace_dp_in_region(
+                    current_grid,
+                    replacement,
+                    region_file=region_file,
+                )
+            else:
+                raise ValueError(f'Unsupported merge method: {method}')
 
-    # ----------- inputs -------------------
-    wdir = '/sciclone/schism10/hjyoo/task/task10_Atlantic/stofs3d-setup_v7p4/stofs3d-setup_v1/src/stofs3d_setup/ops/Bathy_edit/DEM_loading/'
-    dem_dir = '/sciclone/schism10/Hgrid_projects/DEMs/npz3/'
-    dem_json_list = [
-        'DEM_info_original_patched_v7p4.json',
-        'DEM_info_with_bluetopo.json',
-        'DEM_info_v3a.json',  # v3a has CoNED 2022 NGOM for LA
-        'DEM_info_Statewide.json',  # , v4 added USGS 1M Statewide for CT and RI
-        'DEM_info_NYH.json',
-    ]
-    max_dem_region_shpfile = 'bluetopo_regions4.shp'
-    min_dem_region_shpfile = 'breakwaters_poly.shp'
-    direct_replacement_region_shpfile = 'nyh_region.shp'
-    output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
-    # ---------------------------------------
-
-    comm, _, myrank = initialize_mpi()
-    if myrank == 0:  # copy this script to the working directory to keep a record
-        prep_dir(wdir, dem_json_list, [max_dem_region_shpfile, min_dem_region_shpfile, direct_replacement_region_shpfile])
-        print(f'preparing files in {wdir}, DEM list: {dem_json_list}')
-
-    comm.Barrier()
-
-    loaded_grids = []
-    for dem_json in dem_json_list:
-        # Load grids in parallel
-        loaded_grids.append(
-            pload_dem(grd=f'{wdir}/hgrid.ll', grdout=None, dem_json=f'{wdir}/{dem_json}',
-                      dem_dir=dem_dir, reverse_sign=True)  # returns None for non-root
-        )  # On non-root processes, loaded_grids only contains None
-        comm.Barrier()  # wait for all cores to finish populating loaded_grids
-        if myrank == 0:
-            print(f'---------Loaded grid from {dem_json}----------\n')
-
-    # On root process, take the maximum depth from loaded_grids
-    if myrank == 0:
-        print(f'processing loaded grids: {loaded_grids}')
-        hgrid_final = deepcopy(loaded_grids[0])
-        hgrid_final.dp = max_dp_in_region(
-            loaded_grids[:-1], region_file=f'{wdir}/{max_dem_region_shpfile}')
-        hgrid_final.dp = max_dp_in_region(
-            [hgrid_final, loaded_grids[-1]],
-            region_file=f'{wdir}/{min_dem_region_shpfile}',
-            reverse_sign=True)
-        # directly replacement
-        hgrid_final.dp = direct_replace_dp_in_region(
-            hgrid_final,
-            loaded_grids[-1],
-            region_file=f'{wdir}/{direct_replacement_region_shpfile}'
-        )        
-
-        hgrid_final.save(output_fname)
-
-    comm.Barrier()
-    
-
-def stofs3d_v8():
-    """
-    Load bathymetry for STOFS3D-v8 and STOFS3D-v7.2.
-
-    Needs hgrid.ll in the working directory.
-
-    Three DEM sets are used to load bathymetry from different sources.
-    The first one corresponds to v6, the second one includes BlueTopo.
-    The third one includes NGOM_CoNED_2022.
-    This leads to three bathymetry-loaded grids.
-
-    A region (Louisiana) is defined where the v6 grid seems too shallow.
-    The v8 grid depth takes the larger value from the three grids inside the region,
-    i.e., where BlueTopo and NGOM leads to deeper channels than v6.
-    And it takes the v6 value outside the region.
-    """
-    # ----------- inputs -------------------
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v8/I15a_v7/Bathy_edit/DEM_loading/'
-    dem_dir = '/sciclone/schism10/Hgrid_projects/DEMs/npz2/'
-    dem_json_list = [
-        'DEM_info_original_patched.json',
-        'DEM_info_with_bluetopo.json',
-        'DEM_info_v3a.json',  # v3a has CoNED 2022 NGOM for LA
-        'DEM_info_Statewide.json',  # , v4 added USGS 1M Statewide for CT and RI
-    ]
-    max_dem_region_shpfile = 'bluetopo_regions4.shp'
-    min_dem_region_shpfile = 'breakwaters_poly.shp'
-    output_fname = f'{wdir}/hgrid.ll.dem_loaded.mpi.gr3'
-    # ---------------------------------------
-
-    comm, _, myrank = initialize_mpi()
-    if myrank == 0:  # copy this script to the working directory to keep a record
-        prep_dir(wdir, dem_json_list, [max_dem_region_shpfile, min_dem_region_shpfile])
-        print(f'preparing files in {wdir}, DEM list: {dem_json_list}')
-
-    comm.Barrier()
-
-    loaded_grids = []
-    for dem_json in dem_json_list:
-        # Load grids in parallel
-        loaded_grids.append(
-            pload_dem(grd=f'{wdir}/hgrid.ll', grdout=None, dem_json=f'{wdir}/{dem_json}',
-                      dem_dir=dem_dir, reverse_sign=True)  # returns None for non-root
-        )  # On non-root processes, loaded_grids only contains None
-        comm.Barrier()  # wait for all cores to finish populating loaded_grids
-        if myrank == 0:
-            print(f'---------Loaded grid from {dem_json}----------\n')
-
-    # On root process, take the maximum depth from loaded_grids
-    if myrank == 0:
-        print(f'processing loaded grids: {loaded_grids}')
-        hgrid_final = deepcopy(loaded_grids[0])
-        hgrid_final.dp = max_dp_in_region(
-            loaded_grids[:-1], region_file=f'{wdir}/{max_dem_region_shpfile}')
-        hgrid_final.dp = max_dp_in_region(
-            [hgrid_final, loaded_grids[-1]],
-            region_file=f'{wdir}/{min_dem_region_shpfile}',
-            reverse_sign=True)
-
-        hgrid_final.save(output_fname)
+        current_grid.save(str(output_grid))
+        print(f'Wrote DEM-loaded grid: {output_grid}')
 
     comm.Barrier()
 
@@ -710,8 +557,14 @@ def sample_convert_dem():
         convert_dem_format(tif_lonlat_file, sname=tif_lonlat_file.replace('.tif', '.npz'))
 
 
+def main() -> None:
+    args = parse_args()
+    config = load_config(args.config, version=args.version)
+    if args.write_template is not None:
+        write_template(args.write_template, config)
+    else:
+        run_config(config)
+
+
 if __name__ == '__main__':
-    # sample_convert_dem()
-    # stofs3d_v7p2_original()
-    #stofs3d_v8()
-    stofs3d_v7p4()
+    main()

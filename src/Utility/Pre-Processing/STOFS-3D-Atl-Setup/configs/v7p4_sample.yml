@@ -32,4 +32,4 @@ inputs:
   "3D.th.nc": false
   "*nu.nc": false
   "elev2D.th.nc": false
-  "*.prop": false
+  tvd.prop: false

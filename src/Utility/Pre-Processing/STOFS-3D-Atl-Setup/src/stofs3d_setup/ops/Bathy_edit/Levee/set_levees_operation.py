@@ -230,12 +230,17 @@ def set_local_levee_profile(gd_ll=None, local_levee_info=None, i_levee_top_node=
     return gd_ll
 
 
-def set_levees(hgrid_obj, wdir):
+def set_levees(hgrid_obj, wdir, min_levee_height_meters=2):
     """
-    A temporary levee setting script for the MTG levees.
-    The levee heights are in NAVD88, but the hgrid is in xGEOID20b,
-    so the conversion difference (output from the xGEOID20b conversion step)
-    is utilized to save time.
+    Set levee depths for the given hgrid object.
+    Levee heights are assumed to be on NAVD88
+
+    min_levee_height_meters: minimum levee height in meters (positive upward),
+      used to filter out very low levees that are not trustworthy in NLD.
+      A realistic value should be around 2 m, which still requires more
+      testing in the shadow forecast.
+      The operation uses 7 m to be safe.
+
 
     Levee heights are loaded in 3 steps:
     1) National Levee Database
@@ -285,6 +290,12 @@ def set_levees(hgrid_obj, wdir):
     elev = local_levee_heights_gdf['field_4'].to_numpy() * 0.3048  # convert feet to meters
     local_levee_heights_2024 = np.c_[local_levee_heights_gdf.geometry.x, local_levee_heights_gdf.geometry.y, elev]
 
+    # MTG 2025
+    local_levee_heights_gdf = gpd.read_file(
+        f'{wdir}/Levee_info/Polygons/2025_CL_Profile_Data_DCC_25-2_lonlat_ft.shp')  # NAVD88
+    elev = local_levee_heights_gdf['Elev (FT)'].to_numpy() * 0.3048  # convert feet to meters
+    local_levee_heights_2025 = np.c_[local_levee_heights_gdf.geometry.x, local_levee_heights_gdf.geometry.y, elev]
+
     local_levee_info = {
         'MTG_2022': {
             'shapefile': 'Levee_info/Polygons/2022_MTG_Centerline_102008.shp',
@@ -295,6 +306,11 @@ def set_levees(hgrid_obj, wdir):
             'shapefile': 'Levee_info/Polygons/2024_MTG_Centerline_102008.shp',
             'height_points': local_levee_heights_2024,
             'buffer': 2000  # buffer 2000 m, a wide buffer is okay because only the levee top nodes will be selected
+        },
+        'MTG_2025': {
+            'shapefile': 'Levee_info/Polygons/2025_MTG_Centerline_102008.shp',
+            'height_points': local_levee_heights_2025,
+            'buffer': 250  # buffer 250 m, a wide buffer is okay because only the levee top nodes will be selected
         }
     }
     # ---------------------------------------------
@@ -305,8 +321,9 @@ def set_levees(hgrid_obj, wdir):
     hgrid_obj = set_levee_profile(gd=hgrid_obj, wdir=wdir, centerline_shp_dict=centerline_shp_dict)
     grd2sms(hgrid_obj, f'{wdir}/hgrid_with_NLD_levees.2dm')
 
-    # print('force minimum dp to be above -7 m for all levee top points')
-    # hgrid_obj.dp[hgrid_obj.ilevee] = np.minimum(hgrid_obj.dp[hgrid_obj.ilevee], -7)
+    print(f'force minimum dp to be above {min_levee_height_meters} m for all levee top points')
+    # reverse the sign of min_levee_height_meters (positive upward), because dp is positive downward
+    hgrid_obj.dp[hgrid_obj.ilevee] = np.minimum(hgrid_obj.dp[hgrid_obj.ilevee], -min_levee_height_meters)
 
     print('loading additional tweaks on levee heights')
     hgrid_obj = set_additional_dp(gd_ll=hgrid_obj, additional_levee_info=additional_levee_info)
@@ -327,7 +344,7 @@ def sample():
     hg.dp[:] = 9999  # initialize dp to -9999
     hg.save(f'{WDIR}/v7.2_2025_04_12_dp=9999.gr3')
 
-    set_levees(hgrid_obj=hg, wdir=WDIR)
+    set_levees(hgrid_obj=hg, wdir=WDIR, min_levee_height_meters=7)
     hg.save(f'{WDIR}/hgrid_with_levees.gr3')
 
 

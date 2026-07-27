@@ -1,16 +1,202 @@
-1) Use dem_edit.py to apply edits. The usage should be self-evident in the script.
-   This script drives the scripts in subfolders, each applying one type of edits.
+STOFS-3D Bathymetry Workflow
+============================
 
-2) For STOFS3D-v7 (NOAA v3):
-  2.1) run the scripts under Temporary_fix_v7/ as the last step.
-    This fixes the depths of some rivers/canals.
-    The meshing in those rivers/canals needs to be improved in the next version
-  2.2) set dp = min(dp, -8.975) in outfall_canal_fix_min_-8.957_depth.reg to prevent leakage into New Orleans
+This folder contains the two bathymetry stages used after hgrid generation:
+
+1. DEM_loading
+   Load bathymetry/elevation from DEM source tiles onto `hgrid.ll`.
+
+2. Bathy_edit
+   Apply model-specific edits that are not DEM-source decisions, such as
+   regional tweaks, NCF depths, levees, vertical datum conversion, channel
+   connectivity, and temporary fixes.
+
+Keep these stages separate. DEM_loading decides which source data are used and
+how source-specific grids are merged. Bathy_edit starts from the DEM-loaded
+grid and applies later STOFS-3D setup adjustments.
 
 
-moved Bathy_edit/Levee/Levee_info to local copies to reduce git repo size,
-see LARGE_FILES in bathy_edit.py,
-temporarily place it in
-/sciclone/schism10/Hgrid_projects/Levees/Levee_2025/FEMA_regions/FEMA_region_levees/
-, because the content of the folder will be copied.
+Recommended Working Layout
+--------------------------
 
+For a project case, create or use a working directory such as:
+
+```
+/path/to/project/Bathy_edit/
+```
+
+Typical contents after running the workflow:
+
+```
+Bathy_edit/
+  DEM_loading/
+    hgrid.ll
+    hgrid.ll.dem_loaded.mpi.gr3
+  Regional_tweaks/
+  NCF/
+  Levee_dev/
+  xGEOID_cmvd/
+  Ensure_channel_connectivity/
+  Temporary_Fix_v7p2/
+  hgrid_dem_edit.ll
+```
+
+The scripts copy the needed task folders and selected large-data folders into
+the working directory to preserve provenance. Some large data are intentionally
+not stored in git; their source paths are listed in `bathy_edit.py` under
+`LARGE_FILES`.
+
+
+Stage 1: DEM Loading
+--------------------
+
+DEM loading is driven by:
+
+```
+DEM_loading/pload_dem2.py
+```
+
+Version-specific settings live in YAML files:
+
+```
+DEM_loading/configs/
+  stofs3d_v6.yaml
+  stofs3d_v7.yaml
+  stofs3d_v7_hercules.yaml
+  stofs3d_v7p2_original.yaml
+  stofs3d_v7p4.yaml
+  stofs3d_v8.yaml
+  stofs3d_v8_LA.yaml
+```
+
+Run from the git script directory or from a copied `DEM_loading/` folder:
+
+```
+mpirun -np 48 python pload_dem2.py --version stofs3d_v7p4
+```
+
+Use a custom recipe:
+
+```
+mpirun -np 48 python pload_dem2.py --config /path/to/my_dem_recipe.yaml
+```
+
+Write a recipe template before editing:
+
+```
+python pload_dem2.py --version stofs3d_v7p4 --write-template /path/to/stofs3d_v7p4.yaml
+```
+
+The YAML recipe defines the working directory, input grid, output grid, DEM
+tile directory, DEM JSON source lists, and merge rules. The allowed merge
+operations are implemented in Python. If a future version needs a new operation,
+add it as a Python function first, then reference it from YAML by name.
+
+For v7.4/v32e, the config-driven DEM loader was checked against the existing
+baseline product and reproduced `hgrid.ll.dem_loaded.mpi.gr3` exactly.
+
+
+Stage 2: Bathy Edit
+-------------------
+
+Bathy editing is driven by:
+
+```
+bathy_edit.py
+```
+
+The default task set is defined near the top of the file:
+
+```
+TASKS = {
+    'Regional_tweaks',
+    'NCF',
+    'Levee_dev',
+    'xGEOID_cmvd',
+    'Ensure_channel_connectivity',
+    'Temporary_Fix_v7p2',
+}
+```
+
+The common paths and tuning constants are grouped in:
+
+```
+WORKFLOW_CONSTANTS
+```
+
+For a new project, update at least:
+
+```
+WORKFLOW_CONSTANTS['sample_usage']['wdir']
+WORKFLOW_CONSTANTS['sample_usage']['hgrid_fname']
+```
+
+Then run:
+
+```
+python bathy_edit.py
+```
+
+The final product is:
+
+```
+hgrid_dem_edit.ll
+```
+
+Intermediate diagnostic products are written inside each task folder, for
+example:
+
+```
+Regional_tweaks/hgrid_ll_dem_tweaks.2dm
+NCF/hgrid_ll_dem_NCF.2dm
+Levee_dev/hgrid_ll_dem_NCF_levee.2dm
+xGEOID_cmvd/hgrid_ll_dem_NCF_levee_xGEOID_cmvd.2dm
+Ensure_channel_connectivity/hgrid_ll_dem_NCF_levee_xGEOID_cmvd_channel_connectivity_ensured.gr3
+Temporary_Fix_v7p2/hgrid_ll_dem_NCF_levee_xGEOID_cmvd_channel_connectivity_ensured_temp_fix_v7.2.2dm
+```
+
+For v7.4/v32e, this organized `bathy_edit.py` reproduced the previous baseline
+`hgrid_dem_edit.ll` exactly.
+
+
+Task Notes
+----------
+
+`Regional_tweaks`
+  Applies region-based minimum-depth/depth-shaping edits.
+
+`NCF`
+  Loads National Channel Framework maintained depths. The large NCF data folder
+  is copied from a path listed in `LARGE_FILES`.
+
+`Levee_dev`
+  Uses the current 2025 levee workflow. The older `Levee` task is deprecated.
+
+`xGEOID_cmvd`
+  Converts from NAVD88 to xGEOID using the cmvd workflow. The older `xGEOID`
+  task uses `vdatum.jar`, is much slower, and is deprecated for this workflow.
+
+`Ensure_channel_connectivity`
+  Applies RiverMapper-based channel connectivity edits. Important parameters
+  such as `min_channel_depth` and `measured_from_high_bank` are in
+  `WORKFLOW_CONSTANTS`.
+
+`Temporary_Fix_v7p2`
+  Applies the Bayou Lafourche temporary fix using the reference grid path in
+  `WORKFLOW_CONSTANTS`.
+
+
+Good Practice
+-------------
+
+Do not change production behavior first. For new ideas or sensitivity tests,
+make a separate testing script or separate working directory, reproduce the
+existing baseline product, and only then update production scripts.
+
+For channel-connectivity sensitivity tests, keep variations outside
+`bathy_edit.py`. Once a setup is selected, update the constants for the single
+chosen setup.
+
+Use enough MPI ranks for DEM loading. Running `pload_dem2.py` through
+`conda run` can buffer screen output; an activated environment with direct
+`mpirun` gives clearer progress messages.

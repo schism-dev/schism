@@ -761,8 +761,8 @@ def sample3():
     The input grid is in esri:102008
     '''
 
-    grid_dir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32d/Improve/'
-    grid_file = f'{grid_dir}/v32d.2dm'
+    grid_dir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Improve/'
+    grid_file = f'{grid_dir}/v32e.2dm'
 
     # this test may find any potential boundary issues
     gd = sms2grd(grid_file)

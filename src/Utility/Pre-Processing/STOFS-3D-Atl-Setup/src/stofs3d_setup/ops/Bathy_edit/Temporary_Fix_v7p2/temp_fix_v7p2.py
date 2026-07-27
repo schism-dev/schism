@@ -6,8 +6,10 @@ from pylib import read
 
 def temp_fix_v7p2(gd_ll, wdir, reference_hgrid_file):
     '''
-    A temporary fix for v7.2, to tweak depths around Bayou Lafourche,
-    and raise land surface in Lafourche Parish based on a reference hgrid.
+    A temporary fix for v7.2:
+    1) Deepen Bayou Lafourche channel depths,
+    2) Raise land surface to prevent leakage into Lafourche Parish based on a reference hgrid.
+    3) Raise levees at the intersection of MTG and the IWW near Bayou Lafourche, effectively placing a flood gate
 
     gd_ll: hgrid object in lonlat, will be modified in place and returned
     '''
