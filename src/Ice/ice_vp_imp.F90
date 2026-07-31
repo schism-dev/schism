@@ -60,7 +60,7 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
 
 !ice-ocean drag
     umod=sqrt((u_ice(i)-u_ocean(i))**2+(v_ice(i)-v_ocean(i))**2)
-    gam1=inv_m*cdwat*rho0*umod
+    gam1=inv_m*cdwat(i)*rho0*umod
 
     sparsem(0,i)=lump_ice_matrix(i)*(1.0/dt_ice+gam1*cos_io)
 
