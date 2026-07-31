@@ -12,6 +12,7 @@ model:
   hotstart_fortran_exe: "/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/build_81c959af/bin/gen_hot_3Dth_from_hycom"
   hotstart_aviso_path: "/sciclone/schism10/lcui01/schism20/ICOGS/ICOGS3D/Scripts/RUN13r/bnd/aviso_2018_large.nc"
   replace_nwm_with_usgs: True
+  usgs_cache_folder: null  # Default: <project_dir>/I<runid>/USGS_cache
   nwm_cache_folder: null  # Use null or delete this line if you don't have saved NWM product
   existing_source_json_path: /sciclone/schism10/feiye/STOFS3D-v7.4/I201x/original_source_sink_json  # Use null or delete this line if you don't have existing files holding the mapping between schism elements and NWM segments
 

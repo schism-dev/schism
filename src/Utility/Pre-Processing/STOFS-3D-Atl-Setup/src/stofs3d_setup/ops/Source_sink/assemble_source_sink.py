@@ -198,6 +198,11 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
             original_ss_dir=f'{wdir}/original_source_sink/',
             nwm_data_dir=config.nwm_cache_folder,
             output_dir=f'{wdir}/USGS_adjusted_sources/',
+            usgs_cache_folder=(
+                config.usgs_cache_folder
+                if config.usgs_cache_folder is not None
+                else Path(model_input_path) / 'USGS_cache'
+            ),
         )
 
     # A single NWM segment weaving in and out will create duplicate sources/sinks

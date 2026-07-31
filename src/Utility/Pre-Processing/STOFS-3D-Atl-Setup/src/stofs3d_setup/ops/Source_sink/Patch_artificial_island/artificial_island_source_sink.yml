@@ -1,0 +1,6 @@
+# Version-specific source/sink patch information for artificial island rivers.
+#
+# Per-run YAML can override this default with:
+#   model:
+#     artificial_island_source_sink_info: "/path/to/artificial_island_source_sink.yml"
+patches: []

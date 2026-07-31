@@ -35,9 +35,6 @@ from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
 from pylib import schism_grid
 
 
-cache_folder = '/sciclone/schism10/feiye/Cache/'
-
-
 def read_nwm_data(
     data_dir=None, fids=None,
     date_range=pd.date_range("2015-06-01 00:00:00", "2015-08-01 00:00:00", freq="3h")
@@ -369,7 +366,7 @@ def _fingerprint(path: str) -> dict:
     }
 
 
-def preprocess_nwm_shp2(f_shapefile: str) -> gpd.GeoDataFrame:
+def preprocess_nwm_shp2(f_shapefile: str, usgs_cache_folder=None) -> gpd.GeoDataFrame:
     """
     Preprocess the NWM hydrofabric shapefile.
     Adds a 'from' property (list of upstream featureIDs) to each segment.
@@ -377,8 +374,9 @@ def preprocess_nwm_shp2(f_shapefile: str) -> gpd.GeoDataFrame:
     """
 
     t1 = time.time()
-    cache_file = f"{cache_folder}/{Path(f_shapefile).stem}_added_from.parquet"
-    cache_meta = f"{cache_folder}/{Path(f_shapefile).stem}_added_from.metadata.json"
+    usgs_cache_folder = Path(usgs_cache_folder or Path.cwd() / 'USGS_cache')
+    cache_file = f"{usgs_cache_folder}/{Path(f_shapefile).stem}_added_from.parquet"
+    cache_meta = f"{usgs_cache_folder}/{Path(f_shapefile).stem}_added_from.metadata.json"
 
     # Compute source fingerprint
     src_fp = _fingerprint(f_shapefile)
@@ -461,6 +459,7 @@ def source_nwm2usgs(
     original_ss_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/',
     nwm_data_dir='/sciclone/schism10/whuang07/schism20/NWM_v2.1/',
     output_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/USGS_adjusted_sources/',
+    usgs_cache_folder=None,
 ):
     '''
     This script is to adjust the vsource.th file based on USGS data.
@@ -482,10 +481,14 @@ def source_nwm2usgs(
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(f'{output_dir}/Diag/', exist_ok=True)
     os.makedirs(f'{output_dir}/Pngs/', exist_ok=True)
+    usgs_cache_folder = Path(
+        usgs_cache_folder or Path(output_dir).resolve().parents[1] / 'USGS_cache'
+    )
+    os.makedirs(usgs_cache_folder, exist_ok=True)
 
     cache_name = f'usgs_states_{"_".join(np.sort(states))}.txt'
-    if os.path.exists(f'{cache_folder}/{cache_name}'):
-        usgs_station_df = pd.read_csv(f'{cache_folder}/{cache_name}', dtype=object)
+    if os.path.exists(f'{usgs_cache_folder}/{cache_name}'):
+        usgs_station_df = pd.read_csv(f'{usgs_cache_folder}/{cache_name}', dtype=object)
         usgs_stations = usgs_station_df['id']
         usgs_stations_coords = usgs_station_df[['lon', 'lat']].to_numpy().astype(float)
     else:
@@ -588,7 +591,7 @@ def source_nwm2usgs(
         "param_id": usgs_var_dict['streamflow']['id'],
         "station_ids": sorted(usgs_stations),
         "cache_fname": (
-            f'{cache_folder}/usgs_stofs3d_atl_{usgs_var_dict["streamflow"]["id"]}_'
+            f'{usgs_cache_folder}/usgs_stofs3d_atl_{usgs_var_dict["streamflow"]["id"]}_'
             f'{padded_start_time.strftime("%Y%m%d")}_{padded_end_time.strftime("%Y%m%d")}.pq'
         ),
         "padded_start_time": padded_start_time.strftime("%Y-%m-%d %H:%M:%S"),

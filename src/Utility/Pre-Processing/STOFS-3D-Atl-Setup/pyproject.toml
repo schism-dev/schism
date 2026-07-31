@@ -12,6 +12,7 @@ dependencies = [
     "pyyaml>=6",
     "fiona",
     "gsw",
+    "pyschism @ git+https://github.com/schism-dev/pyschism.git@v0.1.17",
     "pyshp",
     "pylibs-ocean",
 ]

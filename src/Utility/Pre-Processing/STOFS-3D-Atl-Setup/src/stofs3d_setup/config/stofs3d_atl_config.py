@@ -13,6 +13,9 @@ import numpy as np
 from ..ops.Source_sink.Relocate import relocate_source_feeder as rsf
 
 
+STOFS3D_SETUP_PACKAGE_DIR = Path(__file__).resolve().parents[1]
+
+
 # ---------------------------------------------------------------------
 #                               Classes
 # -----------------------------------------------------
@@ -82,8 +85,10 @@ class ConfigStofs3dAtlantic(BaseModel):
     existing_source_json_path: Optional[Path] = None
     reuse_source_json: bool = False
     replace_nwm_with_usgs: bool = False
+    usgs_cache_folder: Optional[Path] = None
     source_ele_replace_dict: Dict[int, int] = None  # temporary fix for isolated feeder channels
     constant_sink_shapefile: Optional[Path] = None
+    artificial_island_source_sink_info: Optional[Path] = None
 
     # === Miscellaneous values ===
     gr3_values: Dict[str, float] = Field(
@@ -334,6 +339,10 @@ class ConfigStofs3dAtlantic(BaseModel):
                 '/sciclone/home/feiye/stofs3d-atl/STOFS-3D-Atl-Setup/src/'
                 'stofs3d_setup/ops/Source_sink/Constant_sinks/'
                 'levee_pump_polys_2026_with_poly_type.shp'
+            ),
+            artificial_island_source_sink_info=(
+                STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
+                'Patch_artificial_island' / 'artificial_island_source_sink.yml'
             ),
             bc_flags=[
                 [5, 5, 4, 4],  # Atlantic Ocean
