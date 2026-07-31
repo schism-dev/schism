@@ -63,6 +63,10 @@ def set_constant_sink(wdir='./', shapefile_name='levee_4_pump_polys.shp', hgrid:
         "urban": cm_per_hour(1.0),  # 1.0 cm/h estimated pump capacity
         "rural": cm_per_hour(0.5),  # 0.5 cm/h infiltration
     }
+    # Null polygon types are intentional levee-top polygons. They are excluded
+    # from polygon-specific rates here, but may still receive the background
+    # land sink. Strict exclusion would require levee information, which can
+    # be added later through the Bathy_edit set_levee workflow if needed.
 
     # copy datafiles
     gd = deepcopy(hgrid)

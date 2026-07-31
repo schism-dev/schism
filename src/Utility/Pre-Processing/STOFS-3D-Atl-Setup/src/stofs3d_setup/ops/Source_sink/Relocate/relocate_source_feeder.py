@@ -510,6 +510,8 @@ def relocate_sources2(
             idx += inside_polygon(mandatory_sources_coor[:, :2], region[:, 0], region[:, 1]).astype(bool)
         mandatory_sources_coor = mandatory_sources_coor[idx]
 
+    n_mandatory_sources = len(mandatory_sources_coor)
+
     # check if new sources are within the domain
     if len(mandatory_sources_coor) > 0:
         ingrid_mask = new_gd.inside_grid(mandatory_sources_coor[:, :2]).astype(bool)  # desired locations
@@ -593,6 +595,16 @@ def relocate_sources2(
 
     # get new source elements (ele_idx, 0-based indexing)
     new_sources_ele_idx, _ = nearest_neighbour(new_sources_coor, np.c_[new_gd.xctr, new_gd.yctr])
+    mandatory_source_ele_idx = new_sources_ele_idx[:n_mandatory_sources]
+    if len(np.unique(mandatory_source_ele_idx)) != n_mandatory_sources:
+        duplicated_mandatory_ele_idx = np.unique(mandatory_source_ele_idx)[
+            np.unique(mandatory_source_ele_idx, return_counts=True)[1] > 1
+        ]
+        raise ValueError(
+            'Multiple mandatory sources resolve to the same new source element(s): '
+            f'{(duplicated_mandatory_ele_idx + 1).tolist()}'
+        )
+
     n_dup = new_sources_ele_idx.shape[0] - np.unique(new_sources_ele_idx).shape[0]
     if n_dup > 50:
         raise ValueError(
@@ -657,10 +669,19 @@ def relocate_sources2(
         ids = np.argwhere(new2old_sources_copy == old_source).flatten()
         if len(ids) == 0:  # impossible
             raise ValueError(f'Impossible: old source {old_source} in new2old mapping not mapped to any new source')
-        if len(ids) > 1:  # multiple new sources mapped to the same old source, only retain the closest new source
-            min_dist_id = np.argmin(relocation_distance[ids])
+        if len(ids) > 1:
+            mandatory_ids = ids[ids < n_mandatory_sources]
+
+            # Mandatory sources take precedence over feeder candidates. If
+            # multiple mandatory sources claim the same old source, retain the
+            # closest one; the final check below ensures none are lost.
+            winner = (
+                mandatory_ids[np.argmin(relocation_distance[mandatory_ids])]
+                if len(mandatory_ids) > 0
+                else ids[np.argmin(relocation_distance[ids])]
+            )
             new2old_sources[ids] = -1  # remove all corresponding new sources first
-            new2old_sources[ids[min_dist_id]] = old_source  # set the closest new source as the only new source
+            new2old_sources[winner] = old_source
 
     # add 1 to get element ids (1-based indexing)
     valid_new_sources_eleids = new_sources_eles[new2old_sources >= 0]  # 1-based indexing
@@ -740,6 +761,17 @@ def relocate_sources2(
     tmp = [fid for fids in new2fid.values() for fid in fids]
     if len(tmp) != len(set(tmp)):
         raise ValueError('Duplicated fids in new2fid')
+
+    missing_mandatory_eleids = [
+        int(eleid)
+        for eleid in new_sources_eles[:n_mandatory_sources]
+        if not new2fid.get(str(eleid))
+    ]
+    if missing_mandatory_eleids:
+        raise ValueError(
+            'Mandatory source elements lost during relocation: '
+            f'{missing_mandatory_eleids}'
+        )
 
     # -------------------------------------write -------------------------------------
     # convert set to list for json serialization

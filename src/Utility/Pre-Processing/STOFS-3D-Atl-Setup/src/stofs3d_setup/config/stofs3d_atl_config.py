@@ -27,6 +27,8 @@ class ConfigStofs3dAtlantic(BaseModel):
     # === Core simulation parameters ===
     startdate: datetime = Field(default_factory=lambda: datetime(2017, 12, 1))
     rnday: int = 60
+    hotstart_fortran_exe: Optional[Path] = None
+    hotstart_aviso_path: Optional[Path] = None
 
     # === Boundary and forcing parameters ===
     ocean_bnd_ids: List[int] = Field(default_factory=lambda: [0])
@@ -81,6 +83,7 @@ class ConfigStofs3dAtlantic(BaseModel):
     reuse_source_json: bool = False
     replace_nwm_with_usgs: bool = False
     source_ele_replace_dict: Dict[int, int] = None  # temporary fix for isolated feeder channels
+    constant_sink_shapefile: Optional[Path] = None
 
     # === Miscellaneous values ===
     gr3_values: Dict[str, float] = Field(
@@ -327,6 +330,11 @@ class ConfigStofs3dAtlantic(BaseModel):
             mandatory_sources_coor=rsf.v19p2_for_sms_v32c_mandatory_sources_coor,
             nwm_cache_folder=None,
             source_ele_replace_dict={},
+            constant_sink_shapefile=(
+                '/sciclone/home/feiye/stofs3d-atl/STOFS-3D-Atl-Setup/src/'
+                'stofs3d_setup/ops/Source_sink/Constant_sinks/'
+                'levee_pump_polys_2026_with_poly_type.shp'
+            ),
             bc_flags=[
                 [5, 5, 4, 4],  # Atlantic Ocean
                 [5, 5, 4, 4],  # Gulf of St. Lawrence

@@ -25,13 +25,19 @@ from ..ops.simple_tasks import gen_nudge_coef, gen_shapiro_strength, gen_soil, g
 from ..ops.simple_tasks import gen_3dbc, gen_elev2d, gen_nudge_stofs, gen_diffmin
 from ..ops.Vgrid.gen_vqs import gen_vqs
 from ..ops.River.gen_Canada_river_flux_th import gen_Canada_river_flux_th
-from ..utils.utils import mkcd_new_dir, try_remove, prep_run_dir, write_metadata
+from ..utils.utils import (
+    mkcd_new_dir,
+    prep_run_dir,
+    refresh_directory_snapshot,
+    try_remove,
+    write_metadata,
+)
 from ..ops.Prop.gen_tvd_v1 import gen_tvd_prop
 #from ..ops.Prop.gen_tvd import gen_tvd_prop
 from ..ops.Bctides.bctides.bctides import Bctides  # temporary, bctides.py will be merged into pyschism
 # from pyschism.forcing.bctides import Bctides
 from ..ops.Source_sink.assemble_source_sink import assemble_source_sink
-# from ..ops.Hotstart.gen_hotstart_nc import gen_hotstart_nc
+from ..ops.Hotstart.gen_hotstart_nc import gen_hotstart_nc
 
 # Import configuration
 from ..config.stofs3d_atl_config import ConfigStofs3dAtlantic
@@ -40,7 +46,8 @@ from ..config.stofs3d_atl_config import ConfigStofs3dAtlantic
 # use the full path of the Pre-Processing dir inside your schism repo
 # e.g, script_path = '/my_dir/schism/src/Utility/Pre-Processing/'
 # If you are running this script in the schism repo, you can also use the following line:
-script_path = Path(__file__).resolve().parent.parent / "ops"
+setup_path = Path(__file__).resolve().parents[3]
+script_path = setup_path / "src" / "stofs3d_setup" / "ops"
 print(f"script_path: {script_path}")
 
 DRIVER_PRINT_PREFIX = '\n-----------------STOFS3D-ATL driver:---------------------\n'
@@ -80,13 +87,16 @@ def stofs3d_atl_driver(
     # define and make the model_input_path, the run_dir and the output dir
     model_input_path, run_dir, _ = prep_run_dir(project_dir, runid, scr_dir=scr_dir)
 
-    # make a copy of the script itself to the model_input_path
-    os.system(f'cp -rf {script_path} {model_input_path}/Pre_processing_scripts_backup')
+    # Save an exact snapshot, replacing any backup from an earlier invocation.
+    refresh_directory_snapshot(
+        script_path,
+        Path(model_input_path) / "Pre_processing_scripts_backup",
+    )
     # make a copy of the hgrid to the model_input_path
     os.system(f'cp {hgrid_path} {model_input_path}/hgrid.gr3')
 
     write_metadata(
-        script_path=script_path,
+        script_path=setup_path,
         metadata_path=f"{model_input_path}/metadata.yml",
         project_dir=project_dir,
         runid=runid,
@@ -361,9 +371,12 @@ def stofs3d_atl_driver(
         print(f'{DRIVER_PRINT_PREFIX}Generating hotstart.nc ...')
         mkcd_new_dir(f'{model_input_path}/{sub_dir}')
 
-        raise NotImplementedError(f'{DRIVER_PRINT_PREFIX}Need to update to the latest USGS api; otherwise the download is not stable')
         # uncomment below if you have existing observation data to generate initial condition
-        # gen_hotstart_nc(start_date=config.startdate)
+        gen_hotstart_nc(
+            start_date=config.startdate,
+            fortran_exe=config.hotstart_fortran_exe,
+            aviso_path=config.hotstart_aviso_path,
+        )
 
         os.chdir(run_dir)
         os.system(f'ln -sf ../I{runid}/{sub_dir}/hotstart.nc .')
