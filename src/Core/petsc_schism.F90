@@ -7,14 +7,6 @@
 ! local sparse matrix of size npi x npia (keeping order of non-0 struc's). 
 ! The local-2-global mappings are then generated so we can assemble matrix locally.
 !------------------------------------------------------------------------------
-!Routines & functions
-!init_petsc
-!gen_mappings
-!load_mat_row
-!petsc_solve
-!finalize_petsc
-
-
 module petsc_schism
 
 #if PETSCV==1
@@ -56,24 +48,26 @@ use petscis
 use petscksp
 
 implicit none
+!include 'mpif.h'
 private
-public elev_A,elev_x,elev_b,elev_ksp,npi,npi2np,npa2npi,npa2npia, &
+public elev_A,icevp_M,elev_x,elev_b,elev_ksp,npi,npi2np,npa2npi,npa2npia, &
+       ice_uvel,ice_vvel,ice_vp_rhs,ice_ksp, perr,&
        !public methods
-       &init_petsc,finalize_petsc,load_mat_row,petsc_solve
+       &init_petsc,finalize_petsc,load_mat_row,load_mat_row_ice,petsc_solve,petsc_solve_VP
 
-Mat            :: elev_A
-Vec            :: elev_x, elev_b
-KSP            :: elev_ksp
+Mat            :: elev_A,icevp_M
+Vec            :: elev_x, elev_b,ice_uvel,ice_vvel,ice_vp_rhs
+KSP            :: elev_ksp,ice_ksp
 !PetscScalar is double
-PetscScalar, pointer :: x_npi(:)
+PetscScalar, pointer :: x_npi(:),u_npi(:),v_npi(:)
 
 !PetscBool      :: flag, view 
 PetscErrorCode :: perr
 Character(len=256) :: filename, print_status
 
 ! Mappings
-! npi  - local resident nodes that are owned by this rank (no overlaps of interface nodes btw proc's)
-! npia - local nodes plus ghost or interface nodes of npi nodes
+! npi  - resident nodes excluding those owned by other processes [interface nodes] (subset of np)
+! npia - npi plus neighbor nodes (subset of npa)
 ! petsc_global - Global mapping to map to petsc
 PetscInt :: npi, npia 
 PetscInt, allocatable :: npi2np(:),npa2npi(:),npa2npia(:),npia2gb(:)
@@ -88,17 +82,15 @@ contains
 
 subroutine init_petsc
   use schism_glbl, only : np,np_global,rtol0,mxitn0,lelbc,nnp,indnd
-  use schism_msgp, only : comm,myrank, parallel_abort,parallel_finalize
+  use schism_msgp, only : myrank, parallel_abort,parallel_finalize
 
-  AO :: aoout
-  IS :: isout
-  ISLocalToGlobalMapping :: ltog
+  AO :: aoout,aooutice
+  IS :: isout,isoutice
+  ISLocalToGlobalMapping :: ltog,ltogice
 
   PetscInt :: zero = 0
-  PetscInt :: i,i_npi,j,nd,istat
-
-!  Pass on comm to PETSc 
-  PETSC_COMM_WORLD= comm
+  PetscInt :: i,i_npi,j,nd,istat,M,N,mloc,nloc
+  integer :: mpi_err, comm_size, mapping_size
 
 ! Initialize PETSc and structures
   call PetscInitialize(PETSC_NULL_CHARACTER, perr); CHKERRQ(perr)
@@ -108,11 +100,12 @@ subroutine init_petsc
 !  call PetscOptionsGetString(PETSC_NULL_CHARACTER, "-print", print_status, & 
 !                             view, perr)
 !  CHKERRQ(perr)
-
+  write(12,*)'petsc: start mapping...'
+  
   call gen_mappings
 
 ! Count # of non-zero entries for (block) diagonal (d_nnz) and off-diagonal (o_nnz) parts for each row
-! 'Diagonal' entries are owned by the local proc, off-d entries 'belong to' other proc's (i.e. not part of local npi nodes)
+! Diagonal part is owned by the local proc, off-d entries 'belong to' other proc's (i.e. not part of local npi nodes)
 ! Use npa2npi map (=-999) to identify off-diagonal nonzeros.
 ! Essential boundary conditions are imposed by replacing rows with diagonal 1,
 ! and moving columns to RHS
@@ -216,6 +209,94 @@ subroutine init_petsc
 
   write(12,*)'petsc: done setting up solver'
 
+!another initial subroutine for ice vp dynamic
+#ifdef USE_ICE
+!Crucial to pre-allocate # of diagnoal and off-diagnoal non-0 entries for
+!each process for max efficiency
+
+  call MatCreate(PETSC_COMM_WORLD,icevp_M,perr); CHKERRQ(perr)
+  call MatSetType(icevp_M, MATMPIAIJ,perr); CHKERRQ(perr)
+  call MatSetSizes(icevp_M,npi,npi,PETSC_DECIDE,PETSC_DECIDE,perr); CHKERRQ(perr)
+  call MatSeqAIJSetPreallocation(icevp_M,zero,d_nnz,perr); CHKERRQ(perr)
+!since d_nnz() is specified, the dimension needs not be there (use zero) 
+  call MatMPIAIJSetPreallocation(icevp_M,zero,d_nnz,zero,o_nnz,perr); CHKERRQ(perr)
+  !each proc will set off-proc values
+  call MatSetOption(icevp_M,MAT_NO_OFF_PROC_ENTRIES,PETSC_FALSE,perr); CHKERRQ(perr)
+  !SPD: symmetric, positive, definite (turned off)
+  call MatSetOption(icevp_M,MAT_SPD,PETSC_FALSE,perr); CHKERRQ(perr)
+  !Only matters if MatZeroRows() is called (for b.c.)
+  call MatSetOption(icevp_M,MAT_KEEP_NONZERO_PATTERN,PETSC_FALSE,perr); CHKERRQ(perr)
+  call MatSetup(icevp_M,perr); CHKERRQ(perr)
+
+  write(12,*)'petsc: done setting up matrix ice VP...'
+  !call MatGetSize(icevp_M, M, N, perr); CHKERRQ(perr)
+  !call MatGetLocalSize(icevp_M, mloc, nloc, perr); CHKERRQ(perr)
+
+  !write(12,*) 'Rank',myrank,'local rows=',mloc,nloc
+
+! Vectors : u, x, b 
+  call VecCreate(PETSC_COMM_WORLD,ice_uvel, perr); CHKERRQ(perr)
+  call VecSetSizes(ice_uvel,npi,PETSC_DECIDE,perr); CHKERRQ(perr)
+  call VecSetType(ice_uvel,VECMPI,perr); CHKERRQ(perr)
+  call VecDuplicate(ice_uvel,ice_vvel,perr); CHKERRQ(perr)
+  call VecDuplicate(ice_vvel,ice_vp_rhs,perr); CHKERRQ(perr)
+
+  write(12,*)'petsc: done setting up vectors ice VP...'
+
+! Create local-to-global mappings for matrix and vectors
+  !AO: output aoout is global context; PETSC_NULL_INTEGER means copy the global
+  !mapping npia2gb(0:npia-1)
+  call AOCreateMapping(PETSC_COMM_WORLD,npi,npia2gb,PETSC_NULL_INTEGER,aooutice,perr); CHKERRQ(perr)
+  !Pass mapping to IS (index set; local-to-local, output 'isout' is local context)
+  ! Include ghost nodes (for columns)
+  call ISCreateGeneral(PETSC_COMM_WORLD,npia,npia2gb,PETSC_COPY_VALUES,isoutice,perr); CHKERRQ(perr)
+!  if(view) then
+!    call ISView(isout,PETSC_VIEWER_STDOUT_WORLD,perr); CHKERRQ(perr)
+!  endif
+
+  !Mapping btw 2 global arrays 
+  call AOApplicationToPetscIS(aooutice,isoutice,perr); CHKERRQ(perr)
+  call ISLocalToGlobalMappingCreateIS(isoutice,ltogice,perr); CHKERRQ(perr)
+  !For use by MatSetValuesLocal()
+  call MatSetLocalToGlobalMapping(icevp_M,ltogice,ltogice,perr); CHKERRQ(perr)
+  call VecSetLocalToGlobalMapping(ice_uvel,ltogice,perr); CHKERRQ(perr)
+  call VecSetLocalToGlobalMapping(ice_vvel,ltogice,perr); CHKERRQ(perr)
+
+!  if(view) then
+!    call ISView(isoutice,PETSC_VIEWER_STDOUT_WORLD,perr); CHKERRQ(perr)
+!    call AOView(aooutice,PETSC_VIEWER_STDOUT_WORLD,perr); CHKERRQ(perr)
+!  endif
+
+  call ISDestroy(isoutice,perr); CHKERRQ(perr)
+  call ISLocalToGlobalMappingDestroy(ltogice,perr); CHKERRQ(perr)
+  call AODestroy(aooutice,perr); CHKERRQ(perr)
+
+  write(12,*)'petsc: done mapping matrix/vectors from local to global ice VP'
+
+! Create the linear solver
+  call KSPCreate(PETSC_COMM_WORLD,ice_ksp,perr); CHKERRQ(perr)
+!new19: can set same pre-con as previous iteration! Note the 3rd argument is dropped in
+!v3.5+
+  !call KSPSetOperators(elev_ksp,elev_A,elev_A,SAME_NONZERO_PATTERN,perr); CHKERRQ(perr)
+  call KSPSetOperators(ice_ksp,icevp_M,icevp_M,perr); CHKERRQ(perr)
+
+!2 arguments after rtol0 are: absolute tolerance and divergence tolerance
+!Convergence test for Ax=b is: ||r||_2<max[rtol0*||b||_2,atol], where
+!atol is absolute tolerance. Divergence occurs if ||r||_2>dtol*||b||_2, where
+!dtol is specified before mxitn0. Defaults: rtol0=1.e-5, atol=1.e-50, dtol=1.e5,
+!mxitn0=10^5
+  call KSPSetTolerances(ice_ksp,rtol0,PETSC_DEFAULT_REAL,PETSC_DEFAULT_REAL,mxitn0,perr)
+
+  CHKERRQ(perr)
+
+! Allow cmd option over-ride
+  call KSPSetFromOptions(ice_ksp,perr); CHKERRQ(perr)
+  call MatZeroEntries(icevp_M,perr); CHKERRQ(perr)
+
+  write(12,*)'petsc: done setting up ice vp solver'
+
+#endif /*USE_ICE*/
+
 end subroutine init_petsc
 
 !------------------------------------------------------------------------------
@@ -228,6 +309,9 @@ subroutine gen_mappings
   PetscInt :: i,j,k,nd,istat,ip,npig
   PetscInt, allocatable :: npi_list(:), npig_list(:)
 
+  ! npi  - local resident nodes that are owned by this rank (no overlaps of
+  ! interface nodes btw proc's)
+  ! npia - local nodes plus ghost or interface nodes of npi nodes
   ! npi_list,npig_list are 1-based
   allocate(npig_list(npa),npi_list(np),stat=istat)
   if(istat/=0) call parallel_abort('gen_mappings: Fail to allocate mappings')
@@ -308,7 +392,21 @@ subroutine load_mat_row(A,row_ix,n_columns,column_ix,coeff_vals)
   CHKERRQ(perr)
 end subroutine
 
+!------------------------------------------------------------------------------
+!  Load a row for ice
+!------------------------------------------------------------------------------
+subroutine load_mat_row_ice(A,row_ix,n_columns,column_ix,coeff_vals)
+!  use schism_glbl, only : iplg
 
+  Mat, intent(inout)       :: A
+  PetscInt, intent(in)     :: row_ix,n_columns
+  PetscInt, dimension(n_columns), intent(in)  ::    column_ix
+  PetscScalar, dimension(n_columns), intent(in)  :: coeff_vals
+  PetscInt                 :: one_row = 1
+
+  call MatSetValuesLocal(A,one_row,row_ix,n_columns,column_ix,coeff_vals,INSERT_VALUES,perr)
+  CHKERRQ(perr)
+end subroutine
 !------------------------------------------------------------------------------
 ! Final solve
 !------------------------------------------------------------------------------
@@ -317,6 +415,7 @@ subroutine petsc_solve(ndim,qel2,eta_npi,petsc_its)
   PetscScalar, intent(in) :: qel2(ndim)
   PetscScalar, intent(out) :: eta_npi(ndim)
   integer, intent(out) :: petsc_its
+
 
   PetscInt :: i
 
@@ -333,6 +432,7 @@ subroutine petsc_solve(ndim,qel2,eta_npi,petsc_its)
       
   call MatAssemblyEnd(elev_A,MAT_FINAL_ASSEMBLY,perr); CHKERRQ(perr)
 
+
 !MPI default is GMRES with Block Jacobian PC
 !Default uses left-PC
 !Init guess of elev_x????
@@ -345,7 +445,90 @@ subroutine petsc_solve(ndim,qel2,eta_npi,petsc_its)
     eta_npi(i)=x_npi(i)
   enddo
   call VecRestoreArrayF90(elev_x,x_npi,perr); CHKERRQ(perr)
+
 end subroutine petsc_solve
+
+!------------------------------------------------------------------------------
+! Final solve for ice VP
+!------------------------------------------------------------------------------
+subroutine petsc_solve_VP(ndim,qel2u,qel2v,u_guess,v_guess,iceu_npi,icev_npi,petsc_its_u,petsc_its_v)
+  use schism_msgp, only : myrank
+  PetscInt, intent(in)    :: ndim
+  PetscScalar, intent(in) :: qel2u(ndim),qel2v(ndim),u_guess(ndim),v_guess(ndim)
+  PetscScalar, intent(out) :: iceu_npi(ndim),icev_npi(ndim)
+  integer, intent(out) :: petsc_its_u,petsc_its_v
+
+  PetscInt :: i
+  
+  ! for ice u-velocity 
+  call MatAssemblyBegin(icevp_M,MAT_FINAL_ASSEMBLY,perr); CHKERRQ(perr)
+
+  call MatAssemblyEnd(icevp_M,MAT_FINAL_ASSEMBLY,perr); CHKERRQ(perr)
+
+!new19: insert computation btw MatAssemblyBegin and MatAssemblyEnd to hide latency
+! Manual says VecGetArrayF90, VecRestoreArrayF90 only works with
+! certain F90 compilers
+  call VecGetArrayF90(ice_vp_rhs,u_npi,perr); CHKERRQ(perr)
+  do i=1,npi
+    u_npi(i)=qel2u(i)
+  enddo
+
+  call VecRestoreArrayF90(ice_vp_rhs,u_npi,perr); CHKERRQ(perr)
+!MPI default is GMRES with Block Jacobian PC
+!Default uses left-PC
+!Use the current ice velocity as the initial guess, similar to FESOM's VP CG solve.
+  call VecGetArrayF90(ice_uvel,u_npi,perr); CHKERRQ(perr)
+  do i=1,npi
+    u_npi(i)=u_guess(i)
+  enddo
+  call VecRestoreArrayF90(ice_uvel,u_npi,perr); CHKERRQ(perr)
+  call KSPSetInitialGuessNonzero(ice_ksp,PETSC_TRUE,perr); CHKERRQ(perr)
+  call KSPSolve(ice_ksp,ice_vp_rhs,ice_uvel,perr); CHKERRQ(perr)
+
+  call KSPGetIterationNumber(ice_ksp,petsc_its_u,perr); CHKERRQ(perr)
+
+  call VecGetArrayF90(ice_uvel,u_npi,perr); CHKERRQ(perr)
+  do i=1,npi
+    iceu_npi(i)=u_npi(i)
+  enddo
+  call VecRestoreArrayF90(ice_uvel,u_npi,perr); CHKERRQ(perr)
+
+ ! for ice v-velocity 
+  !call MatAssemblyBegin(icevp_M,MAT_FINAL_ASSEMBLY,perr); CHKERRQ(perr)
+
+!new19: insert computation btw MatAssemblyBegin and MatAssemblyEnd to hide latency
+! Manual says VecGetArrayF90, VecRestoreArrayF90 only works with
+! certain F90 compilers
+  call VecGetArrayF90(ice_vp_rhs,v_npi,perr); CHKERRQ(perr)
+  do i=1,npi
+    v_npi(i)=qel2v(i)
+  enddo
+  call VecRestoreArrayF90(ice_vp_rhs,v_npi,perr); CHKERRQ(perr)
+      
+ !call MatAssemblyEnd(icevp_M,MAT_FINAL_ASSEMBLY,perr); CHKERRQ(perr)
+
+!MPI default is GMRES with Block Jacobian PC
+!Default uses left-PC
+!Use the current ice velocity as the initial guess, similar to FESOM's VP CG solve.
+  call VecGetArrayF90(ice_vvel,v_npi,perr); CHKERRQ(perr)
+  do i=1,npi
+    v_npi(i)=v_guess(i)
+  enddo
+  call VecRestoreArrayF90(ice_vvel,v_npi,perr); CHKERRQ(perr)
+  call KSPSetInitialGuessNonzero(ice_ksp,PETSC_TRUE,perr); CHKERRQ(perr)
+  call KSPSolve(ice_ksp,ice_vp_rhs,ice_vvel,perr); CHKERRQ(perr)
+
+  call KSPGetIterationNumber(ice_ksp,petsc_its_v,perr); CHKERRQ(perr)
+
+  call VecGetArrayF90(ice_vvel,v_npi,perr); CHKERRQ(perr)
+  do i=1,npi
+    icev_npi(i)=v_npi(i)
+  enddo
+  call VecRestoreArrayF90(ice_vvel,v_npi,perr); CHKERRQ(perr)
+
+  call MatZeroEntries(icevp_M,perr); CHKERRQ(perr)
+
+end subroutine petsc_solve_VP
 
 subroutine finalize_petsc
 
@@ -353,7 +536,13 @@ subroutine finalize_petsc
   call VecDestroy(elev_x,perr); CHKERRQ(perr)
   call VecDestroy(elev_b,perr); CHKERRQ(perr)
   call KSPDestroy(elev_ksp,perr); CHKERRQ(perr)
-
+#ifdef USE_ICE
+  call MatDestroy(icevp_M,perr); CHKERRQ(perr)
+  call VecDestroy(ice_uvel,perr); CHKERRQ(perr)
+  call VecDestroy(ice_vvel,perr); CHKERRQ(perr)
+  call VecDestroy(ice_vp_rhs,perr); CHKERRQ(perr)
+  call KSPDestroy(ice_ksp,perr); CHKERRQ(perr)
+#endif /*USE_ICE*/
   deallocate(npi2np,npa2npi,npa2npia,npia2gb,d_nnz,o_nnz)
   call PetscFinalize(perr); CHKERRQ(perr)
 end subroutine finalize_petsc

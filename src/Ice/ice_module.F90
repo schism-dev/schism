@@ -7,7 +7,7 @@ module ice_module
   !Parameters
   integer,parameter :: ntr_ice=3 !# of ice tracers (in order: 1: ice mass; 2: ice conc; 3: snow mass)
   integer :: ice_tests,ice_advection,ice_therm_on,ievp,evp_rheol_steps,mevp_rheol_steps,niter_fct, &
- &mevp_coef,ncyc_fct,ice_atmos_stress_form
+ &mevp_coef,ncyc_fct,ice_atmos_stress_form,ice_VP_iter
   real(rkind) :: xmin_ice,ymin_ice,xmax_ice,ymax_ice,rlx_ice,rly_ice !use in box test only
   real(rkind) :: ice_cutoff,theta_io,cos_io,sin_io,mevp_alpha1,mevp_alpha2, &
   &h_ml0,salt_ice,salt_water,mevp_alpha3,mevp_alpha4,depth_ice_fct,cdwin0
@@ -23,8 +23,9 @@ module ice_module
 !  REAL(rkind) :: zeta_min=4.0e+8  ! kg/s
 
   !Physical const
-!  real(rkind),parameter :: cdwat=5.00e-3 ! drag coeff. ocean - ice
-!  real(rkind),parameter :: cdao=1.20e-3 ! drag coeff. atmosphere - ocean
+!  real(rkind),parameter :: cdwin=2.25e-3 ! drag coeff. atmosphere - ice
+  real(rkind),parameter :: cdwat=5.00e-3 ! drag coeff. ocean - ice
+  real(rkind),parameter :: cdao=1.20e-3 ! drag coeff. atmosphere - ocean
   real(rkind),parameter :: rhoair=1.3    ! Air density [kg/m^3]
   real(rkind),parameter :: rhoice=910.   ! Ice density
   real(rkind),parameter :: rhosnow=290.   ! Snow density
@@ -40,7 +41,6 @@ module ice_module
   real(rkind),allocatable :: delta_ice(:) !(nea). Strain rate [1/sec]
   real(rkind),allocatable :: weit_elem2node(:,:) !(mnei,np)- weights for interpolating from elem to node (via the ball)
   real(rkind),allocatable :: area_median(:) !(1:np); area of dual grid (sum of integrals)
-  real(rkind),allocatable :: cdwat(:) !ice-water drag
 
   !FCT
   real(rkind) :: ice_gamma_fct             ! smoothing parameter

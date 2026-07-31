@@ -78,6 +78,9 @@ subroutine ice_step
     else if (ievp==2) then
       call ice_mevp
       if(myrank==0) write(16,*)'done ice mEVP dynamics'
+    else if(ievp==3) then
+      call ice_vp_imp_step
+      if(myrank==0) write(16,*)'done ice implicit VP dynamics'
     endif !ievp
 
     !Transport: operator splitting
@@ -115,7 +118,7 @@ subroutine ice_step
     do i=1,npa
       if(lhas_ice(i)) then
         umod=sqrt((u_ice(i)-u_ocean(i))**2+(v_ice(i)-v_ocean(i))**2)
-        tmp1=ice_tr(2,i)*cdwat(i)*umod
+        tmp1=ice_tr(2,i)*cdwat*umod
         tau_oi(1,i)=tmp1*((u_ice(i)-u_ocean(i))*cos_io-(v_ice(i)-v_ocean(i))*sin_io) !m^2/s/s
         tau_oi(2,i)=tmp1*((u_ice(i)-u_ocean(i))*sin_io+(v_ice(i)-v_ocean(i))*cos_io)
       endif

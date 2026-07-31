@@ -309,7 +309,7 @@ endif
 
 ifdef USE_ICE
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_ICE
-  OBJS := $(OBJS) ice_module.o ice_therm_mod.o ice_init.o ice_step.o ice_evp.o ice_mevp.o \
+  OBJS := $(OBJS) ice_module.o ice_therm_mod.o ice_init.o ice_step.o ice_vp_imp.o ice_evp.o ice_mevp.o \
                   ice_fct.o ice_thermodynamics.o
 endif
 
