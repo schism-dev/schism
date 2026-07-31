@@ -12,29 +12,52 @@ from pyschism.forcing.hycom.hycom2schism import DownloadHycom
 from .tweak_stofs3d_hotstart import tweak_stofs3d_hotstart
 
 
-def gen_hotstart_nc(wdir=None, start_date=None, python_exe=None):
+LEVEE_POLYGON_SHAPEFILE = "levee_pump_polys_2026_with_poly_type_lonlat.shp"
+
+
+def gen_hotstart_nc(
+    wdir=None,
+    start_date=None,
+    fortran_exe=None,
+    aviso_path=None,
+    python_exe=None,
+):
     """
     Generate hotstart.nc file for STOFS3D model in the specified working directory.
     This function assumes that necessary input files are already present in the working directory.
     """
 
     script_path = os.path.dirname(os.path.abspath(__file__))
+    aviso_script_path = os.path.abspath(os.path.join(script_path, '..', 'AVISO'))
     if wdir is None:
         wdir = os.getcwd() + os.sep
 
+    if fortran_exe is None and python_exe is not None:
+        print("Warning: gen_hotstart_nc(python_exe=...) is deprecated; use fortran_exe=... instead")
+        fortran_exe = python_exe
+
     while True:
-        if python_exe is None:
-            python_exe = input('Please provide the path to the Python executable to run the script: ').strip()
-        if os.path.exists(python_exe):
+        if fortran_exe is None:
+            print(
+                "If you have successfully compiled schism source code, the executable is at "
+                "schism/build/bin/gen_hot_3Dth_from_hycom."
+            )
+            fortran_exe = input('Please provide the path to the Fortran executable to run the script: ').strip()
+        if os.path.exists(fortran_exe):
             break
+        print(f'Fortran executable not found: {fortran_exe}')
+        fortran_exe = None
+
+    if aviso_path is not None and not os.path.exists('aviso.nc'):
+        os.symlink(str(aviso_path), 'aviso.nc')
 
     # check for aviso.nc
     while True:  # search for aviso.nc until it is provided
         if not os.path.exists('aviso.nc'):
             print('\n' + '-'*50)
             print(f'aviso.nc not found, please download the data to {wdir}')
-            print(f'See instructions in {script_path}/AVISO/README and '
-                  f'{script_path}/AVISO/download_aviso*.py')
+            print(f'See instructions in {aviso_script_path}/README and '
+                  f'{aviso_script_path}/download_adt.py')
             input('Press Enter to continue after downloading aviso.nc')
             print('\n' + '-'*50)
         else:
@@ -70,22 +93,19 @@ def gen_hotstart_nc(wdir=None, start_date=None, python_exe=None):
         f.write('1 ! # of HYCOM stacks (e.g., 3 if there are SSH_1.nc, SSH_2.nc, SSH_3.nc)\n')
 
     # generate hotstart.nc using the external fortran script
-    subprocess.run(python_exe, check=True)
+    subprocess.run([fortran_exe], check=True)
 
     # rename hotstart.nc for further processing
     os.system('mv hotstart.nc hotstart.nc.hycom')
 
     # tweak hotstart.nc based on coastal observations if any
-    os.system(f'cp {script_path}/LA_urban_polys_lonlat_v2.* {wdir}/')  # copy city shapefiles to working directory
-    os.system(f'cp -r {script_path}/Obs_2017_12_01 Obs')
-    for f in glob('Obs/mean*'):
-        os.system(f'rename 2017 {start_date.strftime("%Y")} {f}')  # rename obs files to match model year
-    tweak_stofs3d_hotstart(
+    levee_polygon_basename = os.path.splitext(LEVEE_POLYGON_SHAPEFILE)[0]
+    os.system(f'cp {script_path}/{levee_polygon_basename}.* {wdir}/')  # copy levee polygon shapefiles to working directory
+    completed = tweak_stofs3d_hotstart(
         wdir=wdir,
         hotstart_date_str=start_date.strftime('%Y-%m-%d'),
-        # polygon shapefile specifying cities, use v3 for Bayou Lafourche if the area is refined
-        city_shapefile_names=["LA_urban_polys_lonlat_v2.shp"],
-        aviso_file='aviso.nc'
+        city_shapefile_names=[LEVEE_POLYGON_SHAPEFILE],
+        aviso_file='aviso.nc',
     )
 
-    pass
+    return completed

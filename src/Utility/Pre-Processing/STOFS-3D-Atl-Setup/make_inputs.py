@@ -4,7 +4,7 @@ from stofs3d_setup.recipes.generic import build
 
 cfg = Settings.from_yaml(
     "/sciclone/home/feiye/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/configs/"
-    "v7p2_2018_2D.yml"
+    "v7p4_sample.yml"
 )
 build(cfg)
 

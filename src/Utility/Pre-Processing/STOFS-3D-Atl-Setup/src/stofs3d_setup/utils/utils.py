@@ -3,6 +3,7 @@ Utility functions for various tasks
 """
 import os
 import shutil
+import tempfile
 from pathlib import Path
 import shapefile
 import numpy as np
@@ -71,6 +72,38 @@ def try_remove(file):
     except OSError:
         print(f"Error removing: {file}")
         raise
+
+
+def refresh_directory_snapshot(source, destination):
+    """Replace *destination* with an exact copy of *source*."""
+    source = Path(source)
+    destination = Path(destination)
+
+    if not source.is_dir():
+        raise NotADirectoryError(f"Snapshot source is not a directory: {source}")
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix=f".{destination.name}.",
+        dir=destination.parent,
+    ) as staging_dir:
+        staging_dir = Path(staging_dir)
+        staged_snapshot = staging_dir / "snapshot"
+        previous_snapshot = staging_dir / "previous"
+
+        # Build the new snapshot completely before replacing the old one.
+        shutil.copytree(source, staged_snapshot, symlinks=True)
+
+        destination_existed = destination.exists() or destination.is_symlink()
+        if destination_existed:
+            destination.replace(previous_snapshot)
+
+        try:
+            staged_snapshot.replace(destination)
+        except Exception:
+            if destination_existed:
+                previous_snapshot.replace(destination)
+            raise
 
 
 def find_points_in_polyshp(pt_xy, shapefile_names):
@@ -146,12 +179,22 @@ def write_metadata(
         cwd=script_path,
         text=True,
     ).strip()
+    git_changes = subprocess.check_output(
+        [
+            "git", "status", "--porcelain=v1",
+            "--untracked-files=all", "--", ".",
+        ],
+        cwd=script_path,
+        text=True,
+    ).splitlines()
 
     metadata = {
         "runid": str(runid),
         "project_dir": str(project_dir),
         "generated_on": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
         "setup_git_commit": git_commit,
+        "setup_git_dirty": bool(git_changes),
+        "setup_git_changes": git_changes,
     }
 
     with open(metadata_path, "w") as f:

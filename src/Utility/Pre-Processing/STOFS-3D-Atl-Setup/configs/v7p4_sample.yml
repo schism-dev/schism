@@ -2,16 +2,18 @@ profile: "v7.4_sample"  # give any name
 
 run:
   project_dir: "/sciclone/schism10/feiye/STOFS3D-v7.4/"
-  runid: "100e"
-  hgrid_path: "/sciclone/schism10/feiye/STOFS3D-v7.4/R100e/hgrid.gr3"
+  runid: "201x"
+  hgrid_path: "/sciclone/schism10/feiye/STOFS3D-v7.4/RUN201l/hgrid.gr3"
 
 model:
   version: "v7p4"  # defined in src/stofs3d_setup/config/stofs3d_atl_config.py
   rnday: 3
-  startdate: "2016-12-01"  # *
-  replace_nwm_with_usgs: False
+  startdate: "2017-12-01"  # *
+  hotstart_fortran_exe: "/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/build_81c959af/bin/gen_hot_3Dth_from_hycom"
+  hotstart_aviso_path: "/sciclone/schism10/lcui01/schism20/ICOGS/ICOGS3D/Scripts/RUN13r/bnd/aviso_2018_large.nc"
+  replace_nwm_with_usgs: True
   nwm_cache_folder: null  # Use null or delete this line if you don't have saved NWM product
-  existing_source_json_path: /sciclone/schism10/feiye/STOFS3D-v7.4/I100e/existing_source_sink_json  # Use null or delete this line if you don't have existing files holding the mapping between schism elements and NWM segments
+  existing_source_json_path: /sciclone/schism10/feiye/STOFS3D-v7.4/I201x/original_source_sink_json  # Use null or delete this line if you don't have existing files holding the mapping between schism elements and NWM segments
 
 runtime:
   scr_dir: "/sciclone/scr10/feiye/STOFS3D-v7.4/"  # Use null if you don't want to save the outputs on a scratch disk.
@@ -26,9 +28,9 @@ inputs:
   diffmin: false
   elev_ic: false
   flux_th: false
-  source_sink: true
+  source_sink: false
   soil: false
-  "hotstart.nc": false
+  "hotstart.nc": true
   "3D.th.nc": false
   "*nu.nc": false
   "elev2D.th.nc": false

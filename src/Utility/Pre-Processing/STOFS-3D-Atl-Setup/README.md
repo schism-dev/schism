@@ -197,9 +197,10 @@ This will generate three folders under the project directory, for example:
 
 The `I` folder (`Inputs`) contains:
 
-- a copy of all scripts
+- a refreshed snapshot of the preprocessing scripts
 - the generated model input files
-- a metadata.yml file containing version information (e.g., git commit hash and tag), which can be used to retrieve the exact script version from git
+- a metadata.yml file containing the Git commit and any uncommitted setup-tree
+  status entries, so runs made from a modified working tree are clearly flagged
 
 This folder serves as a reproducible snapshot of the input-generation workflow.
 
