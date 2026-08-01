@@ -10,7 +10,7 @@
   ice_tests = 0  !box test flag
   ice_advection = 1 !advection on/off
   ice_therm_on = 1 !ice thermodynamics on/off flag
-  ievp=2 !1: EVP; 2: mEVP
+  ievp=2 !1: EVP; 2: mEVP; 3: implicit VP solver (requires PETSc)
   ice_cutoff=1.e-3 !cut-off thickness [m] or fraction for ice. No ice velocity if *<=ice_cuttoff
   evp_rheol_steps=200  ! the number of sybcycling steps in EVP
   mevp_rheol_steps=200  ! the number of iterations in mEVP

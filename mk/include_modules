@@ -1,17 +1,17 @@
 # ParMETIS enabled/off
 ### NOTE: turn this on if compiling scribe I/O via gnu make, as ParMETIS has issues
- NO_PARMETIS = yes
- EXEC := $(EXEC)_NOPM
+# NO_PARMETIS = yes
+# EXEC := $(EXEC)_NOPM
 
 # Share memory communicator
 # SH_MEM_COMM = yes
 # EXEC := $(EXEC)_SH_MEM_COMM
 
 # Old nc output option (each rank dumps its own data)
-# USE_OLDIO = yes
-# EXEC := $(EXEC)_OLDIO
+ USE_OLDIO = yes
+ EXEC := $(EXEC)_OLDIO
 
-# Use PetSc as solver for FE eq. Works with NO_PARMETIS 
+# Use PetSc as solver for FE eq. or ice VP solver (which requires OLDIO). 
 #'v1': v3.5; 'v2': 3.6, 3.7; 'v3': 3.10
  PETSC_VERSION = v3
  USE_PETSC = yes
@@ -27,8 +27,8 @@
 # EXEC := $(EXEC)_BMI
 
 # Precip/evaporation model
-# USE_PREC_EVAP = yes
-# EXEC := $(EXEC)_EVAP
+ USE_PREC_EVAP = yes
+ EXEC := $(EXEC)_EVAP
 
 # nws=5,6 option using WRF wind (simpler_wind.F90)
 # This option is not officially supported; use at your own risk
@@ -123,8 +123,8 @@
 ####End of tracer models
 
 # Ice module
-# USE_ICE = yes
-# EXEC := $(EXEC)_ICE
+ USE_ICE = yes
+ EXEC := $(EXEC)_ICE
 
 # Multiclass Ice module
 # USE_MICE = yes

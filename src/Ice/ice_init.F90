@@ -61,7 +61,14 @@ subroutine ice_init
   if(ice_tests/=0.and.ice_tests/=1) call parallel_abort('ice_init: ice_tests')
   if(ice_advection/=0.and.ice_advection/=1) call parallel_abort('ice_init: ice_advection')
   if(ice_therm_on/=0.and.ice_therm_on/=1) call parallel_abort('ice_init: ice_therm_on')
-  if(ievp/=1.and.ievp/=2.and.ievp/=3) call parallel_abort('ice_init: ievp')
+  if(ievp<1.or.ievp>3) call parallel_abort('ice_init: ievp')
+
+  if(ievp==3) then
+#ifndef USE_PETSC
+    call parallel_abort('ice_init: ievp=3 requires PETSc')
+#endif
+   endif
+
   if(ice_cutoff<=0) call parallel_abort('ice_init: ice_cutoff')
   if(evp_rheol_steps<=0.or.mevp_rheol_steps<=0) call parallel_abort('ice_init: evp_rheol_steps')
   if(delta_min<=0) call parallel_abort('ice_init: delta_min')
