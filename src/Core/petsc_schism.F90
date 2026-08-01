@@ -82,7 +82,7 @@ contains
 
 subroutine init_petsc
   use schism_glbl, only : np,np_global,rtol0,mxitn0,lelbc,nnp,indnd
-  use schism_msgp, only : myrank, parallel_abort,parallel_finalize
+  use schism_msgp, only : comm, myrank, parallel_abort,parallel_finalize
 
   AO :: aoout,aooutice
   IS :: isout,isoutice
@@ -92,6 +92,9 @@ subroutine init_petsc
   PetscInt :: i,i_npi,j,nd,istat,M,N,mloc,nloc
   integer :: mpi_err, comm_size, mapping_size
 
+!  Pass on comm to PETSc 
+  PETSC_COMM_WORLD= comm
+
 ! Initialize PETSc and structures
   call PetscInitialize(PETSC_NULL_CHARACTER, perr); CHKERRQ(perr)
 !  call PetscOptionsGetString(PETSC_NULL_CHARACTER, "-f", filename, flag, perr)
@@ -100,7 +103,7 @@ subroutine init_petsc
 !  call PetscOptionsGetString(PETSC_NULL_CHARACTER, "-print", print_status, & 
 !                             view, perr)
 !  CHKERRQ(perr)
-  write(12,*)'petsc: start mapping...'
+!  write(12,*)'petsc: start mapping...'
   
   call gen_mappings
 
