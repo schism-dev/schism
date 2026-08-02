@@ -7,7 +7,8 @@ add_library(schism_ice ice_module.F90
                        ice_evp.F90
                        ice_mevp.F90
                        ice_fct.F90
-                       ice_thermodynamics.F90)
+                       ice_thermodynamics.F90
+	               ice_vp_imp.F90)
 
 add_dependencies(schism_ice core ${schismmodlibs})
 target_link_libraries(schism_ice core ${schismmodlibs})

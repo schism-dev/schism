@@ -79,8 +79,10 @@ subroutine ice_step
       call ice_mevp
       if(myrank==0) write(16,*)'done ice mEVP dynamics'
     else if(ievp==3) then
+#ifdef USE_PETSC
       call ice_vp_imp_step
       if(myrank==0) write(16,*)'done ice implicit VP dynamics'
+#endif
     endif !ievp
 
     !Transport: operator splitting

@@ -1,4 +1,5 @@
 ! implicit vp solver of ice module
+#ifdef USE_PETSC
 subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
   use schism_glbl,only: rkind,time_stamp,rnday,eta2,np,ne,nea, &
  &elnode,i34,dldxy,cori,grav,isbnd,indel,nne,area,iself,fdb,lfdb, &
@@ -6,9 +7,7 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
  &lelbc
   use schism_msgp, only: myrank,nproc,parallel_abort,exchange_p2d,ierr,comm
   use ice_module
-#ifdef USE_PETSC
   use petsc_schism
-#endif
   implicit none
 
   real(rkind), dimension(npa), intent(in) :: u_ice0,v_ice0
@@ -29,11 +28,9 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
   real(rkind) :: swild(2,3),swild2(nea),deta(2,nea),sparsem(0:mnei_p,np),rhsu_vp_local(np),&
   &rhsv_vp_local(np),rhs_a(npa),rhs_m(npa),entries(3)
 
-#ifdef USE_PETSC
   integer :: column_ix_vp(0:mnei_p)
   real(rkind) :: coeff_vals_vp(0:mnei_p),uice_npi(npi),vice_npi(npi),rhsu_vp(npi),rhsv_vp(npi),&
     &uice_guess_npi(npi),vice_guess_npi(npi)
-#endif
 
   mxitn0=1500*2
 
@@ -531,3 +528,4 @@ subroutine ice_vp_imp_step
              node_area_sum,node_area_count)
 
 end subroutine ice_vp_imp_step
+#endif /*USE_PETSC*/
