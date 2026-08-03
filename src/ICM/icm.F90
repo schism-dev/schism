@@ -150,11 +150,11 @@ subroutine ecosystem(it)
 #endif
           do i=1,i34(id); btau=btau+rho0*btaun(elnode(i,id))/dble(i34(id)); enddo
         endif
+        rat=1.0/(1.0+KPO4p*DOX(k)*KPO4s*(TSS(k)+KPO4TSS)/((KhDOp+DOX(k)+1.d-8)*(KPO4s+salt(k))))
         if(iSRM==1) then !phase change between dissolved and particulate PO4
-          rat=1.0*KhDOp/((1.0+KPO4p*TSS(k))*(KhDOp+DOX(k)+1.d-8))
           tPO4=PO4(k)+PIP(k); PO4(k)=rat*tPO4; PIP(k)=(1.0-rat)*tPO4; PO4d(k)=PO4(k); PO4p(k)=0.d0
         else
-          rat=1.0/(1.0+KPO4p*TSS(k)); PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k)
+          PO4d(k)=rat*PO4(k); PO4p(k)=(1.0-rat)*PO4(k)
         endif
         if(iSilica==1) then
           rat=1.0/(1.0+KSAp*TSS(k));  SAd(k)=rat*SA(k); SAp(k)=(1.0-rat)*SA(k)

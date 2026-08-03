@@ -50,10 +50,12 @@ subroutine sfm_calc(id,kb,tdep,wdz,it,isub)
   wRPON=RPON(kb+1);  wLPON=LPON(kb+1); wRPOP=RPOP(kb+1)
   wLPOP=LPOP(kb+1);  wPO4 =PO4(kb+1);  wNH4 =NH4(kb+1)
   wNO3 =NO3(kb+1);   wCOD =COD(kb+1);  wDOX =min(max(DOX(kb+1),1.d-2),50.d0)
-  fd0=1.0/(1.0+KPO4p*wTSS); wPO4d=fd0*wPO4; wPO4p=(1.0-fd0)*wPO4
   if(iSRM==1) then
-    wSRPOC=SRPOC(kb+1); wSRPON=SRPON(kb+1); wSRPOP=SRPOP(kb+1); wPIP=PIP(kb+1)
+    wSRPOC=SRPOC(kb+1); wSRPON=SRPON(kb+1); wSRPOP=SRPOP(kb+1); wPIP=PIP(kb+1); fd0=1.0
+  else
+    fd0=1.0/(1.0+KPO4p*wTSS)
   endif
+  wPO4d=fd0*wPO4; wPO4p=(1.0-fd0)*wPO4
 
   !------------------------------------------------------------------------
   !POM fluxes (g.m-2.day-1)

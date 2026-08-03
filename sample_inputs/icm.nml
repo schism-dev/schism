@@ -237,7 +237,6 @@ KTRM  = 0.069  0.069  0.069       !temp. dependence for (RPOM,LPOM,DOM) decay (o
 KSR0  = 0.001  0.001  0.001       !decay rates of SRPOC,SRPON,SRPOP (day-1)
 TRSR  = 20.0   20.0   20.0        !reference temp. for (SRPOC,SRPON,SRPOP) decay (oC)
 KTRSR = 0.069  0.069  0.069       !temp. dependence for (SRPOC,SRPON,SRPOP) decay (oC-1)
-KhDOp = 5.0                       !DO half saturation for PO4 sorption converting to PIP (mg[O2]/L)
 
 !decay coefficient for chemical oxygen demand (COD)
 KCD   = 1.0                       !oxidation rate of COD at TRCOD (day-1)
@@ -261,10 +260,13 @@ an2c = 0.5                        !ratio of denit. rate to oxic DOC respiration 
 
 !misc
 KhDO =   0.5   0.5   0.5          !DO half saturation for PB's DOC excretion (mg/L)
-KPO4p=   0.0                      !coefficient relating PO4 sorption to TSS
-WDOs=    1.0                      !coefficient for DO release under super-saturation (m2.day-1.L.mg-1)
-WRea =   0.0                      !baseline wind-induced reaeration coefficient for DO (m.day-1)
-PBmin=   0.01  0.01  0.01         !minimum PB concentration (mg[C]/L)
+KhDOp=   5.0                      !DO half saturation for PO4 sorption converting to PIP (mg[O2]/L)
+KPO4p=   0.35                     !coefficient relating PO4 sorption to TSS
+KPO4s=   5.0                      !coefficient relating PO4 sorption to salinity (PSU)
+KPO4TSS= 10.0                     !minimum TSS concentration for PO4 sorption (mg/L)
+WDOs   = 1.0                      !coefficient for DO release under super-saturation (m2.day-1.L.mg-1)
+WRea   = 0.0                      !baseline wind-induced reaeration coefficient for DO (m.day-1)
+PBmin  = 0.01  0.01  0.01         !minimum PB concentration (mg[C]/L)
 dz_flux= 1.0   1.0                !surface/bottom thikness (m) within which sflux/bflux are redistributed
 /
 
