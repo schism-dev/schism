@@ -224,6 +224,28 @@ subroutine partition_hgrid
     return
   endif
 
+#ifdef NO_PARMETIS
+    !Offline paritition by reading from input similar to global_to_local.prop
+    if(myrank==0) then
+      open(10,file=in_dir(1:len_in_dir)//'partition.prop',status='old')
+      do i=1,ne_global 
+        read(10,*)j,iegrpv(i)
+      enddo
+      close(10)
+
+      k=maxval(iegrpv); l=minval(iegrpv)
+      if(k/=nproc-1.or.l/=0) then
+        write(errmsg,*)'Offline partition: different nproc,',k,l
+        call parallel_abort(errmsg)
+      endif
+    endif !myrank
+    call mpi_bcast(iegrpv,ne_global,itype,0,comm,stat)
+#else
+!Use ParMETIS
+  
+  ! Count number of edges in dual graph (element as 'vertex')
+  allocate(adjncy(1000),stat=stat) !for single element
+  if(stat/=0) call parallel_abort('partition: adjncy(1000) allocation failure')
   ! Setup initial naive partition
   ! Equal # of elements in each processor (except for the last one).
   allocate(neproc(0:nproc-1),stat=stat)
@@ -292,30 +314,6 @@ subroutine partition_hgrid
     deallocate(nlev)
   endif !ivcor==1
 
-#ifdef NO_PARMETIS
-    !Offline paritition by reading from input similar to global_to_local.prop
-    if(myrank==0) then
-      open(10,file=in_dir(1:len_in_dir)//'partition.prop',status='old')
-      do i=1,ne_global 
-        read(10,*)j,iegrpv(i)
-      enddo
-!      read(10,*); read(10,*)k
-      close(10)
-
-      k=maxval(iegrpv); l=minval(iegrpv)
-      if(k/=nproc-1.or.l/=0) then
-        write(errmsg,*)'Offline partition: different nproc,',k,l
-        call parallel_abort(errmsg)
-      endif
-    endif !myrank
-    call mpi_bcast(iegrpv,ne_global,itype,0,comm,stat)
-
-#else
-!Use ParMETIS
-  
-  ! Count number of edges in dual graph (element as 'vertex')
-  allocate(adjncy(1000),stat=stat) !for single element
-  if(stat/=0) call parallel_abort('partition: adjncy(1000) allocation failure')
   ntedge=0 !total # of edges in the grid
   mxnedge=0 !max. # of local edges
   do ie=1,ne
@@ -547,7 +545,6 @@ subroutine partition_hgrid
   deallocate(xyz,tpwgts,ubvec)
   if(wgtflag==2.or.wgtflag==3) deallocate(vwgt)
   if(wgtflag==1.or.wgtflag==3) deallocate(adjwgt)
-#endif /*NO_PARMETIS*/
 
   ! Deallocate arrays
   deallocate(neproc,neprocsum)
@@ -555,6 +552,7 @@ subroutine partition_hgrid
   if(allocated(nlev)) deallocate(nlev)
   if(allocated(kbp)) deallocate(kbp)
   deallocate(xproj,yproj)
+#endif /*NO_PARMETIS*/
 
 end subroutine partition_hgrid
 
