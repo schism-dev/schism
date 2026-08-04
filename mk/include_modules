@@ -11,7 +11,7 @@
 # USE_OLDIO = yes
 # EXEC := $(EXEC)_OLDIO
 
-# Use PetSc as solver for FE eq. or ice VP solver 
+# Use PetSc as solver for FE eq. or ice VP solver (USE_ICE)
 #'v1': v3.5; 'v2': 3.6, 3.7; 'v3': 3.10
  PETSC_VERSION = v3
  USE_PETSC = yes

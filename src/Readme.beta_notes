@@ -648,6 +648,7 @@ git versions:
 162. `57f824d` (10 Nov 2025): changed default air-sea option to Fairall in make;
 163. `5a174a05` (29 Dec 2025): revised flex veg module (included MARSH);
 164. `e08db1ce` (17 Mar 2026): Zhiyun Du fixed a bug in WWM hotstart;
+165. `d58cbccf` (3 Aug 2026): made offline partition more mem friendly by bypassing aquire_hgrid(.false.) (c/o Panos)
 
 ================================================================================================
 (D) Auto-test history:
