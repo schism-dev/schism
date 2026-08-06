@@ -96,14 +96,13 @@ def ensure_channel_connectivity(
     rivers = Rivers(SMS_MAP(river_extra_info_map_file))  # default crs is 'epsg:4326', also the default for RiverMapper
 
     # Define region of interest
-    watershed_origional = gpd.read_file(region_gdf_file)
+    watershed = gpd.read_file(region_gdf_file)
     # Exclude regions
     if exclude_region_gdf_file_list is not None and exclude_region_gdf_file_list != []:
-        watershed = deepcopy(watershed_origional)
         for exclude_region_gdf_file in exclude_region_gdf_file_list:
             watershed = gpd.overlay(
                 watershed,
-                gpd.read_file(exclude_region_gdf_file).to_crs(watershed_origional.crs),
+                gpd.read_file(exclude_region_gdf_file).to_crs(watershed.crs),
                 how='difference'
             )
 
