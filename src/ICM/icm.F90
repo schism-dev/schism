@@ -560,7 +560,7 @@ subroutine ecosystem(it)
             db_TP(id)=db_TP(id)+dzb*(RPOP(k)+LPOP(k)+DOP(k)+PO4(k)+sum(p2c*PBS(1:3,k)))
             if(iSRM==1) then
               db_TN(id)=db_TN(id)+dzb*SRPON(k)
-              db_TP(id)=db_TP(id)+dzb*SRPOP(k)
+              db_TP(id)=db_TP(id)+dzb*(SRPOP(k)+PIP(k))
             endif
           endif
 
