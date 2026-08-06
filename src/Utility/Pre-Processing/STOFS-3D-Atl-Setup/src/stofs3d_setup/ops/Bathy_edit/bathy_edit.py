@@ -196,13 +196,20 @@ def prepare_dir(wdir: Path, tasks: str):
     if script_dir == wdir:
         print('The script is already in the working directory; no need to copy.')
     else:
+        existing_task_dirs = [wdir / task for task in tasks if (wdir / task).exists()]
+        if existing_task_dirs:
+            existing_dirs = '\n'.join(f'  {path}' for path in existing_task_dirs)
+            raise FileExistsError(
+                'Refusing to prepare the working directory because these requested '
+                f'task directories already exist:\n{existing_dirs}\n'
+                'Move or remove them, or choose a new working directory. No files were copied.'
+            )
+
         print(f'Copying the script and the subdirectories to {wdir}')
         os.makedirs(wdir, exist_ok=True)
         os.system(f'cp {__file__} {wdir}')  # copy the script itself to the working directory
         for task in tasks:
-            if Path(f'{wdir}/{task}/').exists():
-                print(f'Skipping copying {task}, already exists in the working directory.')
-            elif Path(f'{script_dir}/{task}/').exists():
+            if Path(f'{script_dir}/{task}/').exists():
                 shutil.copytree(
                     f'{script_dir}/{task}/', f'{wdir}/{task}/',
                     symlinks=False, dirs_exist_ok=True)
