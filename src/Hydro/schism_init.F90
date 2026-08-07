@@ -2431,9 +2431,10 @@
           enddo !j
         enddo !i
         deallocate(nwild3,swild99)
+
+        call parallel_finalize
+        stop
       endif !iloadtide==4.and.myrank==0
-      call parallel_finalize
-      stop
 
 !-------------------------------------------------------------------------------
 ! Read in boundary condition and tidal info
