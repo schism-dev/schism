@@ -291,7 +291,7 @@ real (rkind) :: aux                               ! ustar
 
           grav2(i)=grav*(1.d0-beta_bar) !0.9d0
         enddo !i
-      else !iloadtide=0,1
+      else !iloadtide=0,1 etc
         grav2=grav
       endif
 
@@ -441,6 +441,13 @@ real (rkind) :: aux                               ! ustar
       enddo !i
 !$OMP end do
 
+!...  SAL from spherical harmonic option
+      if(iloadtide==4) then
+#ifdef USE_SPK
+        call selfattraction
+#endif /*USE_SPK*/
+      endif !iloadtide=4
+
 !...  Earth tidal potential and loading tide at nodes: pre-compute to save time
 !... 
 !$OMP do
@@ -453,6 +460,8 @@ real (rkind) :: aux                               ! ustar
 
           if(iloadtide==1) then !loading tide
             etp(i)=etp(i)+rloadtide(1,j,i)*cos(tfreq(j)*time-rloadtide(2,j,i))
+          else if(iloadtide==4) then !SPK
+            etp(i)=etp(i)+saltide(i)
           endif !iloadtide
         enddo !j
       enddo !i

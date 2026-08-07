@@ -413,6 +413,7 @@ module schism_glbl
   ! Dynamic quantities
   integer,save,allocatable :: ieg_source(:)   !global elem. indices for volume/mass sources
   integer,save,allocatable :: ieg_source_ngen(:)   !global elem. indices for T-Route only volume/mass sources in NextGen
+  integer,save,allocatable :: isal_int(:,:)
   real(rkind),save,allocatable :: ieg_source_flowpath_ids(:)   ! T-Route flowpath ids needed for NextGen framework coupling with SCHISM sources
   integer,save,allocatable :: ieg_sink(:)   !global elem. indices for volume/mass sinks
   real(rkind),save,allocatable :: ieg_sink_flowpath_ids(:)   ! T-Route flowpath ids needed for NextGen framework coupling with SCHISM sinks
@@ -504,6 +505,7 @@ module schism_glbl
   !(npa). evap water flux in ice model [kg/s/m/m]. 
   real(rkind),save,allocatable :: ice_evap(:)
   real(rkind),save,allocatable :: srad_o(:)
+  real(rkind),save,allocatable :: saltide(:)
 
 #ifdef USE_CICE
   !(npa). salinity flux due to ice melting/growth [psu/s].:

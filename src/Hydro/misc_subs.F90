@@ -6720,103 +6720,147 @@
 
 #ifdef USE_SPK
 !     SAL using spheric harmonic approach
-      subroutine selfattraction(avhs, self, i1, i2, j1, j2, jaselfal)
-        use schism_glbl, only : rkind
+!     From Delfs3D: Delft3D/src/engines_gpl/dflowfm/packages/dflowfm_kernel/src/dflowfm_kernel/timespace/meteo1.f90 
+      !subroutine selfattraction(avhs, self, i1, i2, j1, j2,jaselfal)
+      subroutine selfattraction
+        use schism_glbl, only : rkind,pi,npa,saltide,eta2,xlon,ylat,iplg,area,np_global,np, &
+               &isal_int,dp,errmsg
+        use schism_msgp, only : parallel_abort,rtype,itype,comm,myrank,parallel_finalize
         use spherepack, only: shaec, shaeci, shsec, shseci
         implicit none
+        include 'mpif.h'
   
-        ! Input\Output parameter
-        integer, intent(in) :: i1, i2, j1, j2, jaselfal
-        real(rkind), intent(in) :: avhs(i1:i2, j1:j2) !gathered SSH and interpolated onto 1 deg grid
-        real(rkind), intent(out) :: self(i1:i2, j1:j2)
+        !Hardwire 1 deg resolution
+        integer, parameter :: nlat=181,nlon=360,lsave=nlat*(nlat+1)+3*((nlat-2)*(2*nlat-nlat-1)+nlon+15)
+!        integer, intent(in) :: i1, i2, j1, j2 !, jaselfal
+!        real(rkind), parameter :: Me = 5.9726e24, R = 6371e3, g = 9.81, pi = 4.0 * atan(1.0), rhow = 1.0240164e3, rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
+!        integer :: nlat, nlon, lsave
+        real(rkind) :: Me,R,rhow,rhoe
+        integer :: i,j,ierror,isym,nt,l,mdab,ndab,k1,k3(1),ie,nd,iwork1(np_global),iwork2(np_global)
+        !avhs: gathered SSH and interpolated onto 1 deg regular lon/lat grid 
+!        real(rkind) :: avhs(0:359,-90:90),self(0:359,-90:90)
+        real(rkind) :: llnh(0:1024),llnk(0:1024),wshaec(lsave),wshsec(lsave)
+        real(rkind) :: a(nlat,nlat), b(nlat,nlat)
+        real(rkind) :: avhs1(0:180,0:359),self1(0:180,0:359)
+        real(rkind) :: eta_gb(np_global),work1(np_global)
+!        real(rkind) :: tmp1,tmp2,buf(2,1),buf2(2,1),xl2,yl2
   
-        ! Local parameters
-        real(rkind), parameter :: Me = 5.9726e24, R = 6371e3, g = 9.81, pi = 4.0 * atan(1.0), rhow = 1.0240164e3, rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
-        integer :: nlat, nlon, lsave
-        integer :: i, j, ierror, isym, nt, l, mdab, ndab, k1
-        real(rkind), dimension(:), allocatable :: llnh, llnk
-        real(rkind), dimension(:), allocatable :: wshaec, wshsec
-        real(rkind), dimension(:, :), allocatable :: a, b
-        real(rkind), dimension(:, :), allocatable :: avhs1, self1
-  
-        ! Initialisation
-        nlat = 181
-        nlon = 360
-        lsave = nlat * (nlat + 1) + 3 * ((nlat - 2) * (2 * nlat - nlat - 1) + nlon + 15)
+        Me = 5.9726e24; R = 6371e3; rhow = 1.0240164e3 
+        rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
+!        nlat = 181
+!        nlon = 360
+!        lsave = nlat * (nlat + 1) + 3 * ((nlat - 2) * (2 * nlat - nlat - 1) + nlon + 15)
         mdab = nlat
         ndab = nlat
   
-        allocate (wshaec(1:lsave))
-        allocate (wshsec(1:lsave))
-        allocate (a(1:mdab, 1:ndab))
-        allocate (b(1:mdab, 1:ndab))
-  
-        allocate (llnh(0:1024))
-        allocate (llnk(0:1024))
-        allocate (avhs1(0:180, 0:359))
-        allocate (self1(0:180, 0:359))
-  
-        !Water level need to be defined in an array avhs1,
-        ! where avhs1(i,j) contains the waterlevel on the point with longitude phi(j)=(j-1)*2*pi/nlon
+!        allocate (wshaec(1:lsave))
+!        allocate (wshsec(1:lsave))
+!        allocate (a(1:mdab, 1:ndab))
+!        allocate (b(1:mdab, 1:ndab))
+!        allocate (llnh(0:1024))
+!        allocate (llnk(0:1024))
+!        allocate (avhs1(0:180, 0:359))
+!        allocate (self1(0:180, 0:359))
+
+        !Change to co-latitude: avhs1(i,j) contains the waterlevel on the point with longitude phi(j)=(j-1)*2*pi/nlon
         ! and colatitude theta(i)=(i-1)*pi/(nlat)
-        !For a one degree grid, we have nlon=360 and nlat=181
         !If avhs is smaller then 0 is chosen at the location of the missing values
-        avhs1 = 0.0
-        k1 = 0
-        do i = i1, min(i2, i1 + 360 - 1)
-           do j = j1, j2
-              avhs1(j + 90, k1) = avhs(i, j)
-           end do
-           k1 = k1 + 1
-        end do
+        !avhs1=0.d0 !init
+!        k1=0
+        !do i=i1,min(i2,i1+360-1)
+        !  do j = j1, j2
+!        do i=0,359
+!          do j=-90,90
+!            avhs1(j+90,k1)=avhs(i,j) !note the index swap and lat-> co-lat
+!          enddo !j
+!          k1=k1+1
+!        enddo !i
   
-        !Load Love numbers
-        call loadlovenumber(llnh, llnk)
-  
-        !Computation
-        isym = 0
-        nt = 1
-        !Spherical harmonic analysis
-        call shaeci(nlat, nlon, wshaec, ierror)
-        call shaec(nlat, nlon, isym, nt, avhs1, nlat, nlon, a, b, mdab, ndab, wshaec, ierror)
-  
-        !Multiplication in spherical harmonic space (=convolution)
-        if (jaselfal == 2) then
-           do l = 1, ndab
-              a(1:mdab, l) = 3 * g * rhow / rhoe / (2 * l - 1) * a(1:mdab, l)
-              b(1:mdab, l) = 3 * g * rhow / rhoe / (2 * l - 1) * b(1:mdab, l)
-           end do
-        end if
-        if (jaselfal == 1) then
-           do l = 1, ndab
-              a(1:mdab, l) = 3 * g * rhow * (1 + llnk(l - 1) - llnh(l - 1)) / rhoe / (2 * l - 1) * a(1:mdab, l)
-              b(1:mdab, l) = 3 * g * rhow * (1 + llnk(l - 1) - llnh(l - 1)) / rhoe / (2 * l - 1) * b(1:mdab, l)
-           end do
-        end if
-  
-        !Spherical harmonic synthesis
-        call shseci(nlat, nlon, wshsec, ierror)
-        call shsec(nlat, nlon, isym, nt, self1, nlat, nlon, a, b, mdab, ndab, &
-                   wshsec, ierror)
-  
-        !self1 is defined on the same grid than avhs1, we put it back in the same grid than avhs
-        self = 0.0
-        k1 = 0
-        do i = i1, i2
-           if (k1 >= 360) then
-              k1 = 0
-           end if
-           do j = j1, j2
-              if (j + 90 >= 0 .and. j - 90 <= 180) then
-                 self(i, j) = self1(j + 90, k1)
-              end if
-           end do
-           k1 = k1 + 1
-        end do
+        !Gather elev
+        work1=0.d0
+        iwork1=0
+        do i=1,np
+          nd=iplg(i)
+          work1(nd)=eta2(i)  
+          iwork1(nd)=iwork1(nd)+1
+        enddo !i
+        call mpi_reduce(work1,eta_gb,np_global,rtype,MPI_SUM,0,comm,ierror)
+        call mpi_reduce(iwork1,iwork2,np_global,itype,MPI_SUM,0,comm,ierror)
 
-        !TODO: scatter and interpolate back to UG; calculate tidal potential
+        if(myrank==0) then
+          do i=1,np_global
+            if(iwork2(i)==0) then
+              write(errmsg,*) 'selfattraction: missing node ',i
+              call parallel_abort(errmsg)
+            endif
+            eta_gb(i)=eta_gb(i)/dble(iwork2(i))
+          enddo !i
 
-        !Dealloc
+          !avhs1(i,j) contains the waterlevel on the point with longitude phi(j)=(j-1)*360/nlon
+          !and colatitude theta(i)=(i-1)*180/nlat
+          !If avhs1 is smaller then 0 is chosen at the location of the missing values
+          avhs1=0.d0 !init for land etc
+          do i=0,359 
+            do j=-90,90
+              nd=isal_int(j+90,i)
+              if(dp(nd)>-1.d0) then !make sure it's deep enough
+                avhs1(j,i)=eta_gb(nd)
+              endif !dp
+            enddo !j
+          enddo !i
+
+          !Load Love numbers
+          call loadlovenumber(llnh, llnk)
+
+          call parallel_finalize
+          stop
+  
+          !Computation
+          isym = 0
+          nt = 1
+          !Spherical harmonic analysis
+          call shaeci(nlat,nlon,wshaec,ierror)
+          call shaec(nlat,nlon,isym,nt,avhs1,nlat,nlon,a,b,mdab,ndab,wshaec,ierror)
+  
+          !Multiplication in spherical harmonic space (=convolution)
+!        if (jaselfal == 2) then
+!           do l = 1, ndab
+!              a(1:mdab, l) = 3 * g * rhow / rhoe / (2 * l - 1) * a(1:mdab, l)
+!              b(1:mdab, l) = 3 * g * rhow / rhoe / (2 * l - 1) * b(1:mdab, l)
+!           end do
+!        end if
+          !Below seems to be the one used in Brus paper. rhoe is earth density; rhow is water density
+          !Need to remove 'g' in SCHISM
+!        if (jaselfal == 1) then
+          do l=1,ndab
+            a(1:mdab,l)=3*rhow*(1+llnk(l-1)-llnh(l-1))/rhoe/(2*l-1)*a(1:mdab,l)
+            b(1:mdab,l)=3*rhow*(1+llnk(l-1)-llnh(l-1))/rhoe/(2*l-1)*b(1:mdab,l)
+!           a(1:mdab,l)=3*g*rhow*(1+llnk(l-1)-llnh(l-1))/rhoe/(2*l-1)*a(1:mdab,l)
+!           b(1:mdab,l)=3*g*rhow*(1+llnk(l-1)-llnh(l-1))/rhoe/(2*l-1)*b(1:mdab,l)
+          enddo !l
+!        end if
+  
+          !Spherical harmonic synthesis (inverse transform)
+          call shseci(nlat,nlon,wshsec,ierror)
+          call shsec(nlat,nlon,isym,nt,self1,nlat,nlon,a,b,mdab,ndab,wshsec,ierror)
+  
+        !May not need this conversion - just use self1 directly
+        !self1 is defined on the same grid than avhs1, we put it back in the same grid as avhs
+!        self=0.d0
+!        k1=0
+!        do i=0,359 !i1,i2
+!          if(k1>=360) k1=0
+!          do j=-90,90 !j1,j2
+!            if(j+90>=0.and.j-90<=180) then
+!              self(i,j)=self1(j+90,k1)
+!            endif
+!          enddo !j
+!          k1=k1+1
+!        enddo !i
+
+          !Interpolate back to UG; saltide has same unit as etp
+        endif !myrank==0
+
       end subroutine selfattraction
   
       subroutine loadlovenumber(llnh, llnk)

@@ -133,7 +133,7 @@
 
 !     Misc. arrays
       integer, allocatable :: ipiv(:)
-      integer, allocatable :: nwild(:),nwild2(:),ibuf1(:,:),ibuf2(:,:)
+      integer, allocatable :: nwild(:),nwild2(:),nwild3(:,:),ibuf1(:,:),ibuf2(:,:)
       real(rkind), allocatable :: akr(:,:),akrp(:),work4(:),z_r2(:),xy_kr(:,:)
       real(rkind), allocatable :: swild(:),swild2(:,:),swild10(:,:)
       real(rkind), allocatable :: swild3(:) !,rwild(:,:)
@@ -629,6 +629,16 @@
         if(ihorcon==1.and.hvis_coef0>0.125_rkind) call parallel_abort('INIT: hvis_coef0>0.125')
         if(ihorcon==2.and.hvis_coef0>0.025_rkind) call parallel_abort('INIT: hvis_coef0>0.025')
       endif
+
+
+!...  SAL
+      if(iloadtide<0.or.iloadtide>4) call parallel_abort('INIT: iloadtide')
+      if(iloadtide==4) then !spherical harmonics
+#ifndef USE_SPK             
+        call parallel_abort('INIT: iloadtide=4 requires SPK')
+#endif
+        if(ics/=2) call parallel_abort('INIT: iloadtide=4 requires ics=2')
+      endif 
 
 !...  Shapiro filter 
 !      call get_param('param.in','ishapiro',1,ishapiro,tmp,stringvalue)
@@ -1469,6 +1479,11 @@
         allocate(xlon_gb(np_global),ylat_gb(np_global),stat=istat)
         if(istat/=0) call parallel_abort('INIT: alloc xlon_gb failure')
       endif !nws
+
+      if(iloadtide==4) then
+        allocate(saltide(npa),isal_int(0:180,0:359),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: failed to alloc saltide')
+      endif !iloadtide
 
 #ifdef USE_DVD
      allocate(rkai_num(ntrs(12),nvrt,ne),stat=istat) 
@@ -2342,6 +2357,83 @@
         close(14)
 
 #endif /*USE_WWM*/
+
+!...  Calculate interpolation weights (nearest global node) for spherical SAL
+      if(iloadtide==4.and.myrank==0) then !ics=2; only rank 0 doing global operation
+        allocate(nwild3(4,ne_global),swild99(0:180,0:359),stat=istat) !conn table 
+        if(istat/=0) call parallel_abort('INIT: alloc nwild3')
+        open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
+        read(32,*); read(32,*) !ne,np
+        do i=1,np_global
+          read(32,*)j,buf3(i),buf4(i)
+        enddo !i
+        do i=1,ne_global
+          read(32,*)j,nwild2(i),nwild3(1:nwild2(i),i)
+        enddo !i
+        close(32)
+
+        swild99=huge(1.d0) !init for min distance
+        isal_int=-1 !init
+
+        !Do 2 poles first (singularity) via nearest pt
+        tmp1=maxval(buf4(1:np_global))
+        if(abs(tmp1-90.d0)<0.2d0) then !make sure it's close enough
+          nwild=maxloc(buf4(1:np_global)) !needa an array
+          isal_int(180,:)=nwild(1) !global node #
+          !write(12,*)'Max lat for north pole=',tmp1
+        endif !abs
+        tmp1=minval(buf4(1:np_global))
+        if(abs(tmp1-90.d0)<0.2d0) then !make sure it's close enough
+          nwild=minloc(buf4(1:np_global))
+          isal_int(0,:)=nwild(1)
+          !write(12,*)'Min lat for north pole=',tmp1
+        endif !abs
+
+        !Other lat than poles
+        do ie=1,ne_global
+          do i=0,359 !lon
+            xtmp=i !lon
+            !Test closest lon (jump) by shifting \pm 360
+            do m=1,nwild2(ie)
+              nd=nwild3(m,ie)
+              swild(1)=buf3(nd)
+              swild(2)=buf3(nd)+360.d0
+              swild(3)=buf3(nd)-360.d0
+              swild3(m)=minval(abs(swild(1:3)-xtmp)) !modified lon
+            enddo !m
+
+            !Add cushion for jump in lon
+            if(xtmp<minval(swild3(1:nwild2(ie)))-0.3d0.or.xtmp>maxval(swild3(1:nwild2(ie)))+0.3d0) cycle
+            do j=1,179 !co-lat
+              ytmp=j-90.d0 !lat
+              if(ytmp<minval(buf4(nwild3(1:nwild2(ie),ie)))-0.3d0.or. &
+                &ytmp>maxval(buf4(nwild3(1:nwild2(ie),ie)))+0.3d0) cycle 
+
+              swild(1:nwild2(ie))=(xtmp-swild3(1:nwild2(ie)))**2.d0+(ytmp-buf4(nwild3(1:nwild2(ie),ie)))**2.d0 !distance^2
+              nwild=minloc(swild(1:nwild2(ie)))
+              tmp=minval(swild(1:nwild2(ie)))
+              if(tmp<swild99(j,i)) then
+                swild99(j,i)=tmp
+                isal_int(j,i)=nwild3(nwild(1),ie) !save global node #
+              endif !tmp
+            enddo !j
+          enddo !i
+        enddo !ie
+
+        !Debug
+        nd=0
+        write(99,*)'Gaussian'
+        write(99,*)360*181
+        do i=0,359
+          do j=0,180
+            nd=nd+1
+            write(99,*)nd,i,j-90,isal_int(j,i)
+          enddo !j
+        enddo !i
+        deallocate(nwild3,swild99)
+      endif !iloadtide==4.and.myrank==0
+      call parallel_finalize
+      stop
 
 !-------------------------------------------------------------------------------
 ! Read in boundary condition and tidal info
