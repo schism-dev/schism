@@ -82,6 +82,10 @@ module schism_glbl
   integer,parameter :: natrm=12 !# of _available_ tracer models at the moment (including T,S)
   integer,parameter :: mntracers=30 !max # of tracers, used only for dimensioning btrack arrays. Must >=ntracers
 
+  !# of lon/lat pts used in global Gaussian grid (for sphereical SAL)
+  !Please do not change this - some code is hardwired
+  integer,parameter :: nlon_gs=360,nlat_gs=181
+
   !Parameters from param.nml
   integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,iwindoff, &
                   &ibc,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &

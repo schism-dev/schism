@@ -6724,34 +6724,31 @@
       !subroutine selfattraction(avhs, self, i1, i2, j1, j2,jaselfal)
       subroutine selfattraction
         use schism_glbl, only : rkind,pi,npa,saltide,eta2,xlon,ylat,iplg,area,np_global,np, &
-               &isal_int,dp,errmsg
+               &nlon_gs,nlat_gs,isal_int,dp,errmsg
         use schism_msgp, only : parallel_abort,rtype,itype,comm,myrank,parallel_finalize
         use spherepack, only: shaec, shaeci, shsec, shseci
         implicit none
         include 'mpif.h'
   
         !Hardwire 1 deg resolution
-        integer, parameter :: nlat=181,nlon=360,lsave=nlat*(nlat+1)+3*((nlat-2)*(2*nlat-nlat-1)+nlon+15)
+!        integer, parameter :: nlat=181,nlon=360,
+        integer, parameter :: lsave=nlat_gs*(nlat_gs+1)+3*((nlat_gs-2)*(2*nlat_gs-nlat_gs-1)+nlon_gs+15)
 !        integer, intent(in) :: i1, i2, j1, j2 !, jaselfal
 !        real(rkind), parameter :: Me = 5.9726e24, R = 6371e3, g = 9.81, pi = 4.0 * atan(1.0), rhow = 1.0240164e3, rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
-!        integer :: nlat, nlon, lsave
         real(rkind) :: Me,R,rhow,rhoe
         integer :: i,j,ierror,isym,nt,l,mdab,ndab,k1,k3(1),ie,nd,iwork1(np_global),iwork2(np_global)
         !avhs: gathered SSH and interpolated onto 1 deg regular lon/lat grid 
 !        real(rkind) :: avhs(0:359,-90:90),self(0:359,-90:90)
         real(rkind) :: llnh(0:1024),llnk(0:1024),wshaec(lsave),wshsec(lsave)
-        real(rkind) :: a(nlat,nlat), b(nlat,nlat)
-        real(rkind) :: avhs1(0:180,0:359),self1(0:180,0:359)
+        real(rkind) :: a(nlat_gs,nlat_gs), b(nlat_gs,nlat_gs)
+        real(rkind) :: avhs1(0:nlat_gs-1,0:nlon_gs-1),self1(0:nlat_gs-1,0:nlon_gs-1) !0:180,0:359)
         real(rkind) :: eta_gb(np_global),work1(np_global)
 !        real(rkind) :: tmp1,tmp2,buf(2,1),buf2(2,1),xl2,yl2
   
         Me = 5.9726e24; R = 6371e3; rhow = 1.0240164e3 
         rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
-!        nlat = 181
-!        nlon = 360
-!        lsave = nlat * (nlat + 1) + 3 * ((nlat - 2) * (2 * nlat - nlat - 1) + nlon + 15)
-        mdab = nlat
-        ndab = nlat
+        mdab = nlat_gs
+        ndab = nlat_gs
   
 !        allocate (wshaec(1:lsave))
 !        allocate (wshsec(1:lsave))
@@ -6819,8 +6816,8 @@
           isym = 0
           nt = 1
           !Spherical harmonic analysis
-          call shaeci(nlat,nlon,wshaec,ierror)
-          call shaec(nlat,nlon,isym,nt,avhs1,nlat,nlon,a,b,mdab,ndab,wshaec,ierror)
+          call shaeci(nlat_gs,nlon_gs,wshaec,ierror)
+          call shaec(nlat_gs,nlon_gs,isym,nt,avhs1,nlat_gs,nlon_gs,a,b,mdab,ndab,wshaec,ierror)
   
           !Multiplication in spherical harmonic space (=convolution)
 !        if (jaselfal == 2) then
@@ -6841,8 +6838,8 @@
 !        end if
   
           !Spherical harmonic synthesis (inverse transform)
-          call shseci(nlat,nlon,wshsec,ierror)
-          call shsec(nlat,nlon,isym,nt,self1,nlat,nlon,a,b,mdab,ndab,wshsec,ierror)
+          call shseci(nlat_gs,nlon_gs,wshsec,ierror)
+          call shsec(nlat_gs,nlon_gs,isym,nt,self1,nlat_gs,nlon_gs,a,b,mdab,ndab,wshsec,ierror)
   
         !May not need this conversion - just use self1 directly
         !self1 is defined on the same grid than avhs1, we put it back in the same grid as avhs
@@ -6858,8 +6855,10 @@
 !          k1=k1+1
 !        enddo !i
 
-          !Interpolate back to UG; saltide has same unit as etp
         endif !myrank==0
+
+        !Bcast self1
+        !Interpolate back to UG; saltide has same unit as etp
 
       end subroutine selfattraction
   

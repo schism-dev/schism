@@ -1481,7 +1481,7 @@
       endif !nws
 
       if(iloadtide==4) then
-        allocate(saltide(npa),isal_int(0:180,0:359),stat=istat)
+        allocate(saltide(npa),isal_int(0:nlat_gs-1,0:nlon_gs-1),stat=istat)
         if(istat/=0) call parallel_abort('INIT: failed to alloc saltide')
       endif !iloadtide
 
@@ -2372,6 +2372,7 @@
         enddo !i
         close(32)
 
+        aux1=0.3d0 !distance tolerance (deg) used below
         swild99=huge(1.d0) !init for min distance
         isal_int=-1 !init
 
@@ -2380,13 +2381,13 @@
         if(abs(tmp1-90.d0)<0.2d0) then !make sure it's close enough
           nwild=maxloc(buf4(1:np_global)) !needa an array
           isal_int(180,:)=nwild(1) !global node #
-          !write(12,*)'Max lat for north pole=',tmp1
+          !write(98,*)'Max lat for north pole=',tmp1
         endif !abs
         tmp1=minval(buf4(1:np_global))
         if(abs(tmp1-90.d0)<0.2d0) then !make sure it's close enough
           nwild=minloc(buf4(1:np_global))
           isal_int(0,:)=nwild(1)
-          !write(12,*)'Min lat for north pole=',tmp1
+          !write(98,*)'Min lat for south pole=',tmp1
         endif !abs
 
         !Other lat than poles
@@ -2399,21 +2400,25 @@
               swild(1)=buf3(nd)
               swild(2)=buf3(nd)+360.d0
               swild(3)=buf3(nd)-360.d0
-              swild3(m)=minval(abs(swild(1:3)-xtmp)) !modified lon
+              nwild=minloc(abs(swild(1:3)-xtmp))
+              swild3(m)=swild(nwild(1)) !modified lon
             enddo !m
 
             !Add cushion for jump in lon
-            if(xtmp<minval(swild3(1:nwild2(ie)))-0.3d0.or.xtmp>maxval(swild3(1:nwild2(ie)))+0.3d0) cycle
+            if(xtmp<minval(swild3(1:nwild2(ie)))-aux1.or.xtmp>maxval(swild3(1:nwild2(ie)))+aux1) cycle
             do j=1,179 !co-lat
               ytmp=j-90.d0 !lat
-              if(ytmp<minval(buf4(nwild3(1:nwild2(ie),ie)))-0.3d0.or. &
-                &ytmp>maxval(buf4(nwild3(1:nwild2(ie),ie)))+0.3d0) cycle 
+              if(ytmp<minval(buf4(nwild3(1:nwild2(ie),ie)))-aux1.or. &
+                &ytmp>maxval(buf4(nwild3(1:nwild2(ie),ie)))+aux1) cycle 
 
               swild(1:nwild2(ie))=(xtmp-swild3(1:nwild2(ie)))**2.d0+(ytmp-buf4(nwild3(1:nwild2(ie),ie)))**2.d0 !distance^2
-              nwild=minloc(swild(1:nwild2(ie)))
               tmp=minval(swild(1:nwild2(ie)))
-              if(tmp<swild99(j,i)) then
+
+              !Add upper bound for tmp to deal with land pts (bounds 
+              !for xtmp above can be very large for some elem)
+              if(tmp<aux1*aux1.and.tmp<swild99(j,i)) then
                 swild99(j,i)=tmp
+                nwild=minloc(swild(1:nwild2(ie)))
                 isal_int(j,i)=nwild3(nwild(1),ie) !save global node #
               endif !tmp
             enddo !j
@@ -2421,19 +2426,24 @@
         enddo !ie
 
         !Debug
-        nd=0
-        write(99,*)'Gaussian'
-        write(99,*)360*181
-        do i=0,359
-          do j=0,180
-            nd=nd+1
-            write(99,*)nd,i,j-90,isal_int(j,i)
-          enddo !j
-        enddo !i
-        deallocate(nwild3,swild99)
+!        nd=0
+!        write(99,*)'Gaussian'
+!        write(99,*)360*181
+!        do i=0,359
+!          itmp=i
+!          if(itmp>180) itmp=itmp-360
+!          do j=0,180
+!            nd=nd+1
+!            write(99,*)nd,itmp,j-90,isal_int(j,i)
+!          enddo !j
+!        enddo !i
+!        close(99)
+!        close(98)
 
-        call parallel_finalize
-        stop
+!        call parallel_finalize
+!        stop
+
+        deallocate(nwild3,swild99)
       endif !iloadtide==4.and.myrank==0
 
 !-------------------------------------------------------------------------------
