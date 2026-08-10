@@ -1,5 +1,5 @@
 name: stofs3d_v7p4
-workdir: /sciclone/schism10/hjyoo/task/task10_Atlantic/stofs3d-setup_v7p4/stofs3d-setup_v1/src/stofs3d_setup/ops/Bathy_edit/DEM_loading
+workdir: ./
 input_grid: hgrid.ll
 output_grid: hgrid.ll.dem_loaded.mpi.gr3
 dem_dir: /sciclone/schism10/Hgrid_projects/DEMs/npz3

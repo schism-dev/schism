@@ -1,5 +1,5 @@
 name: stofs3d_v7_hercules
-workdir: /work/noaa/nosofs/feiye/STOFS-3D-Atl-Example-Setup/DEM_loading_example
+workdir: ./
 input_grid: hgrid.ll
 output_grid: hgrid.ll.dem_loaded.mpi.gr3
 dem_dir: /work2/noaa/nos-surge/feiye/npz2

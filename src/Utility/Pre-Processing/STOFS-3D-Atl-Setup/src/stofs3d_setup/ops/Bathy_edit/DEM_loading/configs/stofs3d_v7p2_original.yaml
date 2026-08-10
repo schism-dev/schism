@@ -1,5 +1,5 @@
 name: stofs3d_v7p2_original
-workdir: /sciclone/schism10/feiye/STOFS3D-v8/I15g_v7/Bathy_edit/DEM_loading
+workdir: ./
 input_grid: hgrid.ll
 output_grid: hgrid.ll.dem_loaded.mpi.gr3
 dem_dir: /sciclone/schism10/Hgrid_projects/DEMs/npz2
