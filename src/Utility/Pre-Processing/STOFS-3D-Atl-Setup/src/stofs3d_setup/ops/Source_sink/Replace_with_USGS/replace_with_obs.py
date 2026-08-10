@@ -243,6 +243,43 @@ def associate_poi_with_nwm(
 
     # query k nearest centroid neighbors
     k = 10
+
+    #################################################
+    # exclude the NaN of Inf station (lon/lat) - HJ #
+    #################################################
+    poi = np.asarray(poi, dtype=float)
+    poi_names = np.asarray(poi_names)
+
+    print(f"poi shape: {poi.shape}")
+    print(f"NaN in poi: {np.isnan(poi).sum()}")
+    print(f"Inf in poi: {np.isinf(poi).sum()}")
+
+    bad_poi = ~np.isfinite(poi).all(axis=1)
+
+    if bad_poi.any():
+        print("Invalid USGS stations:")
+        for name, xy in zip(poi_names[bad_poi], poi[bad_poi]):
+            print(
+                f"  station={name}, "
+                f"lon={xy[0]}, lat={xy[1]}"
+            )
+
+        pd.DataFrame(
+            {
+                "station_id": poi_names[bad_poi],
+                "longitude": poi[bad_poi, 0],
+                "latitude": poi[bad_poi, 1],
+            }
+        ).to_csv(
+            "invalid_usgs_station_coordinates.csv",
+            index=False,
+        )
+
+        poi = poi[~bad_poi]
+        poi_names = poi_names[~bad_poi]
+
+    ################################################
+
     dist, idx = seg_tree.query(poi, k=k)   # (n_poi, k)
 
     # enforce threshold (10 km ≈ 0.1°)

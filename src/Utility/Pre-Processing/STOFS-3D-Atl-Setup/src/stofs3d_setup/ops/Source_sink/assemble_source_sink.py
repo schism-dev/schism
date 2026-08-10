@@ -12,6 +12,7 @@ from .NWM.gen_sourcesink_nwm import gen_sourcesink_nwm
 from .Constant_sinks.set_constant_sink import set_constant_sink
 from .Relocate.relocate_source_feeder import relocate_sources2
 from .Replace_with_USGS.replace_with_obs import source_nwm2usgs
+from .Patch_artificial_island.patch_artificial_island_source_sink import patch_artificial_island_source_sink, zero_artificial_island_sources_after_replace_USGS_before_relocation#HJ
 from ...utils.utils import mkcd_new_dir, STOFS3D_ATL_STATES
 from ...utils.projection import project_geodataframe
 from pylib_experimental.schism_file import source_sink, TimeHistory
@@ -186,6 +187,7 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
         config.nwm_cache_folder = actual_nwm_cache_folder
     # '''
 
+
     # ---------------------- replace NWM sources with USGS observed flow rates ----------------------
     # Note: this is optional, depending on the availability of USGS data
     if config.replace_nwm_with_usgs:
@@ -205,6 +207,26 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
                 else Path(model_input_path) / 'USGS_cache'
             ),
         )
+
+    # --------------------- exclude the user-defined sources near artificial island -----------------
+    artificial_island_info = config.artificial_island_source_sink_info
+
+    if artificial_island_info is not None:
+        zero_artificial_island_sources_after_replace_USGS_before_relocation(
+            source_sink_dir=f'{wdir}/original_source_sink/',
+            hgrid_file=(
+                config.hgrid_without_feeders
+                if config.hgrid_without_feeders is not None
+                else f'{model_input_path}/hgrid.gr3'
+            ),
+            patch_info_file=artificial_island_info,
+            output_dir=(
+                f'{wdir}/'
+                'zeroed_sources_after_replace_USGS_before_relocation/'
+            ),
+        )
+
+    # -----------------------------------------------------------------------------------------------
 
     # A single NWM segment weaving in and out will create duplicate sources/sinks
     # , so it is not necessary to remove duplicates here.
@@ -301,6 +323,42 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
             base_ss.writer(f'{wdir}/relocated_source_sink/')
     else:
         base_ss = source_sink.from_files(f'{wdir}/original_source_sink/')
+
+
+    #------------ patch artificial island source and sinks ----------------
+
+    artificial_island_info = config.artificial_island_source_sink_info
+
+    if artificial_island_info is not None:
+        patch_output_dir = (
+                f'{wdir}/patch_artificial_island_source_sink/'
+        )
+        mkcd_new_dir(patch_output_dir)
+        os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
+
+        base_ss = patch_artificial_island_source_sink(
+                base_ss = base_ss,
+                hgrid=hgrid,
+                original_source_sink_dir=(
+                    f'{wdir}/original_source_sink/'
+                ),
+                relocated_source_sink_dir=(
+                    f'{wdir}/relocated_source_sink/'
+                ),
+                patch_info_file = artificial_island_info,
+                start_time = config.startdate,
+                rnday=config.rnday,
+                usgs_cache_folder=(
+                    config.usgs_cache_folder
+                    if config.usgs_cache_folder is not None
+                    else Path(model_input_path) / 'USGS_cache'
+                ),
+                nwm_shapefile = (
+                    "/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp"
+                ),
+                output_dir = patch_output_dir,
+        )
+
 
     # ---------- set constant sinks (pumps and background sinks) ----------
     mkcd_new_dir(f'{wdir}/constant_sink/')

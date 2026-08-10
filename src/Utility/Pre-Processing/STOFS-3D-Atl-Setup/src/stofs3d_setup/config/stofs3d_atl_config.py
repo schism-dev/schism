@@ -336,10 +336,10 @@ class ConfigStofs3dAtlantic(BaseModel):
             nwm_cache_folder=None,
             source_ele_replace_dict={},
             constant_sink_shapefile=(
-                '/sciclone/home/feiye/stofs3d-atl/STOFS-3D-Atl-Setup/src/'
-                'stofs3d_setup/ops/Source_sink/Constant_sinks/'
-                'levee_pump_polys_2026_with_poly_type.shp'
+                STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
+                'Constant_sinks' / 'levee_pump_polys_2026_with_poly_type.shp'
             ),
+            #artificial_island_source_sink_info= None,
             artificial_island_source_sink_info=(
                 STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
                 'Patch_artificial_island' / 'artificial_island_source_sink.yml'

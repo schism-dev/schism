@@ -1,6 +1,221 @@
-# Version-specific source/sink patch information for artificial island rivers.
+# Version-specific source/sink patch information for artificial-island rivers.
 #
-# Per-run YAML can override this default with:
-#   model:
-#     artificial_island_source_sink_info: "/path/to/artificial_island_source_sink.yml"
-patches: []
+# Artificial-island and relocated-source patch configuration.
+#
+# Detailed parameter descriptions and processing order are documented in:
+#
+# Patch_artificial_island/patch_artificial_island_source_sink.py
+#
+# Supported patch types:
+#
+# 1. force_source_sink_locations
+#
+# Create a new source or sink at the nearest main-grid element.
+# Original forcing is restored when available. For source entries,
+# flow and temperature may optionally be replaced with USGS observations.
+#
+# 2. replace_only_source_locations
+#
+# Replace flow and/or temperature in an existing relocated source.
+# This operation does not create, remove, or move the source element.
+#
+# 3. large_constant_sink_artificial_island_locations
+#
+# Add a constant sink of -1000 m3/s at the main-grid element nearest
+# each specified x/y location.
+#
+# No NWM feature search or upstream-network analysis is performed.
+# If a sink already exists at the selected element, -1000 m3/s is
+# added to the existing sink time series.
+#
+# 4. exclude_source_sink_locations
+#
+# Remove existing source and/or sink columns whose element centers
+# lie within the specified radius.
+#
+# 5. remove_source_locations_in_artificial_island
+#
+# Before source relocation, set the vsource time series to zero for
+# original source elements located within the fixed search radius of
+# each specified x/y location.
+#
+# The source element remains in source_sink.in and sources.json.
+# Only its vsource values are set to zero.
+#
+# A per-run YAML file can override this default through:
+#
+# model:
+#   artificial_island_source_sink_info: "/path/to/artificial_island_source_sink.yml"
+#
+#
+
+
+# ----------------------------------------------------------------------
+# Create artificial-island sources or sinks.
+#
+# x and y specify the target location on the main grid.
+#
+# max_search_radius_m determines whether nearby original forcing is
+# considered a direct match.
+#
+# For source entries:
+#   use_usgs_obs:
+#     Replace available flow and temperature records with USGS data.
+#     Original forcing is retained where USGS data are unavailable.
+#
+#   allow_negative_sink:
+#     Move negative source-flow values to a sink at the same element
+#     and clip the source flow to zero.
+# ----------------------------------------------------------------------
+
+force_source_sink_locations:
+  - name: "Wando"
+    source_sink_type: "source"
+    x: -79.6996536667
+    y: 32.9802923333
+    max_search_radius_m: 1500.0
+    allow_negative_sink: false
+    use_usgs_obs: true
+
+  - name: "Turkey"
+    source_sink_type: "source"
+    x: -79.82117533
+    y: 33.12041400
+    max_search_radius_m: 500.0
+    allow_negative_sink: false
+    use_usgs_obs: true
+
+  - name: "Buffalo Bluff"
+    source_sink_type: "source"
+    x: -81.683455
+    y: 29.58590625
+    max_search_radius_m: 500.0
+    allow_negative_sink: true
+    use_usgs_obs: true
+
+  - name: "Dunns Creek"
+    source_sink_type: "source"
+    x: -81.630815333
+    y: 29.588973333
+    max_search_radius_m: 500.0
+    allow_negative_sink: true
+    use_usgs_obs: true
+
+# ----------------------------------------------------------------------
+# Replace flow and/or temperature in existing relocated sources.
+#
+# These entries never create, remove, or move a source element.
+#
+# max_search_radius_m is the maximum allowed distance between the
+# specified x/y location and the matched relocated source element.
+# ----------------------------------------------------------------------
+
+replace_only_source_locations:
+  - name: "Delaware"
+    x: -74.9432325
+    y: 40.3422775
+    max_search_radius_m: 500.0
+    replace_flow: true
+    replace_temperature: true
+    allow_negative_sink: false
+
+  - name: "Hudson River"
+    x: -73.693816
+    y: 42.73321625
+    max_search_radius_m: 500.0
+    replace_flow: true
+    replace_temperature: true
+    allow_negative_sink: false
+
+
+# ----------------------------------------------------------------------
+# Add large constant sinks near artificial-island locations.
+#
+# For each x/y location, the nearest main-grid element is selected and
+# a constant sink of -1000 m3/s is applied for the full model period.
+#
+# No NWM feature ID or upstream-network search is performed.
+#
+# If a sink already exists at the selected element, -1000 m3/s is
+# added to the existing sink forcing.
+# ----------------------------------------------------------------------
+
+large_constant_sink_artificial_island_locations:
+  - name: "Wando"
+    x: -79.699338
+    y: 32.982254
+
+  - name: "Turkey"
+    x: -79.820038
+    y: 33.121854
+
+  - name: "Buffalo Bluff"
+    x: -81.683949
+    y: 29.584587
+
+  - name: "Clyo"
+    x: -81.269874
+    y: 32.529153
+
+  - name: "Moultrie"
+    x: -79.974086
+    y: 33.211381
+
+# ----------------------------------------------------------------------
+# Remove existing source and/or sink forcing near selected locations.
+#
+# Each entry should include:
+#   x, y:
+#     Center of the exclusion area.
+#
+#   radius_m:
+#     Search radius in meters.
+#
+#   remove:
+#     May contain "source", "sink", or both.
+# ----------------------------------------------------------------------
+
+exclude_source_sink_locations:
+
+# ----------------------------------------------------------------------
+# Set original source flow to zero before relocation.
+#
+# This operation is applied after USGS flow replacement and before
+# source relocation.
+#
+# For each x/y location, original source elements within the fixed
+# search radius are retained, but their complete vsource time series
+# is set to zero.
+#
+# This operation does not remove source elements and does not modify:
+#   source_sink.in
+#   sources.json
+#   sinks.json
+#   msource.th
+#   vsink.th
+# ----------------------------------------------------------------------
+
+remove_source_locations_in_artificial_island:
+  - name: "Buffalo Bluff"
+    x: -81.683455
+    y: 29.58590625
+
+  - name: "Wando"
+    x: -79.6996536667
+    y: 32.9802923333
+
+  - name: "Turkey"
+    x: -79.82117533
+    y: 33.12041400
+
+  - name: "Buffalo Bluff"
+    x: -81.683455
+    y: 29.58590625
+
+  - name: "Clyo"
+    x: -81.2687900
+    y: 32.5287988
+
+  - name: "Moultrie"
+    x: -79.9726690
+    y: 33.2072897
