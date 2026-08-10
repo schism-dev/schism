@@ -83,6 +83,9 @@
 ! SAL is applied everywhere and does not share parameters with tidal potential).
 ! For iloadtide=2, a const scaling (1-loadtide_coef) is used; for iloadtide=3, the scaling is 
 ! dependent on depth (Stepanov & Hughes 2004) with max of loadtide_coef.
+! If iloadtide=4, use spherical harmonics via a global Gaussian grid of 1 deg 
+! resolution to calculate SAL. In this case, the lon range must be either 
+! [-180,180] or [0,360]!
 !-----------------------------------------------------------------------
   iloadtide = 0
   loadtide_coef = 0.1 !only used if iloadtide=2,3 (for '3', the default should be 0.12)

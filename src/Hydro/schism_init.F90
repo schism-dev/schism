@@ -2358,7 +2358,8 @@
 
 #endif /*USE_WWM*/
 
-!...  Calculate interpolation weights (nearest global node) for spherical SAL
+!...  Calculate interpolation info (nearest global node) for spherical SAL
+      !lon range must be either [-180,180] or [0,360]!
       if(iloadtide==4.and.myrank==0) then !ics=2; only rank 0 doing global operation
         allocate(nwild3(4,ne_global),swild99(0:180,0:359),stat=istat) !conn table 
         if(istat/=0) call parallel_abort('INIT: alloc nwild3')
@@ -2381,13 +2382,13 @@
         if(abs(tmp1-90.d0)<0.2d0) then !make sure it's close enough
           nwild=maxloc(buf4(1:np_global)) !needa an array
           isal_int(180,:)=nwild(1) !global node #
-          !write(98,*)'Max lat for north pole=',tmp1
+          write(12,*)'Max lat for north pole=',tmp1
         endif !abs
         tmp1=minval(buf4(1:np_global))
         if(abs(tmp1-90.d0)<0.2d0) then !make sure it's close enough
           nwild=minloc(buf4(1:np_global))
           isal_int(0,:)=nwild(1)
-          !write(98,*)'Min lat for south pole=',tmp1
+          write(12,*)'Min lat for south pole=',tmp1
         endif !abs
 
         !Other lat than poles
@@ -2404,7 +2405,8 @@
               swild3(m)=swild(nwild(1)) !modified lon
             enddo !m
 
-            !Add cushion for jump in lon
+            !Add cushion for jump in lon. At continental land pt this condition
+            !may cycle for most pts except when range is very large (near some jump)
             if(xtmp<minval(swild3(1:nwild2(ie)))-aux1.or.xtmp>maxval(swild3(1:nwild2(ie)))+aux1) cycle
             do j=1,179 !co-lat
               ytmp=j-90.d0 !lat
@@ -2421,8 +2423,8 @@
                 nwild=minloc(swild(1:nwild2(ie)))
                 isal_int(j,i)=nwild3(nwild(1),ie) !save global node #
               endif !tmp
-            enddo !j
-          enddo !i
+            enddo !j=1,179
+          enddo !i=0,359
         enddo !ie
 
         !Debug
@@ -2439,9 +2441,6 @@
 !        enddo !i
 !        close(99)
 !        close(98)
-
-!        call parallel_finalize
-!        stop
 
         deallocate(nwild3,swild99)
       endif !iloadtide==4.and.myrank==0

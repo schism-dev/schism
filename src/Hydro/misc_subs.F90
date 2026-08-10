@@ -6736,7 +6736,7 @@
 !        integer, intent(in) :: i1, i2, j1, j2 !, jaselfal
 !        real(rkind), parameter :: Me = 5.9726e24, R = 6371e3, g = 9.81, pi = 4.0 * atan(1.0), rhow = 1.0240164e3, rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
         real(rkind) :: Me,R,rhow,rhoe
-        integer :: i,j,ierror,isym,nt,l,mdab,ndab,k1,k3(1),ie,nd,iwork1(np_global),iwork2(np_global)
+        integer :: i,j,itmp,ierror,isym,nt,l,mdab,ndab,k1,k3(1),ie,nd,iwork1(np_global),iwork2(np_global)
         !avhs: gathered SSH and interpolated onto 1 deg regular lon/lat grid 
 !        real(rkind) :: avhs(0:359,-90:90),self(0:359,-90:90)
         real(rkind) :: llnh(0:1024),llnk(0:1024),wshaec(lsave),wshsec(lsave)
@@ -6778,7 +6778,11 @@
         iwork1=0
         do i=1,np
           nd=iplg(i)
-          work1(nd)=eta2(i)  
+
+          if(dp(i)>0.d0) then !make sure it's deep enough
+            work1(nd)=eta2(i)
+          endif !dp
+
           iwork1(nd)=iwork1(nd)+1
         enddo !i
         call mpi_reduce(work1,eta_gb,np_global,rtype,MPI_SUM,0,comm,ierror)
@@ -6791,27 +6795,34 @@
               call parallel_abort(errmsg)
             endif
             eta_gb(i)=eta_gb(i)/dble(iwork2(i))
+
+            !write(99,*)i,eta_gb(i)
           enddo !i
 
+          !Interp onto Gaussian grid (1 deg)
           !avhs1(i,j) contains the waterlevel on the point with longitude phi(j)=(j-1)*360/nlon
           !and colatitude theta(i)=(i-1)*180/nlat
           !If avhs1 is smaller then 0 is chosen at the location of the missing values
           avhs1=0.d0 !init for land etc
+          nt=0 !debug
           do i=0,359 
             do j=-90,90
-              nd=isal_int(j+90,i)
-              if(dp(nd)>-1.d0) then !make sure it's deep enough
-                avhs1(j,i)=eta_gb(nd)
-              endif !dp
+              nd=isal_int(j+90,i) !global node # or -1
+              if(nd>0) avhs1(j,i)=eta_gb(nd)
+
+              !Debug
+!              nt=nt+1
+!              itmp=i
+!              if(itmp>180) itmp=itmp-360
+!              write(98,*)nt,itmp,j,real(avhs1(j,i)),nd
             enddo !j
           enddo !i
+!          close(98)
+!          close(99)
 
           !Load Love numbers
           call loadlovenumber(llnh, llnk)
 
-          call parallel_finalize
-          stop
-  
           !Computation
           isym = 0
           nt = 1
@@ -6855,10 +6866,23 @@
 !          k1=k1+1
 !        enddo !i
 
+          !Debug
+          nd=0
+          do i=0,359
+            do j=0,180
+              nd=nd+1
+              write(99,*)nd,i,j-90,real(self1(j,i))
+            enddo !j
+          enddo !i
+          close(99)
+
         endif !myrank==0
 
+        call parallel_finalize
+        stop
+  
         !Bcast self1
-        !Interpolate back to UG; saltide has same unit as etp
+        !Interpolate back to UG; saltide has same unit as etp [m]
 
       end subroutine selfattraction
   
