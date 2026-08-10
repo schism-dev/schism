@@ -5,6 +5,7 @@ import geopandas as gpd
 import numpy as np
 from copy import deepcopy
 from shapely.geometry import Point
+from stofs3d_setup.utils.projection import project_geodataframe
 
 gd1 = read_schism_hgrid_cached('Original/hgrid.ll.dem_loaded.gr3')
 gd2 = read_schism_hgrid_cached('BlueTopo/hgrid.ll.dem_loaded.gr3')
@@ -17,7 +18,12 @@ region_gdf.set_crs('esri:102008', inplace=True)
 # points_gdf = gpd.GeoDataFrame(geometry=points_list, crs='epsg:4326')
 points_gdf = gpd.GeoDataFrame(geometry=gpd.points_from_xy(x=gd1.x, y=gd1.y), crs='epsg:4326')
 
-points_in_region = gpd.sjoin(points_gdf, region_gdf.to_crs('epsg:4326'), how='inner', op='within').index.values
+region_geographic = project_geodataframe(
+    region_gdf, 'epsg:4326', "maximum-depth region projection to geographic CRS"
+)
+points_in_region = gpd.sjoin(
+    points_gdf, region_geographic, how='inner', op='within'
+).index.values
 print(f'{len(points_in_region)} nodes in region.')
 
 # get the max depth in the region

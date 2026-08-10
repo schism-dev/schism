@@ -11,6 +11,7 @@ there is no manual refinement.
 
 import os
 import geopandas as gpd
+from stofs3d_setup.utils.projection import project_geodataframe
 
 # ------------------------- inputs ---------------------------
 WDIR = '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Clip/'
@@ -91,13 +92,17 @@ if manual_clipping_in_qgis:
 watershed = gpd.read_file(f'{output_dir}/watershed.shp')
 
 # clip the auto arcs to the watershed boundary
-total_arcs = gpd.read_file(auto_arcs_file).to_crs(CRS)
+total_arcs = project_geodataframe(
+    gpd.read_file(auto_arcs_file), CRS, "automatic river-arc projection"
+)
 total_arcs_clipped = total_arcs.clip(watershed)
 total_arcs_clipped.to_file(f'{output_dir}/total_arcs_clipped.shp', crs=CRS)
 
 # clip the polygons formed by auto arcs to the watershed boundary;
 # this step may fail, in that case do it manually in qgis
-total_arcs_polygons = gpd.read_file(auto_polys_file).to_crs(CRS)
+total_arcs_polygons = project_geodataframe(
+    gpd.read_file(auto_polys_file), CRS, "automatic river-polygon projection"
+)
 total_arcs_polygons_clipped = total_arcs_polygons.buffer(0).clip(watershed)
 # put total_arcs_polygons_clipped back to gdf and dissolve
 total_arcs_polygons_clipped = gpd.GeoDataFrame(geometry=total_arcs_polygons_clipped).dissolve()

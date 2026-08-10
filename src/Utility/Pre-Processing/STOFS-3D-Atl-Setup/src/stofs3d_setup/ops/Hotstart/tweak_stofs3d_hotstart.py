@@ -13,6 +13,7 @@ from pylib import schism_grid
 from .download_cbp_hotstart import get_cbp_obs_for_stofs3d
 from .download_usgs_hotstart import get_usgs_obs_for_stofs3d
 from .replace_eta2_aviso import interp_to_points_2d, transform_ll_to_cpp
+from stofs3d_setup.utils.projection import project_geodataframe
 
 
 FALLBACK_OBS_DATE = '2017-12-01'
@@ -187,7 +188,11 @@ def find_nodes_in_shapefile(hgrid, shapefile_fname, crs):
     if 'type' in polygon_gdf.columns:
         polygon_gdf = polygon_gdf[polygon_gdf['type'].fillna('').str.lower() != 'water'].copy()
     if hg_points.crs != polygon_gdf.crs:
-        hg_points = hg_points.to_crs(polygon_gdf.crs)
+        hg_points = project_geodataframe(
+            hg_points,
+            polygon_gdf.crs,
+            "hotstart hgrid-point projection to polygon CRS",
+        )
     ids = gpd.sjoin(hg_points, polygon_gdf, predicate='within', how='inner').index
     idx_mask = np.zeros(hgrid.dp.shape, dtype=bool)
     idx_mask[ids] = True

@@ -23,6 +23,7 @@ from matplotlib import pyplot as plt
 from pylib import read
 from pylib_experimental.schism_file import source_sink, TimeHistory
 from physics import SoilParams, compute_fluxes
+from stofs3d_setup.utils.projection import project_grid, transform_points
 
 # -----------------------------------------------------------------------------
 # Variable alias mapping
@@ -97,7 +98,7 @@ def lonlat_to_ldas_xy(lon, lat, proj4_str=None):
     crs_wgs84 = CRS.from_epsg(4326)
     crs_ldas = CRS.from_proj4(proj4_str)
     tf = Transformer.from_crs(crs_wgs84, crs_ldas, always_xy=True)
-    x, y = tf.transform(lon, lat)   # returns in meters
+    x, y = transform_points(tf, lon, lat, "NWM LDAS coordinate projection")
     return np.asarray(x), np.asarray(y)
 
 
@@ -534,7 +535,7 @@ def prepare_schism_face_areas_in_m2(schism_gd):
     Project SCHISM grid to an equal-area projection and compute face areas.
     Modifies schism_gd in place.
     """
-    schism_gd.proj(prj0="EPSG:4326", prj1="esri:102008")
+    project_grid(schism_gd, "EPSG:4326", "esri:102008")
     schism_gd.compute_area()
 
 

@@ -11,6 +11,7 @@ try:
 except ImportError:
     from pylib import read as schism_read
 from pylib import grd2sms, schism_grid
+from stofs3d_setup.utils.projection import project_geodataframe
 
 
 def load_NCF(hgrid_obj: schism_grid, NCF_shpfile: Path, buf: float = 4.0):
@@ -30,7 +31,17 @@ def load_NCF(hgrid_obj: schism_grid, NCF_shpfile: Path, buf: float = 4.0):
     NCF_data = NCF_data.explode(index_parts=True)
 
     print('Enlarging the NCF polygons...\n')
-    NCF_data['geometry'] = NCF_data['geometry'].to_crs('esri:102008').buffer(buf).to_crs('epsg:4326')
+    NCF_projected = project_geodataframe(
+        NCF_data,
+        'esri:102008',
+        "NCF polygon projection to equal-area CRS",
+    )
+    NCF_projected.geometry = NCF_projected.geometry.buffer(buf)
+    NCF_data = project_geodataframe(
+        NCF_projected,
+        'epsg:4326',
+        "NCF buffered-polygon projection to geographic CRS",
+    )
 
     print('setting dp at points inside the NCF polygons...\n')
     # put hgrid points into a Point GeoDataFrame

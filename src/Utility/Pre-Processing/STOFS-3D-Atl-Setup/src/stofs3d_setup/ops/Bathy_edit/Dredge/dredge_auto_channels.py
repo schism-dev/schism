@@ -9,6 +9,7 @@ import numpy as np
 import geopandas as gpd
 
 from pylib_essentials.schism_file import read_schism_hgrid_cached, grd2sms, schism_grid
+from stofs3d_setup.utils.projection import project_geodataframe
 
 def dredge_auto_channels(hgrid_obj:schism_grid, dredge_polygon_file, dredge_depth):
     '''
@@ -21,7 +22,15 @@ def dredge_auto_channels(hgrid_obj:schism_grid, dredge_polygon_file, dredge_dept
     # load river polygons
     river_polys = gpd.read_file(dredge_polygon_file)  # epsg:4326, this is from clip_autoarcs.py
     # shrink the polygons by 1 m to exclude bank nodes
-    river_polys.geometry = river_polys.geometry.to_crs('esri:102008').buffer(-1).to_crs('epsg:4326')
+    river_polys_projected = project_geodataframe(
+        river_polys, 'esri:102008', "dredge river-polygon projection to equal-area CRS"
+    )
+    river_polys_projected.geometry = river_polys_projected.geometry.buffer(-1)
+    river_polys = project_geodataframe(
+        river_polys_projected,
+        'epsg:4326',
+        "dredge buffered river-polygon projection to geographic CRS",
+    )
 
     # determine in-channel nodes
     hg_points = gpd.GeoDataFrame(geometry=gpd.points_from_xy(hgrid_obj.x, hgrid_obj.y), crs='epsg:4326')

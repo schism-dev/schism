@@ -5,6 +5,7 @@ import geopandas as gpd
 from RiverMapper.rivers import Rivers
 from RiverMapper.SMS import SMS_MAP
 from sklearn.neighbors import KDTree
+from stofs3d_setup.utils.projection import project_geodataframe
 
 
 def dredge_river_transects(
@@ -102,7 +103,11 @@ def ensure_channel_connectivity(
         for exclude_region_gdf_file in exclude_region_gdf_file_list:
             watershed = gpd.overlay(
                 watershed,
-                gpd.read_file(exclude_region_gdf_file).to_crs(watershed.crs),
+                project_geodataframe(
+                    gpd.read_file(exclude_region_gdf_file),
+                    watershed.crs,
+                    "channel-connectivity exclusion-region projection",
+                ),
                 how='difference'
             )
 

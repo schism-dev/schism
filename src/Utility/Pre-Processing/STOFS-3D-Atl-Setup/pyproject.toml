@@ -19,6 +19,7 @@ dependencies = [
 
 [project.scripts]
 stofs3d-setup = "stofs3d_setup.cli:app"
+stofs3d-hgrid-preproc = "stofs3d_setup.ops.Grid.hgrid_preproc.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

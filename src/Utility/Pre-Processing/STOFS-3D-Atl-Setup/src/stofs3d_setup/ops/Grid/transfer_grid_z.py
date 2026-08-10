@@ -1,10 +1,11 @@
 import numpy as np
 from scipy.spatial import cKDTree
 from pylib_experimental.schism_file import cread_schism_hgrid
+from stofs3d_setup.utils.projection import project_grid
 
 hg_tranfer = cread_schism_hgrid(
     '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v28/v27_to_v28_splice.gr3')
-hg_tranfer.proj(prj0='esri:102008', prj1='epsg:4326')
+project_grid(hg_tranfer, 'esri:102008', 'epsg:4326')
 hg1 = cread_schism_hgrid(
     '/sciclone/schism10/feiye/STOFS3D-v8/I13y_v7/hgrid.gr3')
 hg2 = cread_schism_hgrid(

@@ -8,6 +8,7 @@ from scipy.spatial import KDTree
 from matplotlib import pyplot as plt
 
 from pylib_essentials.schism_file import read_schism_hgrid_cached, grd2sms, schism_grid
+from stofs3d_setup.utils.projection import project_geodataframe
 
 def prep_chart_data(sounding_shpfile:Path):
     '''
@@ -63,7 +64,14 @@ def load_chart(hgrid_obj:schism_grid, sounding_shpfile:Path, region_shpfile:Path
     channel_polys['geometry'] = channel_polys['geometry'].buffer(-1)
 
     # intersect hgrid points with the polygons
-    hg_points = gpd.GeoDataFrame(geometry=gpd.points_from_xy(hgrid_obj.x, hgrid_obj.y), crs='epsg:4326').to_crs(crs_region)
+    hg_points = project_geodataframe(
+        gpd.GeoDataFrame(
+            geometry=gpd.points_from_xy(hgrid_obj.x, hgrid_obj.y),
+            crs='epsg:4326',
+        ),
+        crs_region,
+        "chart hgrid-point projection",
+    )
     joined_gdf = gpd.sjoin(hg_points, channel_polys, how="inner", predicate='within')
 
     inchannel_idx = joined_gdf.index.to_numpy()  # get the indices of the points inside the polygons
@@ -143,4 +151,3 @@ if __name__ == '__main__':
     grd2sms(hgrid_obj, (f"{hg_file.parent}/{hg_file.stem}_chart_loaded.2dm"))
 
     pass
-

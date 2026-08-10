@@ -7,6 +7,7 @@ import geopandas as gpd
 
 from pylib_experimental.schism_file import schism_grid
 from pylib_experimental.schism_file import source_sink, TimeHistory
+from stofs3d_setup.utils.projection import project_grid
 
 
 def find_ele_in_shpfile(shapefile_name, hgrid: schism_grid, type=True):
@@ -71,7 +72,7 @@ def set_constant_sink(wdir='./', shapefile_name='levee_4_pump_polys.shp', hgrid:
     # copy datafiles
     gd = deepcopy(hgrid)
     # shapefile_crs = shapefile.Reader(f'{wdir}/{shapefile_name}').crs
-    gd.proj(prj0='epsg:4326', prj1='esri:102008')  # project to Albers Equal Area for inside polygon test
+    project_grid(gd, 'epsg:4326', 'esri:102008')
 
     # set pump capacities
     ele_type_array = find_ele_in_shpfile(

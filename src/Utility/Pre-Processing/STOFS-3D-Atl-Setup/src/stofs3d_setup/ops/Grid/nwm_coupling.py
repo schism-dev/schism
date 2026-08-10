@@ -38,6 +38,7 @@ from pylib import read_schism_bpfile, schism_bpfile
 from RiverMapper.SMS import SMS_MAP
 from RiverMapper.SMS import dl_lonlat2cpp
 from RiverMapper.util import z_decoder
+from stofs3d_setup.utils.projection import project_geodataframe
 
 
 def b_in_a(a=None, b=None):
@@ -185,7 +186,12 @@ class Rivers():
         Indices of the points inside region are saved in self.idx
         '''
         in_region = gpd.sjoin(
-            self.river_arc_gdf.to_crs(region_gdf.crs), region_gdf,
+            project_geodataframe(
+                self.river_arc_gdf,
+                region_gdf.crs,
+                "NWM river-arc projection to region CRS",
+            ),
+            region_gdf,
             how='inner', predicate='intersects'
         ).index
         idx = np.zeros(len(self.river_arc_info.arcs), dtype=bool)
@@ -237,7 +243,14 @@ class Rivers():
 
         if region_gdf is not None:
             idx = gpd.sjoin(
-                dredged_points_gdf.to_crs(region_gdf.crs), region_gdf, how='inner', predicate='intersects'
+                project_geodataframe(
+                    dredged_points_gdf,
+                    region_gdf.crs,
+                    "NWM dredged-point projection to region CRS",
+                ),
+                region_gdf,
+                how='inner',
+                predicate='intersects',
             ).index
             dredged_points = dredged_points[idx, :]
             dredged_points_gdf = dredged_points_gdf.iloc[idx]
@@ -934,9 +947,13 @@ def dredge_river_transects():
     watershed_all = gpd.read_file(
         '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v27/Clip/outputs/watershed.shp'
     )
-    watershed_exclusion = gpd.read_file(
-        '/sciclone/schism10/feiye/STOFS3D-v8/I13y_v7/Bathy_edit/RiverArc_Dredge/watershed_ME.shp'
-    ).to_crs(watershed_all.crs)
+    watershed_exclusion = project_geodataframe(
+        gpd.read_file(
+            '/sciclone/schism10/feiye/STOFS3D-v8/I13y_v7/Bathy_edit/RiverArc_Dredge/watershed_ME.shp'
+        ),
+        watershed_all.crs,
+        "NWM watershed-exclusion projection",
+    )
     watershed = gpd.overlay(watershed_all, watershed_exclusion, how='difference')
 
     hgrid_obj = cread_schism_hgrid(
@@ -958,9 +975,13 @@ def dredge_river_transects():
     )
     watershed = gpd.overlay(
         watershed_origional,
-        gpd.read_file(
-            '/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Bathy_edit/RiverArc_Dredge/watershed_ME.shp'
-        ).to_crs(watershed_origional.crs),
+        project_geodataframe(
+            gpd.read_file(
+                '/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Bathy_edit/RiverArc_Dredge/watershed_ME.shp'
+            ),
+            watershed_origional.crs,
+            "NWM watershed-exclusion projection",
+        ),
         how='difference'
     )
 

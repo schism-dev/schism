@@ -38,6 +38,7 @@ try:
 except ImportError:
     from pylib import schism_grid as schism_read
 from pylib import grd2sms
+from stofs3d_setup.utils.projection import project_grid
 
 
 def set_levee_profile(gd=None, wdir='./', centerline_shp_dict=None, min_levee_height=6.56168):
@@ -99,7 +100,7 @@ def set_levee_profile(gd=None, wdir='./', centerline_shp_dict=None, min_levee_he
 
     gd.lon = gd.x
     gd.lat = gd.y
-    gd.proj(prj0='epsg:4326', prj1='esri:102008')  # this overwrites gd.x, gd.y
+    project_grid(gd, 'epsg:4326', 'esri:102008')
 
     # find levee center line points in hgrid, use projected cooridnates to avoid truncation error
     # initialize: all false (no levee)
@@ -148,7 +149,7 @@ def set_additional_dp(gd_ll=None, additional_levee_info=None):
         return gd_ll
 
     gd_meters = copy.deepcopy(gd_ll)
-    gd_meters.proj(prj0='epsg:4326', prj1='esri:102008')
+    project_grid(gd_meters, 'epsg:4326', 'esri:102008')
 
     for levee_name, levee_info in additional_levee_info.items():
         print(f"forcing dp <= {levee_info['dp']} for {levee_name}")
@@ -201,7 +202,7 @@ def set_local_levee_profile(gd_ll=None, local_levee_info=None, i_levee_top_node=
         return gd_ll
 
     gd_meters = copy.deepcopy(gd_ll)
-    gd_meters.proj(prj0='epsg:4326', prj1='esri:102008')
+    project_grid(gd_meters, 'epsg:4326', 'esri:102008')
 
     for i, [levee_name, levee_info] in enumerate(local_levee_info.items()):
         print(f"forcing local levee dp for {levee_name}")

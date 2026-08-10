@@ -2,11 +2,12 @@ from pylib_essentials.schism_file import cread_schism_hgrid
 import copy
 import geopandas as gpd
 import numpy as np
+from stofs3d_setup.utils.projection import project_geodataframe, project_grid
 
 gd_ll = cread_schism_hgrid('./14a.gr3')
 
 gd_meters = copy.deepcopy(gd_ll)
-gd_meters.proj(prj0='epsg:4326', prj1='esri:102008')
+project_grid(gd_meters, 'epsg:4326', 'esri:102008')
 hg_points = gpd.GeoDataFrame(geometry=gpd.points_from_xy(gd_meters.x, gd_meters.y), crs='esri:102008')
 
 river_fix_dict = {
@@ -31,7 +32,9 @@ for river_name, river_info in river_fix_dict.items():
     river_gdf = gpd.read_file(river_info['fname'])
     river_gdf.set_crs('epsg:4326', inplace=True)
 
-    river_gdf = river_gdf.to_crs('esri:102008')
+    river_gdf = project_geodataframe(
+        river_gdf, 'esri:102008', f"{river_name} river polygon projection"
+    )
     river_gdf.geometry = river_gdf.buffer(river_info['buffer'])
 
     joined_gdf = gpd.sjoin(hg_points, river_gdf, how="inner", predicate='within')

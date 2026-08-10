@@ -48,6 +48,7 @@ import numpy as np
 from mpi4py import MPI
 import geopandas as gpd
 from pylib import load_bathymetry, zdata, convert_dem_format
+from stofs3d_setup.utils.projection import project_geodataframe
 
 import rasterio
 from rasterio.warp import calculate_default_transform, reproject, Resampling
@@ -267,8 +268,11 @@ def max_dp_in_region(grid_list: list, region_file: str, primary_grid_idx: int = 
         points_gdf = gpd.GeoDataFrame(
             geometry=gpd.points_from_xy(x=grid_list[0].x, y=grid_list[0].y), crs='epsg:4326')
 
+        region_geographic = project_geodataframe(
+            region_gdf, 'epsg:4326', "DEM region projection to geographic CRS"
+        )
         points_in_region = gpd.sjoin(
-            points_gdf, region_gdf.to_crs('epsg:4326'), how='inner', predicate='within'
+            points_gdf, region_geographic, how='inner', predicate='within'
         ).index.values
         print(f'{len(points_in_region)} nodes in region.')
 
@@ -306,9 +310,12 @@ def direct_replace_dp_in_region(base_grid, replacement_grid, region_file: str):
     )
 
     # Find indices of points inside the region
+    region_geographic = project_geodataframe(
+        region_gdf, 'epsg:4326', "DEM region projection to geographic CRS"
+    )
     points_in_region = gpd.sjoin(
         points_gdf,
-        region_gdf.to_crs('epsg:4326'),
+        region_geographic,
         how='inner',
         predicate='within'
     ).index.values

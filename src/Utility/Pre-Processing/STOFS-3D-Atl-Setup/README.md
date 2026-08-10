@@ -59,6 +59,8 @@ pip install "git+https://github.com/schism-dev/schism.git@master#subdirectory=sr
 
 - This repository assumes familiarity with the **SCHISM/STOFS modeling workflow**.
 - Several dependencies are currently transitional and will be simplified as upstream packages stabilize.
+- Horizontal-grid preparation is available through `stofs3d-hgrid-preproc`;
+  see [`docs/hgrid_preprocessing.md`](docs/hgrid_preprocessing.md).
 
 
 ## Recommended Usage and Configuration Workflow

@@ -2,6 +2,7 @@
 from pylib import schism_grid, grd2sms, sms2grd
 import os
 from spp_core.Grid.SMS import lonlat2cpp
+from stofs3d_setup.utils.projection import project_grid
 import pathlib
 import copy
 import pickle
@@ -37,7 +38,7 @@ def gen_hgrid_formats(hgrid_name='', gd:schism_grid=None, write_bnd=True):
     gd.cpp_x, gd.cpp_y = gd_cpp.x, gd_cpp.y
 
     print('outputing hgrid in UTM')
-    gd.proj(prj0='epsg:4326', prj1='epsg:26918')
+    project_grid(gd, 'epsg:4326', 'epsg:26918')
     gd.write_hgrid(f'{dirname}/hgrid.utm.26918.gr3', fmt=int(write_bnd))
     gd.utm_x, gd.utm_y = gd.x, gd.y
     print('outputing *.2dm')
@@ -45,7 +46,7 @@ def gen_hgrid_formats(hgrid_name='', gd:schism_grid=None, write_bnd=True):
 
     print('outputing hgrid.102008.gr3')
     gd.x, gd.y = gd.lon, gd.lat
-    gd.proj(prj0='epsg:4326', prj1='esri:102008')
+    project_grid(gd, 'epsg:4326', 'esri:102008')
     gd.write_hgrid(f'{dirname}/hgrid.102008.gr3', fmt=int(write_bnd))
     gd.x_102008, gd.y_102008 = gd.x, gd.y
 
@@ -64,7 +65,7 @@ if __name__ == "__main__":
     # Add boundary and generate different hgrid formats
     gd = sms2grd('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.102008_fixed.2dm')
     # gd = set_ocean_bnd(f'{wdir}/hgrid.ll')
-    gd.proj(prj0='esri:102008', prj1='epsg:4326')
+    project_grid(gd, 'esri:102008', 'epsg:4326')
     gd.compute_bnd()
     gd.save('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ2/hgrid.ll', fmt=1)
 

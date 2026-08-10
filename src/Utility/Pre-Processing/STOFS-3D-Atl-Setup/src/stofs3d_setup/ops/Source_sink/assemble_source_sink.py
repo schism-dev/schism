@@ -13,6 +13,7 @@ from .Constant_sinks.set_constant_sink import set_constant_sink
 from .Relocate.relocate_source_feeder import relocate_sources2
 from .Replace_with_USGS.replace_with_obs import source_nwm2usgs
 from ...utils.utils import mkcd_new_dir, STOFS3D_ATL_STATES
+from ...utils.projection import project_geodataframe
 from pylib_experimental.schism_file import source_sink, TimeHistory
 
 
@@ -389,9 +390,13 @@ def sample2():
     startdate = datetime(2018, 8, 30)
     rnday = 10
 
-    region_gdf = gpd.read_file(
-        '/sciclone/schism10/feiye/TEMP/clip_by_polygon/hires/hires_buffered.shp'
-    ).to_crs('EPSG:4326')
+    region_gdf = project_geodataframe(
+        gpd.read_file(
+            '/sciclone/schism10/feiye/TEMP/clip_by_polygon/hires/hires_buffered.shp'
+        ),
+        'EPSG:4326',
+        "source/sink region projection",
+    )
     # -------------------- end inputs -----------------
 
     os.chdir(wdir)

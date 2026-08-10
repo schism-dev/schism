@@ -27,6 +27,7 @@ from shapely import get_coordinates
 from pylib_experimental.schism_file import source_sink
 # from pylib_essentials.schism_file import TimeHistory, source_sink
 from schism_py_pre_post.Utilities.import_util import get_hgrid_reader
+from stofs3d_setup.utils.projection import project_geodataframe
 
 read_hgrid = get_hgrid_reader()
 
@@ -37,7 +38,11 @@ hgrid = read_hgrid(f'{rundir}/hgrid.gr3')
 # read original source/sink
 original_ss = source_sink.from_ncfile(f'{rundir}/source.nc')
 
-region = gpd.read_file('/sciclone/schism10/feiye/TEMP/clip_by_polygon/hires/hires.shp').to_crs("epsg:4326")
+region = project_geodataframe(
+    gpd.read_file('/sciclone/schism10/feiye/TEMP/clip_by_polygon/hires/hires.shp'),
+    "epsg:4326",
+    "source/sink test-region projection",
+)
 region_coords = [get_coordinates(p) for p in region.explode(index_parts=True).exterior]
 
 # split source/sink into inside and outside region

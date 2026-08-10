@@ -2,6 +2,7 @@ import copy
 import geopandas as gpd
 import numpy as np
 from pylib import read
+from stofs3d_setup.utils.projection import project_geodataframe, project_grid
 
 
 def temp_fix_v7p2(gd_ll, wdir, reference_hgrid_file):
@@ -15,7 +16,7 @@ def temp_fix_v7p2(gd_ll, wdir, reference_hgrid_file):
     '''
 
     gd_meters = copy.deepcopy(gd_ll)
-    gd_meters.proj(prj0='epsg:4326', prj1='esri:102008')
+    project_grid(gd_meters, 'epsg:4326', 'esri:102008')
     hg_points = gpd.GeoDataFrame(geometry=gpd.points_from_xy(gd_meters.x, gd_meters.y), crs='esri:102008')
 
     # deepen rivers
@@ -31,7 +32,9 @@ def temp_fix_v7p2(gd_ll, wdir, reference_hgrid_file):
         river_gdf = gpd.read_file(river_info['fname'])
         river_gdf.set_crs('epsg:4326', inplace=True)
 
-        river_gdf = river_gdf.to_crs('esri:102008')
+        river_gdf = project_geodataframe(
+            river_gdf, 'esri:102008', f"{river_name} river polygon projection"
+        )
         river_gdf.geometry = river_gdf.buffer(river_info['buffer'])
 
         joined_gdf = gpd.sjoin(hg_points, river_gdf, how="inner", predicate='within')
@@ -51,7 +54,9 @@ def temp_fix_v7p2(gd_ll, wdir, reference_hgrid_file):
         levee_gdf = gpd.read_file(levee_info['fname'])
         levee_gdf.set_crs('epsg:4326', inplace=True)
 
-        levee_gdf = levee_gdf.to_crs('esri:102008')
+        levee_gdf = project_geodataframe(
+            levee_gdf, 'esri:102008', f"{levee_name} levee polygon projection"
+        )
 
         joined_gdf = gpd.sjoin(hg_points, levee_gdf, how="inner", predicate='within')
         idx = joined_gdf.index.to_numpy()  # get the indices of the points inside the polygons
@@ -68,7 +73,9 @@ def temp_fix_v7p2(gd_ll, wdir, reference_hgrid_file):
     }
     for land_name, land_info in land_fix_dict.items():
         land_gdf = gpd.read_file(land_info['fname'])
-        land_gdf = land_gdf.to_crs('esri:102008')
+        land_gdf = project_geodataframe(
+            land_gdf, 'esri:102008', f"{land_name} land polygon projection"
+        )
 
         joined_gdf = gpd.sjoin(hg_points, land_gdf, how="inner", predicate='within')
         idx = joined_gdf.index.to_numpy()  # get the indices of the points inside the polygons
@@ -82,7 +89,9 @@ def temp_fix_v7p2(gd_ll, wdir, reference_hgrid_file):
     # Borrow depth from adjacent nodes
     print('Borrowing depth from adjacent nodes.')
     polygon_shp = gpd.read_file(f'{wdir}/Lafourche_Parish_tweaks.shp')  # lonlat
-    polygon_shp = polygon_shp.to_crs('esri:102008')
+    polygon_shp = project_geodataframe(
+        polygon_shp, 'esri:102008', "temporary-fix tweak-polygon projection"
+    )
     for i, polygon in polygon_shp.iterrows():
         print('Processing polygon', i)
         polygon = gpd.GeoDataFrame(geometry=[polygon.geometry]).set_crs('esri:102008')
