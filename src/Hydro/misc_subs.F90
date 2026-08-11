@@ -6736,14 +6736,15 @@
 !        integer, intent(in) :: i1, i2, j1, j2 !, jaselfal
 !        real(rkind), parameter :: Me = 5.9726e24, R = 6371e3, g = 9.81, pi = 4.0 * atan(1.0), rhow = 1.0240164e3, rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
         real(rkind) :: Me,R,rhow,rhoe
-        integer :: i,j,itmp,ierror,isym,nt,l,mdab,ndab,k1,k3(1),ie,nd,iwork1(np_global),iwork2(np_global)
+        integer :: i,j,itmp,ierror,isym,nt,l,mdab,ndab,k1,k3(1), &
+     &ie,nd,ix,ix2,iy,iy2,iwork1(np_global),iwork2(np_global)
         !avhs: gathered SSH and interpolated onto 1 deg regular lon/lat grid 
 !        real(rkind) :: avhs(0:359,-90:90),self(0:359,-90:90)
         real(rkind) :: llnh(0:1024),llnk(0:1024),wshaec(lsave),wshsec(lsave)
         real(rkind) :: a(nlat_gs,nlat_gs), b(nlat_gs,nlat_gs)
         real(rkind) :: avhs1(0:nlat_gs-1,0:nlon_gs-1),self1(0:nlat_gs-1,0:nlon_gs-1) !0:180,0:359)
         real(rkind) :: eta_gb(np_global),work1(np_global)
-!        real(rkind) :: tmp1,tmp2,buf(2,1),buf2(2,1),xl2,yl2
+        real(rkind) :: xtmp0,xtmp,ytmp0,ytmp,xrat,yrat,tmp1,tmp2
   
         Me = 5.9726e24; R = 6371e3; rhow = 1.0240164e3 
         rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
@@ -6782,7 +6783,6 @@
           if(dp(i)>0.d0) then !make sure it's deep enough
             work1(nd)=eta2(i)
           endif !dp
-
           iwork1(nd)=iwork1(nd)+1
         enddo !i
         call mpi_reduce(work1,eta_gb,np_global,rtype,MPI_SUM,0,comm,ierror)
@@ -6796,8 +6796,9 @@
             endif
             eta_gb(i)=eta_gb(i)/dble(iwork2(i))
 
-            !write(99,*)i,eta_gb(i)
+!            write(98,*)i,eta_gb(i)
           enddo !i
+!          close(98)
 
           !Interp onto Gaussian grid (1 deg)
           !avhs1(i,j) contains the waterlevel on the point with longitude phi(j)=(j-1)*360/nlon
@@ -6818,7 +6819,6 @@
             enddo !j
           enddo !i
 !          close(98)
-!          close(99)
 
           !Load Love numbers
           call loadlovenumber(llnh, llnk)
@@ -6867,23 +6867,87 @@
 !        enddo !i
 
           !Debug
-          nd=0
-          do i=0,359
-            do j=0,180
-              nd=nd+1
-              write(99,*)nd,i,j-90,real(self1(j,i))
-            enddo !j
-          enddo !i
-          close(99)
+!          nd=0
+!          do i=0,359
+!            do j=0,180
+!              nd=nd+1
+!              write(99,*)nd,i,j-90,real(self1(j,i))
+!            enddo !j
+!          enddo !i
+!          close(99)
 
+!          write(12,*)'B4 |self1| sum=',sum(abs(self1))
         endif !myrank==0
 
-        call parallel_finalize
-        stop
-  
-        !Bcast self1
-        !Interpolate back to UG; saltide has same unit as etp [m]
+        !Bcast self1; need (0,0) to get receiving buffer address right
+        call mpi_bcast(self1(0,0),nlat_gs*nlon_gs,rtype,0,comm,ierror)
+        if(ierror/=MPI_SUCCESS) call parallel_abort(error=ierror)
+!        write(12,*)'|self1| sum=',sum(abs(self1)),real(self1(1,1)),real(self1(180,359))
 
+        !Interpolate self1(0:180,0:359) back to UG; saltide has same unit as etp [m]
+        do i=1,npa
+          xtmp0=xlon(i)/pi*180.d0
+          ytmp0=ylat(i)/pi*180.d0
+          xtmp=xtmp0
+          ytmp=ytmp0+90.d0 !co-lat
+          !Put lon in [0,360]
+          if(xtmp<0.d0) xtmp=xtmp+360.d0
+          if(xtmp>360.d0) xtmp=xtmp-360.d0
+          if(xtmp<0.d0.or.xtmp>360.d0) then
+            write(errmsg,*)'selfattraction: wrong lon:',iplg(i),xtmp0,ytmp0
+            call parallel_abort(errmsg)
+          endif
+
+          ix=int(xtmp) !index into selfe1
+          iy=int(ytmp)
+          if(min(ix,iy)<0.or.ix>359.or.iy>180) then
+            write(errmsg,*)'selfattraction out of bound: ',iplg(i),xtmp0,ytmp0
+            call parallel_abort(errmsg)
+          endif
+          if(ix>=359) then !jump
+            ix2=0
+          else
+            ix2=ix+1
+          endif !ix
+          iy2=min(180,iy+1)
+          !ix2,iy2 properly bounded
+
+          xrat=xtmp-ix
+          yrat=ytmp-iy
+          tmp1=(1-xrat)*self1(iy,ix)+xrat*self1(iy,ix2)
+          tmp2=(1-xrat)*self1(iy2,ix)+xrat*self1(iy2,ix2)
+          !Should we limit based on depth?
+          saltide(i)=(1-yrat)*tmp1+yrat*tmp2
+
+!          write(12,*)'saltide=',iplg(i),real(xtmp0),real(ytmp0),real(saltide(i)),real(xtmp)
+        enddo !i=1,npa
+
+        !Debug
+!        work1=0.d0
+!        iwork1=0
+!        do i=1,np
+!          nd=iplg(i)
+!          work1(nd)=saltide(i)
+!          iwork1(nd)=iwork1(nd)+1
+!        enddo !i
+!        call mpi_reduce(work1,eta_gb,np_global,rtype,MPI_SUM,0,comm,ierror)
+!        call mpi_reduce(iwork1,iwork2,np_global,itype,MPI_SUM,0,comm,ierror)
+!
+!        if(myrank==0) then
+!          do i=1,np_global
+!            if(iwork2(i)==0) then
+!              write(errmsg,*) 'selfattraction: missing node ',i
+!              call parallel_abort(errmsg)
+!            endif
+!            eta_gb(i)=eta_gb(i)/dble(iwork2(i))
+!            write(97,*)i,eta_gb(i)
+!          enddo !i
+!          close(97)
+!        endif !myrank
+!
+!        call parallel_finalize
+!        stop
+  
       end subroutine selfattraction
   
       subroutine loadlovenumber(llnh, llnk)

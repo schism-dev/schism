@@ -444,6 +444,18 @@ real (rkind) :: aux                               ! ustar
 !...  SAL from spherical harmonic option
       if(iloadtide==4) then
 #ifdef USE_SPK
+
+        !Debug
+!        do i=1,npa
+!          etp(i)=0.d0
+!          do j=1,ntip
+!            ncyc=int(tfreq(j)*time/2.d0/pi)
+!            arg=tfreq(j)*time-real(ncyc,rkind)*2.d0*pi+jspc(j)*xlon(i)+tear(j)
+!            etp(i)=etp(i)+0.69d0*tamp(j)*tnf(j)*fun_lat(jspc(j),i)*cos(arg)
+!          enddo !j
+!          eta2(i)=-etp(i)
+!        enddo !i
+
         call selfattraction
 #endif /*USE_SPK*/
       endif !iloadtide=4
@@ -458,12 +470,12 @@ real (rkind) :: aux                               ! ustar
           arg=tfreq(j)*time-real(ncyc,rkind)*2.d0*pi+jspc(j)*xlon(i)+tear(j)
           etp(i)=etp(i)+0.69d0*ramp*tamp(j)*tnf(j)*fun_lat(jspc(j),i)*cos(arg)
 
-          if(iloadtide==1) then !loading tide
+          if(iloadtide==1) then !loading tide from FES etc
             etp(i)=etp(i)+rloadtide(1,j,i)*cos(tfreq(j)*time-rloadtide(2,j,i))
-          else if(iloadtide==4) then !SPK
-            etp(i)=etp(i)+saltide(i)
           endif !iloadtide
         enddo !j
+
+        if(iloadtide==4) etp(i)=etp(i)+saltide(i) !SPK
       enddo !i
 !$OMP end do
 
