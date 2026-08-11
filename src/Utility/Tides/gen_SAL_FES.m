@@ -44,6 +44,7 @@ indx=find(xl<0);
 xl(indx)=xl(indx)+360;
 
 %miss_value=1.e10; %junk value
+eta2=zeros(np,1);
 for i=1:length(const)
   ncid = netcdf.open(['fes2014a_loadtide/load_tide/' const{i} '.nc'],'NC_NOWRITE');
   vid=netcdf.inqVarID(ncid,'lat'); %1D
@@ -102,4 +103,15 @@ for i=1:length(const)
   %fprintf(fid,'%d %f %f %f %f\n',[(1:np)' xl0 yl ampout phaout]');
   fprintf(fid,'%d %d %d %d %d %d\n',[(1:ne)' i34 nm(:,:)]');
   fclose(fid);
+
+  %Sample SAL at t=0
+  eta2=eta2+ampout.*cos(-phaout/180*pi);
 end %for i - freq's
+
+%Output Sample SAL at t=0
+fid=fopen('sample_SAL.gr3','w');
+fprintf(fid,'At t=0\n');
+fprintf(fid,'%d %d\n',ne,np);
+fprintf(fid,'%d %f %f %f\n',[(1:np)' xl yl eta2]');
+fprintf(fid,'%d %d %d %d %d %d\n',[(1:ne)' i34 nm(:,:)]');
+fclose(fid);
