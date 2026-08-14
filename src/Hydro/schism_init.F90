@@ -6487,7 +6487,7 @@
       !This section must be consistent with schism_step and scribe_io
       nsend_varout=0 !init for first waitall in _step
       out_name='' !init
-      !iout_23d: ndicates location where outputs are defined. 1:3 - node 2D/3D
+      !iout_23d: indicates location where outputs are defined. 1:3 - node 2D/3D
       !whole/3D half level; 4:6 - elem 2D/3D whole/3D half levels; 7:9 - side 2D/3D
       !whole/3D half levels; 0: no vertical info (e.g. time)
       iout_23d=0 
@@ -6939,12 +6939,12 @@
       endif
 
 #ifdef USE_WWM
-      do i=35,36
+      do i=36,37
         if(iof_wwm(i)/=0) then
           ncount_3dnode=ncount_3dnode+2
           counter_out_name=counter_out_name+2
           iout_23d(counter_out_name-1:counter_out_name)=2
-          if(i==35) then
+          if(i==36) then
             out_name(counter_out_name-1)='stokesDriftVelX'
             out_name(counter_out_name)='stokesDriftVelY'
           else
@@ -7091,7 +7091,7 @@
       enddo !i
 
 #ifdef USE_WWM
-      if(iof_wwm(33)/=0) then
+      if(iof_wwm(34)/=0) then
         ncount_3dside=ncount_3dside+1
         counter_out_name=counter_out_name+1
         iout_23d(counter_out_name)=8
@@ -7099,7 +7099,7 @@
       endif
 
       !Vector
-      if(iof_wwm(34)/=0) then
+      if(iof_wwm(35)/=0) then
         ncount_3dside=ncount_3dside+2
         counter_out_name=counter_out_name+2
         iout_23d(counter_out_name-1:counter_out_name)=8
@@ -7261,10 +7261,10 @@
           !call mpi_send(nout_d3d,1,itype,nproc_schism-i,143,comm_schism,ierr)
           !call mpi_send(iof_icm,nout_icm,itype,nproc_schism-i,144,comm_schism,ierr)
 #endif
-        call mpi_send(ics,1,itype,nproc_schism-i,146,comm_schism,ierr)
-        call mpi_send(iof_ugrid,1,itype,nproc_schism-i,147,comm_schism,ierr)
-        call mpi_send(chunk_size_vrt,1,itype,nproc_schism-i,148,comm_schism,ierr)
-        enddo !i
+          call mpi_send(ics,1,itype,nproc_schism-i,146,comm_schism,ierr)
+          call mpi_send(iof_ugrid,1,itype,nproc_schism-i,147,comm_schism,ierr)
+          call mpi_send(chunk_size_vrt,1,itype,nproc_schism-i,148,comm_schism,ierr)
+        enddo !i=1,nscribes
       endif !myrank=0
 
 !     Send subdomain info to last scribe (all compute ranks participate)

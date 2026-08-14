@@ -67,6 +67,8 @@
 ! function M66DET 
 !<weno
 
+! subroutine selfattraction
+! subroutine loadlovenumber
 ! subroutine compute_bed_slope
 ! subroutine smooth_2dvar
 ! subroutine savensend3D_scribe

@@ -9355,7 +9355,7 @@ real (rkind) :: aux                               ! ustar
 
         ! Roller energy dissipation rate (Drol = rho * eps_r, unit [W/m²])
         noutput=noutput+1
-        icount=icount+1
+        icount=icount+1 !=27
         if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
      &'Drol',1,1,npa,dble(rho0*eps_r(:)))
 
@@ -9391,14 +9391,14 @@ real (rkind) :: aux                               ! ustar
 
         !2D vectors
         noutput=noutput+1
-        icount=icount+1
+        icount=icount+1 !=33
         if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
      &'WWM_energy_dir',1,1,npa,dble(out_wwm(:,8)),dble(out_wwm(:,7)))
 
         !3D
         ! Vertical Stokes velocity at sides
         noutput=noutput+1
-        icount=icount+1
+        icount=icount+1 !=34
         if(iof_wwm(icount)==1) call writeout_nc(id_out_var(noutput+4), &
      &'stokes_wvel',8,nvrt,nsa,dble(stokes_wvel_side(:,:)))
 
