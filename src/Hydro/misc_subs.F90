@@ -6812,7 +6812,7 @@
           do i=0,359 
             do j=-90,90
               nd=isal_int(j+90,i) !global node # or -1
-              if(nd>0) avhs1(j,i)=eta_gb(nd)
+              if(nd>0) avhs1(j+90,i)=eta_gb(nd)
 
               !Debug
 !              nt=nt+1
