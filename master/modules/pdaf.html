@@ -2901,9 +2901,9 @@
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>export ESMF_PTHREADS=OFF 
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>export ESMF_COMM=intelmpi 
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>export ESMF_NETCDF=split 
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>export ESMF_NETCDF_INCLUDE=&quot;$NetCDF_FORTRAN_DIR/include -I$NetCDF_FORTRAN_DIR/include $NetCDF_C_DIR/include -I$NetCDF_C_DIR/include&quot; 
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>export ESMF_NETCDF_LIBPATH=&quot;$NetCDF_FORTRAN_DIR/lib -L$NetCDF_FORTRAN_DIR/lib $NetCDF_C_DIR/lib -L$NetCDF_C_DIR/lib&quot; 
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>export ESMF_NETCDF_LIBS=&quot;-lnetcdff -lnetcdf&quot; 
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>export ESMF_NETCDF_INCLUDE="$NetCDF_FORTRAN_DIR/include -I$NetCDF_FORTRAN_DIR/include $NetCDF_C_DIR/include -I$NetCDF_C_DIR/include" 
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>export ESMF_NETCDF_LIBPATH="$NetCDF_FORTRAN_DIR/lib -L$NetCDF_FORTRAN_DIR/lib $NetCDF_C_DIR/lib -L$NetCDF_C_DIR/lib" 
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>export ESMF_NETCDF_LIBS="-lnetcdff -lnetcdf" 
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>export ESMF_PIO=OFF 
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>export ESMF_ABI=x86_64_medium  #(optional) 
 </code></pre></div>
@@ -3008,7 +3008,7 @@
 <a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a> varscale = 1.00, ! Init Ensemble Variance
 <a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a> ihfskip_PDAF  = 108,  ! ihfskip for DA output, has to be multiple of delt_obs
 <a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a> nspool_PDAF  =  36,  ! nspool for DA output, has to be multiple of delt_obs
-<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a> outf = 1,  ! output handle, 0: no output, 1: ens-mean, 2: members (in schism_001...), 3: both ens-mean &amp; members (has netcdf issues, don&#39;t use currently)
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a> outf = 1,  ! output handle, 0: no output, 1: ens-mean, 2: members (in schism_001...), 3: both ens-mean &amp; members (has netcdf issues, don't use currently)
 <a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a> nhot_PDAF = 0,   ! switch to output analysis hotstart rank files
 <a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a> nhot_write_PDAF = 36, ! nhot_write for DA hotstart output, must be a multiple of ihfskip_PDAF if nhot_PDAF=1
 <a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a> rms_type  = 1,  ! obs error handle, 1: uniform error from rms_obs; 2: specify error from rms_obs2; 3: specify error from obs files with extra column

@@ -3272,7 +3272,7 @@ the result back to all processes</li>
 <a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="n">MPI_Op</span><span class="w"> </span><span class="n">op</span><span class="p">,</span><span class="w"> </span>
 <a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nb">int </span><span class="n">root</span><span class="p">,</span><span class="w"> </span>
 <a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="n">MPI_Comm</span><span class="w"> </span><span class="n">comm</span><span class="w"> </span><span class="p">)</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="c">! only difference from MPI_Allreduce is that the result is sent to rank &quot;root&quot;.</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="c">! only difference from MPI_Allreduce is that the result is sent to rank "root".</span>
 </code></pre></div>
 <ul>
 <li><code>MPI_Gather</code> : Gathers together values from a group of processes.</li>
@@ -3410,7 +3410,7 @@ nea
 </code></pre></div>
 <p>If you do need to have all processes write e.g. debug messages, you’d consider using channel <code>12</code> which has been pre-set to point to multiple files from each MPI process (see below).</p>
 <p>Here are all I/O channel numbers currently used in different sub-models of SCHISM (and so you’d avoid using them). A good way to find out if a channel is available is to issue the following cmd from <code>src/</code> -</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>grep<span class="w"> </span><span class="s2">&quot;(61&quot;</span><span class="w"> </span>*/*.F90<span class="w"> </span><span class="c1"># Looks for &#39;(61&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>grep<span class="w"> </span><span class="s2">"(61"</span><span class="w"> </span>*/*.F90<span class="w"> </span><span class="c1"># Looks for '(61'</span>
 </code></pre></div>
 <p>Please contact lead developer after you have selected a channel number to use in your module.</p>
 <ol>
@@ -3461,7 +3461,7 @@ nea
 <figcaption> Domain decomposition for code example.</figcaption>
 </figure>
 <p>Consider Figure <a href="#figure04">4</a>. For example, you want to do averaging at each node of the sub-domain around its ball of elements.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">do </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">np</span><span class="w"> </span><span class="c">!not &#39;npa&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">do </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">np</span><span class="w"> </span><span class="c">!not 'npa'</span>
 <a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span><span class="n">sum1</span><span class="o">=</span><span class="mi">0</span>
 <a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="n">sum_a</span><span class="o">=</span><span class="mi">0</span>
 <a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>
@@ -3479,7 +3479,7 @@ nea
 <p>Notice that you'd use <code>np</code> instead of <code>npa</code> (<code>=np+npg</code>; augmented domain) here. For any resident node <code>P</code>, <code>indel()</code> is well defined (because again, Rank 1 has info in its augmented domain including the ghost zone), and so the loops make sense. As long as all ranks have same info in each others' ghost zones (which is the purpose of exchange routines), <code>stokes_nd</code> at an interface
 node (e.g. <code>P</code>) will be same across ranks. However, for a ghost node <code>Q</code>, some surrounding elements are located outside the augmented domain (and in this case, <code>indel()</code> are actually negative!), and so if you use the same operation, erroneous values at ghost nodes would be generated. Therefore you cannot use npa in the outer loop.</p>
 <p>Now, after this loop is executed, what happens to the ghost nodes like <code>Q</code>? Since they are excluded on Rank 1, the <code>stokes_nd</code> will be wrong there. Fortunately, some neighboring ranks have the correct values for these nodes, which are resident nodes in those neighboring ranks; e.g., <code>Q</code> is a resident node of Rank 0. So now different ranks will have different values at some overlapping nodes, and this needs to be avoided. In order to make sure each rank has correct (and up-to-date) values in its augmented domain, you need to follow this loop with an exchange routine. Remember that for the exchange routines to work, you need to define the exchanged array in the augmented domain - </p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="k">allocate</span><span class="p">(</span><span class="n">stokes_nd</span><span class="p">(</span><span class="n">npa</span><span class="p">))</span><span class="w"> </span><span class="c">!not &#39;np&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="k">allocate</span><span class="p">(</span><span class="n">stokes_nd</span><span class="p">(</span><span class="n">npa</span><span class="p">))</span><span class="w"> </span><span class="c">!not 'np'</span>
 </code></pre></div>
 <p>in order to allow each rank to receive info in the ghost zone. Description of all exchange routines used in SCHISM can be found in <code>schism_msgp.F90</code>.</p>
 <p>The above is just one example of when exchanges are needed. Usually this involves some kind of queries into a neighborhood, but beware that there are other circumstances where exchanges are necessary. </p>
@@ -3491,7 +3491,7 @@ node (e.g. <code>P</code>) will be same across ranks. However, for a ghost node 
 </ul>
 </div>
 <p>Now let's consider an example where no exchanges are needed. Say you want to simply go through all elements and update some arrays defined at elements:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="k">do </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">nea</span><span class="w"> </span><span class="c">!not &#39;ne&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="k">do </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">nea</span><span class="w"> </span><span class="c">!not 'ne'</span>
 <a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">    </span><span class="n">qdl_e</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">=</span><span class="n">cde</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">*</span><span class="n">dte</span><span class="o">/</span><span class="n">area</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 <a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="k">enddo</span><span class="w"> </span><span class="c">!i</span>
 </code></pre></div>

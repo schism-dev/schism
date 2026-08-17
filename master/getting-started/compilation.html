@@ -3001,7 +3001,7 @@ ignore it and proceed in making. The final name of executable has the cluster na
 </code></pre></div>
 <p>The cmake is essentially a pre-processor for make, and it creates cache files (e.g. build/ CMakeCache.txt, 
 where you can inspect all env variables). After cmake is done, make can be executed in parallel or in serial mode.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make<span class="w"> </span>-j8<span class="w"> </span>pschism<span class="w"> </span><span class="c1"># efficient parallel build; you can replace &quot;8&quot; with number of processes you want</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make<span class="w"> </span>-j8<span class="w"> </span>pschism<span class="w"> </span><span class="c1"># efficient parallel build; you can replace "8" with number of processes you want</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># or</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>make<span class="w"> </span><span class="nv">VERBOSE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>pschism<span class="w"> </span><span class="c1"># serial build with a lot of messages</span>
 </code></pre></div>
