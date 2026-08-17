@@ -1,6 +1,6 @@
 ! implicit vp solver of ice module
 #ifdef USE_PETSC
-subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
+subroutine ice_vp_imp(u_ice0,v_ice0)
   use schism_glbl,only: rkind,time_stamp,rnday,eta2,np,ne,nea, &
  &elnode,i34,dldxy,cori,grav,isbnd,indel,nne,area,iself,fdb,lfdb, &
  &xnd,ynd,iplg,ielg,elside,mnei,rho0,idry,errmsg,indnd,nnp,mnei_p,npa,&
@@ -11,8 +11,6 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
   implicit none
 
   real(rkind), dimension(npa), intent(in) :: u_ice0,v_ice0
-  real(rkind), dimension(npa), intent(in) :: RA_node
-  real(rkind), intent(in) :: RA_crit
 
   integer :: isub,i,j,k,ie,n1,n2,icount,kk,ll,m,n,id,n_columns,&
             &petsc_its_u,petsc_its_v,mxitn0,nd0,istat
@@ -21,7 +19,7 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
  &pp0,delta,delta_inv,rr1,rr2,rr3,sig1,sig2,x10,x20,y10,y20,rl10, &
  &rl20,sintheta,bb1,bb2,h_ice_el,a_ice_el,h_snow_el,dsig_1,dsig_2,mass, &
  &cori_nd,umod,gam1,rx,ry,elevx,elevy,eps11,eps12,eps22, &
- &zeta,eta,zeta_over_T,inv_m,vale,pressure,eps_cap,zeta_cap,P0_cap,u_erf
+ &zeta,eta,zeta_over_T,inv_m,vale,pressure
 
   integer :: iball(mnei)
 
@@ -59,12 +57,12 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
     umod=sqrt((u_ice(i)-u_ocean(i))**2+(v_ice(i)-v_ocean(i))**2)
     gam1=inv_m*cdwat(i)*rho0*umod
 
-    sparsem(0,i)=lump_ice_matrix(i)*(1.0/dt_ice+gam1*cos_io)
+    sparsem(0,i)=lump_ice_matrix(i)*(1.0/dt_ice+gam1*cos_io) !diagonal 
 
     !Coriolis @ node
     iball(1:nne(i))=indel(1:nne(i),i)
     cori_nd=dot_product(weit_elem2node(1:nne(i),i),swild2(iball(1:nne(i))))
-
+    !RHS: mass matrix part+ocean/ice friction part + the Coriolis part.
     rhsu_vp_local(i) = lump_ice_matrix(i)*(u_ice0(i)/dt_ice+&
                        &gam1*cos_io*u_ocean(i)+cori_nd*v_ice(i)+&
                        stress_atm_ice(1,i)*inv_m-&
@@ -76,6 +74,7 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
                        &sin_io*gam1*(u_ocean(i)-u_ice(i)))
 
     if(idry(i)/=0 .or. ice_tr(2,i)<0.01_rkind) then ! skip if dry or very thin ice
+    ! thin ice velocity is expected to be zero, so we can skip the rheology part and set the rhs to zero.
     !if(idry(i)/=0) then ! skip if dry or very thin ice
       rhsu_vp_local(i)=0.d0
       rhsv_vp_local(i)=0.d0
@@ -88,13 +87,7 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
     delta=product(ice_tr(1,elnode(1:3,i)))*product(ice_tr(2,elnode(1:3,i)))
 
     if(maxval(idry(elnode(1:i34(i),i)))/=0) cycle ! skip if dry
-    if(delta==0) cycle
-
-    u_erf=0.0_8
-    do j=1,i34(i)
-      u_erf=u_erf+sqrt(u_ice(elnode(j,i))**2+v_ice(elnode(j,i))**2)
-    enddo
-    u_erf=max(u_erf/i34(i),0.01_rkind)
+    if(delta==0) cycle ! skip if no ice
 
     eps11=dot_product(u_ice(elnode(1:i34(i),i)),dldxy(1:i34(i),1,i)) !du_dx
     eps22=dot_product(v_ice(elnode(1:i34(i),i)),dldxy(1:i34(i),2,i)) !dv_dy
@@ -119,23 +112,7 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
 
     pp0 = h_ice_el*pstar*exp(-c_pressure*(1-a_ice_el)) !P_0
 
-    ! ============================================================
-    ! momentum-based P0 cap
-    ! C_P0 = dt * 0.5 * |grad(P0)| / (rho_i h A Uref) ~ 100
-    ! approximate |grad(P0)| ~ P0 / L
-    ! L ~ sqrt(area), rho_i h A ~ mass
-    ! ============================================================
-    P0_cap = 2.0_8*30.0_8*mass*u_erf*sqrt(voltriangle(i))/dt_ice
-    !pp0 = min(pp0, P0_cap)
-
-    ! ============================================================
-    ! viscous stiffness zeta cap
-    ! C_vp = dt * (zeta + eta) / (mass L^2) ~ 100
-    ! ============================================================
-    zeta_cap = 100.0_8*mass*voltriangle(i)/(dt_ice*(1.0_8+vale))
-
     zeta=pp0*0.5/(delta+delta_min)
-    !zeta=min(zeta,zeta_cap)
 
     pressure=zeta*delta
     eta=zeta*vale
@@ -151,25 +128,10 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
     do j=1,i34(i)
       k=elnode(j,i)
 
-      ! ============================================================
-      ! IMPORTANT FIX:
-      ! Elevation-pressure-gradient contribution should NOT be skipped
-      ! by RA_node.
-      !
-      ! RA_node only masks VP internal rheology contribution.
-      ! Therefore add elevx/elevy first, then apply RA-based cycle.
-      ! ============================================================
-      if(ice_tr(2,k)<0.01_rkind) cycle ! skip if very thin ice
+      if(ice_tr(2,k)<0.01_rkind) cycle ! skip if very thin ice，so there is no ice rheology effect
       if(isbnd(1,k)/=0) cycle ! skip if boundary node
       rhsu_vp_local(k) = rhsu_vp_local(k) + elevx
       rhsv_vp_local(k) = rhsv_vp_local(k) + elevy
-
-      ! ------------------------------------------------------------
-      ! Node-based VP rheology skip:
-      ! If RA_node(k)>RA_crit, this node still receives external
-      ! forcing, but does not receive VP internal-stress contribution.
-      ! ------------------------------------------------------------
-      !if(RA_node(k)>RA_crit) cycle
 
       mass=rhoice*ice_tr(1,k)+rhosnow*ice_tr(3,k)
       !mass = rhoice*h_ice_el + rhosnow*h_snow_el
@@ -182,9 +144,7 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
       do m=1,i34(i)
         n=elnode(m,i)
 
-        ! Do not couple to another high-RA node.
-        !if(RA_node(n)>RA_crit) cycle
-        if(ice_tr(2,n)<0.01_rkind) cycle ! skip if very thin ice
+        if(ice_tr(2,n)<0.01_rkind) cycle ! skip if very thin ice，so there is no ice rheology effect
         if(isbnd(1,n)/=0) cycle ! skip if boundary node
 
         entries(m)=(eta+zeta)*(dldxy(j,1,i)*dldxy(m,1,i)+dldxy(j,2,i)*dldxy(m,2,i))* &
@@ -235,6 +195,7 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
     coeff_vals_vp(0)=sparsem(0,i)
 
     if(isbnd(1,i)/=0) then
+      ! skip if boundary node, set diagonal to 1 and rhs to 0, so velocity is fixed to 0.
       coeff_vals_vp(0)=1.d0
       rhsu_vp(nd0)=0.d0
       rhsv_vp(nd0)=0.d0
@@ -244,7 +205,7 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
 
       do j=1,nnp(i)
         k=indnd(j,i)
-        if(isbnd(1,k)/=0) then
+        if(isbnd(1,k)/=0) then ! no change to rhs if boundary node, since no external force from boundary node
           rhsu_vp(nd0) = rhsu_vp(nd0)
           rhsv_vp(nd0) = rhsv_vp(nd0)
         else
@@ -262,7 +223,8 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
   enddo
 
   if(myrank==0) write(16,*)'call ice VP petsc solver...'
-
+  !Use the ice velocity from the previous time step or previous nonlinear iteration as the initial guess,
+  !instead of starting from a zero velocity field.
   do i=1,npi
     uice_guess_npi(i)=u_ice(npi2np(i))
     vice_guess_npi(i)=v_ice(npi2np(i))
@@ -299,215 +261,22 @@ subroutine ice_vp_imp(u_ice0,v_ice0,RA_node,RA_crit)
 end subroutine ice_vp_imp
 
 subroutine ice_vp_imp_step
-  use schism_glbl,only: rkind,time_stamp,rnday,eta2,np,ne,nea, &
-  &elnode,i34,dldxy,cori,grav,isbnd,indel,nne,area,iself,fdb,lfdb, &
-  &xnd,ynd,iplg,ielg,elside,mnei,rho0,idry,errmsg,npa
-  use schism_msgp, only: myrank,nproc,parallel_abort,exchange_p2d,comm,ierr
+  use schism_glbl,only: rkind,npa
+  use schism_msgp, only: myrank,exchange_p2d
   use ice_module
 
   implicit none
-  include 'mpif.h'
 
-  integer :: isub,i,j,k,istat
+  integer :: isub
 
   real(rkind) :: u_ice0(npa),v_ice0(npa)
-
-  ! Node-centered P0-gradient diagnostic
-  real(rkind), allocatable :: P0_node(:),logP0_node(:)
-  real(rkind), allocatable :: gradP0_mag_node(:),gradLogP0_mag_node(:)
-  real(rkind), allocatable :: JP0_node(:),RP0_node(:),RlogP0_node(:)
-  real(rkind), allocatable :: node_area_sum(:),node_area_count(:)
-
-  real(rkind) :: P0_floor,RP0_crit
-  real(rkind) :: gradP0_x,gradP0_y,gradP0_mag
-  real(rkind) :: gradLogP0_x,gradLogP0_y,gradLogP0_mag
-  real(rkind) :: area_w,L_node_loc
-
-  real(rkind) :: max_RP0_local,max_JP0_local,max_RlogP0_local
-  real(rkind) :: max_RP0_global,max_JP0_global,max_RlogP0_global
-  integer :: nskip_local,nskip_global
 
   u_ice0 = u_ice
   v_ice0 = v_ice
 
   if(myrank==0) write(16,*)'start ice VP petsc...'
 
-  ! ============================================================
-  ! Node-based ice-strength-gradient diagnostic
-  !
-  ! Node ice strength:
-  !   P0_node = h_i * pstar * exp[-c_pressure*(1-A)]
-  !
-  ! Element gradient:
-  !   |grad(P0)|_e =
-  !     sqrt( (sum_j P0_j dN_j/dx)^2 + (sum_j P0_j dN_j/dy)^2 )
-  !
-  ! Node gradient:
-  !   |grad(P0)|_n = area-weighted mean of surrounding elements
-  !
-  ! Absolute jump:
-  !   JP0_node = L_node * |grad(P0)|_n
-  !
-  ! Relative jump:
-  !   RP0_node = JP0_node / max(P0_node,P0_floor)
-  !
-  ! Also compute:
-  !   RlogP0_node = L_node * |grad(log(P0+P0_floor))|
-  !
-  ! Compared with RA_node, this directly diagnoses the gradient
-  ! of the actual ice strength entering VP rheology.
-  ! ============================================================
-
-  ! A small P0 floor avoids artificially huge relative ratios when P0 ~ 0.
-  ! You can tune this later.
-  P0_floor = 1.0e-6_rkind*pstar
-
-  ! First test threshold. You may need to tune this from diagnostics.
-  RP0_crit = 1.0_rkind
-
-  allocate(P0_node(npa),logP0_node(npa), &
-           gradP0_mag_node(npa),gradLogP0_mag_node(npa), &
-           JP0_node(npa),RP0_node(npa),RlogP0_node(npa), &
-           node_area_sum(npa),node_area_count(npa),stat=istat)
-
-  if(istat/=0) call parallel_abort('ice_vp_imp_step: allocation failed for P0-gradient arrays')
-
-  P0_node            = 0.0_rkind
-  logP0_node         = 0.0_rkind
-  gradP0_mag_node    = 0.0_rkind
-  gradLogP0_mag_node = 0.0_rkind
-  JP0_node           = 0.0_rkind
-  RP0_node           = 0.0_rkind
-  RlogP0_node        = 0.0_rkind
-  node_area_sum      = 0.0_rkind
-  node_area_count    = 0.0_rkind
-
-  ! ------------------------------------------------------------
-  ! 1. Compute nodal P0
-  ! ------------------------------------------------------------
-  do k=1,npa
-
-    if(idry(k)/=0) then
-      P0_node(k)    = 0.0_rkind
-      logP0_node(k) = log(P0_floor)
-    else
-      P0_node(k) = ice_tr(1,k)*pstar*exp(-c_pressure*(1.0_rkind-ice_tr(2,k)))
-      P0_node(k) = max(P0_node(k),0.0_rkind)
-
-      logP0_node(k) = log(P0_node(k)+P0_floor)
-    endif
-
-  enddo
-
-  ! ------------------------------------------------------------
-  ! 2. Accumulate element |grad(P0)| and |grad(logP0)| to nodes
-  ! ------------------------------------------------------------
-  do i=1,ne
-
-    if(i34(i)<3) cycle
-    if(maxval(idry(elnode(1:i34(i),i)))/=0) cycle
-
-    gradP0_x = dot_product(P0_node(elnode(1:i34(i),i)), &
-                           dldxy(1:i34(i),1,i))
-
-    gradP0_y = dot_product(P0_node(elnode(1:i34(i),i)), &
-                           dldxy(1:i34(i),2,i))
-
-    gradP0_mag = sqrt(gradP0_x**2 + gradP0_y**2)
-
-    gradLogP0_x = dot_product(logP0_node(elnode(1:i34(i),i)), &
-                              dldxy(1:i34(i),1,i))
-
-    gradLogP0_y = dot_product(logP0_node(elnode(1:i34(i),i)), &
-                              dldxy(1:i34(i),2,i))
-
-    gradLogP0_mag = sqrt(gradLogP0_x**2 + gradLogP0_y**2)
-
-    area_w = max(voltriangle(i),0.0_rkind)
-
-    do j=1,i34(i)
-      k = elnode(j,i)
-
-      gradP0_mag_node(k)    = gradP0_mag_node(k)    + area_w*gradP0_mag
-      gradLogP0_mag_node(k) = gradLogP0_mag_node(k) + area_w*gradLogP0_mag
-
-      node_area_sum(k)   = node_area_sum(k)   + area_w
-      node_area_count(k) = node_area_count(k) + 1.0_rkind
-    enddo
-
-  enddo
-
-  ! ------------------------------------------------------------
-  ! 3. Finalize node JP0, RP0, and RlogP0
-  ! ------------------------------------------------------------
-  do k=1,npa
-
-    if(node_area_sum(k)>0.0_rkind) then
-
-      gradP0_mag_node(k) = gradP0_mag_node(k)/node_area_sum(k)
-      gradLogP0_mag_node(k) = gradLogP0_mag_node(k)/node_area_sum(k)
-
-      L_node_loc = sqrt(max(node_area_sum(k)/max(node_area_count(k),1.0_rkind), &
-                            1.0e-12_rkind))
-
-      JP0_node(k) = L_node_loc*gradP0_mag_node(k)
-
-      RP0_node(k) = JP0_node(k)/max(P0_node(k),P0_floor)
-
-      RlogP0_node(k) = L_node_loc*gradLogP0_mag_node(k)
-
-    else
-
-      gradP0_mag_node(k)    = 0.0_rkind
-      gradLogP0_mag_node(k) = 0.0_rkind
-      JP0_node(k)           = 0.0_rkind
-      RP0_node(k)           = 0.0_rkind
-      RlogP0_node(k)        = 0.0_rkind
-
-    endif
-
-  enddo
-
-  ! ------------------------------------------------------------
-  ! 4. Exchange nodal diagnostic fields for ghost/interface nodes
-  ! ------------------------------------------------------------
-  call exchange_p2d(P0_node)
-  call exchange_p2d(JP0_node)
-  call exchange_p2d(RP0_node)
-  call exchange_p2d(RlogP0_node)
-
-  ! ------------------------------------------------------------
-  ! 5. Global diagnostics
-  ! ------------------------------------------------------------
-  max_RP0_local    = maxval(RP0_node(1:np))
-  max_JP0_local    = maxval(JP0_node(1:np))
-  max_RlogP0_local = maxval(RlogP0_node(1:np))
-
-  nskip_local = count(RP0_node(1:np)>RP0_crit)
-
-  call MPI_Allreduce(max_RP0_local,max_RP0_global,1, &
-                     MPI_DOUBLE_PRECISION,MPI_MAX,comm,ierr)
-
-  call MPI_Allreduce(max_JP0_local,max_JP0_global,1, &
-                     MPI_DOUBLE_PRECISION,MPI_MAX,comm,ierr)
-
-  call MPI_Allreduce(max_RlogP0_local,max_RlogP0_global,1, &
-                     MPI_DOUBLE_PRECISION,MPI_MAX,comm,ierr)
-
-  call MPI_Allreduce(nskip_local,nskip_global,1, &
-                     MPI_INTEGER,MPI_SUM,comm,ierr)
-
-  if(myrank==0) then
-    write(16,*) 'ice VP P0-gradient diagnostic: max RP0_node_global=',max_RP0_global, &
-                ' max JP0_node_global=',max_JP0_global, &
-                ' max RlogP0_node_global=',max_RlogP0_global, &
-                ' nskip_node_global=',nskip_global
-  endif
-
-  ! ------------------------------------------------------------
-  ! 6. First implicit VP solve using RP0_node
-  ! ------------------------------------------------------------
-  call ice_vp_imp(u_ice0,v_ice0,RP0_node,RP0_crit)
+  call ice_vp_imp(u_ice0,v_ice0)
 
   do isub=1,ice_VP_iter
 
@@ -517,15 +286,9 @@ subroutine ice_vp_imp_step
     call exchange_p2d(u_ice)
     call exchange_p2d(v_ice)
 
-    ! Reuse the same RP0_node in Picard/VP iterations.
-    call ice_vp_imp(u_ice0,v_ice0,RP0_node,RP0_crit)
+    call ice_vp_imp(u_ice0,v_ice0)
 
   enddo
-
-  deallocate(P0_node,logP0_node, &
-             gradP0_mag_node,gradLogP0_mag_node, &
-             JP0_node,RP0_node,RlogP0_node, &
-             node_area_sum,node_area_count)
 
 end subroutine ice_vp_imp_step
 #endif /*USE_PETSC*/
