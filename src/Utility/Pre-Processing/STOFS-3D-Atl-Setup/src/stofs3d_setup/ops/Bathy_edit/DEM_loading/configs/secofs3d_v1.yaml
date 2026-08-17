@@ -1,0 +1,17 @@
+name: secofs_v1
+workdir: ./
+input_grid: hgrid.ll
+output_grid: hgrid.ll.dem_loaded.mpi.gr3
+dem_dir: /sciclone/schism10/Hgrid_projects/DEMs/npz2_HJ_for_SECOFS
+reverse_sign: true
+copy_provenance: true
+sources:
+  - name: secofs_orginal_patch
+    dem_json: DEM_info_original_patched.json
+  - name: bluetopo
+    dem_json: DEM_info_with_bluetopo.json
+merge_rules:
+  - name: deeper_bluetopo_region
+    method: max_depth
+    sources: [secofs_orginal_patch, bluetopo]
+    region: secofs_domain_clipped_v1.shp

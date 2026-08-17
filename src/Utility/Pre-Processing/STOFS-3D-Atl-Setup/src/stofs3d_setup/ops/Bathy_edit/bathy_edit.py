@@ -55,9 +55,11 @@ IMPLEMENTED_TASKS = [  # order matters
     'Temporary_Fix_v7p2',  # tweak depths around Bayou Lafourche
     'Temporary_Fix_v7.2.1',  # tweak depth around Philadelphia International Airport and Minas Basin
     'Temporary_Fix_v7.4',  # tweak depth around Philadelphia International Airport
+    'Temporary_Fix_secofs',  # tweak depths around Bayou Lafourche
 ]
 
 TASKS = {
+    'Temporary_Fix_secofs',
     'Regional_tweaks',
     'NCF',
     'Levee_dev',
@@ -104,14 +106,20 @@ WORKFLOW_CONSTANTS = {
     'Temporary_Fix_v7p2': {
         'reference_hgrid_file': (
             '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32f_test/Bathy_edit/'
-            'DEM_loading_for_temp_fix_v7p2/hgrid.ll.dem_loaded.mpi.gr3'
+            'DEM_loading_v7.2_original/hgrid.ll.dem_loaded.mpi.gr3'
+        ),
+    },
+    'Temporary_Fix_secofs': {
+        'reference_hgrid_file': (
+            '/sciclone/schism10/hjyoo/task/task10_Atlantic/RUN100g/src/Bathy_edit_org/'
+            'DEM_loading/DEM_loading_for_SECOFS_v1/hgrid.ll.dem_loaded.mpi.gr3'
         ),
     },
     'sample_usage': {
-        'wdir': Path('/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Bathy_edit/'),
+        'wdir': Path('/sciclone/schism10/hjyoo/task/task10_Atlantic/RUN100g/src/Bathy_edit_org/'),
         'hgrid_fname': Path(
-            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Bathy_edit/'
-            'DEM_loading/hgrid.ll.dem_loaded.mpi.gr3'
+            '/sciclone/schism10/hjyoo/task/task10_Atlantic/RUN100g/src/Bathy_edit_org/'
+            'DEM_loading/DEM_loading_for_STOFS_v7p4/hgrid.ll.dem_loaded.mpi.upper_Hudson.gr3'
         ),
     },
 }
@@ -240,12 +248,26 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
     hgrid_base_name = 'hgrid_ll_dem'
     initial_dp = hgrid_obj.dp.copy()  # save dp before processing
 
-    if 'Regional_tweaks' in tasks:  # set minimum depth in regions
-        from Regional_tweaks.regional_tweaks import shape_tweak
-        gpkg_file = (
-            f'{wdir}/Regional_tweaks/default_regional_tweaks_v7p4.gpkg'
+    if 'Temporary_Fix_secofs' in tasks:  # replace depth in SECOFS domain (SJR, Savannah, Charleston)
+        from Temporary_Fix_secofs.temp_fix_secofs import temp_fix_secofs
+        task_cfg = WORKFLOW_CONSTANTS['Temporary_Fix_secofs']
+        hgrid_base_name += '_temp_fix_secofs'
+        hgrid_obj = temp_fix_secofs(
+            hgrid_obj,
+            wdir=f'{wdir}/Temporary_Fix_secofs/',
+            reference_hgrid_file=task_cfg['reference_hgrid_file']
         )
-        hgrid_obj, _ = shape_tweak(hgrid_obj, gpkg_file)
+        hgrid_obj.grd2sms(
+            f'{wdir}/Temporary_Fix_secofs/{hgrid_base_name}.2dm'
+        )
+        print("Finished setting temporary fix for SECOFS.\n")
+
+    if 'Regional_tweaks' in tasks:  # set minimum depth in regions
+        from Regional_tweaks.regional_tweaks import tweak_hgrid_depth, tweak_shp_hgrid_depth
+        hgrid_obj = tweak_hgrid_depth(
+            hgrid=hgrid_obj, regions_dir=f'{wdir}/Regional_tweaks/regions/')
+        hgrid_obj = tweak_shp_hgrid_depth(
+            hgrid=hgrid_obj, regions_dir=f'{wdir}/Regional_tweaks/shp_regions/')        
         grd2sms(hgrid_obj, f'{wdir}/Regional_tweaks/{hgrid_base_name}_tweaks.2dm')
         initial_dp = hgrid_obj.dp.copy()  # treat the regional tweaks as the initial dp
         print("Finished setting regional tweaks and updating initial dp.\n")

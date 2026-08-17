@@ -27,9 +27,127 @@ REQUIRED_COLUMNS = {
     "min_input_depth_m",
     "max_input_depth_m",
 }
-SUPPORTED_OPERATIONS = {"set", "add"}
-POLYGON_TYPES = {"Polygon", "MultiPolygon"}
 
+DEFAULT_REGIONAL_TWEAKS_v7p2 = {  # incoorporating SECOFS updates, for SMS v27 and after
+    'min_5m_ll_noPR': 5,
+    'SabinePass': 7,
+    'BergenPoint': 5,
+     # 'Washington_3': 15,  # deleted
+    'Elk_river': 2,
+    'Hudson_river': 16,
+    'James_river': 2,  # changed
+    'NorthEast_river': 5,
+    'Rappahannock_river': 6,
+    'Susquehanna_river': 10,
+    'York_river': 4,  # changed
+    'Androscoggin_Kennebec_rivers': 3,
+    'Merrimack_river': 3,
+    'Patuxent_river': 5,
+    'Penobscot_river': 5,
+    'Saco_river': 3,
+    'StCroix_river': 5,
+    'Oyster_landing': 1,
+    'st_lawrence1': 10,
+    'st_lawrence2': 10,
+    'st_lawrence3': 10,
+}
+
+DEFAULT_REGIONAL_TWEAKS_shp_v7p4 = {
+    'Savannah_upstream': ['set', 0.6],
+    'Cooper_upstream': ['deepen', 5.0],
+    'Wando_upstream': ['deepen', 2.0],
+    'Wachapreague': ['deepen', 2.0],
+    'Savannah_marsh_block': ['shallow', 2.0, ('between', -2.0, 0.0)],
+    'Savannah_connectivity': ['set', 0.2, ('<', 0.0)],
+    'Turkey': ['set', 0.6, ('<', 0.0)],
+    'Baltimore': ['set', 2.0, ('<', 2.0)],
+    'Fall_River': ['set', 1.5, ('<', 1.5)],
+    'Providence': ['set', 1.5, ('<', 1.5)],
+}
+
+DEFAULT_REGION_DIR = '/sciclone/schism10/Hgrid_projects/DEMs/regions/'
+
+def tweak_shp_hgrid_depth(hgrid, regional_tweaks=None, regions_dir=DEFAULT_REGION_DIR,):
+    """Apply regional depth tweaks using shapefiles."""
+
+    import geopandas as gpd
+
+    if regional_tweaks is None:
+        regional_tweaks = DEFAULT_REGIONAL_TWEAKS_shp_v7p4
+
+    hgrid_gdf = gpd.GeoDataFrame(
+        geometry=gpd.points_from_xy(hgrid.x, hgrid.y),
+        crs='EPSG:4326'
+    )
+
+    for region, tweak in regional_tweaks.items():
+        mode = tweak[0]
+        value = tweak[1]
+        condition = tweak[2] if len(tweak) > 2 else None
+
+        # Read region polygon
+        gdf = gpd.read_file(f'{regions_dir}/{region}.shp')
+
+        if gdf.crs is None:
+            gdf = gdf.set_crs('EPSG:4326')
+        else:
+            gdf = gdf.to_crs('EPSG:4326')
+
+        # Find hgrid nodes inside the polygon
+        idx = gpd.sjoin(
+            hgrid_gdf,
+            gdf[['geometry']],
+            how='inner',
+            predicate='within'
+        ).index.unique().to_numpy(dtype=int)
+
+        if len(idx) == 0:
+            print(f'Warning: no hgrid nodes found in {region}.')
+            continue
+
+        # Apply condition
+        if condition is not None:
+            dp = hgrid.dp[idx]
+
+            if condition[0] == '<':
+                idx = idx[dp < condition[1]]
+
+            elif condition[0] == 'between':
+                idx = idx[
+                    (dp > condition[1]) &
+                    (dp < condition[2])
+                ]
+
+            else:
+                raise ValueError(
+                    f'Unknown condition {condition[0]} in {region}.'
+                )
+
+        if len(idx) == 0:
+            print(f'Warning: no nodes satisfy condition in {region}.')
+            continue
+
+        # Apply depth tweak
+        if mode == 'set':
+            hgrid.dp[idx] = value
+
+        elif mode == 'deepen':
+            hgrid.dp[idx] += value
+
+        elif mode == 'shallow':
+            hgrid.dp[idx] -= value
+
+        else:
+            raise ValueError(
+                f'Unknown mode {mode} in {region}.'
+            )
+
+        print(
+            f'{region}: {mode} by {value} m '
+            f'for {len(idx)} nodes.'
+        )
+
+    return hgrid
 
 class RegionalTweakWarning(UserWarning):
     """Warn about empty or overlapping regional tweak selections."""
