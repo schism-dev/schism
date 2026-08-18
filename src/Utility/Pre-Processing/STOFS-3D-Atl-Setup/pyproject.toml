@@ -11,15 +11,21 @@ dependencies = [
     "pydantic>=2",
     "pyyaml>=6",
     "fiona",
+    "geopandas>=0.14",
     "gsw",
     "pyschism @ git+https://github.com/schism-dev/pyschism.git@v0.1.17",
     "pyshp",
     "pylibs-ocean",
+    "shapely>=2.0",
 ]
 
 [project.scripts]
 stofs3d-setup = "stofs3d_setup.cli:app"
 stofs3d-hgrid-preproc = "stofs3d_setup.ops.Grid.hgrid_preproc.cli:main"
+stofs3d-reg2gpkg = "stofs3d_setup.utils.reg2gpkg:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"stofs3d_setup.ops.Bathy_edit.Regional_tweaks" = ["*.gpkg"]

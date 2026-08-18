@@ -6,6 +6,7 @@ These scripts automate common preprocessing tasks such as mesh preparation, forc
 
 This package replaces the legacy STOFS-3D-Atl-shadow-VIMS package. Previous versions of the original implementation can be retrieved from commit 71dd94b9 and earlier Git history.
 
+The setup workflow was originally developed and organized by Fei Ye and is currently maintained by Fei Ye and Hyungju Yoo. Significant changes are generally made through PRs and reviewed by an experienced user of the workflow.
 ---
 
 ## Dependencies
@@ -239,7 +240,12 @@ Recipe Build (execution)
 
 ### Notes
 
-- For STOFS version `v7.4` and later, use the latest `master` branch.
+- For versions under active development, use the latest `master` branch.
+  The STOFS version under development is `v7.4`; and `v8` is only being tested on local domains.
+
+- For v8.*: [place holder for hash number when it is finalized]
+
+- For v7.4: [place holder for hash number when it is finalized]
 
 - For STOFS version `v7.3` and earlier, check out the corresponding historical setup scripts:
 ```bash

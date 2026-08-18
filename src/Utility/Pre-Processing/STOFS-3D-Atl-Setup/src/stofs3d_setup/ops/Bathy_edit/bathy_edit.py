@@ -103,7 +103,7 @@ WORKFLOW_CONSTANTS = {
     },
     'Temporary_Fix_v7p2': {
         'reference_hgrid_file': (
-            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Bathy_edit/'
+            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32f_test/Bathy_edit/'
             'DEM_loading_for_temp_fix_v7p2/hgrid.ll.dem_loaded.mpi.gr3'
         ),
     },
@@ -241,9 +241,11 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
     initial_dp = hgrid_obj.dp.copy()  # save dp before processing
 
     if 'Regional_tweaks' in tasks:  # set minimum depth in regions
-        from Regional_tweaks.regional_tweaks import tweak_hgrid_depth
-        hgrid_obj = tweak_hgrid_depth(
-            hgrid=hgrid_obj, regions_dir=f'{wdir}/Regional_tweaks/regions/')
+        from Regional_tweaks.regional_tweaks import shape_tweak
+        gpkg_file = (
+            f'{wdir}/Regional_tweaks/default_regional_tweaks_v7p4.gpkg'
+        )
+        hgrid_obj, _ = shape_tweak(hgrid_obj, gpkg_file)
         grd2sms(hgrid_obj, f'{wdir}/Regional_tweaks/{hgrid_base_name}_tweaks.2dm')
         initial_dp = hgrid_obj.dp.copy()  # treat the regional tweaks as the initial dp
         print("Finished setting regional tweaks and updating initial dp.\n")
@@ -378,7 +380,7 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         print("Finished setting temporary fix for v7p2.\n")
 
     if 'Temporary_Fix_v7.2.1' in tasks:  # tweaks around Philadelphia International Airport and Bay of Fundy
-        from Regional_tweaks.regional_tweaks import shape_tweak
+        from Regional_tweaks.regional_tweaks_legacy import shape_tweak
         hgrid_base_name += '_temp_fix_v7.2.1'
         gpkg_file = f'{wdir}/Temporary_Fix_v7.2.1/v7.2.1_fix.gpkg'
         hgrid_obj, hgrid_tweaked_idx = shape_tweak(hgrid_obj, gpkg_file)
@@ -386,7 +388,7 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         print("Finished setting shape tweaks.\n")
 
     if 'Temporary_Fix_v7.4' in tasks:
-        from Regional_tweaks.regional_tweaks import shape_tweak
+        from Regional_tweaks.regional_tweaks_legacy import shape_tweak
         hgrid_base_name += '_temp_fix_v7.4'
         gpkg_file = f'{wdir}/Temporary_Fix_v7.4/v7.4_fix.gpkg'
         hgrid_obj, hgrid_tweaked_idx = shape_tweak(hgrid_obj, gpkg_file)
