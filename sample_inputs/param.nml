@@ -998,11 +998,11 @@
 !  iof_sed(13) = 0 ! deposition flux for suspended transport (kg/m/m/s) {sedDepositionalFlux}  2D
 !  iof_sed(14) = 0 ! Bedload transport rate vector due to wave acceleration (kg/m/s) {sedBedloadTransportX,Y}  2D vector
 
-!  Example of 3D outputs using 2 classes as example
+!  Example of outputs using 2 classes as example
 !  iof_sed(15) = 0 !Bedload transport rate _vector_ (kg.m-1.s-1) for 1st class (one output per class) {sedBedload[X,Y]_1}  2D vector
 !  iof_sed(16) = 0 !Bedload transport of 2nd class {sedBedFraction_[X,Y]_2}  2D vector
-!  iof_sed(17) = 0 !Bed fraction 1st class (one output per class) [-] {sedBedFraction_1}   2D
-!  iof_sed(18) = 0 !Bed fraction of 2nd class {sedBedFraction_2}   2D
+!  iof_sed(17) = 0 !Surfacial bed fraction 1st class (one output per class) [-] {sedBedFraction_1}   2D
+!  iof_sed(18) = 0 !Surfacial bed fraction of 2nd class {sedBedFraction_2}   2D
 
 !  iof_sed(19) = 0 !conc. of 1st class (one output need by each class) [g/L] {sedConcentration_1}   3D
 !  iof_sed(20) = 0 !conc. of 2nd class {sedConcentration_2}   3D

@@ -9145,7 +9145,7 @@ real (rkind) :: aux                               ! ustar
         if(iof_hydro(30)==1) call writeout_nc(id_out_var(33),'salt_elem',6,nvrt,nea,tr_el(2,:,:))
         if(iof_hydro(31)==1) call writeout_nc(id_out_var(34),'pressure_gradient',7,1,nsa,bpgr(:,1),bpgr(:,2))
         if(iof_hydro(32)==1) call writeout_nc(id_out_var(35),'sedTemperature',4,1,nea,stemp)
-        noutput=32 !total # of outputs so far (dim of iof_hydro)
+        noutput=32 !total # of outputs so far (dim of id_out_var)
 
         !'Modules
         !'4' in noutput+i+4 due to the first 4 reserved outputs 
@@ -9240,8 +9240,24 @@ real (rkind) :: aux                               ! ustar
 
         if(iof_sed(icount+1)==1) call writeout_nc(id_out_var(noutput+icount+5), &
      &'SED_TSC',2,nvrt,npa,total_sus_conc)
-
         noutput=noutput+1
+        icount=icount+1
+
+        !Non-standard
+        do i=1,ntrs(5)
+          write(it_char,'(i72)')i
+          it_char=adjustl(it_char); lit=len_trim(it_char)
+          itmp=irange_tr(1,5)+i-1 !global tracer #
+          if(iof_sed(icount+i)==1) call writeout_nc(id_out_var(noutput+icount+i+4), &
+     &'bedFraction_'//it_char(1:lit),5,Nbed,nea,bed_frac(:,:,i))
+        enddo !i
+        noutput=noutput+ntrs(5)
+        icount=icount+ntrs(5)
+
+        if(iof_sed(icount+1)==1) call writeout_nc(id_out_var(noutput+icount+5), &
+     &'bedThickness',5,Nbed,nea,bed(:,:,ithck))
+        noutput=noutput+1
+        icount=icount+1
 #endif /*USE_SED*/
 
 #ifdef USE_ECO
@@ -9565,7 +9581,7 @@ real (rkind) :: aux                               ! ustar
         !write(12,*)'id_out_var=',it,id_out_var(1:noutput)
       endif !mod(it,nspool)==0 && nc_out>0
 
-!     Open new global output files and write header data
+!     Open new global output stack and write header data
       if(nc_out>0.and.mod(it,ihfskip)==0) then
         ifile=ifile+1  !output file #
         call fill_nc_header(1)

@@ -6480,6 +6480,12 @@
       if(ihot<=1) ifile=1 !reset output file #
 
 #ifdef OLDIO
+      !Non-stadard outputs: define dim constants from modules 
+      Nbed00=0 !init
+#ifdef USE_SED
+      Nbed00=Nbed 
+#endif
+
       if(nc_out>0) call fill_nc_header(0)
 #else
 !...  Prep info for I/O scribes: # of output vars and attributes etc

@@ -32,7 +32,7 @@
 !    include 'netcdf.inc'
     private
 
-    integer,save :: node_dim,nele_dim,nedge_dim,four_dim,nv_dim, &
+    integer,save :: node_dim,nele_dim,nedge_dim,four_dim,nv_dim(4), &
     &one_dim,two_dim,time_dim,time_dims(1),itime_id,ele_dims(2),x_dims(1), &
     &y_dims(1),z_dims(1),var2d_dims(2),var3d_dims(3),var4d_dims(4),dummy_dim(1), &
     &data_start_1d(1),data_start_2d(2),data_start_3d(3),data_start_4d(4), &
@@ -235,7 +235,7 @@
 !                  4:6 - elem 2D/3D whole/half levels; 7:9 - side 2D/3D whole/half levels
 !            idim1,idim2: dimensions of output array(s) in the driving routine. 
 !                         For 2D variables (e.g., bottom
-!                         stress), idim1 must be 1; for 3D variables, idim1 must be nvrt.
+!                         stress), idim1 must be 1; for 3D variables, idim1 can be nvrt or other non-standard dim.
 !                         idim2 must be consistent with the type of output as given by
 !                         i23d (e.g., idim2=nea or ne for i23d=4);
 !            outvar[1,2](idim1,idim2): output array. outvar2 is optional [for vectors]
@@ -252,7 +252,7 @@
       !character(len=3) :: sfix
       character(len=1000) :: var_nm2
       logical :: lex1,lex2
-      integer :: i,k,iret,irec,len_var,idim2p,iret2,ivs
+      integer :: i,k,iret,irec,len_var,idim2p,iret2,ivs,nv_dim0
       real*4 :: a1d(1) 
       
 !     Return if not output step
@@ -327,13 +327,24 @@
         endif !ivs
         !write(12,*)'2D:',it_main,varid,var_nm2(1:len_var),iret2
       else !3D
+        !Define nv_dim0
+        if(idim1==nvrt) then
+          nv_dim0=nv_dim(1)
+        !Non-standard
+        else if(Nbed00>0.and.idim1==Nbed00) then
+          nv_dim0=nv_dim(2)
+        else
+          write(errmsg,*)'schism_io: unknown nv_dim,',Nbed00,idim1
+          call parallel_abort(errmsg)
+        endif !idim1
+
         if(iret2/=NF90_NOERR) then !not defined yet
           iret=nf90_redef(ncid_schism_io)
           if(ivs==1) then
-            var3d_dims(1)=nv_dim; var3d_dims(3)=time_dim
+            var3d_dims(1)=nv_dim0; var3d_dims(3)=time_dim
             iret=nf90_def_var(ncid_schism_io,var_nm2(1:len_var),NF90_FLOAT,var3d_dims,varid)
           else
-            var4d_dims(1)=two_dim; var4d_dims(2)=nv_dim; var4d_dims(4)=time_dim
+            var4d_dims(1)=two_dim; var4d_dims(2)=nv_dim0; var4d_dims(4)=time_dim
             iret=nf90_def_var(ncid_schism_io,var_nm2(1:len_var),NF90_FLOAT,var4d_dims,varid)
           endif !ivs
           !write(12,*)'3D def:',var3d_dims,varid,var_nm2(1:len_var),iret
@@ -346,11 +357,11 @@
 
         if(ivs==1) then
           data_start_3d(1)=1; data_start_3d(2)=1; data_start_3d(3)=irec
-          data_count_3d(1)=nvrt; data_count_3d(2)=idim2p; data_count_3d(3)=1
+          data_count_3d(1)=idim1; data_count_3d(2)=idim2p; data_count_3d(3)=1
           iret=nf90_put_var(ncid_schism_io,varid,real(outvar1(:,1:idim2p)),data_start_3d,data_count_3d)
         else !vector
           data_start_4d(1:3)=1; data_start_4d(4)=irec
-          data_count_4d(1)=1; data_count_4d(2)=nvrt; data_count_4d(3)=idim2p; data_count_4d(4)=1
+          data_count_4d(1)=1; data_count_4d(2)=idim1; data_count_4d(3)=idim2p; data_count_4d(4)=1
           iret=nf90_put_var(ncid_schism_io,varid,real(outvar1(:,1:idim2p)),data_start_4d,data_count_4d)
           data_start_4d(1)=2
           iret=nf90_put_var(ncid_schism_io,varid,real(outvar2(:,1:idim2p)),data_start_4d,data_count_4d)
@@ -388,10 +399,13 @@
       iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_face',ne,nele_dim)
       iret=nf90_def_dim(ncid_schism_io,'nSCHISM_hgrid_edge',ns,nedge_dim)
       iret=nf90_def_dim(ncid_schism_io,'nMaxSCHISM_hgrid_face_nodes',4, four_dim)
-      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_vgrid_layers',nvrt,nv_dim)
+      iret=nf90_def_dim(ncid_schism_io,'nSCHISM_vgrid_layers',nvrt,nv_dim(1))
       iret=nf90_def_dim(ncid_schism_io,'one',1,one_dim)
       iret=nf90_def_dim(ncid_schism_io,'two',2,two_dim)
       iret=nf90_def_dim(ncid_schism_io,'time', NF90_UNLIMITED,time_dim)
+
+      !Non-standard
+      if(Nbed00>0) iret=nf90_def_dim(ncid_schism_io,'nSED_bedlayers',Nbed00,nv_dim(2))
 
       time_dims(1)=time_dim
       iret=nf90_def_var(ncid_schism_io,'time',NF90_FLOAT,time_dims,itime_id)

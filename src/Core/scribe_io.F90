@@ -1132,7 +1132,7 @@
 
       !Non-standard outputs
 #ifdef USE_SED
-      iret=nf90_def_dim(ncid_schism0,'nSED_layers',Nbed,nv_dim0(2))
+      iret=nf90_def_dim(ncid_schism0,'nSED_bedlayers',Nbed,nv_dim0(2))
 #endif 
 
       ! Write the coordinate axis for the time dimension
