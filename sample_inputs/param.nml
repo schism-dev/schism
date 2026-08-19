@@ -843,9 +843,9 @@
 !-----------------------------------------------------------------------
 ! UGRID option for _3D_ outputs under scribed IO (out2d*.nc always has meta
 ! data info). If iof_ugrid > 0, 3D outputs will also have UGRID metadata.  
-! if iof_ugrid == 1 3D output will contain UGRID mesh data (at the expense
-! of file size); if iof_ugrid == 2, 3D output references mesh data in the 
-! 2D output.
+! if iof_ugrid=1, 3D output will contain UGRID mesh data (at the expense
+! of file size); if iof_ugrid=2, 3D outputs' mesh data are omitted (found in the 
+! 2D output)
 !-----------------------------------------------------------------------
   iof_ugrid = 0
 
@@ -998,16 +998,20 @@
 !  iof_sed(13) = 0 ! deposition flux for suspended transport (kg/m/m/s) {sedDepositionalFlux}  2D
 !  iof_sed(14) = 0 ! Bedload transport rate vector due to wave acceleration (kg/m/s) {sedBedloadTransportX,Y}  2D vector
 
-!  Example of using 2 classes
-!  iof_sed(15) = 0 !Bedload transport rate _vector_ (kg.m-1.s-1) for 1st tracer (one output per class) {sedBedload[X,Y]_1}  2D vector
+!  Example of 3D outputs using 2 classes as example
+!  iof_sed(15) = 0 !Bedload transport rate _vector_ (kg.m-1.s-1) for 1st class (one output per class) {sedBedload[X,Y]_1}  2D vector
 !  iof_sed(16) = 0 !Bedload transport of 2nd class {sedBedFraction_[X,Y]_2}  2D vector
-!  iof_sed(17) = 0 !Bed fraction 1st tracer (one output per class) [-] {sedBedFraction_1}   2D
+!  iof_sed(17) = 0 !Bed fraction 1st class (one output per class) [-] {sedBedFraction_1}   2D
 !  iof_sed(18) = 0 !Bed fraction of 2nd class {sedBedFraction_2}   2D
 
 !  iof_sed(19) = 0 !conc. of 1st class (one output need by each class) [g/L] {sedConcentration_1}   3D
 !  iof_sed(20) = 0 !conc. of 2nd class {sedConcentration_2}   3D
 
 !  iof_sed(21) = 0 !total suspended concentration (g/L) {totalSuspendedLoad}  3D
+
+!  iof_sed(22) = 0 !bed fraction of 1st class at each bed layer [-] {bedFraction_1} 3D non-standard
+!  iof_sed(23) = 0 !bed fraction of 2nd class at each bed layer [-] {bedFraction_2} 3D non-standard
+!  iof_sed(24) = 0 !bed thickness at each bed layer [m] {bedThickness} 3D non-standard
 
 !-----------------------------------------------------------------------
 ! EcoSim outputs 

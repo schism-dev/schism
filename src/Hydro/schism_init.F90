@@ -446,7 +446,7 @@
       !order). Flags for modules other than hydro are only used inside USE_*
       if(iorder==0) then
         allocate(iof_hydro(40),iof_wwm(40),iof_gen(max(1,ntracer_gen)),iof_age(max(1,ntracer_age)),level_age(ntracer_age/2), &
-     &iof_sed(3*sed_class+20),iof_eco(max(1,eco_class)),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), &
+     &iof_sed(3*sed_class+40),iof_eco(max(1,eco_class)),iof_icm_core(17),iof_icm_silica(2),iof_icm_zb(2),iof_icm_ph(4), &
      &iof_icm_srm(4),iof_cos(20),iof_fib(5),iof_sed2d(14),iof_ice(10),iof_mice(10),iof_ana(20),iof_marsh(2),iof_dvd(max(1,ntrs(12))), &
       !dim of srqst7 increased to account for 2D elem/side etc
      &srqst7(nscribes+10),veg_vert_z(nbins_veg_vert+1),veg_vert_scale_cd(nbins_veg_vert+1), &
@@ -6485,11 +6485,13 @@
 !...  Prep info for I/O scribes: # of output vars and attributes etc
       !Count 2D&3D outputs; vectors count as 2
       !This section must be consistent with schism_step and scribe_io
+      !nsend_varout: global counter used in index of send status etc
       nsend_varout=0 !init for first waitall in _step
-      out_name='' !init
+      out_name='' !init output var name
       !iout_23d: indicates location where outputs are defined. 1:3 - node 2D/3D
       !whole/3D half level; 4:6 - elem 2D/3D whole/3D half levels; 7:9 - side 2D/3D
-      !whole/3D half levels; 0: no vertical info (e.g. time)
+      !whole/3D half levels; 0: no vertical info (e.g. time).
+      !At the moment, non-standard outputs use same criteria.
       iout_23d=0 
 
 !------------------
@@ -6983,7 +6985,7 @@
 #endif /*USE_AGE*/
 
 #ifdef USE_SED
-      istart_sed_3dnode=ised_out_sofar
+      istart_sed_3dnode=ised_out_sofar !starting index for 3D output flags for SED
       do i=1,ntrs(5)
         if(iof_sed(i+ised_out_sofar)==1) then
           write(ifile_char,'(i12)')i
@@ -7137,7 +7139,7 @@
 #endif
 !end of 3D side
 !------------------
-!---  3D elem scalar
+!---  3D elem 
       ncount_3delem=0
       do i=28,30
         if(iof_hydro(i)/=0) then
@@ -7157,6 +7159,34 @@
       enddo !i
 
       !Modules
+
+!     Non-standard outputs (with different vertical dim) @ elem
+!     Different 'vertical' #s have their own numbering 1,2,... assigned 
+!     to var names and routines like alt1_
+!     To add new non-standard outputs (with different vertical #), search for 'Non-standard'
+      alt1_ncount_3delem=0 !init outside CPP
+#ifdef USE_SED
+      do i=1,ntrs(5)
+        if(iof_sed(i+ised_out_sofar)==1) then
+          write(ifile_char,'(i12)')i
+          ifile_char=adjustl(ifile_char); itmp2=len_trim(ifile_char)
+          alt1_ncount_3delem=alt1_ncount_3delem+1
+          counter_out_name=counter_out_name+1
+          iout_23d(counter_out_name)=5
+          out_name(counter_out_name)='bedFraction_'//ifile_char(1:itmp2)
+        endif !iof
+      enddo !i
+      ised_out_sofar=ised_out_sofar+ntrs(5) !index for iof_sed so far
+
+      if(iof_sed(ised_out_sofar+1)==1) then
+        alt1_ncount_3delem=alt1_ncount_3delem+1
+        counter_out_name=counter_out_name+1
+        iout_23d(counter_out_name)=5
+        out_name(counter_out_name)='bedThickness'
+      endif
+      ised_out_sofar=ised_out_sofar+1
+#endif /*USE_SED*/
+
 #ifdef USE_ICM
       do i=1,nout_icm
         if(iof_icm(i)==1.and.wqout(i)%itype==6) then
@@ -7199,13 +7229,21 @@
           allocate(varout_3delem(nvrt,ne,ncount_3delem),stat=istat)
           if(istat/=0) call parallel_abort('INIT: 3delem')
         endif
+
+        !Arrays for non-standard outputs here
+#ifdef USE_SED
+        if(alt1_ncount_3delem>0) then
+          allocate(alt1_varout_3delem(Nbed,ne,alt1_ncount_3delem),stat=istat)
+          if(istat/=0) call parallel_abort('INIT: alt1_varout_3delem')
+        endif
+#endif
       endif !iorder
 
 !...  Send basic time info to scribes. Make sure the send vars are not altered
 !     during non-block sends/recv
 !     Min # of scribes required (all 2D (nodes/elem/side) vars share 1 scribe)
-      noutvars=ncount_3dnode+ncount_3delem+ncount_3dside+1 
-      if (noutvars > nscribes) then
+      noutvars=ncount_3dnode+ncount_3delem+ncount_3dside+alt1_ncount_3delem+1 
+      if(noutvars>nscribes) then
         write(errmsg, '(A,I0,A,A,I0,A)') 'INIT: Too few scribes (', nscribes , '). ', &
         ' Please specify atleast equal to number of output variables (', noutvars, ')' 
         call parallel_abort(errmsg)
@@ -7247,7 +7285,7 @@
 
           call mpi_send(iof_gen,max(1,ntrs(3)),itype,nproc_schism-i,130,comm_schism,ierr)
           call mpi_send(iof_age,max(1,ntrs(4)),itype,nproc_schism-i,131,comm_schism,ierr)
-          call mpi_send(iof_sed,3*ntrs(5)+20,itype,nproc_schism-i,132,comm_schism,ierr)
+          call mpi_send(iof_sed,3*ntrs(5)+40,itype,nproc_schism-i,132,comm_schism,ierr)
           call mpi_send(iof_eco,max(1,ntrs(6)),itype,nproc_schism-i,133,comm_schism,ierr)
           call mpi_send(iof_dvd,max(1,ntrs(12)),itype,nproc_schism-i,134,comm_schism,ierr)
           call mpi_send(istart_sed_3dnode,1,itype,nproc_schism-i,135,comm_schism,ierr)
@@ -7264,6 +7302,12 @@
           call mpi_send(ics,1,itype,nproc_schism-i,146,comm_schism,ierr)
           call mpi_send(iof_ugrid,1,itype,nproc_schism-i,147,comm_schism,ierr)
           call mpi_send(chunk_size_vrt,1,itype,nproc_schism-i,148,comm_schism,ierr)
+
+          !Non-standar output dims
+#ifdef USE_SED
+          call mpi_send(Nbed,1,itype,nproc_schism-i,141,comm_schism,ierr)
+          call mpi_send(alt1_ncount_3delem,1,itype,nproc_schism-i,123,comm_schism,ierr)
+#endif
         enddo !i=1,nscribes
       endif !myrank=0
 

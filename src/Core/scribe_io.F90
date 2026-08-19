@@ -43,10 +43,10 @@
     include 'mpif.h'
     private
 
-    integer,save :: node_dim,nele_dim,nedge_dim,four_dim,nv_dim, &
+    integer,save :: node_dim,nele_dim,nedge_dim,four_dim,nv_dim(4), &
     &one_dim,two_dim,time_dim,itime_id,ivar_id,elnode_id, iside_id, i34_id,ix_id,iy_id,ih_id 
 !    integer, save:: ixel_id2, iyel_id2, ixsd_id2, iysd_id2
-    integer,save :: node_dim2,nele_dim2,nedge_dim2,four_dim2,nv_dim2, &
+    integer,save :: node_dim2,nele_dim2,nedge_dim2,four_dim2,nv_dim2(4), &
     &one_dim2,two_dim2,time_dim2,itime_id2,i34_id2
     integer,save :: var2d_dims(2),var3d_dims(3),var4d_dims(4),dummy_dim(1), &
     &data_start_1d(1),data_start_2d(2),data_start_3d(3),data_start_4d(4), &
@@ -54,8 +54,9 @@
 
     integer,save :: ifile,ihfskip,nspool,nc_out,nvrt,nproc_compute,np_global,ne_global,ns_global, &
   &np_max,ne_max,ns_max,ncount_2dnode,ncount_2delem,ncount_2dside,ncount_3dnode,ncount_3delem,ncount_3dside, &
+  &alt1_ncount_3delem, &
   &iths0,ncid_schism_2d,ncid_schism_3d,istart_sed_3dnode,start_year,start_month,start_day, ics,iof_ugrid, &
-  &chunk_size_vrt
+  &chunk_size_vrt,Nbed
     !Output flag dim must be same as schism_init!
     integer,save :: ntrs(natrm),iof_hydro(40),iof_wwm(40),iof_cos(20),iof_fib(5), &
   &iof_sed2d(14),iof_ice(10),iof_ana(20),iof_marsh(2),counter_out_name,nout_icm_3d(2)
@@ -72,7 +73,8 @@
     real(rkind),save,allocatable :: xnd(:),ynd(:),dp(:),xel(:),yel(:),xsd(:),ysd(:)
     real(4),save,allocatable :: var2dnode(:,:,:),var2dnode_gb(:,:),var2delem(:,:,:),var2delem_gb(:,:), &
   &var2dside(:,:,:),var2dside_gb(:,:),var3dnode(:,:,:),var3dnode_gb(:,:),var3dside(:,:,:),var3dside_gb(:,:), &
-  &var3delem(:,:,:),var3delem_gb(:,:)
+  &var3delem(:,:,:),var3delem_gb(:,:), &
+  &alt1_var3delem(:,:,:),alt1_var3delem_gb(:,:)
 
     public :: scribe_init
     public :: scribe_step
@@ -144,6 +146,14 @@
       call mpi_recv(iof_ugrid,1,itype,0,147,comm_schism,rrqst,ierr)
       call mpi_recv(chunk_size_vrt,1,itype,0,148,comm_schism,rrqst,ierr)
 
+      !Non-standard output dims
+      Nbed=0 !init outside CPP
+#ifdef USE_SED
+      call mpi_recv(Nbed,1,itype,0,141,comm_schism,rrqst,ierr)
+      call mpi_recv(alt1_ncount_3delem,1,itype,0,123,comm_schism,rrqst,ierr)
+#endif
+
+
       if(myrank_scribe==0) then
         write(16,*)'Scribe ',myrank_scribe,myrank_schism,nproc_scribe,nproc_compute
         write(16,*)'Scribe, basic info:',dt,nspool,nvrt,np_global,ihfskip, &
@@ -156,11 +166,11 @@
       endif !myrank_scribe
 
       !Finish rest of recv for modules
-      allocate(iof_gen(max(1,ntrs(3))),iof_age(max(1,ntrs(4))),iof_sed(3*ntrs(5)+20), &
+      allocate(iof_gen(max(1,ntrs(3))),iof_age(max(1,ntrs(4))),iof_sed(3*ntrs(5)+40), &
      &iof_eco(max(1,ntrs(6))),iof_dvd(max(1,ntrs(12))))
       call mpi_recv(iof_gen,max(1,ntrs(3)),itype,0,130,comm_schism,rrqst,ierr)
       call mpi_recv(iof_age,max(1,ntrs(4)),itype,0,131,comm_schism,rrqst,ierr)
-      call mpi_recv(iof_sed,3*ntrs(5)+20,itype,0,132,comm_schism,rrqst,ierr)
+      call mpi_recv(iof_sed,3*ntrs(5)+40,itype,0,132,comm_schism,rrqst,ierr)
       call mpi_recv(iof_eco,max(1,ntrs(6)),itype,0,133,comm_schism,rrqst,ierr)
       call mpi_recv(iof_dvd,max(1,ntrs(12)),itype,0,134,comm_schism,rrqst,ierr)
       call mpi_recv(istart_sed_3dnode,1,itype,0,135,comm_schism,rrqst,ierr)
@@ -365,6 +375,16 @@
         allocate(var3delem(nvrt,ne_max,nproc_compute),var3delem_gb(nvrt,ne_global))
         var3delem(nvrt,ne_max,nproc_compute)=0.
       endif
+
+      !Non-standard outputs
+#ifdef USE_SED
+      if(alt1_ncount_3delem>0) then
+        allocate(alt1_var3delem(Nbed,ne_max,nproc_compute), &
+     &alt1_var3delem_gb(Nbed,ne_global),stat=ierr)
+        if(ierr/=0) call parallel_abort('scribe_init: alt1_var3delem')
+        alt1_var3delem(Nbed,ne_max,nproc_compute)=0.
+      endif
+#endif 
        
 !      call mpi_barrier(comm_scribe,ierr)
       if(myrank_scribe==0) write(16,*)'finished scribe_init:',myrank_schism
@@ -376,7 +396,7 @@
       implicit none
       integer,intent(in) :: it
 
-      integer :: i,j,k,m,rrqst,ierr,irank,itotal,icount_out_name,itmp5
+      integer :: i,j,k,m,rrqst,ierr,irank,itotal,icount_out_name,indx_sed
       character(len=20) :: varname3
 
 !     Return if not output step
@@ -571,8 +591,8 @@
 !        endif !iof_
       enddo !j
 
-      itmp5=istart_sed_3dnode+ntrs(5) !index of iof_sed so far
-      if(iof_sed(itmp5+1)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
+      indx_sed=istart_sed_3dnode+ntrs(5) !index of iof_sed so far
+      if(iof_sed(indx_sed+1)==1) call scribe_recv_write(it,1,1,itotal,icount_out_name)
 !          itotal=itotal+1
 !          icount_out_name=icount_out_name+1 !index into out_name
 !          irank=nproc_schism-itotal
@@ -588,7 +608,7 @@
 !            call nc_writeout3D(1,it,nvrt,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
 !          endif !myrank_schism
 !      endif !iof_
-      itmp5=itmp5+1
+      indx_sed=indx_sed+1
 #endif /*USE_SED*/
 
 #ifdef USE_ECO
@@ -820,6 +840,18 @@
       enddo !j
 
       !Add modules
+
+!     Non-standard outputs
+#ifdef USE_SED
+      do j=1,ntrs(5)
+        if(iof_sed(indx_sed+j)==1) call alt1_scribe_recv_write(Nbed,it,2,1,itotal,icount_out_name)
+      enddo !j
+      indx_sed=indx_sed+ntrs(5)
+
+      if(iof_sed(indx_sed+1)==1) call alt1_scribe_recv_write(Nbed,it,2,1,itotal,icount_out_name)
+      indx_sed=indx_sed+1
+#endif /*USE_SED*/
+
 #ifdef USE_ICM
       do j=1,nout_icm_3d(2)
          call scribe_recv_write(it,2,1,itotal,icount_out_name)
@@ -961,7 +993,7 @@
       real(rkind) :: a1d(1)
       
       !Check inputs
-      if(idim1/=nvrt) call parallel_abort('nc_writeout3D:idim1/=nvrt')
+!      if(idim1/=nvrt) call parallel_abort('nc_writeout3D:idim1/=nvrt')
       if(imode==1) then
         if(idim2/=np_global) call parallel_abort('nc_writeout3D:dim2/=np_global')
       else if(imode==2) then
@@ -990,18 +1022,27 @@
       enddo
       if(4.d0*chunks(1)*chunks(2)*chunks(3)>3.d9) call parallel_abort('nc_writeout3D: chunk size')
 
-      if(mod(it-nspool,ihfskip)==0) then
+      if(mod(it-nspool,ihfskip)==0) then !create new stack
         ifile=(it-1)/ihfskip+1  !output stack #
         write(ifile_char,'(i12)') ifile
         fname=trim(adjustl(out_dir))//'/'//trim(adjustl(vname))//'_'//trim(adjustl(ifile_char))//'.nc'
         iret=nf90_create(trim(adjustl(fname)),OR(NF90_NETCDF4,NF90_CLOBBER),ncid_schism_3d)
 
+        !If iof_ugrid=1, mesh metadata will be added into 3D outputs in this routine
         call fill_header_static(iof_ugrid,ncid_schism_3d,itime_id,node_dim, &
      &nele_dim,nedge_dim,four_dim,nv_dim,one_dim,two_dim,time_dim)
 
         iret=nf90_redef(ncid_schism_3d)
 
-        var3d_dims(1)=nv_dim
+        !Infer verticl dim name. This won't work if the values are same -but maybe harmless
+        if(idim1==nvrt) then
+          var3d_dims(1)=nv_dim(1)
+        else if (idim1==Nbed) then
+          var3d_dims(1)=nv_dim(2)
+        else
+          call parallel_abort('nc_writeout3D: unknown idim1')
+        endif
+
         var3d_dims(3)=time_dim
         if(imode==1) then
           var3d_dims(2)=node_dim
@@ -1055,7 +1096,8 @@
       if(iret/=NF90_NOERR) call parallel_abort('nc_writeout3D: put time')
 
       data_start_3d=(/1,1,irec/)
-      data_count_3d=(/nvrt,idim2,1/)
+      !data_count_3d=(/nvrt,idim2,1/)
+      data_count_3d=(/idim1,idim2,1/)
       iret=nf90_put_var(ncid_schism_3d,ivar_id,real(var3d_gb2),data_start_3d,data_count_3d)
       if(iret/=NF90_NOERR) call parallel_abort('nc_writeout3D: put 3D var')
      
@@ -1072,7 +1114,7 @@
       implicit none
       integer, intent(in) :: iheader,ncid_schism0 !header: more elaborate header per UGRID
       integer, intent(out) :: itime_id0,node_dim0,nele_dim0,nedge_dim0, &
-     &four_dim0,nv_dim0,one_dim0,two_dim0,time_dim0
+     &four_dim0,nv_dim0(4),one_dim0,two_dim0,time_dim0
 
       integer :: irec,iret,i,j,k,ih0_id2,ikbp_id2, ivarid,time_dims(1)
       integer :: ix_id2,iy_id2,ih_id2,ixel_id2,iyel_id2,ixsd_id2,iysd_id2,elnode_id2,iside_id2
@@ -1083,10 +1125,15 @@
       iret=nf90_def_dim(ncid_schism0,'nSCHISM_hgrid_face',ne_global,nele_dim0)
       iret=nf90_def_dim(ncid_schism0,'nSCHISM_hgrid_edge',ns_global,nedge_dim0)
       iret=nf90_def_dim(ncid_schism0,'nMaxSCHISM_hgrid_face_nodes',4, four_dim0)
-      iret=nf90_def_dim(ncid_schism0,'nSCHISM_vgrid_layers',nvrt,nv_dim0)
+      iret=nf90_def_dim(ncid_schism0,'nSCHISM_vgrid_layers',nvrt,nv_dim0(1))
       iret=nf90_def_dim(ncid_schism0,'one',1,one_dim0)
       iret=nf90_def_dim(ncid_schism0,'two',2,two_dim0)
       iret=nf90_def_dim(ncid_schism0,'time', NF90_UNLIMITED,time_dim0)
+
+      !Non-standard outputs
+#ifdef USE_SED
+      iret=nf90_def_dim(ncid_schism0,'nSED_layers',Nbed,nv_dim0(2))
+#endif 
 
       ! Write the coordinate axis for the time dimension
       time_dims(1)=time_dim0
@@ -1097,7 +1144,7 @@
       iret=nf90_put_att(ncid_schism0,itime_id0,'units',trim(isotimestring)) 
       iret=nf90_put_att(ncid_schism0,itime_id0,'standard_name','time') 
       iret=nf90_put_att(ncid_schism0,itime_id0,'axis','T') 
-      if (iheader > 0) then   
+      if (iheader > 0) then !more metadata
         iret=nf90_put_att(ncid_schism0,itime_id0,'calendar','proleptic_gregorian') 
  
         ! UGRID does not need to be specified as it is included in CF-1.12
@@ -1442,6 +1489,71 @@
       end subroutine scribe_recv_write
 
 !===============================================================================
+      !Non-standard outputs: recv and write out _3D_ variables
+      !Different vertical dims need their own separate alt?_
+      subroutine alt1_scribe_recv_write(nvrt0,it,imode,ivs,itotal,icount_out_name)
+      implicit none
+      !imode: 1/2/3 for node/elem/side; ivs: 1 (scalar) or 2 (vector)
+      integer, intent(in) :: nvrt0,it,imode,ivs
+      integer, intent(inout) :: itotal,icount_out_name !global counters
+
+      character(len=20) :: varname3
+      integer :: i,j,m,irank,ierr
+
+      if(imode<1.or.imode>3) call parallel_abort('alt1_scribe_recv_write: imode')
+      if(ivs/=1.and.ivs/=2) call parallel_abort('alt1_scribe_recv_write: ivs')
+
+      do m=1,ivs !components
+        itotal=itotal+1
+        icount_out_name=icount_out_name+1
+        irank=nproc_schism-itotal
+        if(myrank_schism==irank) then
+          !OK to fill partial arrays as long as respect column major
+          do i=1,nproc_compute
+            if(imode==1) then !node
+!              call mpi_irecv(var3dnode(:,:,i),np(i)*nvrt0,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+              call parallel_abort('alt1_scribe_recv_write: not implemented')
+            else if(imode==2) then !elem
+              call mpi_irecv(alt1_var3delem(:,:,i),ne(i)*nvrt0,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+            else !side
+!              call mpi_irecv(var3dside(:,:,i),ns(i)*nvrt0,MPI_REAL4,i-1,200+itotal,comm_schism,rrqst2(i),ierr)
+              call parallel_abort('alt1_scribe_recv_write: not implemented')
+            endif !imode
+          enddo !i
+          call mpi_waitall(nproc_compute,rrqst2,MPI_STATUSES_IGNORE,ierr)
+
+          !Combine in memory
+          do i=1,nproc_compute
+            if(imode==1) then !node
+!              var3dnode_gb(1:nvrt0,iplg(1:np(i),i))=var3dnode(1:nvrt0,1:np(i),i)
+            else if(imode==2) then !elem
+              alt1_var3delem_gb(1:nvrt0,ielg(1:ne(i),i))=alt1_var3delem(1:nvrt0,1:ne(i),i)
+            else !side
+!              var3dside_gb(1:nvrt0,islg(1:ns(i),i))=var3dside(1:nvrt0,1:ns(i),i)
+            endif !imode
+          enddo !i
+
+          !Fill in below-bottom values (for nodes only at the moment)
+!          if(imode==1) then
+!            do i=1,np_global 
+!              var3dnode_gb(1:kbp00(i)-1,i)=NF90_FILL_FLOAT
+!            enddo !i
+!          endif !imode
+
+          varname3=out_name(icount_out_name)
+          if(imode==1) then !node
+!            call nc_writeout3D(1,it,nvrt0,np_global,var3dnode_gb,varname3,iout_23d(icount_out_name))
+          else if(imode==2) then !elem
+            call nc_writeout3D(2,it,nvrt0,ne_global,alt1_var3delem_gb,varname3,iout_23d(icount_out_name))
+          else !side
+!            call nc_writeout3D(3,it,nvrt0,ns_global,var3dside_gb,varname3,iout_23d(icount_out_name))
+          endif !imode
+        endif !myrank_schism
+      enddo !m=1,ivs
+
+      end subroutine alt1_scribe_recv_write
+
+!===============================================================================
       subroutine add_mesh_attributes(ncid, varid, iheader)
         implicit none
         integer, intent(in) :: ncid, varid, iheader
@@ -1678,6 +1790,7 @@
 
       end subroutine add_cf_variable_attributes
 
+      !Copy from user specified metadata.nc
       subroutine add_user_attributes(ncid)
         implicit none
         integer, intent(in) :: ncid

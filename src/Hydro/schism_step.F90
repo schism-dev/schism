@@ -9580,7 +9580,10 @@ real (rkind) :: aux                               ! ustar
 
 !       Beware multi-dim arrays: send/recv sections of first X dims is fine
 !       (column major)
-        nsend_varout=0 !total # of sends in this step (including all 2/3D outputs)
+
+!       Global counter: total # of sends in this step (including all 2/3D outputs), used
+!       for index of send status etc
+        nsend_varout=0 
 
         !2D: all (node/side/elem) share 1 scribe
 !------------------
@@ -9952,63 +9955,35 @@ real (rkind) :: aux                               ! ustar
 
 !------------------
 !---    3D node scalar &vector: each output has its own scribe
-        icount=0 !index into varout_3dnode 
+        icount=0 !index into varout_3dnode; routine savensend3D_scribe will increment it as vars are sent 
         do i=17,25
           if(iof_hydro(i)/=0) then
-!            icount=icount+1
-!            nsend_varout=nsend_varout+1 
-!            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.5)')
             select case(i)
               case(17)
                 call savensend3D_scribe(icount,1,1,nvrt,np,ww2(:,1:np))
-!                varout_3dnode(:,:,icount)=ww2(:,1:np)
               case(18)
                 call savensend3D_scribe(icount,1,1,nvrt,np,tr_nd(1,:,1:np))
-!                varout_3dnode(:,:,icount)=tr_nd(1,:,1:np)
               case(19)
                 call savensend3D_scribe(icount,1,1,nvrt,np,tr_nd(2,:,1:np))
-!                varout_3dnode(:,:,icount)=tr_nd(2,:,1:np)
               case(20)
                 call savensend3D_scribe(icount,1,1,nvrt,np,prho(:,1:np))
-!                varout_3dnode(:,:,icount)=prho(:,1:np)
               case(21)
                 call savensend3D_scribe(icount,1,1,nvrt,np,dfh(:,1:np))
-!                varout_3dnode(:,:,icount)=dfh(:,1:np)
               case(22)
                 call savensend3D_scribe(icount,1,1,nvrt,np,dfv(:,1:np))
-!                varout_3dnode(:,:,icount)=dfv(:,1:np)
               case(23)
                 call savensend3D_scribe(icount,1,1,nvrt,np,q2(:,1:np))
-!                varout_3dnode(:,:,icount)=q2(:,1:np)
               case(24)
                 call savensend3D_scribe(icount,1,1,nvrt,np,xl(:,1:np))
-!                varout_3dnode(:,:,icount)=xl(:,1:np)
               case(25)
                 call savensend3D_scribe(icount,1,1,nvrt,np,znl(:,1:np))
-!                varout_3dnode(:,:,icount)=znl(:,1:np)
             end select
-
-!            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
           endif !iof_hydro
         enddo !i=17,25
 
         !3D node vectors
         do i=26,26
           if(iof_hydro(i)/=0) call savensend3D_scribe(icount,1,2,nvrt,np,uu2(:,1:np),vv2(:,1:np))
-!            do j=1,2 !components
-!              icount=icount+1
-!              nsend_varout=nsend_varout+1
-!              if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2.6)')
-!              if(j==1) then
-!                varout_3dnode(:,:,icount)=uu2(:,1:np)
-!              else
-!                varout_3dnode(:,:,icount)=vv2(:,1:np)
-!              endif !j
-!              call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
-!            enddo !j
-!          endif !iof_hydro
         enddo !i
 
         !Modules
@@ -10016,46 +9991,14 @@ real (rkind) :: aux                               ! ustar
       !Vectors
       do i=35,36
         if(iof_wwm(i)/=0) call savensend3D_scribe(icount,1,2,nvrt,np,stokes_hvel(1,:,1:np),stokes_hvel(2,:,1:np))
-!          do j=1,2 !components
-!            icount=icount+1
-!            nsend_varout=nsend_varout+1
-!            if(nsend_varout>nscribes.or.icount>ncount_3dnode) then
-!              write(errmsg,*)'STEP: icount>nscribes(2.63),',nsend_varout,nscribes,icount,ncount_3dnode
-!              call parallel_abort(errmsg)
-!            endif
-!
-!            if(i==35) then
-!              if(j==1) then
-!                varout_3dnode(:,:,icount)=stokes_hvel(1,:,1:np)
-!              else
-!                varout_3dnode(:,:,icount)=stokes_hvel(2,:,1:np)
-!              endif !j
-!            else
-!              if(j==1) then
-!                varout_3dnode(:,:,icount)=roller_stokes_hvel(1,:,1:np)
-!              else
-!                varout_3dnode(:,:,icount)=roller_stokes_hvel(2,:,1:np)
-!              endif !j
-!            endif !i
-!
-!            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
-!          enddo !j
-!        endif !iof_wwm
       enddo !i
 #endif /*USE_WWM*/
 
 #ifdef USE_GEN
         do i=1,ntrs(3)
           if(iof_gen(i)==1) then
-!            icount=icount+1
-!            nsend_varout=nsend_varout+1
-!            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.7)')
             itmp=irange_tr(1,3)+i-1 !tracer #
             call savensend3D_scribe(icount,1,1,nvrt,np,tr_nd(itmp,:,1:np))
-!            varout_3dnode(:,:,icount)=tr_nd(itmp,:,1:np)
-!            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
           endif !iof_gen
         enddo !i
 #endif /*USE_GEN*/
@@ -10063,17 +10006,11 @@ real (rkind) :: aux                               ! ustar
 #ifdef USE_AGE
         do i=1,ntrs(4)/2
           if(iof_age(i)==1) then
-!            icount=icount+1
-!            nsend_varout=nsend_varout+1
-!            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.8)')
             itmp=irange_tr(1,4)+i-1 !tracer #
             bcc(1,1:nvrt,1:npa)=max(1.d-5,tr_nd(itmp,:,:))
             bcc(1,1:nvrt,1:np)=tr_nd(itmp+ntrs(4)/2,:,1:np)/bcc(1,1:nvrt,1:np)/86400.d0
 
             call savensend3D_scribe(icount,1,1,nvrt,np,bcc(1,1:nvrt,1:np))
-!            varout_3dnode(:,:,icount)=tr_nd(itmp+ntrs(4)/2,:,1:np)/bcc(1,1:nvrt,1:np)/86400.d0
-!            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
           endif !iof_age
         enddo !i
 #endif /*USE_AGE*/
@@ -10081,40 +10018,23 @@ real (rkind) :: aux                               ! ustar
 #ifdef USE_SED
       do i=1,ntrs(5)
         if(iof_sed(i+ised_out_sofar)==1) then
-!          icount=icount+1
-!          nsend_varout=nsend_varout+1
-!          if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.81)')
           itmp=irange_tr(1,5)+i-1 !tracer #
           call savensend3D_scribe(icount,1,1,nvrt,np,tr_nd(itmp,:,1:np))
-!          varout_3dnode(:,:,icount)=tr_nd(itmp,:,1:np)
-!          call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
         endif !iof
       enddo !i
       ised_out_sofar=ised_out_sofar+ntrs(5) !index for iof_sed so far
 
       if(iof_sed(ised_out_sofar+1)==1) then
         call savensend3D_scribe(icount,1,1,nvrt,np,total_sus_conc(:,1:np))
-!        icount=icount+1
-!        nsend_varout=nsend_varout+1
-!        if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.82)')
-!        varout_3dnode(:,:,icount)=total_sus_conc(:,1:np)
-!        call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
       endif
+      ised_out_sofar=ised_out_sofar+1
 #endif /*USE_SED*/
 
 #ifdef USE_ECO
         do i=1,ntrs(6)
           if(iof_eco(i)==1) then
-!            icount=icount+1
-!            nsend_varout=nsend_varout+1
-!            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(1.9)')
             itmp=irange_tr(1,6)+i-1 !tracer #
             call savensend3D_scribe(icount,1,1,nvrt,np,tr_nd(itmp,:,1:np))
-!            varout_3dnode(:,:,icount)=tr_nd(itmp,:,1:np)
-!            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
           endif !iof_eco
         enddo !i
 #endif /*USE_ECO*/
@@ -10130,14 +10050,8 @@ real (rkind) :: aux                               ! ustar
 #ifdef USE_COSINE
         do i=1,ntrs(8)
           if(iof_cos(i)==1) then
-!            icount=icount+1
-!            nsend_varout=nsend_varout+1
-!            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2.9)')
             itmp=irange_tr(1,8)+i-1 !tracer #
             call savensend3D_scribe(icount,1,1,nvrt,np,tr_nd(itmp,:,1:np))
-!            varout_3dnode(:,:,icount)=tr_nd(itmp,:,1:np)
-!            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
           endif !iof_cos
         enddo !i
 #endif /*USE_COSINE*/
@@ -10145,14 +10059,8 @@ real (rkind) :: aux                               ! ustar
 #ifdef USE_FIB
         do i=1,ntrs(9)
           if(iof_fib(i)==1) then
-!            icount=icount+1
-!            nsend_varout=nsend_varout+1
-!            if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2.8)')
             itmp=irange_tr(1,9)+i-1 !tracer #
             call savensend3D_scribe(icount,1,1,nvrt,np,tr_nd(itmp,:,1:np))
-!            varout_3dnode(:,:,icount)=tr_nd(itmp,:,1:np)
-!            call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
           endif !iof_fib
         enddo !i
 #endif/*USE_FIB*/
@@ -10160,24 +10068,12 @@ real (rkind) :: aux                               ! ustar
 #ifdef USE_FABM
         do i=1,ntrs(11)
           call savensend3D_scribe(icount,1,1,nvrt,np,tr_nd(i+fabm_istart-1,:,1:np))
-!          icount=icount+1
-!          nsend_varout=nsend_varout+1
-!          if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2.2)')
-!          varout_3dnode(:,:,icount)=tr_nd(i+fabm_istart-1,:,1:np)
-!          call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
         enddo !i
 #endif
 
 #ifdef USE_ANALYSIS
       if(iof_ana(14)==1) then
         call savensend3D_scribe(icount,1,1,nvrt,np,swild95(:,1:np,7))
-!        icount=icount+1
-!        nsend_varout=nsend_varout+1
-!        if(nsend_varout>nscribes.or.icount>ncount_3dnode) call parallel_abort('STEP: icount>nscribes(2.3)')
-!        varout_3dnode(:,:,icount)=swild95(:,1:np,7)
-!        call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
       endif
 #endif
 
@@ -10192,86 +10088,27 @@ real (rkind) :: aux                               ! ustar
         icount=0 !index into varout_3dside
         do i=27,27
           if(iof_hydro(i)/=0) call savensend3D_scribe(icount,3,2,nvrt,ns,su2(:,1:ns),sv2(:,1:ns))
-!            do j=1,2 !components
-!              icount=icount+1
-!              nsend_varout=nsend_varout+1
-!              if(nsend_varout>nscribes.or.icount>ncount_3dside) call parallel_abort('STEP: icount>nscribes(2.7)')
-!              if(j==1) then
-!                varout_3dside(:,:,icount)=su2(:,1:ns)
-!              else
-!                varout_3dside(:,:,icount)=sv2(:,1:ns)
-!              endif !j
-!              call mpi_isend(varout_3dside(:,1:ns,icount),ns*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
-!            enddo !j
-!          endif !iof_hydro
         enddo !i
      
         !Modules
 #ifdef USE_WWM
         if(iof_wwm(33)/=0) call savensend3D_scribe(icount,3,1,nvrt,ns,stokes_wvel_side(:,1:ns))
-!          icount=icount+1
-!          nsend_varout=nsend_varout+1
-!          if(nsend_varout>nscribes.or.icount>ncount_3dside) call parallel_abort('STEP: icount>nscribes(2.62)')
-!          varout_3dside(:,:,icount)=stokes_wvel_side(:,1:ns)
-!          call mpi_isend(varout_3dside(:,1:ns,icount),ns*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
-!        endif !iof_wwm
-
         !Vector
         if(iof_wwm(34)/=0) call savensend3D_scribe(icount,3,2,nvrt,ns,wwave_force(1,:,1:ns),wwave_force(2,:,1:ns))
-!          do j=1,2 !components
-!            icount=icount+1
-!            nsend_varout=nsend_varout+1
-!            if(nsend_varout>nscribes.or.icount>ncount_3dside) call parallel_abort('STEP: icount>nscribes(2.6)')
-!            if(j==1) then
-!              varout_3dside(:,:,icount)=wwave_force(1,:,1:ns)
-!            else
-!              varout_3dside(:,:,icount)=wwave_force(2,:,1:ns)
-!            endif !j
-!            call mpi_isend(varout_3dside(:,1:ns,icount),ns*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
-!          enddo !j
-!        endif !iof_wwm
 #endif /*USE_WWM*/
 
 #ifdef USE_ANALYSIS
       do i=6,13
         if(iof_ana(i)/=0) then
-!          icount=icount+1
-!          nsend_varout=nsend_varout+1
-!          if(nsend_varout>nscribes.or.icount>ncount_3dside) call parallel_abort('STEP: icount>nscribes(2.7)')
-!          select case(i)
-!            case(6)
           if(i<=7) then
             call savensend3D_scribe(icount,3,1,nvrt,ns,d2uv(i-5,:,1:ns))
-!              varout_3dside(:,:,icount)=d2uv(1,:,1:ns)
-!            case(7)
           else
             call savensend3D_scribe(icount,3,1,nvrt,ns,swild95(:,1:ns,i-7))
           endif
-!              varout_3dside(:,:,icount)=d2uv(2,:,1:ns)
-!            case(8)
-!              varout_3dside(:,:,icount)=swild95(:,1:ns,1)
-!            case(9)
-!              varout_3dside(:,:,icount)=swild95(:,1:ns,2)
-!            case(10)
-!              varout_3dside(:,:,icount)=swild95(:,1:ns,3)
-!            case(11)
-!              varout_3dside(:,:,icount)=swild95(:,1:ns,4)
-!            case(12)
-!              varout_3dside(:,:,icount)=swild95(:,1:ns,5)
-!            case(13)
-!              varout_3dside(:,:,icount)=swild95(:,1:ns,6)
-!          end select
-
-!          call mpi_isend(varout_3dside(:,1:ns,icount),ns*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
         endif !iof_ana
       enddo !i
 #endif /*USE_ANALYSIS*/
 
-        
       !Check total # of vars
       if(icount/=ncount_3dside) then
         write(errmsg,*)'STEP: 3D count wrong(2):',icount,ncount_3dside
@@ -10283,26 +10120,42 @@ real (rkind) :: aux                               ! ustar
         icount=0 !index into varout_3delem
         do i=28,30
           if(iof_hydro(i)/=0) then
-!            icount=icount+1
-!            nsend_varout=nsend_varout+1
-!            if(nsend_varout>nscribes.or.icount>ncount_3delem) call parallel_abort('STEP: icount>nscribes(2.9)')
             if(i==28) then
               call savensend3D_scribe(icount,2,1,nvrt,ne,we(:,1:ne))
-!              varout_3delem(:,:,icount)=we(:,1:ne)
             else if(i==29) then
               call savensend3D_scribe(icount,2,1,nvrt,ne,tr_el(1,:,1:ne))
-!              varout_3delem(:,:,icount)=tr_el(1,:,1:ne)
             else
               call savensend3D_scribe(icount,2,1,nvrt,ne,tr_el(2,:,1:ne))
-!              varout_3delem(:,:,icount)=tr_el(2,:,1:ne)
             endif
-
-!            call mpi_isend(varout_3delem(:,1:ne,icount),ne*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
           endif !iof_hydro
         enddo !i
 
         !Modules
+
+!       Non-standard outputs
+#ifdef USE_SED
+        icount2=0 !use a separate global counter from standard outputs (index into alt1_())
+        do i=1,ntrs(5)
+          if(iof_sed(i+ised_out_sofar)==1) then
+!            tmp_bed(:,:) = bed_frac(1:Nbed, 1:ne, i)
+            call alt1_savensend3D_scribe(icount2,2,1,Nbed,ne,bed_frac(1:Nbed,1:ne,i))
+          endif
+        enddo !i
+        ised_out_sofar=ised_out_sofar+ntrs(5)        
+
+        if(iof_sed(ised_out_sofar+1)==1) then
+!          tmp_bed(:,:) = bed(1:Nbed, 1:ne, ithck)
+          call alt1_savensend3D_scribe(icount2,2,1,Nbed,ne,bed(1:Nbed,1:ne,ithck))
+        endif
+        ised_out_sofar=ised_out_sofar+1
+
+        !Check dim
+        if(icount2/=alt1_ncount_3delem) then
+          write(errmsg,*)'STEP: 3D count wrong(3.1):',icount2,alt1_ncount_3delem
+          call parallel_abort(errmsg)
+        endif 
+#endif /*USE_SED*/
+
 #ifdef USE_ICM
       do i=1,nout_icm
         if(iof_icm(i)==1.and.wqout(i)%itype==6) then
@@ -10313,13 +10166,6 @@ real (rkind) :: aux                               ! ustar
 
 #ifdef USE_DVD
         if(iof_dvd(1)==1) call savensend3D_scribe(icount,2,1,nvrt,ne,rkai_num(1,:,1:ne))
-!          icount=icount+1
-!          nsend_varout=nsend_varout+1
-!          if(nsend_varout>nscribes.or.icount>ncount_3delem) call parallel_abort('STEP: icount>nscribes(2.5)')
-!          varout_3delem(:,:,icount)=rkai_num(1,:,1:ne)
-!          call mpi_isend(varout_3delem(:,1:ne,icount),ne*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
-!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
-!        endif !iof_dvd
 #endif /*USE_DVD*/
 
       !Check total # of vars
@@ -10331,7 +10177,7 @@ real (rkind) :: aux                               ! ustar
 !------------------
         
 !...    Lastly, send 2D elem/side outputs as nsend_varout is used by 3D outputs above
-        nsend_varout=nsend_varout+1
+        nsend_varout=nsend_varout+1 !dim of srqst7=nscribes+10
         call mpi_isend(varout_2delem(1:ncount_2delem,1:ne),ne*ncount_2delem,MPI_REAL4,iscribe_2d, &
      &701,comm_schism,srqst7(nsend_varout),ierr)
         nsend_varout=nsend_varout+1

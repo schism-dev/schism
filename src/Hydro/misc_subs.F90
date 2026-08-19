@@ -72,6 +72,7 @@
 ! subroutine compute_bed_slope
 ! subroutine smooth_2dvar
 ! subroutine savensend3D_scribe
+! subroutine alt1_savensend3D_scribe
 ! subroutine signa2
 ! subroutine compute_wave_force_lon (called from ESMF directly for WW3)
 ! subroutine get_WW3_arrays and other routines (called from ESMF directly for WW3
@@ -9177,6 +9178,87 @@
       enddo !j
 
       end subroutine savensend3D_scribe
+
+!     Non-standard outputs: save temp 3D vars and send to scribes
+!     Different vertical dims (nvrt0) need their separate routine alt?_ 
+!     as var names are different inside
+      subroutine alt1_savensend3D_scribe(icount,imode,ivs,nvrt0,npes,savevar1,savevar2)
+      use schism_glbl, only : rkind,np,ne,ns,nvrt,nsend_varout,alt1_varout_3delem, &
+     & alt1_ncount_3delem,srqst7
+      use schism_msgp, only : nscribes,nproc_schism,comm_schism,parallel_abort
+
+      implicit none
+      include 'mpif.h'
+
+      !imode: 1(node), 2(elem), 3(side)
+      !npes: resident only
+      integer, intent(in) :: imode,ivs,nvrt0,npes
+      !icount: global counter (index into arrays alt1_varout_3delem)
+      integer, intent(inout) :: icount
+      real(rkind), intent(in) :: savevar1(nvrt0,npes)
+      real(rkind), optional, intent(in) :: savevar2(nvrt0,npes)
+
+      integer :: i,j,ncount3,ierr
+
+      !Check
+      if(imode<1.or.imode>3) call parallel_abort('alt1_savensend3D_scribe: imode')
+!      if(nvrt0/=nvrt) call parallel_abort('alt1_savensend3D_scribe: nvrt0/=nvrt')
+      if(imode==1) then
+        if(npes/=np) call parallel_abort('alt1_savensend3D_scribe: npes/=np')
+        call parallel_abort('alt1_savensend3D_scribe: not implemented')
+!        ncount3=ncount_3dnode
+      else if(imode==2) then
+        if(npes/=ne) call parallel_abort('alt1_savensend3D_scribe: npes/=ne')
+        ncount3=alt1_ncount_3delem
+      else
+        if(npes/=ns) call parallel_abort('alt1_savensend3D_scribe: npes/=ns')
+        call parallel_abort('alt1_savensend3D_scribe: not implemented')
+!        ncount3=ncount_3dside
+      endif
+
+!     Somehow this inference did not work
+!      ivs=1
+!      if(present(savevar2)) ivs=2
+
+      if(ivs==2.and..not.present(savevar2)) call parallel_abort('alt1_savensend3D_scribe: missing vector component')
+!'
+
+      do j=1,ivs !scalar/vector
+        icount=icount+1
+        nsend_varout=nsend_varout+1
+        if(nsend_varout>nscribes.or.icount>ncount3) call parallel_abort('alt1_savensend3D_scribe: too many sends')
+
+        if(j==1) then
+          if(imode==1) then !node
+!            varout_3dnode(:,:,icount)=savevar1(:,1:npes)
+          else if(imode==2) then !elem
+            alt1_varout_3delem(:,:,icount)=savevar1(:,1:npes)
+          else !side
+!            varout_3dside(:,:,icount)=savevar1(:,1:npes)
+          endif !imode
+        else !vector
+          if(imode==1) then !node
+!            varout_3dnode(:,:,icount)=savevar2(:,1:npes)
+          else if(imode==2) then !elem
+            alt1_varout_3delem(:,:,icount)=savevar2(:,1:npes)
+          else !side
+!            varout_3dside(:,:,icount)=savevar2(:,1:npes)
+          endif !imode
+        endif !j
+
+        if(imode==1) then !node
+!          call mpi_isend(varout_3dnode(:,1:np,icount),np*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+        else if(imode==2) then !elem
+          call mpi_isend(alt1_varout_3delem(:,1:ne,icount),ne*nvrt0,MPI_REAL4,nproc_schism-nsend_varout, &
+     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+        else !side
+!          call mpi_isend(varout_3dside(:,1:ns,icount),ns*nvrt,MPI_REAL4,nproc_schism-nsend_varout, &
+!     &200+nsend_varout,comm_schism,srqst7(nsend_varout),ierr)
+        endif !imode
+      enddo !j
+
+      end subroutine alt1_savensend3D_scribe
 
       !dir$ attributes forceinline :: signa2
       function signa2(x1,x2,x3,y1,y2,y3)
