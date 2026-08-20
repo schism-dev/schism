@@ -57,7 +57,8 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
   integer,allocatable :: elside(:,:)
   integer,allocatable :: isdel(:,:),vlen(:),ne(:),np(:),ns(:),ihot_len(:), &
  &i34(:),nm2(:,:),kbp00(:),iplg(:,:),ielg(:,:),islg(:,:),kbs(:),kbe(:), &
- &ic3(:,:),isidenode(:,:),i23d(:),ivs(:),ndims(:),iu_id(:),idry(:),idry_e(:),idry_s(:)
+ &ic3(:,:),isidenode(:,:),i23d(:),ivs(:),ndims(:),iu_id(:),idry(:),idry_e(:),idry_s(:), &
+ &first2_dims(:,:)
   !Coordinates in double
   real*8,allocatable :: x(:),y(:)
   real,allocatable :: ztot(:),sigma(:),cs(:),eta2(:),outeb(:,:,:), &
@@ -68,7 +69,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
   character(len=1024)           :: default_variables='time,wetdry_elem,wetdry_node,wetdry_side,depth'
   character(len=1024)           :: output_prefix
   logical                       :: check_vars=.false.
-  logical,allocatable           :: skip_var(:)
+  logical,allocatable           :: skip_var(:),nonstandard(:)
 
   type :: type_outd
     real,pointer :: data(:,:,:)=>null()
@@ -92,7 +93,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
             &data_start_1d(1),data_start_2d(2),data_start_3d(3),data_start_4d(4), &
             &data_count_1d(1),data_count_2d(2),data_count_3d(3),data_count_4d(4), &
             & int_buffer(4),dummy_dim(1),ihgrid_id, tempint_array(1),&
-            & chunks(3),one_dim
+            & chunks(3),one_dim,nv_dims(10),dimids(100)
   real  :: hc_array(1),hs_array(1),thetab_array(1),thetaf_array(1),real_buffer(4) 
   
 !  character(len=long_name_len) :: netcdf_var_long_name(2) 
@@ -105,6 +106,22 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
 !  logical :: found_netcdf_var
 
   invalid_index = -99999
+
+! Read other vertical dims than nvrt
+  write(it_char,'(i12)')ibgn
+  it_char=adjustl(it_char); it_len=len_trim(it_char)
+  file63='schout_000000_'//it_char(1:it_len)//'.nc'
+  file63=adjustl(file63)
+  iret=nf90_open(trim(file63),NF90_NOWRITE,ncid2)
+  if(iret/=NF90_NOERR) stop 'Failed to open(0)'
+  iret=nf90_inq_dimid(ncid2,"nSED_bedlayers",nv_dims(1))
+  if(iret/=NF90_NOERR) then
+    Nbed=0
+  else
+    iret=nf90_inquire_dimension(ncid2,nv_dims(1),len=Nbed)
+  endif
+  iret=nf90_close(ncid2)
+
 
 ! Read local_to_global_000000 for global info
   open(10,file='local_to_global_000000',status='old')
@@ -183,6 +200,9 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
 
     close(10)
 
+    !Define max vertical dim
+    max_nvdim=max(nvrt,Nbed)
+
     !Debug
     !write(98,*)irank,(i34(ielg(irank,m)),m=1,ne(irank))
 
@@ -217,7 +237,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
   ! Compute geometry
   call compute_nside(np_global,ne_global,i34,elnode(1:4,1:ne_global),ns2)
   allocate(ic3(4,ne_global),elside(4,ne_global),isdel(2,ns2),isidenode(2,ns2),xcj(ns2),ycj(ns2), &
-  &worka(2,nvrt,ns2),stat=istat)
+  &worka(2,max_nvdim,ns2),stat=istat)
   if(istat/=0) stop 'Allocation error: side(0)'
   call schism_geometry_single(np_global,ne_global,ns2,real(x),real(y),i34,elnode(1:4,1:ne_global),ic3(1:4,1:ne_global), &
   &elside(1:4,1:ne_global),isdel,isidenode,xcj,ycj)
@@ -270,6 +290,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
     iret = nf90_def_dim(ncid, 'two',2, ntwo_dim)
     iret = nf90_def_dim(ncid, 'sigma',nvrt-kz+1, nsigma_dim)
     if(kz/=1) iret = nf90_def_dim(ncid, 'nz',kz-1, nz_dim)
+    if(Nbed>0) iret = nf90_def_dim(ncid, 'nSED_bedlayers',Nbed,Nbed_dim)
     iret = nf90_def_dim(ncid, 'time', NF90_UNLIMITED, ntime_dim)
       
 !    coords_type =1 ! default project coords
@@ -509,13 +530,12 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
     file63=adjustl(file63)
     iret=nf90_open(trim(file63),NF90_NOWRITE,ncid2)
     if(iret/=NF90_NOERR) stop 'Failed to open(1)'
-    !iret=nf_inq_nvars(ncid2,nvars)
     iret=nf90_inquire(ncid2,nVariables=nvars)
 !    write(99,*)'nvars=',nvars,file63
 
     if(iinput==ibgn) then 
       allocate(i23d(nvars),ivs(nvars),variable_nm(nvars),vlen(nvars),ndims(nvars), &
-    &iu_id(nvars))
+    &iu_id(nvars),first2_dims(nvars,2),nonstandard(nvars))
       allocate(outd(nvars),stat=istat)
       allocate(skip_var(nvars),stat=istat)
       skip_var(:)=.false. ! by default do not skip variables
@@ -529,8 +549,12 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
 
     !Define all time-varying vars (all vars from uncombined)
     do m=1,nvars
-      iret=nf90_inquire_variable(ncid2,m,name=variable_nm(m)) !,itype,ndims(m),int_buffer,natts)
+      iret=nf90_inquire_variable(ncid2,m,name=variable_nm(m),dimids=dimids) !,itype,ndims(m),int_buffer,natts)
       variable_nm(m)=trim(adjustl(variable_nm(m))); vlen(m)=len_trim(variable_nm(m))
+      iret=nf90_inquire_dimension(ncid2,dimids(1),len=first2_dims(m,1))
+      iret=nf90_inquire_dimension(ncid2,dimids(2),len=first2_dims(m,2))
+!      print*, 'First dim=',m,first2_dims,nvrt,Nbed
+
       if (check_vars) then
         if ((index(to_be_combined,trim(variable_nm(m)))>0).or. &
            (index(default_variables,trim(variable_nm(m)))>0)) then
@@ -590,21 +614,22 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
           case (1)
             allocate(outd(m)%data(2,1,np_global))
           case (2)
-            allocate(outd(m)%data(2,nvrt,np_global))
+            allocate(outd(m)%data(2,max_nvdim,np_global))
           case (3)
-            allocate(outd(m)%data(2,nvrt,np_global))
+            !allocate(outd(m)%data(2,nvrt,np_global))
+            allocate(outd(m)%data(2,max_nvdim,np_global))
           case (4)
             allocate(outd(m)%data(2,1,ne_global))
           case (5)
-            allocate(outd(m)%data(2,nvrt,ne_global))
+            allocate(outd(m)%data(2,max_nvdim,ne_global))
           case (6)
-            allocate(outd(m)%data(2,nvrt,ne_global))
+            allocate(outd(m)%data(2,max_nvdim,ne_global))
           case (7)
             allocate(outd(m)%data(2,1,ns2))
           case (8)
-            allocate(outd(m)%data(2,nvrt,ns2))
+            allocate(outd(m)%data(2,max_nvdim,ns2))
           case (9)
-            allocate(outd(m)%data(2,nvrt,ns2))
+            allocate(outd(m)%data(2,max_nvdim,ns2))
           end select
           if (associated(outd(m)%data)) outd(m)%data = -9999.0d0
         end if
@@ -619,23 +644,42 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
           endif !ivs
         else !3D
           if(ivs(m)==1) then
-            var3d_dims(1)=nv_dim; var3d_dims(3)=ntime_dim
-            chunks(1)=nvrt; chunks(2)=npse; chunks(3)=1
+            if(first2_dims(m,1)==nvrt) then
+              nonstandard(m)=.false.
+              nv_dim0=nv_dim
+            else if(Nbed>0.and.first2_dims(m,1)==Nbed) then
+              !non-standard
+              nonstandard(m)=.true.
+              nv_dim0=Nbed_dim
+            else
+              print*, 'Unknown vertical dim:',first2_dims(m,:)
+              stop
+            endif
+
+            var3d_dims(1)=nv_dim0; var3d_dims(3)=ntime_dim
+            chunks(1)=first2_dims(m,1); chunks(2)=npse; chunks(3)=1
             iret=nf90_def_var(ncid,variable_nm(m),NF90_FLOAT,var3d_dims,iu_id(m))
-!#ifdef NETCDF_4
             iret=nf90_def_var_chunking(ncid,iu_id(m),NF90_CHUNKED,chunks)
 !function nf90_def_var_deflate(ncid, varid, shuffle, deflate, deflate_level)
 !where deflate_level\in[0,9] with 9 being most compression
             iret=nf90_def_var_deflate(ncid,iu_id(m),0,1,4)
-!#endif
+
           else !3D vector
-            var4d_dims(2)=nv_dim; var4d_dims(1)=ntwo_dim; var4d_dims(4)=ntime_dim
-            chunks(2)=nvrt; chunks(1)=2; chunks(3)=npse
+            if(first2_dims(m,2)==nvrt) then
+              nv_dim0=nv_dim
+            else if(Nbed>0.and.first2_dims(m,2)==Nbed) then
+              !non-standard
+              nv_dim0=Nbed_dim
+            else
+              print*, 'Unknown vertical dim:',first2_dims(m,:)
+              stop
+            endif
+
+            var4d_dims(2)=nv_dim0; var4d_dims(1)=ntwo_dim; var4d_dims(4)=ntime_dim
+            chunks(2)=first2_dims(m,2); chunks(1)=2; chunks(3)=npse
             iret=nf90_def_var(ncid,variable_nm(m),NF90_FLOAT,var4d_dims,iu_id(m))
-!#ifdef NETCDF_4
             iret=nf90_def_var_chunking(ncid,iu_id(m),NF90_CHUNKED, chunks)
             iret=nf90_def_var_deflate(ncid,iu_id(m),0,1,4)
-!#endif
           endif !ivs
         endif !i23d: 2|3D
 ! debug header information in stderr:
@@ -786,16 +830,16 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
           else !3D
             if(ivs(m)==1) then
               data_start_3d(1:2)=1; data_start_3d(3)=ispool
-              data_count_3d(1)=nvrt; data_count_3d(3)=1
-              iret=nf90_get_var(ncid2,varid,worka(1,:,1:data_count_3d(2)),data_start_3d,data_count_3d)
+              data_count_3d(1)=first2_dims(m,1); data_count_3d(3)=1
+              iret=nf90_get_var(ncid2,varid,worka(1,1:data_count_3d(1),1:data_count_3d(2)),data_start_3d,data_count_3d)
             else !vector
               data_start_4d(1:3)=1; data_start_4d(4)=ispool
-              data_count_4d(1)=2; data_count_4d(2)=nvrt; data_count_4d(4)=1
-              iret=nf90_get_var(ncid2,varid,worka(1:2,:,1:data_count_4d(3)),data_start_4d,data_count_4d)
+              data_count_4d(1)=2; data_count_4d(2)=first2_dims(m,2); data_count_4d(4)=1
+              iret=nf90_get_var(ncid2,varid,worka(1:2,1:data_count_4d(2),1:data_count_4d(3)),data_start_4d,data_count_4d)
             endif !ivs
           endif !i23d
 
-          !Put into global index
+          !Put into global index (combine)
           if(i23d(m)==0) then !do nothing
           else if(i23d(m)<=3) then !node
             do i=1,np(irank)
@@ -873,7 +917,7 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
 !        endif !zcor
 !
         !Fill below-bottom for 3D vars
-        if(mod(i23d(m)-1,3)/=0.and.i23d(m)>0) then !3D
+        if(mod(i23d(m)-1,3)/=0.and.i23d(m)>0.and..not.nonstandard(m)) then !3D
           if(i23d(m)<=3) then !node
             do i=1,np_global
               outd(m)%data(1:2,1:kbp00(i)-1,i)=NF90_FILL_FLOAT
@@ -935,12 +979,12 @@ subroutine combine_output11(ibgn,iend,iwetdry,to_be_combined,output_prefix)
         else !3D
           if(ivs(m)==1) then
             data_start_3d(1:2)=1; data_start_3d(3)=ispool
-            data_count_3d(1)=nvrt; data_count_3d(3)=1
-            iret=nf90_put_var(ncid,iu_id(m),outd(m)%data(1,:,1:data_count_3d(2)),data_start_3d,data_count_3d)
+            data_count_3d(1)=first2_dims(m,1); data_count_3d(3)=1
+            iret=nf90_put_var(ncid,iu_id(m),outd(m)%data(1,1:data_count_3d(1),1:data_count_3d(2)),data_start_3d,data_count_3d)
           else
             data_start_4d(1:3)=1; data_start_4d(4)=ispool
-            data_count_4d(1)=2; data_count_4d(2)=nvrt; data_count_4d(4)=1
-            iret=nf90_put_var(ncid,iu_id(m),outd(m)%data(:,:,1:data_count_4d(3)),data_start_4d,data_count_4d)
+            data_count_4d(1)=2; data_count_4d(2)=first2_dims(m,2); data_count_4d(4)=1
+            iret=nf90_put_var(ncid,iu_id(m),outd(m)%data(:,1:data_count_4d(2),1:data_count_4d(3)),data_start_4d,data_count_4d)
           endif
         endif !i23d
       enddo !m=1,nvars

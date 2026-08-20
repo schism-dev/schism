@@ -327,7 +327,7 @@
         endif !ivs
         !write(12,*)'2D:',it_main,varid,var_nm2(1:len_var),iret2
       else !3D
-        !Define nv_dim0
+        !Define nv_dim0. In the odd case of nvrt=Nbed00, the dim name may be off (but may be OK)
         if(idim1==nvrt) then
           nv_dim0=nv_dim(1)
         !Non-standard

@@ -1,3 +1,5 @@
+!Not updated for nonstandard outputs. If needed, compare differences in older versions
+!and adapt.
 !===============================================================================
 ! Read in netcdf outputs (rank-specific) from parallel code and combine them into
 ! one global outputs in classic nc format. 
