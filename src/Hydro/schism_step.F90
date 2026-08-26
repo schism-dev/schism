@@ -2633,12 +2633,13 @@ real (rkind) :: aux                               ! ustar
         enddo !i
 !$OMP end do
 
-        if(iveg>=2) then !Ganthy's flex stem option
+        if(iveg==2) then !Ganthy's flex stem option
           !Modify canopy height, diameter, and density
 !$OMP     do
           do i=1,npa
             !Make sure there is veg on this node
             if(veg_h_unbent(i)>0.d0) then
+              !Error: should we use mean vel up to canopy?
               wtmp2=sqrt(dav(1,i)**2.d0+dav(2,i)**2.d0)
               veg_h(i)=veg_h_unbent(i)*exp(-veg_cw*wtmp2) 
 !0.72d-2*(4.657d0-0.158d0*wtmp2+0.262d0*veg_lai-0.011d0*veg_lai*wtmp2+ &
@@ -2655,7 +2656,7 @@ real (rkind) :: aux                               ! ustar
             veg_alpha3D(:,i)=0.5d0*veg_di(i)*veg_nv(i)*veg_cd(i)
           enddo !i
 !$OMP     end do
-        endif !iveg>=2
+        endif !iveg=2
 
 !       Add vertical variation to veg_alpha and compute vertical mean 
 !$OMP   do

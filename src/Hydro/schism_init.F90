@@ -1182,7 +1182,7 @@
 !      if(slr_rate<0) call parallel_abort('INIT: slr_rate<0')
       slr_rate=slr_rate*1.d-3/365.d0/86400.d0 !m/s
       !Marsh age does not work with hotstart!
-      if(myrank==0) write(16,*)'Marsh model does not work when age is enabled; use cold start'
+      if(myrank==0) write(16,*)'Marsh model cannot hotstart as age is enabled; use cold start'
 #endif
 
 !     Ice
@@ -2255,8 +2255,8 @@
       do i=1,ne_global
         if(iegl(i)%rank==myrank) then
           ie=iegl(i)%id
-          imarsh(ie)=nint(buf3(i)) !itmp1
-          ibarrier_m(ie)=nint(buf4(i)) !itmp2
+          imarsh(ie)=nint(buf3(i)) !marsh type if >0
+          ibarrier_m(ie)=nint(buf4(i)) 
           if(ibarrier_m(ie)==1) imarsh(ie)=0
         endif
       enddo !i
