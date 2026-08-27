@@ -1,5 +1,109 @@
+# STOFS-3D Atlantic post-processing
+
+This README records how the post-processing workflow changes SCHISM outputs.
+Each output-file family should have its own section so inputs, mutations, and
+derived products can be traced independently.
+
+## Version notes
+
 The following scripts should have been updated with v7.2:
-  extract_slab_fcst_netcdf4.py
-  generate_adcirc.py has a bug fix, which has not been incorporated into operational forecast yet
 
+- `extract_slab_fcst_netcdf4.py`
+- `generate_adcirc.py` has a bug fix that has not yet been incorporated into
+  the operational forecast.
 
+## `out2d_*.nc`
+
+### Summary
+
+| Script | Input or target | Effect |
+| --- | --- | --- |
+| `filter_isolated_ponds.py` | Files matching `*out2d_*.nc`, or a selected `out2d_<id>.nc` | Modifies each matched file in place by adding or replacing `isolatedPondNode`. It reads `dryFlagNode` but does not change `dryFlagNode` or `elevation`. |
+| `mask_boundary_elev.py` | `hgrid.ll` and `Shapefiles/additional_masks.shp` | Does not modify `out2d`. It creates the auxiliary `lbnd_node_mask.nc` used by `mask_lbn_nd.sh`. |
+| `../MaskLargeElevation/mask_lbn_nd.sh` | Currently hard-coded to `out2d_1.nc` | Appends `idmask` to the raw input file in place, then creates the derived file `out2d_1.mask.nc`, in which masked `elevation` values are set to `-99999`. |
+
+The archived `TEMP/filter_isolated_ponds.py_ver_2026-0707` has the same
+in-place `isolatedPondNode` behavior if it is run manually.
+
+### Isolated-pond mask
+
+`filter_isolated_ponds.py` reads `dryFlagNode` at every time step and identifies
+wet nodes that are not connected to a wet seed node. The result is stored in
+the original `out2d` file as:
+
+- Variable: `isolatedPondNode`
+- Dimensions: `(time, nSCHISM_hgrid_node)`
+- Type: signed byte (`i1`)
+- Values: `0` for a node that is not an isolated pond and `1` for an isolated
+  pond node
+
+The file is opened in NetCDF append mode. If `isolatedPondNode` already exists,
+its values are replaced; otherwise, the variable and its attributes are added.
+`gen_geojson.py` reads this variable and applies it as an additional elevation
+mask. Other `out2d` consumers currently ignore it.
+
+### Land-boundary/high-ground mask
+
+#### Generating `lbnd_node_mask.nc`
+
+Run `mask_boundary_elev.py` from a working directory containing:
+
+- `hgrid.ll` (a runtime/staged input; it is not stored in this directory)
+- the complete `Shapefiles/additional_masks` shapefile set (`.shp`, `.shx`,
+  `.dbf`, `.prj`, and `.cpg`), which is stored in this directory
+
+From that prepared working directory, run:
+
+```shell
+python mask_boundary_elev.py
+```
+
+The current additional-mask shapefile contains 15 polygon features in
+EPSG:4326.
+
+The script reads `hgrid.ll`, computes grid boundaries and node connectivity,
+and forms the union of three node masks:
+
+1. Land-boundary neighborhood: all land-boundary nodes, sides touching those
+   nodes, elements adjacent to those sides, and every node in those elements.
+2. High ground: nodes satisfying `hgrid.ll` depth `dp < -19.0`.
+3. Additional polygons: nodes selected by
+   `Shapefiles/additional_masks.shp`.
+
+It writes `lbnd_node_mask.nc` in NetCDF4 format with:
+
+- Dimension: `nSCHISM_hgrid_node`
+- Variable: `idmask(nSCHISM_hgrid_node)`
+- Type: NetCDF integer
+- Values: `0` for unmasked nodes and `1` for nodes selected by any of the three
+  masks
+- Attribute: `idmask:long_name = "Node mask"`
+
+The same run also writes `hgrid_masked.gr3` as a diagnostic representation of
+the mask.
+
+#### Applying `lbnd_node_mask.nc`
+
+`../MaskLargeElevation/mask_lbn_nd.sh` performs three operations:
+
+1. `ncks -A` appends `idmask` from `lbnd_node_mask.nc` directly to
+   `out2d_1.nc`. This changes the raw file.
+2. `ncap2` copies the augmented input to `out2d_1.mask.nc` and sets
+   `elevation=-99999.0` wherever `idmask == 1`.
+3. `ncatted` sets `elevation:missing_value` to `-99999.0` on the derived file.
+
+Despite the older `../MaskLargeElevation/README` referring to `out2d_*.nc`, the
+current shell script processes only `out2d_1.nc` unless its `infile` and
+`outfile` assignments are changed or the script is wrapped in a loop.
+
+## Adding another output-file family
+
+Add a new section at the same level as `out2d_*.nc` and record:
+
+1. Raw inputs and generated outputs.
+2. The scripts and commands involved, in execution order.
+3. Whether each input is read-only, modified in place, or copied to a derived
+   product.
+4. Variables, dimensions, attributes, fill values, and masks that are added or
+   changed.
+5. Required grids, shapefiles, caches, and other auxiliary inputs.
