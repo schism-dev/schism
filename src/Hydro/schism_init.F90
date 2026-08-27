@@ -2369,7 +2369,7 @@
           read(32,*)j,buf3(i),buf4(i)
         enddo !i
         do i=1,np_global
-          buf3(i)=modulo(buf3(i),360.d0)   ! force lon into [0,360); ±360 shift below still handles the seam
+          buf3(i)=modulo(buf3(i),360.d0) !1st attempt to force lon into [0,360); ±360 shift below still handles the seam
         enddo
         do i=1,ne_global
           read(32,*)j,nwild2(i),nwild3(1:nwild2(i),i)
