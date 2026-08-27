@@ -471,7 +471,7 @@ real (rkind) :: aux                               ! ustar
           etp(i)=etp(i)+0.69d0*ramp*tamp(j)*tnf(j)*fun_lat(jspc(j),i)*cos(arg)
 
           if(iloadtide==1) then !loading tide from FES etc
-            etp(i)=etp(i)+rloadtide(1,j,i)*cos(tfreq(j)*time-rloadtide(2,j,i))
+            etp(i)=etp(i)+rloadtide(1,j,i)*cos(tfreq(j)*time+tear(j)-rloadtide(2,j,i))
           endif !iloadtide
         enddo !j
 
