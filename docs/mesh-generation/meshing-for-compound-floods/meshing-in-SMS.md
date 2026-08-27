@@ -279,7 +279,7 @@ Normally these small 'bad' elements do not affect the efficiency or stability of
 However, it's advisable to edit out extremely small/skew elements.
 You may remedy them using the following script provided in [RiverMapper](https://github.com/schism-dev/RiverMeshTools/tree/main/RiverMapper):
 ```
-RiverMeshTools/RiverMapper/RiverMapper/improve_hgrid.py
+RiverMeshTools/RiverMapper/Scripts/improve_hgrid.py
 ```
 The script automatically checks for small and skew elements,
 then improve the mesh by merging, removing, or relaxing the problematic elements.
@@ -353,7 +353,6 @@ In addition, set the polygon attribute of the "island" between Chesapeake Bay an
 - For SECOFS, "Constant paving" with the following parameters is used:
 
 ![const_paving](../../assets/const_paving.jpg)
-
 
 
 

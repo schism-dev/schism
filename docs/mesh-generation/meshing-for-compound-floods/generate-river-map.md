@@ -1,109 +1,96 @@
-## Scripts
-[RiverMapper](https://github.com/schism-dev/RiverMeshTools/tree/main/RiverMapper) is available in the [RiverMeshTools repository](https://github.com/schism-dev/RiverMeshTools) maintained by schism-dev.
+## RiverMapper source
 
-## Usage
-RiverMapper requires two inputs:
+[RiverMapper](https://github.com/schism-dev/RiverMeshTools/tree/main/RiverMapper) is maintained in the [RiverMeshTools repository](https://github.com/schism-dev/RiverMeshTools).
 
-1. \*.tif files — DEM tiles in lon/lat coordinates, from one or more sources.
+## Inputs and outputs
 
-2. A shapefile of 'LineString' type, representing a 1D river network.
+The core `make_river_map()` function requires three inputs:
 
-!!!Note
-    The 1D river network can be any reasonable approximation of the thalwegs. It may be:
-    <ul>
-        <li>Extracted from DEMs using the method described in the [previous section](./extract-thalweg.md)</li>
-        <li>Copied from the river network of a hydrological model, such as the National Water Model</li>
-        <li>Manually drawn for [quick local touch-ups]()</li>
-    </ul>
+1. One or more TIFF files in longitude/latitude coordinates. These are normally elevation DEMs, but they may instead be [rasterized NHD Area polygons](special-case-utilizing-nhd.md).
+2. A polyline shapefile representing the thalwegs or channel centerlines.
+3. An output directory.
 
-The outputs include:
+The polyline network only needs to provide a reasonable approximation of the channel centerlines. It may be extracted from DEMs using the [previous workflow](extract-thalweg.md), obtained from a hydrologic dataset such as NHD, or drawn manually for local corrections.
 
-- `total_river_arcs.map` — river arcs used for final meshing in SMS.
-
-- Additional \*.map files for diagnostic purposes.
-
-A sample output looks like this:
+RiverMapper writes `total_arcs.map` and `total_arcs.shp` for use in subsequent meshing. It can also write river polygons for OCSMesh and diagnostic maps or shapefiles when the corresponding options are enabled.
 
 ![Sample river map](../../assets/sample-river-map.png)
 
-
 ## Sample applications
-To test the RiverMapper tool, begin by extracting the "RiverMapper_Samples/" directory from [RiverMapper_Samples.tar](http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar).
 
-Inside, you’ll find two subdirectories: "Serial" and "Parallel", which demonstrate sample applications for meshing watershed rivers in small and large domains, respectively.  
-Each subdirectory contains a sample Python script along with the required input files.
+Download and extract [RiverMapper_Samples.tar](https://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar). The `Serial` and `Parallel` subdirectories contain drivers and inputs for small and large domains, respectively. Their defaults target watershed rivers up to a few hundred meters wide, similar to those represented in [STOFS3D Atlantic](https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/).
 
-These two samples use default settings tailored for small watershed rivers typically narrower than a few hundred meters.  
-Similar configurations are employed in the latest version of NOAA's operational forecast system, [STOFS3D Atlantic](https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/).
+For wider channels and specialized features, see [More parameterization](#more-parameterization).
 
-If you're interested in meshing rivers with a broader range of widths, see additional parameterized examples [below](#more-parameterization).
+### Small domains: serial mode
 
+For a small domain, such as one or two states, call `make_river_map()` directly. The serial sample is located at:
 
-### Meshing watershed rivers in a small domain (Serial mode)
-For a small domain (covering one or two states), a direct function call to the serial "make_river_map" suffices.
-See the sample script:
-```
+```text
 RiverMapper_Samples/Serial/sample_serial.py
 ```
-, which reads:
+
+Its essential contents are:
+
 ```python
 from RiverMapper.make_river_map import make_river_map
 
 
 if __name__ == "__main__":
-    '''
-    A sample serial application of RiverMapper
-    '''
     make_river_map(
-        tif_fnames = ['./Inputs/DEMs/GA_dem_merged_ll.tif'],
-        thalweg_shp_fname = './Inputs/Shapefiles/GA_local.shp',
-        output_dir = './Outputs/',
+        tif_fnames=["./Inputs/DEMs/GA_dem_merged_ll.tif"],
+        thalweg_shp_fname="./Inputs/Shapefiles/GA_local.shp",
+        output_dir="./Outputs/",
     )
 ```
 
-Under the  directory "RiverMapper_Samples/Serial/", execute the serial script like this:
-```
+Run it from `RiverMapper_Samples/Serial/`:
+
+```bash
 ./sample_serial.py
 ```
 
-!!!Note
-    * Although only one DEM tile is used in this example, but multiple DEM tiles are allowed.
-    * If the tiles are from different DEM sources, they should be arranged from high to low priority in the list.
-        Tiles from the high priority DEM source should have high fidelity and high resolution.
-    * The script allows DEM tiles of different sizes and shapes.
+Multiple TIFFs may be used, and they may have different extents and shapes. List higher-quality or higher-resolution sources first because RiverMapper treats earlier entries as higher priority.
 
+### Large domains: parallel mode
 
-### Meshing rivers in a large domain (Parallel mode)
-For a large domain such as [STOFS3D Atlantic](https://nauticalcharts.noaa.gov/updates/introducing-the-inland-coastal-flooding-operational-guidance-system-icogs/),
-a parallel driver is provided to automatically group thalwegs based on their parent tiles, then distribute the groups to parallel processors.
+For a large domain, the MPI driver groups thalwegs by their required raster tiles and distributes the groups among processes. The parallel sample is located at:
 
-The sample parallel script is:
-```
+```text
 RiverMapper_Samples/Parallel/sample_parallel.py
 ```
-, which reads:
+
+A minimal driver is:
+
 ```python
-from mpi4py import MPI
 import os
+
+from mpi4py import MPI
+
+from RiverMapper.config_river_map import ConfigRiverMap
 from RiverMapper.river_map_mpi_driver import river_map_mpi_driver
 
+
 if __name__ == "__main__":
-    comm=MPI.COMM_WORLD
-    # ------------------------- sample input ---------------------------
-    dems_json_file = './Inputs/DEMs/dems.json'  # specifying files for all DEM tiles
-    thalweg_shp_fname='./Inputs/Shapefiles/LA_local.shp'
-    output_dir = './Outputs/' +  f'{os.path.basename(thalweg_shp_fname).split(".")[0]}_{comm.Get_size()}-core/'
-    # ------------------------- end input section ---------------------------
+    comm = MPI.COMM_WORLD
+    dems_json_file = "./Inputs/DEMs/dems.json"
+    thalweg_shp_fname = "./Inputs/Shapefiles/LA_local.shp"
+    output_dir = (
+        "./Outputs/"
+        f"{os.path.basename(thalweg_shp_fname).split('.')[0]}_{comm.Get_size()}-core/"
+    )
+
     river_map_mpi_driver(
         dems_json_file=dems_json_file,
         thalweg_shp_fname=thalweg_shp_fname,
         output_dir=output_dir,
-        comm=comm
+        river_map_config=ConfigRiverMap(),
+        comm=comm,
     )
 ```
 
-In stead of specifying a file list for the DEM tiles as in the serial example,
-the first argument takes a \*.json file that specifies multiple sets of DEMs, for example:
+The JSON file groups TIFFs by data source:
+
 ```json
 {
     "CuDEM": {
@@ -121,284 +108,207 @@ the first argument takes a \*.json file that specifies multiple sets of DEMs, fo
 }
 ```
 
+For each source, provide a glob pattern, an explicit file list, or both. Leave `boxes` empty; RiverMapper populates it. Sources should be ordered from highest to lowest priority. Python 3.7 and later preserve the order of dictionary keys.
 
+Run the driver from `RiverMapper_Samples/Parallel/`:
 
-!!!Note
-    * For each DEM source, specify a glob pattern and/or a list of file names;
-    if both are specified, the script will pool all files together and take the unique files.
-
-    * No need to manually specify the bounding "boxes", just leave them empty.
-
-    * Different DEM products should be arranged from high priority to low priority.
-    The order of the dictionary key ("CuDEM" and "CRM") is preserved as long as you are using Python 3.7 or a later version.
-    We may replace the regular dictionary to OrderedDict if there is a need.
-
-Under the directory "RiverMapper_Samples/Parallel/", execute the parallel script like this:
-
-```
+```bash
 mpirun -n 20 ./sample_parallel.py
 ```
 
-The exact mpi command may vary based on your system.
+The exact MPI launcher and arguments depend on the local system.
 
+## Parameters
 
-## Advanced Parameterization
+### Required parameters
 
-### Mandatory input parameters
+| Parameter | Type | Description |
+|---|---|---|
+| `tif_fnames` | list of paths | Raster tiles covering the area of interest, ordered from highest to lowest priority. Use elevation DEMs normally, or NHD Area surrogate TIFFs with `nhd_area_tif=True`. |
+| `thalweg_shp_fname` | path | Polyline shapefile containing thalwegs or channel centerlines. |
+| `output_dir` | path | Directory in which RiverMapper writes its products. |
 
-In the "Serial" and "Parallel" examples above, you may have noticed there are 3 mandatory Inputs:
+The parallel driver replaces `tif_fnames` with `dems_json_file`, which describes and orders multiple raster sources.
 
-| parameter | explanation |
-| ----------- | ----------- |
-| tif_fnames (or a \*.json file if there are many tiles) | a list of TIF file names. These TIFs should cover the area of interest and be arranged by priority (higher priority ones in front) |
-| thalweg_shp_fname | name of a polyline shapefile containing the thalwegs |
-| output_dir | must specify one. |
+### Optional parameters
 
-### Optional input parameters
+The following table matches the current `make_river_map()` signature and defaults in `ConfigRiverMap`.
 
-In addition to the mandatory inpouts, RiverMapper provides a few parameters to fine tune the output polylines or generate special features like levees or pseudo-channels.
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `i_DEM_cache` | bool | `True` | Read cached raster metadata when available. |
+| `selected_thalweg` | NumPy integer array or `None` | `None` | Process only the specified thalweg indices; mainly used by the parallel driver. |
+| `river_threshold` | tuple of floats | `(5, 600)` | Minimum and maximum channel widths, in meters, that bank detection attempts to resolve. |
+| `min_arcs` | int | `3` | Minimum number of cross-channel arcs, including bank, inner, and outer arcs. |
+| `width2narcs_option` | str | `"regular"` | Width-to-arc rule: `"regular"`, `"sensitive"`, `"insensitive"`, or `"custom"`. |
+| `custom_width2narcs` | callable or `None` | `None` | Function that accepts channel width and returns the number of cross-channel arcs. Specifying it selects custom behavior. |
+| `elev_scale` | float | `1.0` | Scale applied to raster elevations. Use `-1.0` to invert elevations for ridge-like features such as barrier islands. |
+| `outer_arcs_positions` | tuple of floats | `()` | Positions of additional arc pairs outside the banks, expressed as fractions of channel width. |
+| `R_coef` | float | `0.4` | Controls along-channel resolution at bends; larger values produce coarser resolution for a given bend radius. |
+| `length_width_ratio` | float | `6.0` | Target ratio of along-channel to cross-channel resolution. |
+| `along_channel_reso_thres` | tuple of floats | `(5, 300)` | Minimum and maximum along-channel resolution, in meters. |
+| `snap_point_reso_ratio` | float | `0.3` | Point-snapping threshold relative to local resolution; a negative value is interpreted as an absolute distance. |
+| `snap_arc_reso_ratio` | float | `0.2` | Point-to-arc snapping threshold relative to local resolution; a negative value is interpreted as an absolute distance. |
+| `n_clean_iter` | int | `5` | Number of cleaning iterations used to improve intersections and connectivity. |
+| `i_close_poly` | bool | `True` | Add cross-channel arcs that close river arcs into polygons. |
+| `i_nudge_banks` | bool | `True` | Nudge detected banks to keep channel width within the supported range. |
+| `i_smooth_banks` | bool | `False` | Smooth banks where curvature changes abruptly. |
+| `output_prefix` | str | `""` | Prefix added to output file names. |
+| `mpi_print_prefix` | str | `""` | Prefix added to log messages, typically to identify an MPI rank. |
+| `i_OCSMesh` | bool | `True` | Write polygon-based products for OCSMesh or other mesh generators. |
+| `i_DiagnosticOutput` | bool | `False` | Write diagnostic maps and shapefiles. |
+| `i_pseudo_channel` | int | `2` | Pseudo-channel mode: `0` disables it; `1` creates a fixed levee-style channel; `2` falls back to a pseudo-channel when DEM banks are poorly defined; `3` creates a general fixed-width channel. |
+| `pseudo_channel_width` | float | `18` | Pseudo-channel width, in meters. |
+| `pseudo_channel_dl` | float | `20` | Along-channel resolution of a pseudo-channel, in meters. |
+| `nrow_pseudo_channel` | int | `4` | Number of cross-channel element rows in a pseudo-channel. |
+| `dry_run_only` | bool | `False` | Stop after the preliminary bank search and diagnostic outputs. |
+| `nhd_area_tif` | bool | `False` | Interpret the TIFFs as rasterized NHD Area polygons (`-1` water and `0` land) instead of elevation DEMs. |
 
-| parameter | type | explanation |
-| ----------- | ----------- | ----------- |
-| selected_thalweg | integer numpy array | Indices of a subset of thalwegs for which the river arcs will be sought; mainly used by the parallel driver |
-| output_prefix | string | a prefix of the output files, mainly used by the caller of this script; can be empty |
-| mpi_print_prefix | string | a prefix string to identify the calling mpi processe in the output messages; can be empty |
-| river_threshold | float | minimum and maximum river widths (in meters) to be resolved |
-| min_arcs | integer | minimum number of arcs to resolve a channel (including bank arcs, inner arcs and outer arcs) |
-| width2narcs_option | string or callable | pre-defined options ('regular', 'sensitive', 'insensitve') or  'custom' if a user-defined function is specified |
-| custom_width2narcs | a user-defined function | a function that takes one parameter 'width' and returns 'narcs', i.e., the number of arcs in the cross-channel direction |
-| elev_scale | float | scaling factor for elevations; a number of -1 (invert elevations) is useful for finding ridges (e.g., of a barrier island) |
-| outer_arc_positions | a tuple of floats | relative position of outer arcs, e.g., (0.1, 0.2) will add 2 outer arcs on each side of the river (4 in total), 0.1 \* riverwidth and 0.2 \* riverwidth from the banks. |
-| R_coef | float | coef controlling the along-channel resolutions at river bends (with a radius of R), a larger number leads to coarser resolutions (R*R_coef) |
-| length_width_ratio | float |  the ratio between along-channel resolution and cross-channel resolution |
-| along_channel_reso_thres | a tuple of 2 floats | the minimum and maximum along-channel resolution (in meters) |
-| snap_point_reso_ratio | float | scaling the threshold of the point snapping; a negtive number means absolute distance value |
-| snap_arc_reso_ratio | float | scaling the threshold of the arc snapping; a negtive number means absolute distance value |
-| n_clean_iter | int | number of iterations for cleaning; more iterations produce cleaner intersections and better channel connectivity |
-| i_close_poly | bool | whether to add cross-channel arcs to enclose river arcs into a polygon |
-| i_smooth_banks | bool | whether to smooth the river banks at abrupt changes of the curvature |
-| i_DEM_cache  | bool | Whether or not to read DEM info from cache.  Reading from original \*.tif files can be slow, so the default option is True |
-| i_OCSMesh | bool | Whether or not to generate polygon-based outputs to be used as inputs to OCSMesh |
-| i_DiagnosticsOutput | bool | whether to output diagnostic information |
-| i_pseudo_channel | int | 0:  default, no pseudo channel, nrow_pseudo_channel and pseudo_channel_width are ignored; 1: fixed-width channel with nrow elements in the cross-channel direction, it can also be used to generate a fixed-width levee for a given levee centerline; 2: implement a pseudo channel when the river is poorly defined in DEM
-| pseudo_channel_width | float | width of the pseudo channel (in meters) |
-| nrow_pseudo_channel |int| number of rows of elements in the cross-channel direction in the pseudo channel |
+For example, add two pairs of outer arcs at distances of 0.1 and 0.2 channel widths from each bank:
 
-You can change the values of these parameters so that the output river map better fits your application (otherwise default values are used).
-For example, if you want to add two pairs of outer arcs that flank the main river channel, you can do:
 ```python
-    make_river_map(
-        tif_fnames = ['./Inputs/DEMs/GA_dem_merged_ll.tif'],
-        thalweg_shp_fname = './Inputs/Shapefiles/GA_local.shp',
-        output_dir = './Outputs/',
-        outer_arc_positions = (0.1, 0.2),
-    )
+make_river_map(
+    tif_fnames=["./Inputs/DEMs/GA_dem_merged_ll.tif"],
+    thalweg_shp_fname="./Inputs/Shapefiles/GA_local.shp",
+    output_dir="./Outputs/",
+    outer_arcs_positions=(0.1, 0.2),
+)
 ```
-, where the last argument specifies the relative distances of the outer arcs to the main channel.
-In this case two outer arcs will be placed to the left of the channel at distances of "$0.1 \times$ channel width" and "$0.2 \times$ channel width" from the left bank;
-the same goes for the right bank, so 4 outer arcs in total.
 
 ## Parameter presets
-Tuning the parameters may not be easy at first because there are many of them.
-To simplify the parameter configuration, RiverMapper offers a class called "ConfigRiverMap",
-which provides commonly used parameter presets.
-These presets are "class methods" in [config_river_map.py](https://github.com/schism-dev/RiverMeshTools/blob/main/RiverMapper/RiverMapper/config_river_map.py),
-and each preset (class method, or factory method) comes with a short description in the code.
 
-For example, the preset "LooselyFollowRivers" means that "Small-scale river curvatures may not be exactly followed, but channel connectivity is still preserved",
-and this is the sample code:
-```python
-    from RiverMapper.config_river_map import ConfigRiverMap
-
-    river_map_config = ConfigRiverMap.LooselyFollowRivers()
-    make_river_map(
-        tif_fnames = ['./Inputs/DEMs/GA_dem_merged_ll.tif'],
-        thalweg_shp_fname = './Inputs/Shapefiles/GA_local.shp',
-        output_dir = './Outputs/',
-        **river_map_config.optional,
-    )
-
-```
-and the operator "\*\*" unpacks the optional parameters from the configuration.
-
-
-Another utility of the "ConfigRiverMap" class is to facilitate the parameter transfer from the parallel driver to the core routine.
-The stardard way of setting the parameters in the parallel mode is as follows:
+[`ConfigRiverMap`](https://github.com/schism-dev/RiverMeshTools/blob/main/RiverMapper/RiverMapper/config_river_map.py) collects optional parameters and provides presets for common applications. Pass `config.optional` to `make_river_map()` with Python's `**` dictionary unpacking syntax:
 
 ```python
-from mpi4py import MPI
-import os
-from RiverMapper.river_map_mpi_driver import river_map_mpi_driver
 from RiverMapper.config_river_map import ConfigRiverMap
+from RiverMapper.make_river_map import make_river_map
 
-if __name__ == "__main__":
-    comm=MPI.COMM_WORLD
-# ------------------------- sample input ---------------------------
-    dems_json_file = '/sciclone/schism10/Hgrid_projects/STOFS3D-V6/v16/Inputs/dems.json'  # specifying files for all DEM tiles
-    thalweg_shp_fname='/sciclone/schism10/Hgrid_projects/STOFS3D-V6/v16/Shapefiles/CUDEM_Merged_for_v16.shp'
-    output_dir = './Outputs/' +  f'{os.path.basename(thalweg_shp_fname).split(".")[0]}_{comm.Get_size()}-core/'
-    river_map_config = ConfigRiverMap()
-# ------------------------- end input section ---------------------------
-    river_map_mpi_driver(
-        dems_json_file=dems_json_file,
-        thalweg_shp_fname=thalweg_shp_fname,
-        output_dir=output_dir,
-        river_map_config=river_map_config,
-        comm=comm
-    )
+
+river_map_config = ConfigRiverMap.loosely_follow_rivers()
+make_river_map(
+    tif_fnames=["./Inputs/DEMs/GA_dem_merged_ll.tif"],
+    thalweg_shp_fname="./Inputs/Shapefiles/GA_local.shp",
+    output_dir="./Outputs/",
+    **river_map_config.optional,
+)
 ```
 
-Comparing with the parallel [example](#parallel-mode) in the previous section, the above example adds a few lines of code that does the following:
+The same configuration object carries optional parameters through the parallel driver. Individual values can be adjusted before the call:
 
-* importing the "ConfigRiverMap" class
-* creating a default configuration "river_map_config",
-* passing the configration to the parallel driver.
-
-Since the default configuration is used, this example is essentially the same as the previous parallel example.
-But it facilitates further parameter tweaking, e.g.:
 ```python
-    river_map_config = ConfigRiverMap.LooselyFollowRivers()
-    river_map_config.optional['outer_arc_positions'] = (0.1, 0.2)
-    river_map_config.optional['i_real_clean'] = True
+river_map_config = ConfigRiverMap.loosely_follow_rivers()
+river_map_config.optional["outer_arcs_positions"] = (0.1, 0.2)
+
+river_map_mpi_driver(
+    dems_json_file=dems_json_file,
+    thalweg_shp_fname=thalweg_shp_fname,
+    output_dir=output_dir,
+    river_map_config=river_map_config,
+    comm=comm,
+)
 ```
-, without changing other parts of the code.
 
 
 ## More parameterization
-By tweaking the parameters, RiverMapper can also aid in the meshing of a wider range of river sizes or other channel-like features.
+
+RiverMapper can also represent channels much wider than the default watershed range and other long, narrow features.
 
 ### Hudson River and tributaries
-This example shows how to customize cross-channel divisions for a main channel that is a few kilometers wide and
-smaller tributaries.
+For a domain containing both kilometer-scale main channels and small tributaries, expand the bank-search range and along-channel resolution limits. A custom function can control the number of cross-channel arcs.
 
 ```python
 from mpi4py import MPI
-import os
-from RiverMapper.river_map_mpi_driver import river_map_mpi_driver
+
 from RiverMapper.config_river_map import ConfigRiverMap
+from RiverMapper.river_map_mpi_driver import river_map_mpi_driver
 
 if __name__ == "__main__":
-    comm=MPI.COMM_WORLD
-    # ------------------------- sample input ---------------------------
-    dems_json_file = '/sciclone/schism10/Hgrid_projects/Shared_with_KM/Inputs/dems.json'  # specifying files for all DEM tiles
-    thalweg_shp_fname='/sciclone/schism10/Hgrid_projects/Shared_with_KM/Inputs/Thalwegs/thalweg_v16_subset_Hudson2.shp'
-    output_dir = './Outputs/' +  f'{os.path.basename(thalweg_shp_fname).split(".")[0]}_{comm.Get_size()}-core/'
+    comm = MPI.COMM_WORLD
+    dems_json_file = "./Inputs/DEMs/dems.json"
+    thalweg_shp_fname = "./Inputs/Shapefiles/hudson_and_tributaries.shp"
+    output_dir = "./Outputs/hudson/"
 
-    river_map_config = ConfigRiverMap()  # initialize a default configuration
-    river_map_config.optional['river_threshold'] = (2, 5000)  # change the search range of river banks to accomodate for Hudson River
-    river_map_config.optional['along_channel_reso_thres'] = (5, 1200)  # change the maximum element length from 300 (default for small rivers) to 1200
-    river_map_config.optional['length_width_ratio'] = 4.0  # set element aspect ratio as needed
+    river_map_config = ConfigRiverMap()
+    river_map_config.optional['river_threshold'] = (2, 5_000)
+    river_map_config.optional['along_channel_reso_thres'] = (5, 1_200)
+    river_map_config.optional['length_width_ratio'] = 4.0
 
-    # Customize a width-to-narcs function and pass it to the configuration.
-    def width2narcs(width):  # do not change this line even if width is not used
-        narcs = 5  # you can specify more sophisticated configurations here as needed
-        return narcs  # narcs is the number of rows in the cross-channel direction.
-    # pass the customized function to the configuration
+    def width2narcs(width):
+        return 5
+
     river_map_config.optional['custom_width2narcs'] = width2narcs
-    # ------------------------- end input section ---------------------------
 
     river_map_mpi_driver(
         dems_json_file=dems_json_file,
         thalweg_shp_fname=thalweg_shp_fname,
         output_dir=output_dir,
         river_map_config=river_map_config,
-        comm=comm
+        comm=comm,
     )
 ```
 
-The above code adds more customization to the parallel example.
-Please read the comments which explain each piece of customization.
-In particular, note how to pass a customized width-to-narcs function to the configuration.
-This function takes the width of a river and returns the number of rows in the cross-channel directions.
+The custom function accepts channel width and returns the number of cross-channel arcs. This example always returns five.
 
-!!!Note
-    The option 'river_threshold' specifies the min and max river width to be resolved, which affects the search range of river banks.
-    A large value like 5000 m used here can slow down the execution compared to the default value (600 m, for small watershed rivers).
-    In the future, we will allow users to select rivers and specify different values for this option.
+!!! note
+    `river_threshold` controls both the supported width range and the bank-search distance. Increasing its upper limit from the 600 m default to 5,000 m can substantially increase runtime.
 
-Here, a simplest function is used that specifies five rows of arcs regardless of river width,
-and the result is shown below:
+The result is shown below:
 
 ![Hudson river](../../assets/Hudson.jpg)
 
-Of course you can specify  more sophisticated functions depending on your needs, e.g.,
+More adaptive rules can be used, for example:
 
 ```python
-nrow = int(min_arcs + np.ceil(width / 100))  # add one arc for every increase of 100 m
+narcs = int(min_arcs + np.ceil(width / 100))
 ```
 
-or
+or:
 
 ```python
-nrow = int(min_arcs + np.floor(0.35*width**0.25))  # add one arc for every increase of one order of magnitude
+narcs = int(min_arcs + np.floor(0.35 * width**0.25))
 ```
 
-or even make a master plan (similar to the master grid for SCHISM's [vgrid](https://feiye-vims.github.io/schism-tut/docs/compound-flood/vgrid_3d)) of how many arcs should be used for a given river width.
+The width-to-arc relationship can also follow a predefined master plan.
 
 
 ### Levees
-In the STOFS-3D-Atlantic domain, levees are important features to be incorporated in the model mesh.
-Instead of parameterizing them as hydraulic structures, the levees are explicitly represented by meter-scale elements,
-with two rows of nodes resolving the feet of the levee and another two rows resolving the top of the levee:
 
-![Sample river map](../../assets/sample-levee-map.png) 
+Levees may be explicitly represented with meter-scale elements instead of being parameterized as hydraulic structures. The `Levees()` preset creates a fixed-width feature with rows resolving the levee feet and crown:
 
-With the levee centerlines available from National Levee Database,
-the levee map can be easily made by invoking the pseudo channel option of RiverMapper:
+![Sample levee map](../../assets/sample-levee-map.png)
 
 ```python
 river_map_config = ConfigRiverMap.Levees()
 ```
 
-Notice that the along-channel (in this case along-levee) resolution also adapts for bends,
-just like for rivers.
+Along-levee resolution adapts to bends in the same manner as along-channel resolution.
 
 ### Barrier islands
-Barrier islands are long and narrow topographical features similar to river channels.
-In fact, the map of a barrier island can be made in the same way as river channels
-if the sign of the DEM's elevation values is inverted.
 
-![Sample river map](../../assets/sample-barrier-island-map.png) 
+Barrier islands are long, narrow topographic features that can be processed like channels after the DEM elevations are inverted. Set `elev_scale=-1.0` directly or use the current preset:
 
-This can be done by setting the optional parameter "elev_scale" to "-1",
-or directly invoking the preset "BarrierIsland":
+![Sample barrier-island map](../../assets/sample-barrier-island-map.png)
 
 ```python
-river_map_config = ConfigRiverMap.BarrierIsland()
+river_map_config = ConfigRiverMap.make_barrier_islands()
 ```
 
-!!!Note
-    The above two sample applications can also be found in 
-    [RiverMapper_Samples.tar](http://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar)
+The levee and barrier-island examples are included in [RiverMapper_Samples.tar](https://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_Samples.tar).
 
-## Experimental Features
-### Global arc cleaning
-The experimental option "i_real_clean" has been removed from the parameter list,
-because it has superseded all other options for river confluence cleaning.
-It is the only cleaning option in the latest code and enabled by default.
+## Additional behavior and outputs
 
-The idea is simple: arc vertices that are too close to any vertex or arc segment are snapped to the closest vertices.
+### Arc cleaning
 
-A critical step is defining how close is close.
-Setting a global threshold value would not work well because a larger value tends to over-simplify small rivers thus not ensuring channel connectivity
-and a smaller value causes insufficient cleaning for larger rivers.
-As a result, a spatially varying threshold is specified for each vertex based on the cross-channel resolution at that location.
-This ensures a sufficent level of cleaning while maintaining channel connectivity.
-For example, the resolution around a confluence is largely determined by the smallest branch:
-![Confluence_cleaning](../../assets/confluence_cleaning.png) 
+RiverMapper cleans intersections by snapping arc vertices that are too close to another vertex or arc segment. The threshold varies with local cross-channel resolution: a fixed large threshold could oversimplify small channels, while a fixed small threshold would not adequately clean larger channels.
 
-For a continental application like STOFS-3D-Atlantic that includes about 30,000 rivers, the cleaning takes about 10 minutes.
-Since the algorithm is fairly efficient, several iterations of cleaning are implemented allowing the threshold gradually increasing from a small value to the target value;
-in other words, the most close-by vertices are snapped first, which prevents overly aggressive snapping and slightly improve the quality of the end product.
+Cleaning proceeds over several iterations, gradually increasing the threshold so the closest vertices are resolved first. This reduces overly aggressive snapping while maintaining channel connectivity. Near a confluence, the smallest branch largely determines the local resolution.
 
-### Outputs for OCSMesh
-The "i_OCSMesh" option leads to an extra shapefile output containing river polygons,
-which serves as an input to [OCSMesh](https://github.com/noaa-ocs-modeling/OCSMesh).
-The option is enabled by default because the polygon-based output may be useful for other mesh generators too.
+![Confluence cleaning](../../assets/confluence_cleaning.png)
 
-### Outputting river mesh elements
-It may be desirable in some circumstances to directly discretize river polygons into elements (quadrangles and triangles).
-However, this is not the intended function of the tool at least by its original design but rather a task for mesh generators.  
-In addition, the accuracy and efficiency of SCHISM are not sensitive to how mesh generators decide to form the elements (as quads or triangles), as long as they adhere to the given river arcs or polygons.
-We can implement this option if there is a need.
+### OCSMesh products
 
+`i_OCSMesh=True`, the default, writes polygon-based river products for [OCSMesh](https://github.com/noaa-ocs-modeling/OCSMesh). These polygons may also be useful with other mesh generators.
+
+### River mesh elements
+
+RiverMapper generates the constraining arcs and polygons, but it does not directly discretize those polygons into quadrilateral or triangular elements. That step belongs to the mesh generator, which can choose element types while honoring the RiverMapper features.

@@ -1,94 +1,154 @@
 ## Introduction
-Previously, we discussed how to extract thalwegs from a Digital Elevation Model (DEM) for use as input to RiverMapper.
-We also mentioned other 1D river network datasets can be used intead of the extracted thalwegs, provided they reasonably represent the true thalwegs or channel centerlines.
-In this section, we illustrate the usage of an alternative data sources, National Hydrography Dataset (NHD), and outline the workflow for pre-processing NHD products as RiverMapper inputs.
 
-NHD is a comprehensive set of digital spatial data that represents the surface water features of the United States, including rivers, streams, lakes, and ponds.
-Developed by the U.S. Geological Survey (USGS), NHD provides detailed vector representations of flowlines, water bodies, and associated attributes.
+RiverMapper can use an existing one-dimensional river network instead of thalwegs extracted from a digital elevation model (DEM). This section uses the National Hydrography Dataset (NHD) as an example and explains how to prepare its flowlines and area polygons for RiverMapper.
 
-![Sample NHD](../../assets/sample-nhd.jpg) 
+NHD is a collection of digital surface-water data for the United States. It includes vector representations of rivers, streams, lakes, ponds, and related attributes.
 
-It is widely used for hydrologic analysis, watershed modeling, and mapping, and can serve as an alternative source of 1D river networks for RiverMapper inputs.
+![Sample NHD](../../assets/sample-nhd.jpg)
 
-## Download
-The NHD products can be downloaded from the [EPA website](https://www.epa.gov/waterdata/get-nhdplus-national-hydrography-dataset-plus-data).
-Notably, NHDPlus v2 is used in the National Water Model.
-Here, we will use NHDPlus High Resolution EPA Snapshot 2022, which provides finer detail suitable for accurate river network extraction and modeling.
+## Download the data
 
-Scroll to the bottom of the page, select state(s), and download the GeoPackage data:
+NHD products can be downloaded from the [EPA NHDPlus website](https://www.epa.gov/waterdata/get-nhdplus-national-hydrography-dataset-plus-data). This tutorial uses the NHDPlus High Resolution EPA Snapshot 2022. On the download page, select the required state or states and download the GeoPackage data.
 
 ![GeoPackage Download](../../assets/geopackage_download.jpg)
 
-## Pre-processing flowlines
-The `nhdflowline` layer in the GeoPackage typically contains many more rivers than are needed for a compound flood simulation. 
-To reduce processing time, select only the flowlines within your region of interest and export them to a shapefile.
+Before preprocessing, clip the `nhdflowline` and `nhdarea` layers to the region of interest and export them as shapefiles. This substantially reduces processing time.
 
-Then, apply the following pre-processing steps to the shapefile:
+## Choose the raster source
 
-- Subset flowlines based on specific criteria (e.g., valid `gnis_id`).
-- Dissolve flowlines sharing the same `gnis_id` to minimize segmentation.
-- For segments that are partially inside (outside) nhdarea polygons, split them into parts that are inside and outside the nhdarea.
-- Split long flowlines into shorter segments based on a maximum length threshold.
-- Densify vertices along each flowline to enhance accuracy for use in RiverMapper.
-- Add an integer attribute to all linestrings "keep" = 1, which invokes optinal processing steps (taliored for NHD) inside RiverMapper.
+NHD flowlines can be paired with either a real elevation DEM or rasterized NHD Area polygons. The source of the flowlines does not determine how RiverMapper interprets the raster values.
 
-These steps can be performed manually using GIS tools such as QGIS.
-Alternatively, the following [script](https://github.com/schism-dev/RiverMeshTools/blob/main/RiverMapper/Scripts/pre_proc_nhd_flowline.py) is provided to automate the process:
+| Flowline input | Raster input | `input_nhdarea` in flowline preprocessing | `nhd_area_tif` in RiverMapper |
+|---|---|---|---|
+| NHD flowlines | Real elevation DEM | `None` | `False` or omitted |
+| NHD flowlines | Rasterized NHD Area polygons | NHD Area shapefile | `True` |
 
+Use `input_nhdarea=None` with a real DEM to preserve continuous flowlines and bypass unnecessary inside/outside splitting. When NHD Area provides the surrogate raster, pass the area shapefile so a flowline crossing a polygon boundary is divided into separate inside and outside portions.
+
+The `nhd_area_tif` option describes the TIFF values, not the source of the thalwegs. Do not set it to `True` merely because the flowlines came from NHD.
+
+Because `nhd_area_tif` applies to the entire TIFF list, use one raster interpretation per RiverMapper call. Do not mix real elevation DEMs with `-1/0` NHD Area surrogate tiles in the same list.
+
+## Preprocess the flowlines
+
+The preprocessing workflow:
+
+- Optionally selects flowlines using an attribute such as `gnis_id`.
+- Dissolves flowlines with the same identifier to reduce unnecessary segmentation.
+- Optionally splits flowlines at NHD Area boundaries.
+- Divides long flowlines into shorter segments.
+- Densifies vertices along each segment.
+- Adds an integer `keep=1` attribute.
+
+The `keep` attribute only controls retention. A positive value tells RiverMapper to process the flowline even when other criteria, such as the minimum detected width, would normally cause it to be discarded. In that case, RiverMapper can fall back to a pseudo-channel. The `keep` value does not select NHD raster processing or change how elevation is interpreted.
+
+These operations can be performed in a GIS or with the standalone [pre_proc_nhd_flowline.py](https://github.com/schism-dev/RiverMeshTools/blob/main/RiverMapper/Scripts/pre_proc_nhd_flowline.py) script. Copy the script into the project directory, or import it from wherever RiverMeshTools was cloned. For example, after copying it beside the input shapefile:
+
+```python
+from pathlib import Path
+
+from pre_proc_nhd_flowline import pre_process_nhdflowlines
+
+
+pre_process_nhdflowlines(
+    input_flowline=Path("nhdflowline_ll.shp"),
+    input_nhdarea=None,  # use Path("nhdarea_ll.shp") with NHD Area surrogate TIFFs
+    line_identifier="gnis_id",
+    max_segment_length=15_000,
+    along_segment_resolution=20,
+)
 ```
-RiverMeshTools/RiverMapper/Scripts/pre_proc_nhd_flowline.py
-```
 
-The usage of the script is self-explanatory in the main() function.
-An example of the processed nhdflowline around Wilmington, NC, USA is shown below:
+Set `line_identifier=None` to retain all input flowlines. Additional examples and diagnostic-output options are available in the script's `sample()` function.
+
+An example of preprocessed NHD flowlines near Wilmington, North Carolina, is shown below.
 
 ![Pre-processed nhdflowline](../../assets/pre_processed_nhdflowline.jpg)
 
-## Pre-processing NHD Area (Optional)
-The `nhdarea` layer from the downloaded GeoPackage can serve as a surrogate for a DEM after the following post-processing steps:
+## Preprocess NHD Area polygons (optional)
 
-- (Optional) Split the entire domain into tiles if the domain is large.
-- Rasterize each tile into a `.tif` file, assigning -1 to areas inside the polygons (water) and 0 to areas outside (land).
-- Generate a dummy tile covering the full domain with only 0 values. This is used as the lowest-priority tile to ensure all rivers are within *.tif coverage.
+Skip this section when using a real elevation DEM. To use NHD Area as a surrogate raster, RiverMapper expects `-1` for water and `0` for land. The preprocessing script:
 
-Tiling facilitates parallel processing with MPI. 
-Rasterization simplifies and accelerates geometric queries, at the cost of increased memory usage — a trade-off that is manageable with MPI.
-These post-processing steps make the tiles directly usable as inputs to RiverMapper.
+- Splits the polygons into overlapping tiles.
+- Rasterizes each nonempty tile, burning water as `-1` and background land as `0`.
+- Creates a coarse, zero-valued `global_dummy.tif` that supplies coverage outside the detailed tiles.
 
-The following scripts are provided to automate the process:
+The input shapefile should be in longitude/latitude coordinates (EPSG:4326) when using the default tile and pixel sizes. If polygon overlaps, gaps, or slivers need repair, `build_clean_polygon_mask()` in the same script provides an optional cleanup step. Its `target_crs` must be a projected CRS with meter units; reproject the cleaned result to EPSG:4326 before rasterization.
 
+The [pre_proc_nhd_area.py](https://github.com/schism-dev/RiverMeshTools/blob/main/RiverMapper/Scripts/pre_proc_nhd_area.py) script is standalone. Copy it into the project directory, or run it from wherever RiverMeshTools was cloned. For example, after copying it beside the input shapefile:
+
+```bash
+python pre_proc_nhd_area.py nhdarea_ll.shp
 ```
-RiverMeshTools/RiverMapper/RiverMapper/river_map_tif_preproc.py
+
+By default, the outputs are written to `nhdarea_ll_split_rasterized/`. Use `--outdir` to choose another location:
+
+```bash
+python pre_proc_nhd_area.py nhdarea_ll.shp \
+    --outdir nhdarea_tifs
 ```
 
-The usage of the script is self-explanatory in the main() function.
+Run the command with `--help` to see options for tile size, tile overlap, raster resolution, burn value, and dummy-TIFF generation.
+
+## Run RiverMapper
+
+### NHD flowlines with a real DEM
+
+Use the DEM normally and leave `nhd_area_tif` at its default value of `False`:
+
+```python
+from RiverMapper.make_river_map import make_river_map
+
+
+make_river_map(
+    tif_fnames=["./dem/domain_dem_ll.tif"],
+    thalweg_shp_fname="./nhdflowline_ll_processed/nhdflowline_ll_processed.shp",
+    output_dir="./Outputs/",
+)
+```
+
+### NHD flowlines with NHD Area surrogate TIFFs
+
+List all detailed NHD Area tiles before the global dummy TIFF. RiverMapper uses the first available raster at a location, so `global_dummy.tif` must have the lowest priority and appear last.
+
+```python
+from pathlib import Path
+
+from RiverMapper.make_river_map import make_river_map
+
+
+nhd_tif_dir = Path("./nhdarea_ll_split_rasterized")
+nhd_area_tifs = sorted(str(path) for path in nhd_tif_dir.glob("nhdarea_ll_*.tif"))
+nhd_area_tifs.append(str(nhd_tif_dir / "global_dummy.tif"))
+
+make_river_map(
+    tif_fnames=nhd_area_tifs,
+    thalweg_shp_fname="./nhdflowline_ll_processed/nhdflowline_ll_processed.shp",
+    output_dir="./Outputs/",
+    nhd_area_tif=True,
+)
+```
 
 ## Sample applications
-Two sample applications — one for the Pee Dee River, SC, and one for Wilmington, NC — are provided [here](https://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_samples_NHD.zip).
 
-Each application includes:
+Sample applications for the Pee Dee River, South Carolina, and Wilmington, North Carolina, are available [here](https://ccrm.vims.edu/yinglong/feiye/Public/RiverMapper_samples_NHD.zip). Each application includes:
 
-- A shapefile containing pre-processed NHD layer `nhdflowline`;
-- A shapefile containing `nhdarea` clipped to the regions of interest, but it still needs to be processed as described [above](#pre-processing-nhd-area-optional);
-- A sample script demonstrating how to call RiverMapper;
-- Example outputs generated by RiverMapper.
+- Preprocessed NHD flowlines.
+- An NHD Area shapefile clipped to the region of interest.
+- A sample RiverMapper driver.
+- Example RiverMapper outputs.
 
-In these two examples, the rivers selected for feature extraction are those with a valid `gnis_id`. 
-Different strategies can be used to choose the rivers as needed. 
-Additional rivers can also be added as needed.
-In the Pee Dee River case, a stretch of the Intracoastal Waterway was added to the initial selection.
-In the Wilmington case, additional rivers (orange lines) in the urban area are copied from the original nhdflowline:
+The samples select rivers with a valid `gnis_id`, but other selection strategies can be used. Additional flowlines may also be added manually. For example, the Pee Dee application includes part of the Intracoastal Waterway, and the Wilmington application adds several urban flowlines shown in orange below.
 
-![Wilmington_added_flowline](../../assets/wilmington_added_flowline.jpg)
+![Wilmington added flowlines](../../assets/wilmington_added_flowline.jpg)
 
-!!!Note
-    In the Wilmington example (above figure), a few lines are also added in the main stem of the Cape Fear River.
-    This is to improve the arcs around the islands.
-    However, it is recommended to draw major rivers and estuaries manually without using RiverMapper.
+!!! note
+    Several flowlines were also added along the main stem of the Cape Fear River to improve the generated arcs around islands. Major rivers and estuaries are generally better drawn manually instead of being processed with RiverMapper.
 
-An example of the final product is shown below,
-where rivers inside the `nhdarea` polygons are resolved with higher resolution,
-while small creeks outside the polygons are represented by uniform-width channels.
+The resulting map resolves rivers inside the NHD Area polygons at higher resolution, while small creeks outside the polygons fall back to uniform-width pseudo-channels.
 
 ![sample nhd-based arcs](../../assets/sample-nhd-based-arcs.jpg)
 
+## RiverMapper source
+
+[RiverMapper](https://github.com/schism-dev/RiverMeshTools/tree/main/RiverMapper) is maintained in the [RiverMeshTools repository](https://github.com/schism-dev/RiverMeshTools).
