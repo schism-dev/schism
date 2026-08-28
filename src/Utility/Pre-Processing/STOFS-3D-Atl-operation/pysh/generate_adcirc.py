@@ -1,27 +1,78 @@
-'''
-Usage: python generate_adcirc.py -h
+"""Convert SCHISM 2-D output to the NetCDF layout used by ADCIRC products.
+
+Main procedure
+--------------
+The script reads node coordinates, bathymetry, elements, elevation, wet/dry
+flags, and wind from a SCHISM ``out2d`` file. It splits quadrilateral elements
+into triangles, computes maximum elevation and maximum disturbance, masks dry
+or insignificant values, and writes ``schout_adcirc_*.nc`` in ADCIRC format.
+
+An optional city mask controls where disturbances below 0.3 m are suppressed.
+On Sciclone and Frontera, ``--input_city_identifier_file`` must be a polygon
+shapefile. The script tests every model node against those polygons and writes
+a reusable ``*.node_id.txt`` mask next to the shapefile. On other systems,
+including WCOSS2, the argument must be that previously generated text mask.
+The text file has one 0/1 flag per model node; despite its name, it is not a
+list of node IDs. Omitting the argument disables city masking.
+
+Usage
+-----
+Run ``python generate_adcirc.py -h`` for all arguments.
 
 For example:
 
 (on WCOSS2) python generate_adcirc.py --input_filename t12z.fields.out2d_nowcast.nc --input_city_identifier_file ./Shapefiles/city_poly.node_id.txt --output_dir .
-(on other clusters) python generate_adcirc.py --input_filename ./outputs/out2d_1.nc --input_city_identifier_file ./Shapefiles/city_poly.shp --output_dir ./extract/  --datum "xGEOID20B"
+(on Sciclone or Frontera) python generate_adcirc.py --input_filename ./outputs/out2d_1.nc --input_city_identifier_file ./Shapefiles/city_poly.shp --output_dir ./extract/ --datum "xGEOID20B"
 
 Outputs:
 ./extract/schout_adcirc_*.nc, which are in ADCIRC's format
-
-'''
+"""
 from time import time
 import argparse
 from pathlib import Path
 import copy
 import os
 import errno
+import socket
 
 import matplotlib as mpl
 import shapefile
 
 import numpy as np
 from netCDF4 import Dataset
+
+
+def get_city_mask_host_config():
+    """Return the host label and whether a precomputed city mask is required.
+
+    Sciclone nodes do not always expose ``sciclone`` in their short hostname,
+    so detection uses both the fully qualified domain name and the presence of
+    the cluster's ``/sciclone`` filesystem. Frontera is identified by either
+    its short hostname or fully qualified domain name.
+
+    Returns
+    -------
+    tuple[str, bool]
+        The most informative available hostname and ``static_city_mask``.
+        ``False`` means city polygons can be converted to a node mask locally;
+        ``True`` means an existing ``*.node_id.txt`` mask must be supplied.
+    """
+    short_hostname = os.uname().nodename
+    host_fqdn = socket.getfqdn()
+    host_label = host_fqdn or short_hostname
+
+    is_sciclone = (
+        'sciclone' in host_fqdn.lower()
+        or 'sciclone' in short_hostname.lower()
+        or Path('/sciclone').is_dir()
+    )
+    is_frontera = (
+        'frontera' in host_fqdn.lower()
+        or 'frontera' in short_hostname.lower()
+    )
+
+    return host_label, not (is_sciclone or is_frontera)
+
 
 def signa(x,y):
     '''
@@ -182,8 +233,7 @@ def split_quads(elements=None):  # modified by FY
     return triangles[:, :3]  # only return the first 3 nodes of each element
 
 if __name__ == '__main__':
-    # Check host and make special arrangement for WCOSS2
-    myhost = os.uname()[1]
+    myhost, static_city_mask = get_city_mask_host_config()
 
     # ---------------------------
     my_fillvalue = -99999.0  # used for dry nodes and small disturbance on land/city
@@ -194,7 +244,7 @@ if __name__ == '__main__':
     # ----------- input arguments ----------------------
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--input_filename', required=True, help='input file in SCHISM format')
-    argparser.add_argument('--input_city_identifier_file', help='optional input shapefile defining the urban region, or (on WCOSS2) a txt file containing node ids inside city, where small disturbance will be masked out')
+    argparser.add_argument('--input_city_identifier_file', help='optional input shapefile defining the urban region, or (on WCOSS2) a txt file containing one city-mask flag per mesh node, where small disturbance will be masked out')
     argparser.add_argument('--datum', default='xGEOID20B', help='Vertical datum of the schism run, defaulting to xGEOID20B.')
     argparser.add_argument('--output_dir', required=True, help='folder holding the outputs of this script.')
     args=argparser.parse_args()
@@ -213,14 +263,13 @@ if __name__ == '__main__':
         if not os.path.exists(input_city_identifier_file):
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), input_city_identifier_file)
 
-        if any(tested_host in myhost for tested_host in ["frontera", "viz", "femto", "vortex", "kuro", "gulf"]):
-            static_city_mask = False  # search for city mask within polygons of shapefile
+        if not static_city_mask:  # search for city mask within polygons of shapefile
             if Path(input_city_identifier_file).suffix != '.shp':
                 raise ValueError("When not using static_city_mask, input_city_identifier_file must be a shapefile containing city polygons")
         else:
-            static_city_mask = True  # On WCOSS2 or any untested machine, use static mask because it may not have mpl.path
+            # On WCOSS2 or any untested machine, use the existing static mask.
             if Path(input_city_identifier_file).suffix != '.txt':
-                raise ValueError("When using static_city_mask, input_city_identifier_file must be a txt file containing node indices inside city")
+                raise ValueError("When using static_city_mask, input_city_identifier_file must be a txt file containing one city-mask flag per mesh node")
         print(f'myhost: {myhost}, static_city_mask: {static_city_mask}, city identifier input: {input_city_identifier_file}')
     else:
         print('No city identifier file provided, no city mask will be applied')

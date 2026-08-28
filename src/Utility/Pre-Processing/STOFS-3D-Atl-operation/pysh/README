@@ -12,6 +12,58 @@ The following scripts should have been updated with v7.2:
 - `generate_adcirc.py` has a bug fix that has not yet been incorporated into
   the operational forecast.
 
+## `Shapefiles/city_poly.node_id.txt`
+
+### Current v7.2 product
+
+The city-node mask was regenerated on 2026-08-28 using node coordinates from:
+
+```text
+/sciclone/schism10/feiye/STOFS3D-v8/v7.2_static_inputs_2025_06_20/hgrid.gr3
+```
+
+That path is a symbolic link which currently resolves to:
+
+```text
+/sciclone/schism10/feiye/STOFS3D-v8/I15w_v7/hgrid_levee_2025_xgeoid20b.gr3
+```
+
+The mesh has 5,872,610 elements and 3,052,121 nodes. Its SHA-256 checksum at
+generation time was
+`4f844719bfbe238a825a61850ab935b5541653413bbaade642d19e479ebc16b0`.
+
+The polygon input was `Shapefiles/city_poly.shp`, which contains 71 features
+in WGS 84 longitude/latitude coordinates. The mask was calculated with the
+same operational rule used by `generate_adcirc.py`: read each feature with
+pyshp, pass its point coordinates to
+`matplotlib.path.Path.contains_points()`, and take the union of the selected
+nodes across all features.
+
+The output is a plain-text Boolean mask, not a list of node IDs. Line 1 maps to
+mesh node 1, and each subsequent line maps to the corresponding 1-based mesh
+node. Its validated contents are:
+
+| Property | Value |
+| --- | ---: |
+| Total lines | 3,052,121 |
+| Non-city values (`0`) | 2,992,030 |
+| City values (`1`) | 60,091 |
+| Other values | 0 |
+| File size | 6,104,242 bytes |
+| SHA-256 | `73ae134663cca2d7f167215f9074ac3c11eed0efe44331da1390249be38fec8a` |
+
+Sanity checks performed during generation included sequential node-ID and
+finite-coordinate validation of the mesh, a reload of the written text file,
+and an independent OGR reading of the polygons. The pyshp and OGR masks had
+zero differing nodes. Feature 26 is the only polygon with an interior ring; a
+ring-aware containment check also had zero differences for this mesh.
+
+OGR reports features 1, 2, 12, and 13 as invalid because each collapses to a
+two-point, zero-area segment. They were retained during generation so the
+result continues to match the operational pyshp/matplotlib behavior. Replace
+or repair these source features before changing the mask algorithm to a strict
+geometry-validating implementation.
+
 ## `out2d_*.nc`
 
 ### Summary
