@@ -1615,6 +1615,7 @@
         standard_name = ''
         comment = ''
         units = ''
+        cell_methods = ''
         valid_min = NF90_FILL_FLOAT
         valid_max = NF90_FILL_FLOAT
 
@@ -1659,10 +1660,10 @@
           units = 'kg m-3'
         case ('barotropicPresGradX')
           long_name = 'Eastward barotropic pressure gradient'
-          units = 'Pa m-1'
+          units = 'm s-2'
         case ('barotropicPresGradY')
           long_name = 'Northward barotropic pressure gradient'
-          units = 'Pa m-1'
+          units = 'm s-2'
         case ('temperatureAtElement')
           standard_name = 'sea_water_temperature'
           units = 'degree_C'
@@ -1693,7 +1694,7 @@
           units = 'm2 s-1'
         case ('viscosity')
           long_name = 'Viscosity'
-          units = 'N s m-2'
+          units = 'm2 s-1'
         case ('elevation')
           standard_name = 'sea_surface_height_above_geoid'
           units = 'm'
@@ -1738,6 +1739,17 @@
         case ('horizontalSideVelY')
           standard_name = 'sea_water_y_velocity'
           units = 'm s-1'
+        case ('horizontalVelX')
+          long_name = 'Horizontal x velocity'
+          standard_name = 'sea_water_x_velocity'
+          units = 'm s-1'
+        case ('horizontalVelY')
+          long_name = 'Horizontal y velocity'
+          standard_name = 'sea_water_y_velocity'
+          units = 'm s-1'
+        case ('sedTemperature')
+          long_name = 'Sediment temperature'
+          units = 'degree_C'
         case ('windSpeedX')
           standard_name = 'eastward_wind'
           units = 'm s-1'
@@ -1781,6 +1793,9 @@
 
         if (trim(comment) /= '')  iret=nf90_put_att(ncid,varid,'comment',trim(comment))
         if(iret.ne.NF90_NOERR) call parallel_abort(varname//' comment')
+
+        if (trim(cell_methods) /= '')  iret=nf90_put_att(ncid,varid,'cell_methods',trim(cell_methods))
+        if(iret.ne.NF90_NOERR) call parallel_abort(varname//' cell_methods')
 
         if (valid_min /= NF90_FILL_FLOAT)  iret=nf90_put_att(ncid,varid,'valid_min',valid_min)
         if(iret.ne.NF90_NOERR) call parallel_abort(varname//' valid_min')
