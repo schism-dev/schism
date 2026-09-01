@@ -38,6 +38,8 @@ from pylib import schism_grid as schism_read
 
 
 IMPLEMENTED_TASKS = [  # order matters
+    'Interpolate_Upper_Hudson', #interpolate bathymetry at upper hudson using reference loaded hgrid
+    'Temporary_Fix_secofs',  # tweak depths around Bayou Lafourche
     'Regional_tweaks',  # set minimum depth in regions specified in regional_tweaks
     'NCF',  # load NCF (National Channel Framework) maintained depth
     'Levee',  # set levees height based on National Levee Database
@@ -58,6 +60,8 @@ IMPLEMENTED_TASKS = [  # order matters
 ]
 
 TASKS = {
+    'Interpolate_Upper_Hudson',
+    'Temporary_Fix_secofs',
     'Regional_tweaks',
     'NCF',
     'Levee_dev',
@@ -71,6 +75,10 @@ TASKS = {
 # paths and frequently tuned parameters here so future cleanup can be reviewed
 # without changing task logic.
 WORKFLOW_CONSTANTS = {
+    'Interpolate_Upper_Hudson':{
+        'reference_hgrid_file': '/sciclone/home/hjyoo/new_schism/STOFS3D_scripts_work_HJ/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/src/stofs3d_setup/ops/Bathy_edit/Interpolate_Upper_Hudson/hgrid_10g.ll',
+        'region_file': '/sciclone/home/hjyoo/new_schism/STOFS3D_scripts_work_HJ/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/src/stofs3d_setup/ops/Bathy_edit/Interpolate_Upper_Hudson/upper_Hudson.rgn'
+    },
     'Dredge': {
         'dredge_depth': 2,
         'dredge_polygon_file': Path(
@@ -86,10 +94,15 @@ WORKFLOW_CONSTANTS = {
             'bora_v19.1.v19_ie_v18_3_nwm_clipped_in_cudem_missing_tiles_20-core/'
             'total_river_arcs_extra.map'
         ),
-        'region_gdf_file': (
-            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Clip/outputs/'
-            'watershed.shp'
-        ),
+        'region_gdf_file_list': [
+            (
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Clip/outputs/'
+                'watershed.shp'
+            ),
+            (
+                '/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/src/stofs3d_setup/ops/Bathy_edit/Ensure_channel_connectivity/watershed_manual_addition.shp'
+            ),
+        ],
         'exclude_region_gdf_file_list': [
             (
                 '/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Bathy_edit/'
@@ -103,15 +116,20 @@ WORKFLOW_CONSTANTS = {
     },
     'Temporary_Fix_v7p2': {
         'reference_hgrid_file': (
-            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32f_test/Bathy_edit/'
-            'DEM_loading_for_temp_fix_v7p2/hgrid.ll.dem_loaded.mpi.gr3'
+            '/sciclone/schism10/hjyoo/task/task10_Atlantic/RUN100m/src/Bathy_edit_org/DEM_loading/DEM_loading_for_STOFS_v7p2/hgrid.ll.dem_loaded.mpi.gr3'
+        ),
+    },
+    'Temporary_Fix_secofs': {
+        'reference_hgrid_file': (
+            '/sciclone/schism10/hjyoo/task/task10_Atlantic/RUN100m/src/Bathy_edit_org/'
+            'DEM_loading/DEM_loading_for_SECOFS_v1/hgrid.ll.dem_loaded.mpi.gr3'
         ),
     },
     'sample_usage': {
-        'wdir': Path('/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Bathy_edit/'),
+        'wdir': Path('/sciclone/schism10/hjyoo/task/task10_Atlantic/TMP/bathy_edit_test_based_on_RUN100n_August_28th_2026/Bathy_edit/'),
         'hgrid_fname': Path(
-            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Bathy_edit/'
-            'DEM_loading/hgrid.ll.dem_loaded.mpi.gr3'
+            '/sciclone/schism10/hjyoo/task/task10_Atlantic/TMP/bathy_edit_test_based_on_RUN100n_August_28th_2026/'
+            'hgrid.ll.dem_loaded.mpi.gr3'
         ),
     },
 }
@@ -240,6 +258,39 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
     hgrid_base_name = 'hgrid_ll_dem'
     initial_dp = hgrid_obj.dp.copy()  # save dp before processing
 
+    if 'Interpolate_Upper_Hudson' in tasks:
+        from Interpolate_Upper_Hudson.interpolate_upper_hudson import interpolate_upper_hudson
+
+        task_cfg = WORKFLOW_CONSTANTS['Interpolate_Upper_Hudson']
+
+        hgrid_obj = interpolate_upper_hudson(
+            hgrid_obj = hgrid_obj,
+            reference_hgrid_file = f"{wdir}/Interpolate_Upper_Hudson/{task_cfg['reference_hgrid_file']}",
+            region_file = f"{wdir}/Interpolate_Upper_Hudson/{task_cfg['region_file']}",
+        )
+
+        hgrid_base_name += '_upper_Hudson'
+        hgrid_obj.write_hgrid(
+            f'{wdir}/Interpolate_Upper_Hudson/{hgrid_base_name}.gr3'
+        )
+
+        print("Finished interpolating Upper Hudson bathymetry.\n")
+
+
+    if 'Temporary_Fix_secofs' in tasks:  # replace depth in SECOFS domain (SJR, Savannah, Charleston)
+        from Temporary_Fix_secofs.temp_fix_secofs import temp_fix_secofs
+        task_cfg = WORKFLOW_CONSTANTS['Temporary_Fix_secofs']
+        hgrid_base_name += '_temp_fix_secofs'
+        hgrid_obj = temp_fix_secofs(
+            hgrid_obj,
+            wdir=f'{wdir}/Temporary_Fix_secofs/',
+            reference_hgrid_file=task_cfg['reference_hgrid_file']
+        )
+        hgrid_obj.grd2sms(
+            f'{wdir}/Temporary_Fix_secofs/{hgrid_base_name}.2dm'
+        )
+        print("Finished setting temporary fix for SECOFS.\n")
+
     if 'Regional_tweaks' in tasks:  # set minimum depth in regions
         from Regional_tweaks.regional_tweaks import shape_tweak
         gpkg_file = (
@@ -340,7 +391,7 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
             min_channel_depth=task_cfg['min_channel_depth'],
             measured_from_high_bank=task_cfg['measured_from_high_bank'],
             river_extra_info_map_file=task_cfg['river_extra_info_map_file'],
-            region_gdf_file=task_cfg['region_gdf_file'],
+            region_gdf_file_list=task_cfg['region_gdf_file_list'],
             exclude_region_gdf_file_list=task_cfg['exclude_region_gdf_file_list'],
             output_dir=f'{wdir}/Ensure_channel_connectivity/'
         )
