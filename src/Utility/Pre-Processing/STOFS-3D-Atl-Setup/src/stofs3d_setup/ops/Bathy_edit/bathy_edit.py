@@ -77,7 +77,10 @@ TASKS = {
 WORKFLOW_CONSTANTS = {
     'Interpolate_Upper_Hudson':{
         'reference_hgrid_file': '/sciclone/home/hjyoo/new_schism/STOFS3D_scripts_work_HJ/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/src/stofs3d_setup/ops/Bathy_edit/Interpolate_Upper_Hudson/hgrid_10g.ll',
-        'region_file': '/sciclone/home/hjyoo/new_schism/STOFS3D_scripts_work_HJ/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/src/stofs3d_setup/ops/Bathy_edit/Interpolate_Upper_Hudson/upper_Hudson.rgn'
+        'region_file': '/sciclone/home/hjyoo/new_schism/STOFS3D_scripts_work_HJ/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/src/stofs3d_setup/ops/Bathy_edit/Interpolate_Upper_Hudson/upper_Hudson.rgn',
+    },
+    'Regional_tweaks': {
+        'gpkg_file': 'default_regional_tweaks_v7p4.gpkg',
     },
     'Dredge': {
         'dredge_depth': 2,
@@ -264,9 +267,9 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         task_cfg = WORKFLOW_CONSTANTS['Interpolate_Upper_Hudson']
 
         hgrid_obj = interpolate_upper_hudson(
-            hgrid_obj = hgrid_obj,
-            reference_hgrid_file = f"{wdir}/Interpolate_Upper_Hudson/{task_cfg['reference_hgrid_file']}",
-            region_file = f"{wdir}/Interpolate_Upper_Hudson/{task_cfg['region_file']}",
+            hgrid_obj=hgrid_obj,
+            reference_hgrid_file=task_cfg['reference_hgrid_file'],
+            region_file=task_cfg['region_file'],
         )
 
         hgrid_base_name += '_upper_Hudson'
@@ -293,8 +296,9 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
 
     if 'Regional_tweaks' in tasks:  # set minimum depth in regions
         from Regional_tweaks.regional_tweaks import shape_tweak
+        task_cfg = WORKFLOW_CONSTANTS['Regional_tweaks']
         gpkg_file = (
-            f'{wdir}/Regional_tweaks/default_regional_tweaks_v7p4.gpkg'
+            Path(wdir) / 'Regional_tweaks' / task_cfg['gpkg_file']
         )
         hgrid_obj, _ = shape_tweak(hgrid_obj, gpkg_file)
         grd2sms(hgrid_obj, f'{wdir}/Regional_tweaks/{hgrid_base_name}_tweaks.2dm')

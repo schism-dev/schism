@@ -141,16 +141,14 @@ def _load_regions(gpkg_file, layer, hgrid_crs):
 
 
 def _select_nodes(regions, x, y, input_depth):
-    """Select spatial and depth-filtered hgrid nodes for every region.
+    """Select spatially and depth-filtered hgrid nodes for every region.
 
     Polygon boundaries are included. Depth bounds are inclusive and always
     use the original input depths, so earlier operations do not change which
-    nodes a later feature selects. The separate spatial selections preserve
-    the original diagnostic-mask behavior.
+    nodes a later feature selects.
     """
 
     selections = []
-    spatial_selections = []
     for row in regions.itertuples():
         spatial_indices = np.flatnonzero(intersects_xy(row.geometry, x, y))
         if spatial_indices.size == 0:
@@ -164,9 +162,8 @@ def _select_nodes(regions, x, y, input_depth):
             indices = indices[input_depth[indices] >= row.min_input_depth_m]
         if not np.isnan(row.max_input_depth_m):
             indices = indices[input_depth[indices] <= row.max_input_depth_m]
-        spatial_selections.append(spatial_indices)
         selections.append(indices)
-    return selections, spatial_selections
+    return selections
 
 
 def _warn_about_overlaps(regions, selections, node_count):
@@ -251,8 +248,7 @@ def shape_tweak(
     -------
     tweaked_hgrid, touched_hgrid : tuple
         A depth-modified copy and a copy whose depth is 1 at every selected
-        polygon-covered node and 0 elsewhere. The diagnostic mask includes
-        nodes excluded by input-depth bounds, matching the original function.
+        node that passes the polygon and input-depth filters, and 0 elsewhere.
     """
 
     x = np.asarray(hgrid.x, dtype=float)
@@ -268,16 +264,14 @@ def shape_tweak(
         raise ValueError("hgrid depths must be finite")
 
     regions = _load_regions(gpkg_file, layer, hgrid_crs)
-    selections, spatial_selections = _select_nodes(regions, x, y, input_depth)
+    selections = _select_nodes(regions, x, y, input_depth)
     _warn_about_overlaps(regions, selections, input_depth.size)
 
     tweaked = copy.deepcopy(hgrid)
     touched = copy.deepcopy(hgrid)
     touched.dp[:] = 0
-    for row, indices, spatial_indices in zip(
-        regions.itertuples(), selections, spatial_selections
-    ):
-        touched.dp[spatial_indices] = 1
+    for row, indices in zip(regions.itertuples(), selections):
+        touched.dp[indices] = 1
         if indices.size == 0:
             print(f"Skipped {row.region} [{row.apply_order}]: no selected nodes")
             continue

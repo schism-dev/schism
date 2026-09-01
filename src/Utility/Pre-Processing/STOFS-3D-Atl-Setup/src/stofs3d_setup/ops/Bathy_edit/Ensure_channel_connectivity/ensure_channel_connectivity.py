@@ -2,6 +2,7 @@ import os
 import numpy as np
 from copy import deepcopy
 import geopandas as gpd
+import pandas as pd
 from RiverMapper.rivers import Rivers
 from RiverMapper.SMS import SMS_MAP
 from sklearn.neighbors import KDTree
@@ -60,7 +61,7 @@ def dredge_river_transects(
 def ensure_channel_connectivity(
     hgrid_obj, min_channel_depth=1.0, measured_from_high_bank=True,
     river_extra_info_map_file=None,
-    region_gdf_file=None, exclude_region_gdf_file_list=None,
+    region_gdf_file_list=None, exclude_region_gdf_file_list=None,
     output_dir=None
 ):
     '''
@@ -74,8 +75,9 @@ def ensure_channel_connectivity(
         file containing extra information of river arcs, which is used to identify the river arcs to be dredged.
         You should have this file under the RiverMapper output directory;
         if not, configure RiverMapper to output this file by setting i_DiagnosticOutput
-    - region_gdf_file: str, path to the shapefile defining the region of interest,
-        in which the dredging is performed. It must have a coordinate reference system (CRS) defined.
+    - region_gdf_file_list: list of str, paths to files defining the regions of
+        interest in which dredging is performed. Each file must have a coordinate
+        reference system (CRS) defined. The regions are combined before dredging.
     - exclude_region_gdf_file_list: list of str, list of paths to the shapefiles
         defining the regions to be excluded from dredging, e.g., New England (GoME),
         in which auto arcs are used to represent underwater channels, not watershed rivers.
@@ -84,8 +86,15 @@ def ensure_channel_connectivity(
     # check inputs:
     if river_extra_info_map_file is None or not os.path.isfile(river_extra_info_map_file):
         raise ValueError('river_extra_info_map_file is required and must be a valid file path.')
-    if region_gdf_file is None or not os.path.isfile(region_gdf_file):
-        raise ValueError('region_gdf_file is required and must be a valid file path.')
+    if not region_gdf_file_list:
+        raise ValueError('region_gdf_file_list is required and cannot be empty.')
+    if isinstance(region_gdf_file_list, (str, os.PathLike)):
+        raise ValueError('region_gdf_file_list must be a list of file paths.')
+    for region_gdf_file in region_gdf_file_list:
+        if not os.path.isfile(region_gdf_file):
+            raise ValueError(
+                f'region_gdf_file {region_gdf_file} must be a valid file path.'
+            )
     if output_dir is None:
         raise ValueError('output_dir is required and must be a valid directory path.')
     if exclude_region_gdf_file_list is not None:
@@ -96,8 +105,33 @@ def ensure_channel_connectivity(
     # Load extra information from the river arcs
     rivers = Rivers(SMS_MAP(river_extra_info_map_file))  # default crs is 'epsg:4326', also the default for RiverMapper
 
-    # Define region of interest
-    watershed = gpd.read_file(region_gdf_file)
+    # Define the combined region of interest. Files are loaded in the supplied
+    # order and projected to the CRS of the first file before being combined.
+    region_gdf_list = []
+    target_crs = None
+    for region_gdf_file in region_gdf_file_list:
+        region_gdf = gpd.read_file(region_gdf_file)
+        if region_gdf.empty:
+            raise ValueError(f'region_gdf_file {region_gdf_file} contains no features.')
+        if region_gdf.crs is None:
+            raise ValueError(f'region_gdf_file {region_gdf_file} has no CRS.')
+
+        if target_crs is None:
+            target_crs = region_gdf.crs
+        else:
+            region_gdf = project_geodataframe(
+                region_gdf,
+                target_crs,
+                f'channel-connectivity inclusion-region projection for {region_gdf_file}',
+            )
+        region_gdf_list.append(region_gdf[['geometry']])
+
+    watershed = gpd.GeoDataFrame(
+        pd.concat(region_gdf_list, ignore_index=True),
+        geometry='geometry',
+        crs=target_crs,
+    ).dissolve().reset_index(drop=True)
+
     # Exclude regions
     if exclude_region_gdf_file_list is not None and exclude_region_gdf_file_list != []:
         for exclude_region_gdf_file in exclude_region_gdf_file_list:

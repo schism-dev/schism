@@ -60,6 +60,11 @@ def temp_fix_secofs(gd_ll, wdir, reference_hgrid_file):
     print(
         f'{len(idx)} hgrid nodes found inside the SECOFS domain.'
     )
+    if len(idx) == 0:
+        raise ValueError(
+            'No hgrid nodes were found inside the SECOFS domain. '
+            'Check the domain geometry and coordinate reference system.'
+        )
 
     # Read reference hgrid
     reference_hgrid = read(reference_hgrid_file)

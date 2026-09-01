@@ -25,6 +25,11 @@ def interpolate_upper_hudson(
     ) == 1
 
     print(f'Upper Hudson interpolation: {sind.sum()} nodes')
+    if not np.any(sind):
+        raise ValueError(
+            'No hgrid nodes were found inside the Upper Hudson region. '
+            'Check the region geometry and coordinate reference system.'
+        )
 
     # interpolate reference bathymetry to base-grid node locations
     dp_interp = griddata(
