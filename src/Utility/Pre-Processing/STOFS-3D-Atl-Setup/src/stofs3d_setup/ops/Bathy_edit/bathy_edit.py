@@ -76,8 +76,8 @@ TASKS = {
 # without changing task logic.
 WORKFLOW_CONSTANTS = {
     'Interpolate_Upper_Hudson':{
-        'reference_hgrid_file': 'hgrid_10g.ll',
-        'region_file': 'upper_Hudson.rgn'
+        'reference_hgrid_file': '/sciclone/home/hjyoo/new_schism/STOFS3D_scripts_work_HJ/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/src/stofs3d_setup/ops/Bathy_edit/Interpolate_Upper_Hudson/hgrid_10g.ll',
+        'region_file': '/sciclone/home/hjyoo/new_schism/STOFS3D_scripts_work_HJ/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/src/stofs3d_setup/ops/Bathy_edit/Interpolate_Upper_Hudson/upper_Hudson.rgn'
     },
     'Dredge': {
         'dredge_depth': 2,
@@ -94,10 +94,15 @@ WORKFLOW_CONSTANTS = {
             'bora_v19.1.v19_ie_v18_3_nwm_clipped_in_cudem_missing_tiles_20-core/'
             'total_river_arcs_extra.map'
         ),
-        'region_gdf_file': (
-            '/sciclone/schism10/hjyoo/task/task10_Atlantic/RUN100m/src/Bathy_edit_org/watershed/'
-            'watershed_dissolved.shp'
-        ),
+        'region_gdf_file_list': [
+            (
+                '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Clip/outputs/'
+                'watershed.shp'
+            ),
+            (
+                '/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/src/stofs3d_setup/ops/Bathy_edit/Ensure_channel_connectivity/watershed_manual_addition.shp'
+            ),
+        ],
         'exclude_region_gdf_file_list': [
             (
                 '/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Bathy_edit/'
@@ -386,7 +391,7 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
             min_channel_depth=task_cfg['min_channel_depth'],
             measured_from_high_bank=task_cfg['measured_from_high_bank'],
             river_extra_info_map_file=task_cfg['river_extra_info_map_file'],
-            region_gdf_file=task_cfg['region_gdf_file'],
+            region_gdf_file_list=task_cfg['region_gdf_file_list'],
             exclude_region_gdf_file_list=task_cfg['exclude_region_gdf_file_list'],
             output_dir=f'{wdir}/Ensure_channel_connectivity/'
         )
