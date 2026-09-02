@@ -7,7 +7,7 @@ from pylib import read
 from stofs3d_setup.utils.projection import project_geodataframe, project_grid
 
 
-def temp_fix_secofs(gd_ll, wdir, reference_hgrid_file):
+def temp_fix_secofs(gd_ll, wdir, reference_hgrid_file, region_file=None):
     """
     Replace hgrid depths within the SECOFS domain using depths
     from a reference hgrid.
@@ -20,6 +20,9 @@ def temp_fix_secofs(gd_ll, wdir, reference_hgrid_file):
         Directory containing secofs_domain_clipped_v1.shp.
     reference_hgrid_file : str
         Reference hgrid whose depths are used inside the SECOFS domain.
+    region_file : str or Path, optional
+        SECOFS domain polygon. The historical sibling `DEM_loading` location
+        is used when omitted for compatibility with existing direct callers.
     """
 
     # Project target grid to the same projected CRS used for spatial selection
@@ -32,10 +35,8 @@ def temp_fix_secofs(gd_ll, wdir, reference_hgrid_file):
     )
 
     # Read SECOFS domain polygon
-    secofs_domain_file = (
-        Path(wdir).parent
-        / 'DEM_loading'
-        / 'secofs_domain_clipped_v1.shp'
+    secofs_domain_file = Path(region_file) if region_file is not None else (
+        Path(wdir).parent / 'DEM_loading' / 'secofs_domain_clipped_v1.shp'
     )
 
     secofs_gdf = gpd.read_file(secofs_domain_file)

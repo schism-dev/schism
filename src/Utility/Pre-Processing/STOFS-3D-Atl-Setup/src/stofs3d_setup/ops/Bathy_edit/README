@@ -124,6 +124,19 @@ The common paths and tuning constants are grouped in:
 WORKFLOW_CONSTANTS
 ```
 
+Version-specific v7.4 inputs that are not stored in Git are centralized under
+the directory configured by `WORKFLOW_CONSTANTS_DIR`:
+
+```
+/sciclone/schism10/Hgrid_projects/WORKFLOW_CONSTANTS_stofs3d_v7.4
+```
+
+Its `README.md` records the original location of every bundled file. This
+directory can be shared with external users and relocated by changing only
+`WORKFLOW_CONSTANTS_DIR`. It is deliberately separate from `LARGE_FILES`:
+workflow constants reproduce one setup version, while the larger NCF, levee,
+and similar source datasets persist across setup versions.
+
 For a new project, update at least:
 
 ```

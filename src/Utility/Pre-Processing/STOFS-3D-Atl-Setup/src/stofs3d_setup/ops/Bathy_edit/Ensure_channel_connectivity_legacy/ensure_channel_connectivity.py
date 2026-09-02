@@ -1,3 +1,5 @@
+"""Legacy scalar-depth RiverMapper channel-connectivity workflow."""
+
 import os
 import numpy as np
 from copy import deepcopy

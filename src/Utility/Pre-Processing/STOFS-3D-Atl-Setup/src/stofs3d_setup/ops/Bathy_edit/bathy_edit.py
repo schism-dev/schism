@@ -53,6 +53,7 @@ IMPLEMENTED_TASKS = [  # order matters
     'Ensure_channel_connectivity',  # ensure channel connectivity by ensure a minimum elevation drop
                                     # from bank to thalweg for river transects defined by RiverMapper,
                                     # relative, vertical datum doesn't matter
+    'Ensure_channel_connectivity_legacy',  # legacy scalar-depth RiverMapper workflow
     'Feeder',  # set feeder channel depth, relative, vertical datum doesn't matter
     'Temporary_Fix_v7p2',  # tweak depths around Bayou Lafourche
     'Temporary_Fix_v7.2.1',  # tweak depth around Philadelphia International Airport and Minas Basin
@@ -70,14 +71,21 @@ TASKS = {
     'Temporary_Fix_v7p2',
 }
 
-# Test refactor note:
-# Keep production behavior identical to bathy_edit.py, but gather hardwired
-# paths and frequently tuned parameters here so future cleanup can be reviewed
-# without changing task logic.
+# Version-specific inputs that are not tracked by Git are centralized here for
+# reproducibility and sharing. Cross-version datasets remain under LARGE_FILES.
+WORKFLOW_CONSTANTS_DIR = Path(
+    '/sciclone/schism10/Hgrid_projects/WORKFLOW_CONSTANTS_stofs3d_v7.4'
+)
+BATHY_EDIT_DIR = Path(__file__).resolve().parent
+
 WORKFLOW_CONSTANTS = {
     'Interpolate_Upper_Hudson':{
-        'reference_hgrid_file': '/sciclone/home/hjyoo/new_schism/STOFS3D_scripts_work_HJ/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/src/stofs3d_setup/ops/Bathy_edit/Interpolate_Upper_Hudson/hgrid_10g.ll',
-        'region_file': '/sciclone/home/hjyoo/new_schism/STOFS3D_scripts_work_HJ/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/src/stofs3d_setup/ops/Bathy_edit/Interpolate_Upper_Hudson/upper_Hudson.rgn',
+        'reference_hgrid_file': (
+            str(WORKFLOW_CONSTANTS_DIR / 'Interpolate_Upper_Hudson/hgrid_10g.ll')
+        ),
+        'region_file': (
+            str(BATHY_EDIT_DIR / 'Interpolate_Upper_Hudson/upper_Hudson.rgn')
+        ),
     },
     'Regional_tweaks': {
         'gpkg_file': 'default_regional_tweaks_v7p4.gpkg',
@@ -90,27 +98,69 @@ WORKFLOW_CONSTANTS = {
         ),
     },
     'Ensure_channel_connectivity': {
-        'min_channel_depth': 1.0,
+        'min_channel_depth': 2.0,
+        'channel_depth_source': 'hydrofabric',
         'measured_from_high_bank': True,
-        'river_extra_info_map_file': (
-            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v19_RiverMapper/Outputs/'
-            'bora_v19.1.v19_ie_v18_3_nwm_clipped_in_cudem_missing_tiles_20-core/'
-            'total_river_arcs_extra.map'
+        'river_arcs_file': str(
+            WORKFLOW_CONSTANTS_DIR /
+            'Ensure_channel_connectivity/river_arcs.parquet'
+        ),
+        'river_centerlines_file': str(
+            WORKFLOW_CONSTANTS_DIR /
+            'Ensure_channel_connectivity/river_centerlines.parquet'
+        ),
+        'matches_gpkg_file': str(
+            WORKFLOW_CONSTANTS_DIR /
+            'Ensure_channel_connectivity/hydrofabric_river_matches.gpkg'
         ),
         'region_gdf_file_list': [
-            (
-                '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Clip/outputs/'
-                'watershed.shp'
+            str(
+                WORKFLOW_CONSTANTS_DIR /
+                'Ensure_channel_connectivity/watershed.shp'
             ),
-            (
-                '/sciclone/data10/feiye/SCHISM_REPOSITORY/schism/src/Utility/Pre-Processing/STOFS-3D-Atl-Setup/src/stofs3d_setup/ops/Bathy_edit/Ensure_channel_connectivity/watershed_manual_addition.shp'
+            str(
+                WORKFLOW_CONSTANTS_DIR /
+                'Ensure_channel_connectivity/watershed_manual_addition.shp'
             ),
         ],
         'exclude_region_gdf_file_list': [
-            (
-                '/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Bathy_edit/'
-                'RiverArc_Dredge/watershed_ME.shp'
-            )
+            str(
+                WORKFLOW_CONSTANTS_DIR /
+                'Ensure_channel_connectivity/watershed_ME.shp'
+            ),
+        ],
+        'max_nearest_distance_m': 500.0,
+        'max_dredging_delta_m': 6.0,
+        'intersection_search_radius_m': 200.0,
+        'intersection_width_tolerance_m': 10.0,
+        'intersection_bank_exclusion_fraction': 0.05,
+        'intersection_recovery': True,
+        'unmatched_policy': 'baseline',
+        'query_workers': -1,
+        'write_gpkg': False,
+    },
+    'Ensure_channel_connectivity_legacy': {
+        'min_channel_depth': 1.0,
+        'measured_from_high_bank': True,
+        'river_extra_info_map_file': str(
+            WORKFLOW_CONSTANTS_DIR /
+            'Ensure_channel_connectivity_legacy/total_river_arcs_extra.map'
+        ),
+        'region_gdf_file_list': [
+            str(
+                WORKFLOW_CONSTANTS_DIR /
+                'Ensure_channel_connectivity/watershed.shp'
+            ),
+            str(
+                WORKFLOW_CONSTANTS_DIR /
+                'Ensure_channel_connectivity/watershed_manual_addition.shp'
+            ),
+        ],
+        'exclude_region_gdf_file_list': [
+            str(
+                WORKFLOW_CONSTANTS_DIR /
+                'Ensure_channel_connectivity/watershed_ME.shp'
+            ),
         ],
     },
     'Feeder': {
@@ -118,14 +168,18 @@ WORKFLOW_CONSTANTS = {
         'feeder_info_dir': Path('/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v31/Feeder/'),
     },
     'Temporary_Fix_v7p2': {
-        'reference_hgrid_file': (
-            '/sciclone/schism10/hjyoo/task/task10_Atlantic/RUN100m/src/Bathy_edit_org/DEM_loading/DEM_loading_for_STOFS_v7p2/hgrid.ll.dem_loaded.mpi.gr3'
+        'reference_hgrid_file': str(
+            WORKFLOW_CONSTANTS_DIR /
+            'Temporary_Fix_v7p2/hgrid.ll.dem_loaded.mpi.gr3'
         ),
     },
     'Temporary_Fix_secofs': {
-        'reference_hgrid_file': (
-            '/sciclone/schism10/hjyoo/task/task10_Atlantic/RUN100m/src/Bathy_edit_org/'
-            'DEM_loading/DEM_loading_for_SECOFS_v1/hgrid.ll.dem_loaded.mpi.gr3'
+        'reference_hgrid_file': str(
+            WORKFLOW_CONSTANTS_DIR /
+            'Temporary_Fix_secofs/hgrid.ll.dem_loaded.mpi.gr3'
+        ),
+        'region_file': str(
+            BATHY_EDIT_DIR / 'DEM_loading/secofs_domain_clipped_v1.shp'
         ),
     },
     'sample_usage': {
@@ -179,6 +233,15 @@ def handle_tasks(user_tasks: Optional[List[str]]) -> List[str]:
     invalid_tasks = user_tasks_set - set(IMPLEMENTED_TASKS)
     if invalid_tasks:
         raise ValueError(f"Undefined tasks: {', '.join(invalid_tasks)}")
+    connectivity_tasks = {
+        'Ensure_channel_connectivity',
+        'Ensure_channel_connectivity_legacy',
+    }
+    if connectivity_tasks <= user_tasks_set:
+        raise ValueError(
+            'Choose either Ensure_channel_connectivity or '
+            'Ensure_channel_connectivity_legacy, not both.'
+        )
 
     # Return tasks in the same order as IMPLEMENTED_TASKS
     ordered_tasks = [task for task in IMPLEMENTED_TASKS if task in user_tasks]
@@ -207,7 +270,7 @@ def copy_large_files(src_paths: List[Path], dest_dir: Path):
         raise FileNotFoundError(f'None of the source paths exist: {src_paths}')
 
 
-def prepare_dir(wdir: Path, tasks: str):
+def prepare_dir(wdir: Path, tasks: List[str]):
     '''
     Make a copy of the scripts in the working directory.
     This includes the scripts for each requested task and
@@ -217,7 +280,9 @@ def prepare_dir(wdir: Path, tasks: str):
     if script_dir == wdir:
         print('The script is already in the working directory; no need to copy.')
     else:
-        existing_task_dirs = [wdir / task for task in tasks if (wdir / task).exists()]
+        existing_task_dirs = [
+            wdir / task for task in tasks if (wdir / task).exists()
+        ]
         if existing_task_dirs:
             existing_dirs = '\n'.join(f'  {path}' for path in existing_task_dirs)
             raise FileExistsError(
@@ -236,7 +301,9 @@ def prepare_dir(wdir: Path, tasks: str):
                     symlinks=False, dirs_exist_ok=True)
                 print(f'Copied {task} to {wdir}')
             else:
-                raise FileNotFoundError(f'Task directory not found: {script_dir}/{task}/')
+                raise FileNotFoundError(
+                    f'Task directory not found: {script_dir}/{task}/'
+                )
 
     # copy larger files not in the Git repository
     for task, file_path_list in LARGE_FILES.items():
@@ -287,7 +354,8 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         hgrid_obj = temp_fix_secofs(
             hgrid_obj,
             wdir=f'{wdir}/Temporary_Fix_secofs/',
-            reference_hgrid_file=task_cfg['reference_hgrid_file']
+            reference_hgrid_file=task_cfg['reference_hgrid_file'],
+            region_file=task_cfg['region_file'],
         )
         hgrid_obj.grd2sms(
             f'{wdir}/Temporary_Fix_secofs/{hgrid_base_name}.2dm'
@@ -387,9 +455,51 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
         hgrid_obj.write_hgrid(f'{wdir}/Dredge/{hgrid_base_name}.gr3')
         print("Finished loading dredging depth.\n")
 
-    if 'Ensure_channel_connectivity' in tasks:  # dredging river transects defined by RiverMapper
-        from Ensure_channel_connectivity.ensure_channel_connectivity import ensure_channel_connectivity
+    if 'Ensure_channel_connectivity' in tasks:
+        from Ensure_channel_connectivity.hydrofabric_dredge import (
+            ensure_channel_connectivity,
+        )
         task_cfg = WORKFLOW_CONSTANTS['Ensure_channel_connectivity']
+        hgrid_obj = ensure_channel_connectivity(
+            hgrid_obj=hgrid_obj,
+            river_arcs_file=task_cfg['river_arcs_file'],
+            river_centerlines_file=task_cfg['river_centerlines_file'],
+            matches_gpkg_file=task_cfg['matches_gpkg_file'],
+            region_gdf_file_list=task_cfg['region_gdf_file_list'],
+            exclude_region_gdf_file_list=(
+                task_cfg['exclude_region_gdf_file_list']
+            ),
+            output_dir=f'{wdir}/Ensure_channel_connectivity/',
+            min_channel_depth=task_cfg['min_channel_depth'],
+            channel_depth_source=task_cfg['channel_depth_source'],
+            measured_from_high_bank=task_cfg['measured_from_high_bank'],
+            max_nearest_distance_m=task_cfg['max_nearest_distance_m'],
+            max_dredging_delta_m=task_cfg['max_dredging_delta_m'],
+            intersection_search_radius_m=(
+                task_cfg['intersection_search_radius_m']
+            ),
+            intersection_width_tolerance_m=(
+                task_cfg['intersection_width_tolerance_m']
+            ),
+            intersection_bank_exclusion_fraction=(
+                task_cfg['intersection_bank_exclusion_fraction']
+            ),
+            intersection_recovery=task_cfg['intersection_recovery'],
+            unmatched_policy=task_cfg['unmatched_policy'],
+            query_workers=task_cfg['query_workers'],
+            write_gpkg=task_cfg['write_gpkg'],
+        )
+        hgrid_base_name += '_channel_connectivity_ensured'
+        hgrid_obj.write_hgrid(
+            f'{wdir}/Ensure_channel_connectivity/{hgrid_base_name}.gr3'
+        )
+        print("Finished ensuring channel connectivity with hydrofabric depths.\n")
+
+    if 'Ensure_channel_connectivity_legacy' in tasks:
+        from Ensure_channel_connectivity_legacy.ensure_channel_connectivity import (
+            ensure_channel_connectivity,
+        )
+        task_cfg = WORKFLOW_CONSTANTS['Ensure_channel_connectivity_legacy']
         hgrid_obj = ensure_channel_connectivity(
             hgrid_obj,
             min_channel_depth=task_cfg['min_channel_depth'],
@@ -397,11 +507,13 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
             river_extra_info_map_file=task_cfg['river_extra_info_map_file'],
             region_gdf_file_list=task_cfg['region_gdf_file_list'],
             exclude_region_gdf_file_list=task_cfg['exclude_region_gdf_file_list'],
-            output_dir=f'{wdir}/Ensure_channel_connectivity/'
+            output_dir=f'{wdir}/Ensure_channel_connectivity_legacy/'
         )
-        hgrid_base_name += '_channel_connectivity_ensured'
-        hgrid_obj.write_hgrid(f'{wdir}/Ensure_channel_connectivity/{hgrid_base_name}.gr3')
-        print("Finished ensuring channel connectivity.\n")
+        hgrid_base_name += '_channel_connectivity_legacy_ensured'
+        hgrid_obj.write_hgrid(
+            f'{wdir}/Ensure_channel_connectivity_legacy/{hgrid_base_name}.gr3'
+        )
+        print("Finished ensuring channel connectivity with the legacy workflow.\n")
 
     if 'Feeder' in tasks:  # set feeder channel depth
         from SetFeederDp.set_feeder_dp import set_feeder_dp

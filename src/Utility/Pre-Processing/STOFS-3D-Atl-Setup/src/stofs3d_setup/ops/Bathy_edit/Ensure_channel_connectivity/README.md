@@ -1,4 +1,74 @@
-# Hydrofabric matching prototype
+# Hydrofabric channel-connectivity workflow
+
+## Concise end-to-end workflow
+
+The workflow has two stages:
+
+```text
+RiverMapper *.map + bankfull hydrofabric
+    -> reusable arcs, centerlines, and hydrofabric matches
+    -> apply those products to an hgrid inside the configured regions
+    -> dredged hgrid
+```
+
+The first stage is independent of the hgrid. Run the full-domain MPI matcher
+once for each RiverMapper map and hydrofabric dataset:
+
+```bash
+srun -n 20 python \
+  src/stofs3d_setup/ops/Bathy_edit/Ensure_channel_connectivity/hydrofabric_match_mpi.py \
+  --river-map /path/to/total_river_arcs_extra.map \
+  --hydrofabric /path/to/Bankfull_Meanflow_CONUS_Stream_Reaches.shp \
+  --output-dir /path/to/connectivity_inputs
+```
+
+It creates the three inputs used by the dredging stage:
+
+```text
+/path/to/connectivity_inputs/
+|-- hydrofabric_river_matches.gpkg
+`-- input_cache/
+    |-- river_arcs.parquet
+    `-- river_centerlines.parquet
+```
+
+The two Parquet files are parsed and assembled from the RiverMapper map.
+`hydrofabric_river_matches.gpkg` additionally matches the resulting centerlines
+to the hydrofabric reaches and records the selected COMID and `bnk_depth`
+intervals. No hgrid is read during this stage, so these files can be kept in a
+central location and reused for different hgrids as long as the RiverMapper map
+and hydrofabric dataset are unchanged. For an existing output directory, add
+`--overwrite`; add `--force-input-cache` only when the cached inputs must be
+rebuilt.
+
+The second stage applies those reusable products to a particular hgrid:
+
+```bash
+python \
+  src/stofs3d_setup/ops/Bathy_edit/Ensure_channel_connectivity/hydrofabric_dredge.py \
+  --hgrid /path/to/input_hgrid.gr3 \
+  --river-arcs /path/to/connectivity_inputs/input_cache/river_arcs.parquet \
+  --river-centerlines /path/to/connectivity_inputs/input_cache/river_centerlines.parquet \
+  --matches-gpkg /path/to/connectivity_inputs/hydrofabric_river_matches.gpkg \
+  --watershed /path/to/watershed.shp \
+  --exclude-region /path/to/excluded_region.shp \
+  --output-dir /path/to/dredge_output \
+  --write-hgrid
+```
+
+This stage selects eligible mesh nodes inside the included regions, subtracts
+the excluded regions, maps the RiverMapper vertices and matched depths to those
+nodes, applies the configured safety limits, and writes
+`dredge_output/hgrid_hydrofabric_dredged.gr3`. Repeat `--watershed` or
+`--exclude-region` to supply multiple files. In the normal Bathy-edit workflow,
+the `Ensure_channel_connectivity` task calls this same serial implementation
+using the paths and settings in `WORKFLOW_CONSTANTS`.
+
+---
+
+## Detailed implementation and diagnostics
+
+### Regional matching prototype
 
 `hydrofabric_match.py` tests partial-overlap matching between RiverMapper river
 centerlines and hydrofabric reaches. It does not change the production
@@ -53,7 +123,7 @@ on both sides have the same COMID. These additions are labeled
 `continuity_fill`, record their `continuity_basis`, and are written to dedicated
 point and interval layers in the diagnostic GeoPackage.
 
-## Full-domain MPI run
+### Full-domain MPI matching
 
 `hydrofabric_match_mpi.py` applies the same matching and continuity functions
 to the complete RiverMapper map. A 20-rank full-domain launch is:
@@ -96,12 +166,15 @@ use a separate `--output-dir`. The hgrid is intentionally not read by this
 matching stage: it produces the vertex-to-COMID/`bnk_depth` mapping consumed by
 the serial and MPI mesh-assimilation drivers documented below.
 
-## Hydrofabric-depth KD-tree dredging
+### Hydrofabric-depth KD-tree dredging
 
-`hydrofabric_dredge.py` is the first mesh-assimilation implementation. It keeps
-the existing nearest-node approach while using `selected_intervals` as the
-authoritative piecewise COMID and bankfull-depth mapping. The established
-scalar-depth production function remains unchanged while this path is tested.
+`hydrofabric_dredge.py` is the serial production implementation used by the
+`Ensure_channel_connectivity` Bathy-edit task. It keeps the established
+nearest-node approach while using `selected_intervals` as the authoritative
+piecewise COMID and bankfull-depth mapping. The former scalar-depth workflow is
+retained separately in
+`../Ensure_channel_connectivity_legacy/ensure_channel_connectivity.py` and is
+available through the `Ensure_channel_connectivity_legacy` task.
 
 For each complete RiverMapper river, the driver:
 
@@ -213,7 +286,7 @@ isolated undredged node that could interrupt connectivity. The threshold is
 configurable with `--max-dredging-delta-m` and is fixed at 6 m for
 reproducibility rather than recomputed on every run.
 
-### Full-domain review layers
+#### Full-domain review layers
 
 The compact review package is
 `dredge_full_v32e/full_domain_review.gpkg`. Its layers describe independent
@@ -267,7 +340,7 @@ without reviewing `flagged_nearest_distance`; a distant nearest node can belong
 to an unrelated part of the mesh. Relaxing it would also bring very wide
 boundary channels into a workflow intended for smaller watershed rivers.
 
-### v32e comparison base
+#### v32e comparison base
 
 The default hgrid for both the serial and MPI dredging drivers is the
 bathymetry-loaded/edited, pre-connectivity grid from the verified v32e channel
@@ -281,11 +354,17 @@ Using this grid isolates the hydrofabric-depth method from the later channel
 connectivity edits and makes its result directly comparable with the existing
 v32e channel variants.
 
-### Full-domain MPI dredging
+#### Full-domain MPI dredging
 
 `hydrofabric_dredge_mpi.py` runs the same forward KD-tree mapping and reverse
 intersection screening over the full domain. A 32-rank diagnostic launch on an
 allocated compute node is:
+
+The serial and MPI paths share the settings constructor, station-depth logic,
+intersection screening, and final request capping/classification. MPI only adds
+spatial ownership and deterministic cross-rank reduction. Both commands accept
+repeated `--watershed PATH` arguments; use the same ordered region and exclusion
+lists when comparing their outputs.
 
 ```bash
 srun -n 32 python \
@@ -300,6 +379,19 @@ The first run builds reusable memory-mapped hgrid arrays and a Parquet copy of
 cache while testing another output directory, pass
 `--input-cache-dir /path/to/existing/input_cache`. Use
 `--force-input-cache` only after an input file changes.
+
+`--hgrid` accepts either a SCHISM `.gr3`/`.ll` mesh or the SMS `.2dm` normally
+written by the `xGEOID_cmvd` Bathy_edit stage. A 2DM source remains the
+authoritative checkpoint and is converted once to a fingerprinted GR3 under
+`input_cache`; subsequent runs reuse that conversion while the source file is
+unchanged. With `--write-hgrid`, a 2DM input produces updated meshes in both
+GR3 and 2DM formats. This makes the connectivity stage restartable directly
+from the standard cmvd product without relying on a manually saved GR3.
+
+`hydrofabric_dredge_legacy_compare.py` compares one completed hydrofabric run
+with a legacy connectivity mesh using the run's cached base depths. It writes
+new-only, legacy-only, shared large-difference, capped, raw greater-than-10 m,
+and intersection-only review layers plus a JSON count summary.
 
 Mesh tiles have unique spatial owners for intersection candidates. Every
 owner receives complete river geometry intersecting its tile plus a 500 m
@@ -320,7 +412,7 @@ Per-rank temporary Parquet files are removed after a successful merge unless
 `--keep-parts` is supplied. An interrupted job can be rerun with `--overwrite`;
 the validated input cache is reused.
 
-### v32e lower-bank comparison runs
+#### v32e lower-bank comparison runs
 
 The full-domain lower-bank comparison is under
 `Connectivity_test/dredge_full_runs_v32e`. It uses a 2 m minimum/fallback and
@@ -395,7 +487,77 @@ coordinate set. Their depths were checked exhaustively against the respective
 `dredged_mesh_nodes.parquet` products, including unchanged nodes, and the GR3
 and 2DM representations agree.
 
-#### Presentation summary
+#### I201b Bathy_edit restart test
+
+The I201b replacement test is isolated under:
+
+```text
+/sciclone/schism10/feiye/STOFS3D-v7.4/I201b/Bathy_edit_new_connectivity_test
+```
+
+It restarts after `xGEOID_cmvd` and replaces only the original
+`Ensure_channel_connectivity` stage. The DEM, regional-tweak, NCF, levee, and
+vertical-datum stages were not rerun, and the colleague's original benchmark
+directory was not modified. The authoritative checkpoint is the standard
+cmvd output:
+
+```text
+/sciclone/schism10/feiye/STOFS3D-v7.4/I201b/Bathy_edit/xGEOID_cmvd/hgrid_ll_dem_NCF_levee_xGEOID_cmvd.2dm
+```
+
+The additional `hgrid_ll_dem_NCF_levee_xGEOID.gr3` in that directory is
+numerically identical in all 3,080,551 node coordinates and depths and in all
+5,953,705 elements, but it is treated as optional. The restart uses the 2DM
+and creates the fingerprinted `input_cache/source_hgrid_from_2dm.gr3` cache.
+
+Both I201b variants use hydrofabric bankfull depth, the lower-bank reference,
+forward and reverse-intersection requests, the v32c watershed and legacy Maine
+exclusion, the 500 m nearest-node guard, and the 6 m applied-deepening cap.
+They differ only in the matched minimum and unmatched fallback:
+
+| Variant | Minimum/fallback | Requested nodes | Changed nodes | Capped at 6 m |
+| --- | ---: | ---: | ---: | ---: |
+| `full_domain_min2` | 2 m | 521,206 | 488,207 | 5,562 |
+| `full_domain_min1` | 1 m | 521,206 | 477,856 | 5,325 |
+
+The two variants have the same requested-node set and intersection geometry:
+201,471 broad candidates and 100,627 accepted targets. The 2 m variant is
+deeper at 277,224 requested nodes by at most 1 m and activates 10,351 changes
+that the 1 m variant leaves unchanged. The 1 m result is never deeper and has
+no exclusive changed nodes. `min1_vs_min2_comparison.gpkg` contains:
+
+- `min2_deeper_than_min1`: the 277,224 nodes with a deeper 2 m result.
+- `min2_only_changed`: the 10,351 nodes changed only by the 2 m variant.
+
+The 2 m Savannah bounded regression produced identical serial and MPI fields
+for all 3,857 requested nodes, 2,686 changed nodes, 1,564 intersection
+candidates, and 793 targets. Both full-domain variants were also checked
+exhaustively: every depth in `dredged_mesh_nodes.parquet` appears in the GR3
+and 2DM, no other node changes, and coordinates and connectivity remain
+unchanged.
+
+`full_domain_min2/legacy_comparison.gpkg` compares the 2 m ML result with the I201b
+legacy 1 m high-bank result. The legacy mesh changes 310,534 nodes; 310,081
+overlap the new result, 178,126 are new-only, and 453 are legacy-only. Large
+shared depth differences are expected because the two workflows use different
+bank references, depth sources, fallback depths, and intersection targeting.
+The review layers are:
+
+- `new_only_changed` and `legacy_only_changed`: exclusive changed-node sets.
+- `shared_diff_gt0p5m`: common changed nodes whose final depths differ by more
+  than 0.5 m.
+- `new_capped_at6m` and `new_raw_delta_gt10m`: capped changes and their severe
+  uncapped-request subset.
+- `new_intersection_only`: nodes changed through reverse intersection recovery
+  without a forward vertex request.
+
+Each variant contains `hgrid_hydrofabric_dredged.gr3` and `.2dm`, along with
+workflow-compatible `hgrid_ll_dem_NCF_levee_xGEOID_cmvd_channel_connectivity_ensured.*`
+symlinks. Use `run_full_min2.sh 32` for the 2 m variant and
+`run_full_min1.sh 32` for the 1 m variant. The test-folder README records the
+exact inputs, validation, products, and comparison layers.
+
+##### Presentation summary
 
 Using the same v32e pre-connectivity mesh and lower-bank reference, the
 ML-informed workflow deepened 485,123 mesh nodes compared with 476,471 for a

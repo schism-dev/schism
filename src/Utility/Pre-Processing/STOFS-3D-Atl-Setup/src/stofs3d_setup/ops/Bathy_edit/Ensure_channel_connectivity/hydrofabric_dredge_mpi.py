@@ -36,20 +36,22 @@ try:
         DEFAULT_EXCLUDE_REGIONS,
         DEFAULT_MATCHES,
         DEFAULT_WATERSHED,
-        DredgeSettings,
         HgridNodes,
         MATCH_CRS,
         _atomic_parquet,
         _empty_intersection_targets,
         apply_station_depths,
         assign_intervals_to_stations,
+        dredge_settings_from_namespace,
         expand_stations_to_arc_vertices,
+        finalize_mesh_requests,
         load_effective_watershed,
         points_intersect_region,
         project_lonlat,
         read_hgrid_nodes,
         refresh_result_mesh_requests,
         screen_intersection_mesh_nodes,
+        write_2dm_with_updates,
         write_hgrid_with_updates,
     )
     from stofs3d_setup.ops.Bathy_edit.Ensure_channel_connectivity.hydrofabric_match import (
@@ -63,20 +65,22 @@ except ModuleNotFoundError:  # Permit direct execution from this directory.
         DEFAULT_EXCLUDE_REGIONS,
         DEFAULT_MATCHES,
         DEFAULT_WATERSHED,
-        DredgeSettings,
         HgridNodes,
         MATCH_CRS,
         _atomic_parquet,
         _empty_intersection_targets,
         apply_station_depths,
         assign_intervals_to_stations,
+        dredge_settings_from_namespace,
         expand_stations_to_arc_vertices,
+        finalize_mesh_requests,
         load_effective_watershed,
         points_intersect_region,
         project_lonlat,
         read_hgrid_nodes,
         refresh_result_mesh_requests,
         screen_intersection_mesh_nodes,
+        write_2dm_with_updates,
         write_hgrid_with_updates,
     )
     from hydrofabric_match import normalized_bbox  # type: ignore[no-redef]
@@ -136,6 +140,47 @@ def hgrid_total_node_count(path: Path) -> int:
     return int(fields[1])
 
 
+def prepare_hgrid_input(source: Path, cache_dir: Path, force: bool = False) -> Path:
+    """Return a GR3 input, converting a canonical SMS 2DM checkpoint once.
+
+    Bathy_edit's cmvd stage normally writes a 2DM file, while the dredging
+    reader and streaming GR3 writer require SCHISM ordering.  The conversion
+    is cached by the source file fingerprint so an unchanged checkpoint is
+    never converted twice.
+    """
+    suffix = source.suffix.lower()
+    if suffix in {".gr3", ".ll"}:
+        return source
+    if suffix != ".2dm":
+        raise ValueError(
+            f"Unsupported hgrid format {source.suffix!r}: expected .2dm, .gr3, or .ll"
+        )
+
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    output = cache_dir / "source_hgrid_from_2dm.gr3"
+    metadata_path = cache_dir / "source_hgrid_from_2dm.metadata.json"
+    metadata = {
+        "kind": "hydrofabric_dredge_2dm_to_gr3_v1",
+        "source_2dm": file_fingerprint(source),
+    }
+    if not force and cache_is_current(metadata_path, metadata, [output]):
+        return output
+
+    # Import lazily: only workflows whose canonical checkpoint is 2DM need
+    # pylib's SMS reader and the associated full-mesh memory allocation.
+    from pylib import sms2grd
+
+    grid = sms2grd(str(source))
+    temporary = output.with_suffix(".tmp.gr3")
+    grid.write_hgrid(str(temporary), fmt=1)
+    if hgrid_total_node_count(temporary) != int(grid.np):
+        temporary.unlink(missing_ok=True)
+        raise RuntimeError(f"Converted GR3 node count is invalid: {temporary}")
+    os.replace(temporary, output)
+    metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")
+    return output
+
+
 def cache_is_current(
     metadata_path: Path,
     expected: dict[str, object],
@@ -155,7 +200,7 @@ def build_input_cache(
     hgrid_path: Path,
     matches_path: Path,
     effective_watershed: gpd.GeoDataFrame,
-    watershed_path: Path,
+    watershed_paths: Sequence[Path],
     exclude_regions: Sequence[Path],
     bbox_lonlat: tuple[float, float, float, float] | None,
     force: bool,
@@ -169,7 +214,7 @@ def build_input_cache(
     hgrid_metadata = {
         "kind": "hydrofabric_dredge_hgrid_nodes_v1",
         "hgrid": file_fingerprint(hgrid_path),
-        "watershed": vector_fingerprint(watershed_path),
+        "watersheds": [vector_fingerprint(path) for path in watershed_paths],
         "exclude_regions": [vector_fingerprint(path) for path in exclude_regions],
         "bbox_lonlat": list(bbox_lonlat) if bbox_lonlat is not None else None,
         "metric_crs": MATCH_CRS,
@@ -511,11 +556,19 @@ def reduce_requested_nodes(
     requests: pd.DataFrame,
     max_dredging_delta_m: float = 6.0,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    if max_dredging_delta_m <= 0:
-        raise ValueError("max_dredging_delta_m must be positive")
     if requests.empty:
-        return requests.copy(), requests.copy()
+        return finalize_mesh_requests(requests, max_dredging_delta_m)
     grouped = requests.groupby("mesh_position", sort=True)
+    identity_columns = ["mesh_node_id", "x", "y", "original_dp"]
+    inconsistent = (
+        grouped[identity_columns].nunique(dropna=False).gt(1).any(axis=1)
+    )
+    if inconsistent.any():
+        positions = inconsistent.index[inconsistent].astype(int).tolist()
+        raise RuntimeError(
+            "MPI ranks disagree on hgrid identity/depth for mesh positions "
+            f"{positions[:20]}"
+        )
     reduced = grouped.agg(
         mesh_node_id=("mesh_node_id", "first"),
         x=("x", "first"),
@@ -530,52 +583,7 @@ def reduce_requested_nodes(
             "max",
         ),
     ).reset_index()
-    reduced["requested_dredging_delta_m"] = np.maximum(
-        0.0, reduced.requested_dp - reduced.original_dp
-    )
-    requests_deepening = reduced.requested_dredging_delta_m > 1.0e-12
-    reduced["passes_max_dredging_delta"] = (
-        reduced.requested_dredging_delta_m
-        <= max_dredging_delta_m + 1.0e-12
-    )
-    reduced["dredging_delta_capped"] = (
-        requests_deepening & ~reduced.passes_max_dredging_delta
-    )
-    reduced["dredging_delta_m"] = np.minimum(
-        reduced.requested_dredging_delta_m, max_dredging_delta_m
-    )
-    reduced["would_deepen"] = reduced.dredging_delta_m > 1.0e-12
-    reduced["final_dp"] = reduced.original_dp + reduced.dredging_delta_m
-    reduced["depth_screen_status"] = np.select(
-        [~requests_deepening, reduced.dredging_delta_capped],
-        ["no_deepening_needed", "capped_at_max_dredging_delta"],
-        default="accepted",
-    )
-    reduced["request_source"] = np.select(
-        [
-            reduced.forward_requested & reduced.intersection_target,
-            reduced.intersection_target,
-        ],
-        ["forward+intersection", "intersection"],
-        default="forward",
-    )
-    reduced["request_count"] = (
-        reduced.forward_vertex_requests
-        + reduced.intersection_target.astype(np.int64)
-    )
-    reduced["vertex_requests"] = reduced.forward_vertex_requests
-    ordered = [
-        "mesh_position", "mesh_node_id", "x", "y", "original_dp",
-        "requested_dp", "requested_dredging_delta_m", "final_dp",
-        "dredging_delta_m", "would_deepen", "passes_max_dredging_delta",
-        "dredging_delta_capped", "depth_screen_status",
-        "forward_requested", "intersection_target", "request_source",
-        "forward_vertex_requests", "intersection_qualifying_river_count",
-        "request_count", "vertex_requests",
-    ]
-    reduced = reduced[ordered]
-    changed = reduced.loc[reduced.would_deepen].copy()
-    return reduced, changed
+    return finalize_mesh_requests(reduced, max_dredging_delta_m)
 
 
 def write_gpkg(
@@ -619,7 +627,16 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("--river-arcs", type=Path, default=DEFAULT_ARCS)
     parser.add_argument("--river-centerlines", type=Path, default=DEFAULT_CENTERLINES)
     parser.add_argument("--matches-gpkg", type=Path, default=DEFAULT_MATCHES)
-    parser.add_argument("--watershed", type=Path, default=DEFAULT_WATERSHED)
+    parser.add_argument(
+        "--watershed",
+        action="append",
+        type=Path,
+        default=None,
+        help=(
+            "Region included in dredging; repeat for multiple files. The "
+            "default watershed is used when this option is omitted."
+        ),
+    )
     parser.add_argument("--exclude-region", action="append", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument(
@@ -670,21 +687,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.tile_size_m <= 0:
         raise ValueError("--tile-size-m must be positive")
     bbox_lonlat = normalized_bbox(args.bbox) if args.bbox is not None else None
-    settings = DredgeSettings(
-        min_channel_depth_m=args.min_channel_depth_m,
-        channel_depth_source=args.channel_depth_source,
-        measured_from_high_bank=not args.measured_from_lower_bank,
-        max_nearest_distance_m=args.max_nearest_distance_m,
-        max_dredging_delta_m=args.max_dredging_delta_m,
-        intersection_search_radius_m=args.intersection_search_radius_m,
-        intersection_width_tolerance_m=args.intersection_width_tolerance_m,
-        intersection_bank_exclusion_fraction=args.intersection_bank_exclusion_fraction,
-        intersection_recovery=not args.disable_intersection_recovery,
-        unmatched_policy=args.unmatched_policy,
-        query_workers=1,
+    settings = dredge_settings_from_namespace(args, query_workers=1)
+    watershed_regions = (
+        tuple(args.watershed)
+        if args.watershed is not None
+        else (DEFAULT_WATERSHED,)
     )
     exclude_regions = tuple(args.exclude_region) if args.exclude_region else DEFAULT_EXCLUDE_REGIONS
-    effective_watershed = load_effective_watershed(args.watershed, exclude_regions)
+    effective_watershed = load_effective_watershed(
+        watershed_regions, exclude_regions
+    )
     cache_dir = (
         args.input_cache_dir
         if args.input_cache_dir is not None
@@ -699,12 +711,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         args.output_dir.mkdir(parents=True, exist_ok=True)
         parts_dir.mkdir(parents=True, exist_ok=True)
+        prepared_hgrid = prepare_hgrid_input(
+            args.hgrid, cache_dir, force=args.force_input_cache
+        )
         hgrid_cache, interval_cache = build_input_cache(
             cache_dir,
-            args.hgrid,
+            prepared_hgrid,
             args.matches_gpkg,
             effective_watershed,
-            args.watershed,
+            watershed_regions,
             exclude_regions,
             bbox_lonlat,
             args.force_input_cache,
@@ -739,6 +754,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         geometry_inventory = river_geometry_inventory(centerlines_root, arcs_root)
         payload = {
             "hgrid_cache": str(hgrid_cache),
+            "prepared_hgrid": str(prepared_hgrid),
             "interval_cache": str(interval_cache),
             "assignments": assignments,
             "rank_rivers": rank_rivers,
@@ -918,8 +934,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             products["diagnostics_gpkg"] = gpkg_path
         if args.write_hgrid:
             output_hgrid = args.output_dir / "hgrid_hydrofabric_dredged.gr3"
-            write_hgrid_with_updates(args.hgrid, output_hgrid, changed)
+            write_hgrid_with_updates(
+                Path(payload["prepared_hgrid"]), output_hgrid, changed
+            )
             products["hgrid"] = output_hgrid
+            products["hgrid_gr3"] = output_hgrid
+            if args.hgrid.suffix.lower() == ".2dm":
+                output_2dm = args.output_dir / "hgrid_hydrofabric_dredged.2dm"
+                write_2dm_with_updates(args.hgrid, output_2dm, changed)
+                products["hgrid_2dm"] = output_2dm
 
         changed_delta = changed.dredging_delta_m.to_numpy(dtype=float)
         summary = {
@@ -954,10 +977,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             },
             "inputs": {
                 "hgrid": str(args.hgrid),
+                "prepared_hgrid": str(payload["prepared_hgrid"]),
                 "river_arcs": str(args.river_arcs),
                 "river_centerlines": str(args.river_centerlines),
                 "matches_gpkg": str(args.matches_gpkg),
-                "watershed": str(args.watershed),
+                "watershed": (
+                    str(watershed_regions[0])
+                    if len(watershed_regions) == 1
+                    else None
+                ),
+                "regions": [str(path) for path in watershed_regions],
                 "exclude_regions": [str(path) for path in exclude_regions],
             },
             "products": {key: str(value) for key, value in products.items()},

@@ -11,13 +11,15 @@ recovers multi-river junction nodes, screens them against local half-width and
 signed channel-polygon/bank distance, and merges accepted targets with the
 forward requests.
 
-This is a validation driver and does not replace the existing scalar-depth
-``ensure_channel_connectivity`` production path.
+This module provides the serial production implementation used by the
+``Ensure_channel_connectivity`` Bathy-edit task and a command-line driver for
+standalone validation runs.
 """
 
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import math
 import os
@@ -171,14 +173,28 @@ def _to_analysis_geographic(frame: gpd.GeoDataFrame, context: str) -> gpd.GeoDat
 
 
 def load_effective_watershed(
-    watershed_path: Path,
+    watershed_path: Path | Sequence[Path],
     exclude_region_paths: Sequence[Path] = (),
 ) -> gpd.GeoDataFrame:
-    """Load the legacy connectivity region and subtract its exclusions."""
-    watershed = _to_analysis_geographic(
-        gpd.read_file(watershed_path), f"watershed {watershed_path}"
-    )
-    effective_geometry = watershed.geometry.unary_union
+    """Load one or more connectivity regions and subtract their exclusions."""
+    if isinstance(watershed_path, (str, Path)):
+        watershed_paths = (Path(watershed_path),)
+    else:
+        watershed_paths = tuple(Path(path) for path in watershed_path)
+    if not watershed_paths:
+        raise ValueError("At least one watershed path is required")
+
+    effective_geometry = None
+    for path in watershed_paths:
+        watershed = _to_analysis_geographic(
+            gpd.read_file(path), f"watershed {path}"
+        )
+        watershed_geometry = watershed.geometry.unary_union
+        effective_geometry = (
+            watershed_geometry
+            if effective_geometry is None
+            else effective_geometry.union(watershed_geometry)
+        )
     for exclusion_path in exclude_region_paths:
         exclusion = _to_analysis_geographic(
             gpd.read_file(exclusion_path), f"watershed exclusion {exclusion_path}"
@@ -1100,6 +1116,60 @@ REQUESTED_MESH_NODE_COLUMNS = [
 ]
 
 
+def finalize_mesh_requests(
+    requests: pd.DataFrame,
+    max_dredging_delta_m: float = 6.0,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Apply the shared serial/MPI depth cap and request classifications."""
+    if max_dredging_delta_m <= 0:
+        raise ValueError("max_dredging_delta_m must be positive")
+    if requests.empty:
+        empty = pd.DataFrame(columns=REQUESTED_MESH_NODE_COLUMNS)
+        return empty, empty.copy()
+    if requests.mesh_position.duplicated().any():
+        raise ValueError("Mesh requests must be reduced to one row per mesh position")
+
+    finalized = requests.copy()
+    finalized["requested_dredging_delta_m"] = np.maximum(
+        0.0, finalized.requested_dp - finalized.original_dp
+    )
+    requests_deepening = finalized.requested_dredging_delta_m > 1.0e-12
+    finalized["passes_max_dredging_delta"] = (
+        finalized.requested_dredging_delta_m
+        <= max_dredging_delta_m + 1.0e-12
+    )
+    finalized["dredging_delta_capped"] = (
+        requests_deepening & ~finalized.passes_max_dredging_delta
+    )
+    finalized["dredging_delta_m"] = np.minimum(
+        finalized.requested_dredging_delta_m, max_dredging_delta_m
+    )
+    finalized["would_deepen"] = finalized.dredging_delta_m > 1.0e-12
+    finalized["final_dp"] = finalized.original_dp + finalized.dredging_delta_m
+    finalized["depth_screen_status"] = np.select(
+        [~requests_deepening, finalized.dredging_delta_capped],
+        ["no_deepening_needed", "capped_at_max_dredging_delta"],
+        default="accepted",
+    )
+    finalized["request_source"] = np.select(
+        [
+            finalized.forward_requested & finalized.intersection_target,
+            finalized.intersection_target,
+        ],
+        ["forward+intersection", "intersection"],
+        default="forward",
+    )
+    finalized["request_count"] = (
+        finalized.forward_vertex_requests
+        + finalized.intersection_target.astype(np.int64)
+    )
+    # Preserve the existing changed-node field for downstream users.
+    finalized["vertex_requests"] = finalized.forward_vertex_requests
+    finalized = finalized[REQUESTED_MESH_NODE_COLUMNS]
+    changed = finalized.loc[finalized.would_deepen].copy()
+    return finalized, changed
+
+
 def build_dredge_requested_mesh_nodes(
     vertices: pd.DataFrame,
     hgrid: HgridNodes,
@@ -1107,8 +1177,6 @@ def build_dredge_requested_mesh_nodes(
     max_dredging_delta_m: float = 6.0,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Combine requests and cap implausibly large mesh-depth changes."""
-    if max_dredging_delta_m <= 0:
-        raise ValueError("max_dredging_delta_m must be positive")
     node_count = len(hgrid.node_id)
     requested_dp = np.full(node_count, -np.inf)
     forward_counts = np.zeros(node_count, dtype=np.int64)
@@ -1148,67 +1216,25 @@ def build_dredge_requested_mesh_nodes(
             )
 
     positions = np.flatnonzero(np.isfinite(requested_dp))
-    if len(positions) == 0:
-        empty = pd.DataFrame(columns=REQUESTED_MESH_NODE_COLUMNS)
-        return empty, empty.copy()
-
-    original_dp = hgrid.dp[positions]
-    proposed_dp = requested_dp[positions]
-    requested_dredging_delta = np.maximum(0.0, proposed_dp - original_dp)
-    requests_deepening = requested_dredging_delta > 1.0e-12
-    passes_max_dredging_delta = (
-        requested_dredging_delta <= max_dredging_delta_m + 1.0e-12
-    )
-    dredging_delta_capped = requests_deepening & ~passes_max_dredging_delta
-    dredging_delta = np.minimum(
-        requested_dredging_delta, max_dredging_delta_m
-    )
-    would_deepen = dredging_delta > 1.0e-12
-    final_dp = original_dp + dredging_delta
-    depth_screen_status = np.select(
-        [~requests_deepening, dredging_delta_capped],
-        ["no_deepening_needed", "capped_at_max_dredging_delta"],
-        default="accepted",
-    )
     forward_requested = forward_counts[positions] > 0
     intersection_target = intersection_requested[positions]
-    request_source = np.select(
-        [forward_requested & intersection_target, intersection_target],
-        ["forward+intersection", "intersection"],
-        default="forward",
-    )
-    requested_nodes = pd.DataFrame(
+    requests = pd.DataFrame(
         {
             "mesh_position": positions,
             "mesh_node_id": hgrid.node_id[positions],
             "x": hgrid.x[positions],
             "y": hgrid.y[positions],
-            "original_dp": original_dp,
-            "requested_dp": proposed_dp,
-            "requested_dredging_delta_m": requested_dredging_delta,
-            "final_dp": final_dp,
-            "dredging_delta_m": dredging_delta,
-            "would_deepen": would_deepen,
-            "passes_max_dredging_delta": passes_max_dredging_delta,
-            "dredging_delta_capped": dredging_delta_capped,
-            "depth_screen_status": depth_screen_status,
+            "original_dp": hgrid.dp[positions],
+            "requested_dp": requested_dp[positions],
             "forward_requested": forward_requested,
             "intersection_target": intersection_target,
-            "request_source": request_source,
             "forward_vertex_requests": forward_counts[positions],
             "intersection_qualifying_river_count": (
                 intersection_river_counts[positions]
             ),
-            "request_count": (
-                forward_counts[positions] + intersection_target.astype(np.int64)
-            ),
-            # Preserve the existing changed-node field for downstream users.
-            "vertex_requests": forward_counts[positions],
-        },
-        columns=REQUESTED_MESH_NODE_COLUMNS,
+        }
     )
-    node_changes = requested_nodes.loc[requested_nodes.would_deepen].copy()
-    return requested_nodes, node_changes
+    return finalize_mesh_requests(requests, max_dredging_delta_m)
 
 
 def refresh_result_mesh_requests(
@@ -1661,13 +1687,289 @@ def write_diagnostics(
     return products
 
 
+def run_hydrofabric_dredge(
+    hgrid: HgridNodes,
+    river_arcs_file: str | Path,
+    river_centerlines_file: str | Path,
+    matches_gpkg_file: str | Path,
+    effective_watershed: gpd.GeoDataFrame,
+    settings: DredgeSettings,
+    bbox_lonlat: tuple[float, float, float, float] | None = None,
+) -> DredgeResult:
+    """Calculate hydrofabric-informed connectivity changes for one hgrid."""
+    centerlines = gpd.read_parquet(river_centerlines_file)
+    if bbox_lonlat is not None:
+        selection = gpd.GeoDataFrame(
+            geometry=[box(*bbox_lonlat)], crs=ANALYSIS_GEOGRAPHIC_CRS
+        ).to_crs(centerlines.crs).geometry.iloc[0]
+        centerlines = centerlines.loc[
+            centerlines.geometry.intersects(selection)
+        ].copy()
+    if centerlines.empty:
+        raise ValueError("No RiverMapper centerlines intersect the dredging region")
+
+    river_ids = centerlines.river_idx.astype(np.int64).to_numpy()
+    arcs = gpd.read_parquet(river_arcs_file)
+    arcs = arcs.loc[arcs.river_idx.isin(river_ids)].copy()
+    selected = gpd.read_file(matches_gpkg_file, layer="selected_intervals")
+    selected = selected.loc[selected.river_idx.isin(river_ids)].copy()
+    print(
+        f"Loaded {len(centerlines)} rivers, {len(arcs)} arcs, and "
+        f"{len(selected)} selected intervals",
+        flush=True,
+    )
+
+    stations = assign_intervals_to_stations(centerlines, selected)
+    if bbox_lonlat is not None:
+        test_region = box(*bbox_lonlat)
+        stations["station_inside_test_region"] = (
+            stations.to_crs(ANALYSIS_GEOGRAPHIC_CRS)
+            .geometry.intersects(test_region)
+            .to_numpy()
+        )
+    else:
+        stations["station_inside_test_region"] = True
+    station_lonlat = stations.to_crs(ANALYSIS_GEOGRAPHIC_CRS)
+    stations["station_inside_watershed"] = points_intersect_region(
+        station_lonlat.geometry.x,
+        station_lonlat.geometry.y,
+        effective_watershed,
+    )
+    stations["station_inside_dredge_region"] = (
+        stations.station_inside_test_region & stations.station_inside_watershed
+    )
+    vertices = expand_stations_to_arc_vertices(arcs, stations)
+    if vertices.empty:
+        raise ValueError("No RiverMapper arc vertices are available for dredging")
+    if bbox_lonlat is not None:
+        xmin, ymin, xmax, ymax = bbox_lonlat
+        vertices["inside_test_region"] = (
+            (vertices.x >= xmin)
+            & (vertices.x <= xmax)
+            & (vertices.y >= ymin)
+            & (vertices.y <= ymax)
+        )
+    else:
+        vertices["inside_test_region"] = True
+    vertices["inside_watershed"] = points_intersect_region(
+        vertices.x, vertices.y, effective_watershed
+    )
+    mesh_inside_watershed = points_intersect_region(
+        hgrid.x, hgrid.y, effective_watershed
+    )
+    print(
+        f"Built test set with {len(vertices)} arc vertices and "
+        f"{len(hgrid.node_id)} hgrid nodes",
+        flush=True,
+    )
+    mapped = map_vertices_to_mesh(
+        vertices,
+        hgrid,
+        settings.query_workers,
+        mesh_candidate_mask=mesh_inside_watershed,
+    )
+    result = apply_station_depths(mapped, hgrid, settings)
+    if settings.intersection_recovery:
+        result.intersection_candidates = screen_intersection_mesh_nodes(
+            result.vertices,
+            hgrid,
+            effective_watershed,
+            radius_m=settings.intersection_search_radius_m,
+            width_tolerance_m=settings.intersection_width_tolerance_m,
+            bank_exclusion_fraction=settings.intersection_bank_exclusion_fraction,
+            bbox_lonlat=bbox_lonlat,
+            query_workers=settings.query_workers,
+        )
+    else:
+        result.intersection_candidates = _empty_intersection_targets()
+    result.intersection_targets = result.intersection_candidates.loc[
+        result.intersection_candidates.intersection_target
+    ].copy()
+    refresh_result_mesh_requests(
+        result, hgrid, max_dredging_delta_m=settings.max_dredging_delta_m
+    )
+
+    candidates = result.intersection_candidates
+    targets = result.intersection_targets
+    result.summary.update(
+        {
+            "intersection_candidate_mesh_nodes_200m": len(candidates),
+            "strict_half_width_intersection_target_mesh_nodes": int(
+                candidates.passes_strict_half_width.sum()
+            ) if not candidates.empty else 0,
+            "tolerant_half_width_intersection_target_mesh_nodes": int(
+                candidates.passes_half_width_with_tolerance.sum()
+            ) if not candidates.empty else 0,
+            "bank_proximity_rejected_intersection_mesh_nodes": int(
+                (
+                    candidates.passes_half_width_with_tolerance
+                    & ~candidates.intersection_target
+                ).sum()
+            ) if not candidates.empty else 0,
+            "intersection_target_mesh_nodes": len(targets),
+            "additional_intersection_target_mesh_nodes": int(
+                targets.additional_target.sum()
+            ) if not targets.empty else 0,
+            "intersection_targets_that_would_deepen": int(
+                targets.would_deepen.sum()
+            ) if not targets.empty else 0,
+            "additional_intersection_targets_that_would_deepen": int(
+                (targets.additional_target & targets.would_deepen).sum()
+            ) if not targets.empty else 0,
+        }
+    )
+    return result
+
+
+def ensure_channel_connectivity(
+    hgrid_obj,
+    *,
+    river_arcs_file: str | Path = DEFAULT_ARCS,
+    river_centerlines_file: str | Path = DEFAULT_CENTERLINES,
+    matches_gpkg_file: str | Path = DEFAULT_MATCHES,
+    region_gdf_file_list: Sequence[str | Path] | None = None,
+    exclude_region_gdf_file_list: Sequence[str | Path] | None = None,
+    output_dir: str | Path,
+    min_channel_depth: float = 1.0,
+    channel_depth_source: str = "hydrofabric",
+    measured_from_high_bank: bool = True,
+    max_nearest_distance_m: float = 500.0,
+    max_dredging_delta_m: float = 6.0,
+    intersection_search_radius_m: float = 200.0,
+    intersection_width_tolerance_m: float = 10.0,
+    intersection_bank_exclusion_fraction: float = 0.05,
+    intersection_recovery: bool = True,
+    unmatched_policy: str = "baseline",
+    query_workers: int = -1,
+    write_gpkg: bool = False,
+):
+    """Apply the hydrofabric connectivity workflow to an in-memory SCHISM grid."""
+    if output_dir is None:
+        raise ValueError("output_dir is required")
+    required_files = {
+        "river_arcs_file": Path(river_arcs_file),
+        "river_centerlines_file": Path(river_centerlines_file),
+        "matches_gpkg_file": Path(matches_gpkg_file),
+    }
+    for label, path in required_files.items():
+        if not path.is_file():
+            raise FileNotFoundError(f"{label} does not exist: {path}")
+
+    if region_gdf_file_list is None:
+        region_paths = (DEFAULT_WATERSHED,)
+    elif isinstance(region_gdf_file_list, (str, Path)):
+        raise TypeError("region_gdf_file_list must be a sequence of paths")
+    else:
+        region_paths = tuple(Path(path) for path in region_gdf_file_list)
+    if not region_paths:
+        raise ValueError("region_gdf_file_list cannot be empty")
+    for path in region_paths:
+        if not path.is_file():
+            raise FileNotFoundError(f"Region file does not exist: {path}")
+
+    if exclude_region_gdf_file_list is None:
+        exclude_paths = DEFAULT_EXCLUDE_REGIONS
+    elif isinstance(exclude_region_gdf_file_list, (str, Path)):
+        raise TypeError("exclude_region_gdf_file_list must be a sequence of paths")
+    else:
+        exclude_paths = tuple(Path(path) for path in exclude_region_gdf_file_list)
+    for path in exclude_paths:
+        if not path.is_file():
+            raise FileNotFoundError(f"Exclusion file does not exist: {path}")
+
+    x = np.asarray(hgrid_obj.x, dtype=float)
+    y = np.asarray(hgrid_obj.y, dtype=float)
+    dp = np.asarray(hgrid_obj.dp, dtype=float)
+    if x.ndim != 1 or y.ndim != 1 or dp.ndim != 1:
+        raise ValueError("hgrid x, y, and dp must be one-dimensional arrays")
+    if not (len(x) == len(y) == len(dp)):
+        raise ValueError("hgrid x, y, and dp must have equal lengths")
+    if len(x) == 0:
+        raise ValueError("hgrid contains no nodes")
+    if not np.isfinite(x).all() or not np.isfinite(y).all():
+        raise ValueError("hgrid coordinates must be finite")
+    if not np.isfinite(dp).all():
+        raise ValueError("hgrid depths must be finite")
+
+    settings = DredgeSettings(
+        min_channel_depth_m=min_channel_depth,
+        channel_depth_source=channel_depth_source,
+        measured_from_high_bank=measured_from_high_bank,
+        max_nearest_distance_m=max_nearest_distance_m,
+        max_dredging_delta_m=max_dredging_delta_m,
+        intersection_search_radius_m=intersection_search_radius_m,
+        intersection_width_tolerance_m=intersection_width_tolerance_m,
+        intersection_bank_exclusion_fraction=(
+            intersection_bank_exclusion_fraction
+        ),
+        intersection_recovery=intersection_recovery,
+        unmatched_policy=unmatched_policy,
+        query_workers=query_workers,
+    )
+    effective_watershed = load_effective_watershed(region_paths, exclude_paths)
+    hgrid = HgridNodes(
+        node_id=np.arange(1, len(x) + 1, dtype=np.int64),
+        x=x.copy(),
+        y=y.copy(),
+        dp=dp.copy(),
+        total_node_count=len(x),
+    )
+    result = run_hydrofabric_dredge(
+        hgrid,
+        required_files["river_arcs_file"],
+        required_files["river_centerlines_file"],
+        required_files["matches_gpkg_file"],
+        effective_watershed,
+        settings,
+    )
+
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    products = write_diagnostics(
+        output_path,
+        result,
+        bbox_lonlat=None,
+        write_gpkg=write_gpkg,
+        effective_watershed=effective_watershed,
+    )
+    result.summary.update(
+        {
+            "bbox_lonlat": None,
+            "inputs": {
+                **{label: str(path) for label, path in required_files.items()},
+                "regions": [str(path) for path in region_paths],
+                "exclude_regions": [str(path) for path in exclude_paths],
+            },
+            "products": products,
+        }
+    )
+    summary_path = output_path / "summary.json"
+    summary_path.write_text(json.dumps(result.summary, indent=2) + "\n")
+
+    dredged = copy.deepcopy(hgrid_obj)
+    if not result.node_changes.empty:
+        positions = result.node_changes.mesh_position.to_numpy(dtype=np.int64)
+        dredged.dp[positions] = result.node_changes.final_dp.to_numpy(dtype=float)
+    print(json.dumps(result.summary, indent=2), flush=True)
+    return dredged
+
+
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--hgrid", type=Path, default=DEFAULT_HGRID)
     parser.add_argument("--river-arcs", type=Path, default=DEFAULT_ARCS)
     parser.add_argument("--river-centerlines", type=Path, default=DEFAULT_CENTERLINES)
     parser.add_argument("--matches-gpkg", type=Path, default=DEFAULT_MATCHES)
-    parser.add_argument("--watershed", type=Path, default=DEFAULT_WATERSHED)
+    parser.add_argument(
+        "--watershed",
+        action="append",
+        type=Path,
+        default=None,
+        help=(
+            "Region included in dredging; repeat for multiple files. The "
+            "default watershed is used when this option is omitted."
+        ),
+    )
     parser.add_argument(
         "--exclude-region",
         action="append",
@@ -1728,10 +2030,14 @@ def get_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    args = get_parser().parse_args(argv)
-    bbox_lonlat = normalized_bbox(args.bbox) if args.bbox is not None else None
-    settings = DredgeSettings(
+def dredge_settings_from_namespace(
+    args: argparse.Namespace,
+    *,
+    query_workers: int | None = None,
+) -> DredgeSettings:
+    """Build settings identically for the serial and MPI command-line paths."""
+    workers = args.query_workers if query_workers is None else query_workers
+    return DredgeSettings(
         min_channel_depth_m=args.min_channel_depth_m,
         channel_depth_source=args.channel_depth_source,
         measured_from_high_bank=not args.measured_from_lower_bank,
@@ -1744,7 +2050,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         ),
         intersection_recovery=not args.disable_intersection_recovery,
         unmatched_policy=args.unmatched_policy,
-        query_workers=args.query_workers,
+        query_workers=workers,
+    )
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = get_parser().parse_args(argv)
+    bbox_lonlat = normalized_bbox(args.bbox) if args.bbox is not None else None
+    settings = dredge_settings_from_namespace(args)
+    watershed_regions = (
+        tuple(args.watershed)
+        if args.watershed is not None
+        else (DEFAULT_WATERSHED,)
     )
     exclude_regions = (
         tuple(args.exclude_region)
@@ -1752,123 +2069,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         else DEFAULT_EXCLUDE_REGIONS
     )
     effective_watershed = load_effective_watershed(
-        args.watershed, exclude_regions
-    )
-    centerlines = gpd.read_parquet(args.river_centerlines)
-    if bbox_lonlat is not None:
-        selection = gpd.GeoDataFrame(
-            geometry=[box(*bbox_lonlat)], crs=ANALYSIS_GEOGRAPHIC_CRS
-        ).to_crs(centerlines.crs).geometry.iloc[0]
-        centerlines = centerlines.loc[
-            centerlines.geometry.intersects(selection)
-        ].copy()
-    river_ids = centerlines.river_idx.astype(np.int64).to_numpy()
-    arcs = gpd.read_parquet(args.river_arcs)
-    arcs = arcs.loc[arcs.river_idx.isin(river_ids)].copy()
-    selected = gpd.read_file(args.matches_gpkg, layer="selected_intervals")
-    selected = selected.loc[selected.river_idx.isin(river_ids)].copy()
-    print(
-        f"Loaded {len(centerlines)} rivers, {len(arcs)} arcs, and "
-        f"{len(selected)} selected intervals",
-        flush=True,
-    )
-
-    stations = assign_intervals_to_stations(centerlines, selected)
-    if bbox_lonlat is not None:
-        test_region = box(*bbox_lonlat)
-        stations["station_inside_test_region"] = (
-            stations.to_crs(ANALYSIS_GEOGRAPHIC_CRS)
-            .geometry.intersects(test_region)
-            .to_numpy()
-        )
-    else:
-        stations["station_inside_test_region"] = True
-    station_lonlat = stations.to_crs(ANALYSIS_GEOGRAPHIC_CRS)
-    stations["station_inside_watershed"] = points_intersect_region(
-        station_lonlat.geometry.x,
-        station_lonlat.geometry.y,
-        effective_watershed,
-    )
-    stations["station_inside_dredge_region"] = (
-        stations.station_inside_test_region & stations.station_inside_watershed
-    )
-    vertices = expand_stations_to_arc_vertices(arcs, stations)
-    if bbox_lonlat is not None:
-        xmin, ymin, xmax, ymax = bbox_lonlat
-        vertices["inside_test_region"] = (
-            (vertices.x >= xmin)
-            & (vertices.x <= xmax)
-            & (vertices.y >= ymin)
-            & (vertices.y <= ymax)
-        )
-    else:
-        vertices["inside_test_region"] = True
-    vertices["inside_watershed"] = points_intersect_region(
-        vertices.x, vertices.y, effective_watershed
+        watershed_regions, exclude_regions
     )
     hgrid = read_hgrid_nodes(args.hgrid, bbox_lonlat=bbox_lonlat)
-    mesh_inside_watershed = points_intersect_region(
-        hgrid.x, hgrid.y, effective_watershed
-    )
-    print(
-        f"Built test set with {len(vertices)} arc vertices and "
-        f"{len(hgrid.node_id)} hgrid nodes",
-        flush=True,
-    )
-    mapped = map_vertices_to_mesh(
-        vertices,
+    result = run_hydrofabric_dredge(
         hgrid,
-        settings.query_workers,
-        mesh_candidate_mask=mesh_inside_watershed,
-    )
-    result = apply_station_depths(mapped, hgrid, settings)
-    if settings.intersection_recovery:
-        result.intersection_candidates = screen_intersection_mesh_nodes(
-            result.vertices,
-            hgrid,
-            effective_watershed,
-            radius_m=settings.intersection_search_radius_m,
-            width_tolerance_m=settings.intersection_width_tolerance_m,
-            bank_exclusion_fraction=settings.intersection_bank_exclusion_fraction,
-            bbox_lonlat=bbox_lonlat,
-            query_workers=settings.query_workers,
-        )
-    else:
-        result.intersection_candidates = _empty_intersection_targets()
-    result.intersection_targets = result.intersection_candidates.loc[
-        result.intersection_candidates.intersection_target
-    ].copy()
-    refresh_result_mesh_requests(
-        result, hgrid, max_dredging_delta_m=settings.max_dredging_delta_m
-    )
-    candidates = result.intersection_candidates
-    targets = result.intersection_targets
-    result.summary.update(
-        {
-            "intersection_candidate_mesh_nodes_200m": len(candidates),
-            "strict_half_width_intersection_target_mesh_nodes": int(
-                candidates.passes_strict_half_width.sum()
-            ) if not candidates.empty else 0,
-            "tolerant_half_width_intersection_target_mesh_nodes": int(
-                candidates.passes_half_width_with_tolerance.sum()
-            ) if not candidates.empty else 0,
-            "bank_proximity_rejected_intersection_mesh_nodes": int(
-                (
-                    candidates.passes_half_width_with_tolerance
-                    & ~candidates.intersection_target
-                ).sum()
-            ) if not candidates.empty else 0,
-            "intersection_target_mesh_nodes": len(targets),
-            "additional_intersection_target_mesh_nodes": int(
-                targets.additional_target.sum()
-            ) if not targets.empty else 0,
-            "intersection_targets_that_would_deepen": int(
-                targets.would_deepen.sum()
-            ) if not targets.empty else 0,
-            "additional_intersection_targets_that_would_deepen": int(
-                (targets.additional_target & targets.would_deepen).sum()
-            ) if not targets.empty else 0,
-        }
+        args.river_arcs,
+        args.river_centerlines,
+        args.matches_gpkg,
+        effective_watershed,
+        settings,
+        bbox_lonlat=bbox_lonlat,
     )
     products = write_diagnostics(
         args.output_dir,
@@ -1889,7 +2100,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "river_arcs": str(args.river_arcs),
                 "river_centerlines": str(args.river_centerlines),
                 "matches_gpkg": str(args.matches_gpkg),
-                "watershed": str(args.watershed),
+                "watershed": (
+                    str(watershed_regions[0])
+                    if len(watershed_regions) == 1
+                    else None
+                ),
+                "regions": [str(path) for path in watershed_regions],
                 "exclude_regions": [str(path) for path in exclude_regions],
             },
             "products": products,
