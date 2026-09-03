@@ -748,7 +748,7 @@
 #endif
      &                        tau_xz, tau_yz)
 
-        use schism_glbl, only : rkind, uu2, vv2,tr_nd, & !tnd, snd, &
+        use schism_glbl, only : rkind, uu2, vv2,tr_nd, & 
      &                      idry, nvrt, ivcor,errmsg
         use schism_msgp, only : myrank,parallel_abort
         implicit none
@@ -794,7 +794,7 @@
         real(rkind) :: re, z_0_t, e_sfc, q_sfc, rho_air, rb
         real(rkind) :: theta_air, theta_v_air, delta_theta, delta_q
         real(rkind) :: delta_theta_v, theta_v_star, speed_res, tau
-        real(rkind) :: speed_air, speed_water, esat_flat_r,tmp
+        real(rkind) :: speed_air, speed_water, esat_flat_r,tmp,tmp2
         logical :: converged, dry
 
 #ifdef DEBUG
@@ -812,41 +812,39 @@
 !$OMP parallel do default(shared) private(i_node,dry,sfc_lev,e_sfc,q_sfc,mix_ratio, &
 !$OMP theta_air,theta_v_air,delta_theta,delta_q,delta_theta_v,t_v,rho_air,speed_air, &
 !$OMP speed_water,u_star,w_star,speed,iter,z_0,rb,zeta_u,monin,zeta_t,converged, &
-!$OMP re,z_0_t,theta_star,q_star,theta_v_star,speed_res,tau,tmp)
+!$OMP re,z_0_t,theta_star,q_star,theta_v_star,speed_res,tau,tmp,tmp2)
         do i_node = 1, num_nodes !=npa
 !=================================================================
 #ifdef DEBUG
-          if (mod(i_node-1,printit) .eq. 0) then
-            write(38,*)
-            write(38,*) 'i_node = ', i_node
-          endif
+        if (mod(i_node-1,printit) .eq. 0) then
+          write(38,*)
+          write(38,*) 'i_node = ', i_node
+        endif
 #endif
 
-! define whether this node is dry or not (depends on coordinate system)
-          dry = idry(i_node) .eq. 1
-!     &        ( (ivcor .eq. -1) .and. (kfp(i_node)  .eq. -1) ) & ! z
-!     &      .or. &
-!     &        ( (ivcor .ne. -1) .and. (idry(i_node) .eq. 1) )   !sigma
+! define whether this node is dry or not 
+        dry = idry(i_node) .eq. 1
 
 ! if this point isn't dry, then calculate fluxes (if dry, then skip)
         if (.not. dry) then
 
-! specify the surface level at this node (depends on coordinate system)
-!          if (ivcor .eq. -1) then         ! z
-!            sfc_lev = kfp(i_node)
-!          else                            ! sigma
+! specify the surface level at this node 
           sfc_lev = nvrt
-!          endif
 
 ! calculate q_sfc from e_sfc
 ! (e_sfc reduced for salinity using eqn from Smithsonian Met Tables)
           e_sfc = (1.0d0 - 0.000537d0 * tr_nd(2,sfc_lev,i_node)) &
      &          * esat_flat_r(tr_nd(1,sfc_lev,i_node) + t_freeze)
-          q_sfc = epsilon_r * e_sfc &
-     &          / ( p_air(i_node) - e_sfc * (1.0d0 - epsilon_r) )
+
+          tmp=p_air(i_node) - e_sfc * (1.0d0 - epsilon_r)
+          if(tmp==0.d0.or.q_air(i_node)==1.d0) then
+            write(errmsg,*) 'turb_flux (1):',tmp,q_air(i_node)
+            call parallel_abort(errmsg)
+          endif
+          q_sfc = epsilon_r * e_sfc/tmp ! ( p_air(i_node) - e_sfc * (1.0d0 - epsilon_r) )
 
 ! calculate the water vapor mixing ratio of the air
-          mix_ratio = q_air(i_node) / (1.0d0 - q_air(i_node))
+          mix_ratio = q_air(i_node) / (1.0d0 - q_air(i_node)) !denom checked
 
 ! calculate theta_air, theta_v_air, delta_theta, delta_q,
 ! and delta_theta_v
@@ -858,6 +856,10 @@
 
 ! calculate the air virtual temperature and density
           t_v = (t_air(i_node) + t_freeze) * (1.0d0 + 0.608d0 * mix_ratio)
+          if(t_v==0.d0) then
+            write(errmsg,*) 'turb_flux (2):',t_v
+            call parallel_abort(errmsg)
+          endif
           rho_air = p_air(i_node) / (r_air * t_v)
 
 #ifdef DEBUG
@@ -876,13 +878,7 @@
 ! excessive values
           speed_air = sqrt( u_air(i_node)*u_air(i_node) + &
      &                      v_air(i_node)*v_air(i_node) )
-!          speed_water &
-!#ifndef SCHISM
-!     &      = sqrt( uu2(i_node, sfc_lev)*uu2(i_node, sfc_lev) + &
-!     &              vv2(i_node, sfc_lev)*vv2(i_node, sfc_lev) )
-!#else /* SCHISM */
           speed_water=sqrt(uu2(sfc_lev,i_node)*uu2(sfc_lev,i_node)+vv2(sfc_lev,i_node)*vv2(sfc_lev,i_node))
-!#endif /* SCHISM */
 
           if (speed_air .gt. speed_air_stop) then
             write(errmsg,*) 'speed_air exceeds ', speed_air_stop
@@ -906,43 +902,40 @@
           if (delta_theta_v .ge. 0) then  ! stable
             speed=max(sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+ &
                           &(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0),0.1_rkind)
-!#ifndef SCHISM
-!     &               (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
-!     &               (v_air(i_node) - vv2(i_node, sfc_lev))**2 ), &
-!#else /* SCHISM */
-!     &               (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
-!     &               (v_air(i_node) - vv2(sfc_lev,i_node))**2 ), &
-!#endif /* SCHISM */
-!     &             0.1_rkind)
           else  ! unstable
-            speed =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2+(beta * w_star)**2) 
-!#ifndef SCHISM
-!     &        sqrt( (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
-!     &              (v_air(i_node) - vv2(i_node, sfc_lev))**2 + &
-!#else /* SCHISM */
-!     &        sqrt((u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
-!     &              (v_air(i_node) - vv2(sfc_lev,i_node))**2 + &
-!#endif /* SCHISM */
-!     &              (beta * w_star)**2)
+            speed =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2+(beta * w_star)**2) !>0
           endif !stable
 
 ! now loop to obtain good initial values for u_star and z_0
           do iter = 1, 5
-            z_0 = a1 * u_star * u_star / g + a2 * nu / u_star
+            z_0 = a1 * u_star * u_star / g + a2 * nu / u_star 
+            if(z_u/z_0<=0.d0) then
+              write(errmsg,*) 'turb_flux(3): ',z_0,z_u
+              call parallel_abort(errmsg)
+            endif
             u_star = karman * speed / log(z_u/z_0)
           enddo
 
 ! calculate rb (some stability parameter from Xubin's code?)
+          if(theta_v_air==0.d0.or.speed==0.d0) then
+            write(errmsg,*) 'turb_flux(3.1): ',theta_v_air,speed
+            call parallel_abort(errmsg)
+          endif
           rb = g * z_u * delta_theta_v / (theta_v_air * speed * speed)
 
 ! calculate initial values for zeta_u, monin, zeta_t
-          if (rb .ge. 0.d0) then                      ! neutral or stable
+          if (rb .ge. 0.d0) then !neutral or stable (z_u/z_0 checked above)
             zeta_u = rb * log(z_u/z_0) &
-     &             / (1.0d0 - 0.5d0*min(rb,0.19_rkind))
+     &             / (1.0d0 - 0.5d0*min(rb,0.19_rkind)) 
           else
             zeta_u = rb * log(z_u/z_0)
           endif
-          monin = z_u / zeta_u
+
+          if(zeta_u==0.d0) then
+            write(errmsg,*) 'turb_flux(3.2): ',zeta_u
+            call parallel_abort(errmsg)
+          endif
+          monin = z_u / zeta_u !/=0
           zeta_t = z_t / monin
 
 #ifdef DEBUG
@@ -963,8 +956,18 @@
             iter = iter + 1
 
 ! Calculate the roughness lengths
-            z_0 = a1 * u_star * u_star / g + a2 * nu / u_star
-            re = u_star * z_0 / nu
+            if(u_star==0.d0) then
+              write(errmsg,*) 'turb_flux (4):',u_star
+              call parallel_abort(errmsg)
+            endif
+
+            z_0 = a1 * u_star * u_star / g + a2 * nu / u_star 
+            re = u_star * z_0 / nu 
+            if(re<0.d0.or.monin==0.d0) then
+              write(errmsg,*) 'turb_flux (4.1):',re,monin
+              call parallel_abort(errmsg)
+            endif
+            !Error: limit exp()?
             z_0_t = z_0 / exp(b1 * (re**0.25d0) + b2)
 
 #ifdef DEBUG
@@ -975,14 +978,14 @@
 #endif
 
 ! calculate the zetas
-            zeta_u = z_u / monin
+            zeta_u = z_u / monin !check above
             zeta_t = z_t / monin
 
 ! apply asymptotic limit to stable conditions
             if (zeta_t .gt. 2.5d0) then
               converged = .true.
               zeta_t = 2.5d0
-              monin = z_t / zeta_t
+              monin = z_t / zeta_t !>0
               zeta_u = z_u / monin
 
 #ifdef DEBUG
@@ -992,38 +995,83 @@
             endif !zeta_t
 
 ! caulculate u_star, depending on zeta
-            if(zeta_u .lt. zeta_m) then ! very unstable
+            if(zeta_u .lt. zeta_m) then ! very unstable (zeta_m = -1.574)
 ! extra term?
-              u_star = speed * karman/(log(zeta_m*monin/z_0)-psi_m(zeta_m)+ psi_m(z_0/monin) &
-     &+1.14d0*((-zeta_u)**(one_third)-(-zeta_m)**(one_third)))
+              if(zeta_m*monin/z_0<=0.d0) then
+                write(errmsg,*) 'turb_flux (5):',monin,z_0
+                call parallel_abort(errmsg)
+              endif
+              tmp=log(zeta_m*monin/z_0)-psi_m(zeta_m)+ psi_m(z_0/monin) &
+     &+1.14d0*((-zeta_u)**(one_third)-(-zeta_m)**(one_third))
+              if(tmp==0.d0) then
+                write(errmsg,*) 'turb_flux (6):',tmp
+                call parallel_abort(errmsg)
+              endif
+              u_star = speed * karman/tmp !(log(zeta_m*monin/z_0)-psi_m(zeta_m)+ psi_m(z_0/monin) &
+!     &+1.14d0*((-zeta_u)**(one_third)-(-zeta_m)**(one_third)))
             else if (zeta_u .lt. 0.0d0) then ! unstable
-              u_star = speed*karman/(log(z_u/z_0)-psi_m(zeta_u)+psi_m(z_0/monin))
+              tmp=log(z_u/z_0)-psi_m(zeta_u)+psi_m(z_0/monin)
+              if(z_0<=0.d0.or.monin==0.d0.or.tmp==0.d0) then
+                write(errmsg,*) 'turb_flux (7):',tmp,z_u,z_0,monin
+                call parallel_abort(errmsg)
+              endif
+              u_star = speed*karman/tmp !(log(z_u/z_0)-psi_m(zeta_u)+psi_m(z_0/monin))
             else if (zeta_u .le. 1.0d0) then ! neutral/stable
-              u_star = speed*karman/(log(z_u/z_0)+5.0d0*zeta_u-5.0d0*z_0/monin)
-            else  ! very stable
-              u_star = speed*karman/(log(monin/z_0)+5.0d0+5.0d0*log(zeta_u)-5.0d0*z_0/monin+zeta_u-1.0d0)
+              tmp=log(z_u/z_0)+5.0d0*zeta_u-5.0d0*z_0/monin
+              if(z_0<=0.d0.or.monin==0.d0.or.tmp==0.d0) then
+                write(errmsg,*) 'turb_flux (8):',tmp,monin,z_u,z_0
+                call parallel_abort(errmsg)
+              endif
+              u_star = speed*karman/tmp !(log(z_u/z_0)+5.0d0*zeta_u-5.0d0*z_0/monin)
+            else  ! very stable (zeta_u>1)
+              if(z_0==0.d0.or.monin/z_0<=0.d0.or.monin==0.0d0) then
+                write(errmsg,*) 'turb_flux (9):',monin,z_0
+                call parallel_abort(errmsg)
+              endif
+              tmp=log(monin/z_0)+5.0d0+5.0d0*log(zeta_u)-5.0d0*z_0/monin+zeta_u-1.0d0
+              if(tmp==0.d0) then
+                write(errmsg,*) 'turb_flux (10):',tmp
+                call parallel_abort(errmsg)
+              endif
+              u_star = speed*karman/tmp !(log(monin/z_0)+5.0d0+5.0d0*log(zeta_u)-5.0d0*z_0/monin+zeta_u-1.0d0)
             endif
 
 ! caulculate theta_star and q_star, depending on zeta
-            if(zeta_t.lt.zeta_h) then ! very unstable
-              tmp=karman/(log(zeta_h*monin/z_0_t)-psi_h(zeta_h) &
-     &+ psi_h(z_0_t/monin)+0.8d0*((-zeta_h)**(-one_third)-(-zeta_t)**(-one_third)))
-!              theta_star = karman*delta_theta/(log(zeta_h*monin/z_0_t)-psi_h(zeta_h) &
-!     &+ psi_h(z_0_t/monin)+0.8*((-zeta_h)**(-one_third)-(-zeta_t)**(-one_third)))
-!              q_star = karman*delta_q/(log(zeta_h*monin/z_0_t)- psi_h(zeta_h) &
-!     &+ psi_h(z_0_t/monin)+0.8*((-zeta_h)**(-one_third) -(-zeta_t)**(-one_third)))
+            if(zeta_t.lt.zeta_h) then ! very unstable (zeta_h = -0.465)
+              if(z_0_t==0.d0.or.zeta_h*monin/z_0_t<=0.d0) then 
+                write(errmsg,*) 'turb_flux (11):',zeta_h,monin,z_0_t
+                call parallel_abort(errmsg)
+              endif
+              tmp2=log(zeta_h*monin/z_0_t)-psi_h(zeta_h) &
+     &+ psi_h(z_0_t/monin)+0.8d0*((-zeta_h)**(-one_third)-(-zeta_t)**(-one_third))
+              if(tmp2==0.d0) then
+                write(errmsg,*) 'turb_flux (12):',tmp2
+                call parallel_abort(errmsg)
+              endif
+              tmp=karman/tmp2 !(log(zeta_h*monin/z_0_t)-psi_h(zeta_h) &
+!     &+ psi_h(z_0_t/monin)+0.8d0*((-zeta_h)**(-one_third)-(-zeta_t)**(-one_third)))
             else if(zeta_t.lt.0.0d0) then ! unstable
-              tmp=karman/(log(z_t/z_0_t)-psi_h(zeta_t)+psi_h(z_0_t/monin))
-!              theta_star = karman * delta_theta/(log(z_t/z_0_t)-psi_h(zeta_t)+psi_h(z_0_t/monin))
-!              q_star = karman*delta_q/(log(z_t/z_0_t)-psi_h(zeta_t)+psi_h(z_0_t/monin))
+              tmp2=log(z_t/z_0_t)-psi_h(zeta_t)+psi_h(z_0_t/monin)
+              if(z_t/z_0_t<=0.d0.or.monin==0.d0.or.tmp2==0.d0) then
+                write(errmsg,*) 'turb_flux (13):',tmp2,monin,z_t,z_0_t
+                call parallel_abort(errmsg)
+              endif
+              tmp=karman/tmp2 !(log(z_t/z_0_t)-psi_h(zeta_t)+psi_h(z_0_t/monin))
             else if(zeta_t.lt.1.0d0) then ! neutral/stable
-              tmp=karman/(log(z_t/z_0_t)+5.0d0*zeta_t-5.0d0*z_0_t/monin)
-!              theta_star = karman * delta_theta/(log(z_t/z_0_t)+5.0*zeta_t-5.0*z_0_t/monin)
-!              q_star = karman*delta_q/(log(z_t/z_0_t)+5.0*zeta_t-5.0*z_0_t/monin)
-            else ! very stable
-              tmp=karman/(log(monin/z_0_t) + 5.0d0+5.0d0*log(zeta_t)-5.0d0*z_0_t/monin+zeta_t-1.0d0)
-!              theta_star = karman * delta_theta/(log(monin/z_0_t) + 5.0+5.0*log(zeta_t)-5.0*z_0_t/monin+zeta_t-1.0)
-!              q_star = karman*delta_q/(log(monin/z_0_t)+5.0+5.0*log(zeta_t)-5.0*z_0_t/monin+zeta_t-1.0)
+              tmp2=log(z_t/z_0_t)+5.0d0*zeta_t-5.0d0*z_0_t/monin
+              if(z_t/z_0_t<=0.d0.or.monin==0.d0.or.tmp2==0.d0) then
+                write(errmsg,*) 'turb_flux (14):',tmp2,monin,z_t,z_0_t
+                call parallel_abort(errmsg)
+              endif
+              tmp=karman/tmp2 !(log(z_t/z_0_t)+5.0d0*zeta_t-5.0d0*z_0_t/monin)
+            else ! very stable (zeta_t>1)
+              tmp2=log(monin/z_0_t) + 5.0d0+5.0d0*log(zeta_t)-5.0d0*z_0_t/monin+zeta_t-1.0d0
+              if(z_0_t==0.d0.or.monin/z_0_t<=0.d0.or.tmp2==0.d0) then
+                write(errmsg,*) 'turb_flux (15):',tmp2,monin,z_0_t
+                call parallel_abort(errmsg)
+              endif
+
+              tmp=karman/tmp2 !(log(monin/z_0_t) + 5.0d0+5.0d0*log(zeta_t)-5.0d0*z_0_t/monin+zeta_t-1.0d0)
             endif
 
             theta_star=tmp*delta_theta
@@ -1031,6 +1079,10 @@
 
 ! calculate theta_v_star and monin
             theta_v_star = theta_star*(1.0d0+0.608d0*mix_ratio)+0.608d0*theta_air*q_star
+            if(theta_v_star==0.d0) then
+              write(errmsg,*) 'turb_flux (16):',theta_v_star
+              call parallel_abort(errmsg)
+            endif
             monin = theta_v_air*u_star*u_star/(karman*g*theta_v_star)
 
 ! depending on surface layer stability, calculate the effective
@@ -1038,7 +1090,7 @@
 ! (ie relative to the flowing water surface)
             if (delta_theta_v .ge. 0.0d0) then ! stable
               speed =max(sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+ &
-                             &(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0),0.1_rkind) 
+                             &(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0),0.1_rkind) !>0
 !#ifndef SCHISM
 !     &                 (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
 !     &                 (v_air(i_node) - vv2(i_node, sfc_lev))**2 ), &
@@ -1054,7 +1106,7 @@
               w_star = (-g*theta_v_star*u_star*z_i/theta_v_air)**one_third
 
               speed =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+ &
-                         &(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0+(beta * w_star)**2.d0)
+                         &(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0+(beta * w_star)**2.d0) !>=0
 !#ifndef SCHISM
 !     &          sqrt( (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
 !     &                (v_air(i_node) - vv2(i_node, sfc_lev))**2 + &
@@ -1079,7 +1131,7 @@
 
 ! bottom of main iteration loop
             if (converged.or.iter>= max_iter) exit
-          enddo
+          enddo !infinite loop
 
 ! calculate fluxes
           sen_flux(i_node) = - rho_air * c_p_air * u_star * theta_star
@@ -1090,30 +1142,11 @@
 
 ! calculate wind stresses
           speed_res =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0)
-!#ifndef SCHISM
-!     &          sqrt( (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
-!     &                (v_air(i_node) - vv2(i_node, sfc_lev))**2 )
-!#else /* SCHISM */
-!     &          sqrt( (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
-!     &                (v_air(i_node) - vv2(sfc_lev,i_node))**2 )
-!#endif /* SCHISM */
 
           if(speed_res>0.0d0.and.speed>0.1d0) then
             tau = rho_air * u_star * u_star * speed_res / speed
             tau_xz(i_node) =-tau*(u_air(i_node)-uu2(sfc_lev,i_node))/speed_res
-!#ifndef SCHISM
-!     &                     * (u_air(i_node) - uu2(i_node, sfc_lev)) &
-!#else /* SCHISM */
-!     &                     * (u_air(i_node) - uu2(sfc_lev,i_node)) &
-!#endif /* SCHISM */
-!     &                     / speed_res
             tau_yz(i_node) =-tau*(v_air(i_node)-vv2(sfc_lev,i_node))/speed_res
-!#ifndef SCHISM
-!     &                     * (v_air(i_node) - vv2(i_node, sfc_lev)) &
-!#else /* SCHISM */
-!     &                     * (v_air(i_node) - vv2(sfc_lev,i_node)) &
-!#endif /* SCHISM */
-!     &                     / speed_res
           else
             tau_xz(i_node) = 0.0d0
             tau_yz(i_node) = 0.0d0
@@ -1173,14 +1206,21 @@
       end
 !-----------------------------------------------------------------------
       function psi_m(zeta)
-        use schism_glbl, only : rkind
+        use schism_glbl, only : rkind,errmsg
+        use schism_msgp, only : parallel_abort
         implicit none
         real(rkind)             :: psi_m
         real(rkind), intent(in) :: zeta
-        real(rkind) :: chi, half_pi
+        real(rkind) :: chi, half_pi,tmp
 
         half_pi = 2.0d0 * atan(1._rkind)
-        chi = (1.0d0 - 16.0d0 * zeta)**0.25d0
+        tmp=1.0d0 - 16.0d0 * zeta
+        if(tmp<0.d0) then
+          write(errmsg,*) 'psi_m:',tmp
+          call parallel_abort(errmsg)
+        endif
+
+        chi = tmp**0.25d0 !(1.0d0 - 16.0d0 * zeta)**0.25d0 !>=0
         psi_m = 2.0d0 * log( 0.5d0 * (1.0d0 + chi) ) + &
      &          log( 0.5d0 * (1.0d0 + chi*chi) ) - &
      &          2.0d0 * atan(chi) + half_pi
@@ -1189,13 +1229,19 @@
       end
 !-----------------------------------------------------------------------
       function psi_h(zeta)
-        use schism_glbl, only : rkind
+        use schism_glbl, only : rkind,errmsg
+        use schism_msgp, only : parallel_abort
         implicit none
         real(rkind)             :: psi_h
         real(rkind), intent(in) :: zeta
-        real(rkind) :: chi
+        real(rkind) :: chi,tmp
 
-        chi = (1.0d0 - 16.0d0 * zeta)**0.25d0
+        tmp=1.0d0 - 16.0d0 * zeta
+        if(tmp<0.d0) then
+          write(errmsg,*) 'psi_h:',tmp
+          call parallel_abort(errmsg)
+        endif                
+        chi = tmp**0.25d0 !(1.0d0 - 16.0d0 * zeta)**0.25d0
         psi_h = 2.0d0 * log( 0.5d0 * (1.0d0 + chi*chi) )
 
       return
