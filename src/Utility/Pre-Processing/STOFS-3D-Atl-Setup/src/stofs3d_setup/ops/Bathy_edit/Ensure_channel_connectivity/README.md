@@ -89,6 +89,90 @@ By default, generated products are written outside the Git worktree to:
 Use one subdirectory under `Connectivity_test` for each additional test region
 so its caches and diagnostics do not overwrite another region.
 
+### Hydrofabric-to-mesh inverse mapping
+
+`hydrofabric_inverse_map.py` provides the reverse association after in-river
+mesh nodes have been identified. Its default `comid` granularity groups all
+input features with the same COMID and returns every in-river node within the
+configured exact point-to-line distance. Long, sparsely digitized reaches are
+searched by their line segments, not only by their vertices.
+
+Set `granularity="vertex"` for the refined mapping. This returns one nearest
+in-river node per LineString coordinate and preserves `part_idx` and
+`vertex_idx` for multipart reaches. In either mode, a target with no viable
+in-river candidate receives its nearest unrestricted mesh node and is marked
+with `match_method="nearest_mesh_fallback"` and `is_fallback=True`.
+
+```python
+from hydrofabric_inverse_map import map_hydrofabric_to_mesh
+
+inverse = map_hydrofabric_to_mesh(
+    hydrofabric,
+    hgrid,
+    in_river_mask,
+    search_radius_m=200.0,
+)  # default: one grouped geometry and all nearby nodes per COMID
+
+vertex_inverse = map_hydrofabric_to_mesh(
+    hydrofabric,
+    hgrid,
+    in_river_mask,
+    search_radius_m=200.0,
+    granularity="vertex",
+)
+```
+
+Pass the existing forward node mapping as `node_hydrofabric_matches` when a
+strict inverse is wanted. The table must contain `mesh_node_id` and `COMID`;
+nearby in-river nodes assigned to a different COMID are then excluded. This is
+recommended near confluences.
+
+#### Atlas full-domain validation
+
+`coarsen_river_skeleton.py` removes manually inserted vertices with a metric
+Douglas--Peucker tolerance while retaining endpoints and reporting coordinate,
+length, and Hausdorff-distance diagnostics. For the v7.3 Atlas test, 320 m was
+selected to reduce 13,431,860 coordinates to 99,550 while retaining the river
+meanders needed for review.
+
+`write_atlas_skeleton_match_gpkg.py` maps those skeleton vertices to the Atlas
+mesh. It first assigns each complete skeleton LineString to one RiverMapper
+river using minimum whole-line Hausdorff distance. A vertex can then use only
+the matched river's inner arcs (`0 < local_arc_idx < n_arcs - 1`), preventing a
+nearby unrelated river from supplying its node. Bank arcs never seed the inner
+candidate set, but a node is not removed merely because another bank arc also
+reaches it; this retains valid tributary cuts at intersections. No watershed or
+effective-watershed mask is applied. Vertices inside the hgrid footprint with
+no viable corresponding inner node use the nearest unrestricted mesh node,
+and vertices outside the footprint remain explicitly unmapped.
+
+Example:
+
+```bash
+python write_atlas_skeleton_match_gpkg.py \
+  --matches-gpkg /path/to/hydrofabric_river_matches.gpkg \
+  --river-arcs /path/to/input_cache/river_arcs.parquet \
+  --river-centerlines /path/to/input_cache/river_centerlines.parquet \
+  --hgrid-cache /path/to/hgrid_cache \
+  --output /path/to/atlas_skeleton_vertex_mesh_matches.gpkg
+```
+
+The output includes the skeleton-to-RiverMapper correspondence, strict inner
+mesh nodes, per-vertex mapping classes and links, outside-footprint vertices,
+and links longer than 500 m. Its summary records the line-matching guards,
+inner-arc node guard, mapping counts, and `watershed_filter_applied: false`.
+
+The validated test uses:
+
+```text
+/sciclone/schism10/Hgrid_projects/STOFS3D-v7.3/data_reduction/
+|-- v7.3.hgrid.gr3
+|-- atlas_river_skeleton_coarsened_320m.parquet
+|-- atlas_river_skeleton_coarsened_1m.parquet
+|-- atlas_hydrofabric_match_320m/
+`-- atlas_skeleton_vertex_mesh_matches.gpkg
+```
+
 The cache directory contains:
 
 - `hydrofabric.parquet`: regional hydrofabric reaches in EPSG:5070.

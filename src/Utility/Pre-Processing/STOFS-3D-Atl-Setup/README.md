@@ -201,6 +201,7 @@ This will generate three folders under the project directory, for example:
 The `I` folder (`Inputs`) contains:
 
 - a refreshed snapshot of the preprocessing scripts
+- a copy of the run YAML, retaining its original filename
 - the generated model input files
 - a metadata.yml file containing the Git commit and any uncommitted setup-tree
   status entries, so runs made from a modified working tree are clearly flagged

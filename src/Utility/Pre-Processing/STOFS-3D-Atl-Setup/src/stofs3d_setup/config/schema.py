@@ -1,5 +1,7 @@
 # src/stofs3d_setup/config/schema.py
-from pydantic import BaseModel, FilePath, DirectoryPath, Field, ConfigDict
+from pathlib import Path
+
+from pydantic import BaseModel, FilePath, DirectoryPath, Field, ConfigDict, PrivateAttr
 from datetime import datetime
 import yaml
 from typing import Optional
@@ -40,6 +42,8 @@ class Inputs(BaseModel):
     prop_glob: bool | None = Field(None, alias="*.prop")
 
 class Settings(BaseModel):
+    _source_yaml_path: Path | None = PrivateAttr(default=None)
+
     profile: str
     run: Run
     model: ModelCfg
@@ -48,6 +52,14 @@ class Settings(BaseModel):
 
     @classmethod
     def from_yaml(cls, p):
-        with open(p, "r") as f:
+        source_yaml_path = Path(p).expanduser().resolve()
+        with source_yaml_path.open("r") as f:
             data = yaml.safe_load(f)
-        return cls.model_validate(data)
+        settings = cls.model_validate(data)
+        settings._source_yaml_path = source_yaml_path
+        return settings
+
+    @property
+    def source_yaml_path(self) -> Path | None:
+        """Absolute path of the YAML loaded by :meth:`from_yaml`, if any."""
+        return self._source_yaml_path

@@ -323,6 +323,21 @@ def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--hydrofabric", type=Path, default=DEFAULT_HYDROFABRIC)
     parser.add_argument("--river-map", type=Path, default=DEFAULT_RIVER_MAP)
+    parser.add_argument(
+        "--river-centerlines",
+        type=Path,
+        default=None,
+        help=(
+            "Use a prebuilt centerline GeoParquet with river_idx, n_stations, "
+            "and geometry instead of parsing --river-map."
+        ),
+    )
+    parser.add_argument(
+        "--hydrofabric-cache",
+        type=Path,
+        default=None,
+        help="Reuse an existing indexed hydrofabric GeoPackage.",
+    )
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument(
         "--bbox",
@@ -374,7 +389,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     output_path = args.output_dir / "hydrofabric_river_matches.gpkg"
     cache_dir = args.output_dir / "input_cache"
-    hydro_cache = cache_dir / "hydrofabric_indexed.gpkg"
+    hydro_cache = (
+        args.hydrofabric_cache
+        if args.hydrofabric_cache is not None
+        else cache_dir / "hydrofabric_indexed.gpkg"
+    )
     parts_dir = args.output_dir / "mpi_parts"
 
     if rank == 0:
@@ -385,30 +404,48 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.output_dir.mkdir(parents=True, exist_ok=True)
         cache_dir.mkdir(parents=True, exist_ok=True)
         parts_dir.mkdir(parents=True, exist_ok=True)
-        _, centerlines_path = build_river_cache(
-            args.river_map,
-            cache_dir,
-            bbox_lonlat,
-            settings.search_radius_m,
-            force=args.force_input_cache,
-        )
-        rivers = gpd.read_parquet(centerlines_path)
-        rivers_metric = rivers.to_crs(MATCH_CRS)
-        if bbox_lonlat is None:
-            with fiona.open(args.hydrofabric) as source_collection:
-                source_bounds = tuple(
-                    float(value) for value in source_collection.bounds
-                )
-        else:
-            source_bounds = buffered_source_bounds(
-                rivers_metric, settings.search_radius_m
+        if args.river_centerlines is None:
+            _, centerlines_path = build_river_cache(
+                args.river_map,
+                cache_dir,
+                bbox_lonlat,
+                settings.search_radius_m,
+                force=args.force_input_cache,
             )
-        build_indexed_hydrofabric_cache(
-            args.hydrofabric,
-            hydro_cache,
-            source_bounds,
-            force=args.force_input_cache,
-        )
+        else:
+            centerlines_path = args.river_centerlines
+            if not centerlines_path.is_file():
+                raise FileNotFoundError(centerlines_path)
+        rivers = gpd.read_parquet(centerlines_path)
+        required_river_columns = {"river_idx", "n_stations", "geometry"}
+        if missing := sorted(required_river_columns - set(rivers.columns)):
+            raise ValueError(f"River centerlines are missing columns: {missing}")
+        rivers_metric = rivers.to_crs(MATCH_CRS)
+        if args.hydrofabric_cache is not None:
+            if not hydro_cache.is_file():
+                raise FileNotFoundError(hydro_cache)
+            missing_layers = set([HYDRO_LAYER]) - set(fiona.listlayers(hydro_cache))
+            if missing_layers:
+                raise ValueError(
+                    f"Hydrofabric cache lacks layer {HYDRO_LAYER!r}: {hydro_cache}"
+                )
+            log(rank, f"reusing indexed hydrofabric cache: {hydro_cache}")
+        else:
+            if bbox_lonlat is None:
+                with fiona.open(args.hydrofabric) as source_collection:
+                    source_bounds = tuple(
+                        float(value) for value in source_collection.bounds
+                    )
+            else:
+                source_bounds = buffered_source_bounds(
+                    rivers_metric, settings.search_radius_m
+                )
+            build_indexed_hydrofabric_cache(
+                args.hydrofabric,
+                hydro_cache,
+                source_bounds,
+                force=args.force_input_cache,
+            )
         tiled_rivers, assignments, planned_loads = assign_tiles(
             rivers_metric, args.tile_size_m, mpi_size
         )
