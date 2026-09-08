@@ -1,4 +1,5 @@
 import os
+import shutil
 import time
 import subprocess
 import glob
@@ -19,6 +20,7 @@ rundir = os.getcwd()  # use os.getcwd if launch from rundir; otherwise specify a
 last_stack = None  # if None, the script will try to find the last stack number in the file "param.nml"
                    # make sure the run can finish the specified rnday in param.nml (i.e., the forcing covers the whole period);
                    # otherwise, change the "rnday" in param.nml or specify another number here
+counter=1 #counter to save diagnostic outputs
 
 #----------end input---------------------------------
 
@@ -171,6 +173,8 @@ while (not os.path.exists(f'{rundir}/outputs/schout_000000_{last_stack+1}.nc')) 
                 break
             else:
                 print("The last line does not indicate a successful completion, try combining the last hotstart.nc the restart the run.")
+                counter=counter+1
+                shutil.copy(f'{rundir}/outputs/fatal.error',f'{rundir}/outputs/fatal.error.{str(counter)}')
 
         # combine hotstart
         hot_steps = Get_hotstart_step(f'{rundir}/outputs/')
