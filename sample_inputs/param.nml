@@ -89,6 +89,7 @@
 !-----------------------------------------------------------------------
   iloadtide = 0
   loadtide_coef = 0.1 !only used if iloadtide=2,3 (for '3', the default should be 0.12)
+  nstep_sal = 1 !int, only used if iloadtide=4; SAL calculation interval in time steps (>=1)
 
 ! Starting time
   start_year = 2000 !int

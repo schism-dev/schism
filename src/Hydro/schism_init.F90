@@ -211,7 +211,7 @@
      &rho0,shw,iveg,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &level_age,vclose_surf_frac0,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
-     &iloadtide,loadtide_coef,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
+     &iloadtide,loadtide_coef,nstep_sal,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,istemp,relax_2_airt, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_cw, &
      &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
@@ -501,7 +501,7 @@
       ielm_transport=0; max_subcyc=10
       hmin_airsea_ex=0.2_rkind; hmin_salt_ex=0.2_rkind
       itransport_only=0 
-      iloadtide=0; loadtide_coef=0.1d0
+      iloadtide=0; loadtide_coef=0.1d0; nstep_sal=1
       nu_sum_mult=1
       h_massconsv=2.d0; rinflation_icm=1.d-3
       lev_tr_source=-9 !bottom
@@ -633,6 +633,7 @@
 
 !...  SAL
       if(iloadtide<0.or.iloadtide>4) call parallel_abort('INIT: iloadtide')
+      if(nstep_sal<1) call parallel_abort('INIT: nstep_sal must be >=1')
       if(iloadtide==4) then !spherical harmonics
 #ifndef USE_SPK             
         call parallel_abort('INIT: iloadtide=4 requires SPK')

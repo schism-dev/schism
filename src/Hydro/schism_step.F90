@@ -440,7 +440,7 @@ real (rkind) :: aux                               ! ustar
 !$OMP end do
 
 !...  SAL from spherical harmonic option
-      if(iloadtide==4) then
+      if(iloadtide==4.and.mod(it-iths_main-1,nstep_sal)==0) then
 #ifdef USE_SPK
 
         !Debug
@@ -456,7 +456,7 @@ real (rkind) :: aux                               ! ustar
 
         call selfattraction
 #endif /*USE_SPK*/
-      endif !iloadtide=4
+      endif !iloadtide=4 and SAL calculation step
 
 !...  Earth tidal potential and loading tide at nodes: pre-compute to save time
 !... 
