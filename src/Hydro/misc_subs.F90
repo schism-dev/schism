@@ -6743,7 +6743,9 @@
      &ie,nd,ix,ix2,iy,iy2,iwork1(np_global),iwork2(np_global)
         !avhs: gathered SSH and interpolated onto 1 deg regular lon/lat grid 
 !        real(rkind) :: avhs(0:359,-90:90),self(0:359,-90:90)
-        real(rkind) :: llnh(0:1024),llnk(0:1024),wshaec(lsave),wshsec(lsave)
+        real(rkind),save :: llnh(0:1024),llnk(0:1024)
+        real(rkind),save :: wshaec(lsave),wshsec(lsave)
+        logical,save :: spherepack_initialized=.false.
         real(rkind) :: a(nlat_gs,nlat_gs), b(nlat_gs,nlat_gs)
         real(rkind) :: avhs1(0:nlat_gs-1,0:nlon_gs-1),self1(0:nlat_gs-1,0:nlon_gs-1) !0:180,0:359)
         real(rkind) :: eta_gb(np_global),work1(np_global)
@@ -6823,14 +6825,26 @@
           enddo !i
 !          close(98)
 
-          !Load Love numbers
-          call loadlovenumber(llnh, llnk)
-
           !Computation
           isym = 0
           nt = 1
+          !Initialize constant SAL data once
+          if(.not.spherepack_initialized) then
+            call loadlovenumber(llnh, llnk)
+            call shaeci(nlat_gs,nlon_gs,wshaec,ierror)
+            if(ierror/=0) then
+              write(errmsg,*) 'selfattraction: shaeci failed, ierror=',ierror
+              call parallel_abort(errmsg)
+            endif
+            call shseci(nlat_gs,nlon_gs,wshsec,ierror)
+            if(ierror/=0) then
+              write(errmsg,*) 'selfattraction: shseci failed, ierror=',ierror
+              call parallel_abort(errmsg)
+            endif
+            spherepack_initialized=.true.
+          endif
+
           !Spherical harmonic analysis
-          call shaeci(nlat_gs,nlon_gs,wshaec,ierror)
           call shaec(nlat_gs,nlon_gs,isym,nt,avhs1,nlat_gs,nlon_gs,a,b,mdab,ndab,wshaec,ierror)
   
           !Multiplication in spherical harmonic space (=convolution)
@@ -6852,7 +6866,6 @@
 !        end if
   
           !Spherical harmonic synthesis (inverse transform)
-          call shseci(nlat_gs,nlon_gs,wshsec,ierror)
           call shsec(nlat_gs,nlon_gs,isym,nt,self1,nlat_gs,nlon_gs,a,b,mdab,ndab,wshsec,ierror)
   
         !May not need this conversion - just use self1 directly
