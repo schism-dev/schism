@@ -2389,7 +2389,7 @@
           write(12,*)'Max lat for north pole=',tmp1
         endif !abs
         tmp1=minval(buf4(1:np_global))
-        if(abs(tmp1-90.d0)<0.2d0) then !make sure it's close enough
+        if(abs(tmp1+90.d0)<0.2d0) then !make sure it's close enough
           nwild=minloc(buf4(1:np_global))
           isal_int(0,:)=nwild(1)
           write(12,*)'Min lat for south pole=',tmp1
