@@ -202,7 +202,8 @@ If iloadtide=2 or 3, use a simple scaling for gravity approach (in this option,
 If `iloadtide=2`, a simple scaling specified by `loadtide_coef` is used to reduce 
 the gravity. If `iloadtide=3`, the scaling is dependent on the local depth _a la_ Stepanov & Hughes (2004),
  with a maximum value of `loadtide_coef`.
-If `iloadtide=4`, SAL is calculated using spherical harmonics on a global 1-degree Gaussian grid.
+If `iloadtide=4`, SAL is calculated using spherical harmonics on a global regular 1-degree
+longitude-latitude grid (360 x 181 points, including both poles).
 `nstep_sal` sets the calculation interval in time steps for this option. It must be at least 1 and
 defaults to 1. SAL is calculated on the first step after initialization, then every `nstep_sal`
 steps. The most recently calculated SAL field is used between calculations.

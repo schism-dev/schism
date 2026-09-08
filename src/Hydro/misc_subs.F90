@@ -6805,7 +6805,7 @@
           enddo !i
 !          close(98)
 
-          !Interp onto Gaussian grid (1 deg)
+          !Interp onto regular 1-degree lon/lat grid
           !avhs1(i,j) contains the waterlevel on the point with longitude phi(j)=(j-1)*360/nlon
           !and colatitude theta(i)=(i-1)*180/nlat
           !If avhs1 is smaller then 0 is chosen at the location of the missing values

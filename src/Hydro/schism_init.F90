@@ -2433,7 +2433,7 @@
 
         !Debug
 !        nd=0
-!        write(99,*)'Gaussian'
+!        write(99,*)'Regular 1-degree lon/lat grid'
 !        write(99,*)360*181
 !        do i=0,359
 !          itmp=i
