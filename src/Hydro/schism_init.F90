@@ -133,7 +133,7 @@
 
 !     Misc. arrays
       integer, allocatable :: ipiv(:)
-      integer, allocatable :: nwild(:),nwild2(:),nwild3(:,:),ibuf1(:,:),ibuf2(:,:)
+      integer, allocatable :: nwild(:),nwild2(:),nwild3(:,:),ibuf1(:,:),ibuf2(:,:),nsal_lcl(:,:)
       real(rkind), allocatable :: akr(:,:),akrp(:),work4(:),z_r2(:),xy_kr(:,:)
       real(rkind), allocatable :: swild(:),swild2(:,:),swild10(:,:)
       real(rkind), allocatable :: swild3(:) !,rwild(:,:)
@@ -1482,7 +1482,8 @@
       endif !nws
 
       if(iloadtide==4) then
-        allocate(saltide(npa),isal_int(0:nlat_gs-1,0:nlon_gs-1),stat=istat)
+        allocate(saltide(npa),isal_int(0:nlat_gs-1,0:nlon_gs-1), &
+          &isal_lcl(0:nlat_gs-1,0:nlon_gs-1),nsal_contrib(0:nlat_gs-1,0:nlon_gs-1),stat=istat)
         if(istat/=0) call parallel_abort('INIT: failed to alloc saltide')
       endif !iloadtide
 
@@ -2359,6 +2360,7 @@
 
 #endif /*USE_WWM*/
 
+#ifdef USE_SPK
 !...  Calculate interpolation info (nearest global node) for spherical SAL
       !lon range must be either [-180,180] or [0,360]!
       if(iloadtide==4.and.myrank==0) then !ics=2; only rank 0 doing global operation
@@ -2448,6 +2450,44 @@
 
         deallocate(nwild3,swild99)
       endif !iloadtide==4.and.myrank==0
+
+      !Build local SAL-grid mapping and static shared-node contribution counts
+      if(iloadtide==4) then
+        call mpi_bcast(isal_int(0,0),nlat_gs*nlon_gs,itype,0,comm,istat)
+        if(istat/=MPI_SUCCESS) call parallel_abort(error=istat)
+
+        isal_lcl=0
+        do i=0,nlon_gs-1
+          do j=0,nlat_gs-1
+            nd=isal_int(j,i)
+            if(nd>0) then
+              if(ipgl(nd)%rank==myrank.and.ipgl(nd)%id>0.and.ipgl(nd)%id<=np) then
+                isal_lcl(j,i)=ipgl(nd)%id
+              endif
+            endif
+          enddo !j
+        enddo !i
+
+        allocate(nsal_lcl(0:nlat_gs-1,0:nlon_gs-1),stat=istat)
+        if(istat/=0) call parallel_abort('INIT: failed to alloc SAL contribution counts')
+        nsal_lcl=0
+        where(isal_lcl>0) nsal_lcl=1
+        call mpi_reduce(nsal_lcl(0,0),nsal_contrib(0,0),nlat_gs*nlon_gs,itype,MPI_SUM,0,comm,istat)
+        if(istat/=MPI_SUCCESS) call parallel_abort(error=istat)
+        deallocate(nsal_lcl)
+
+        if(myrank==0) then
+          do i=0,nlon_gs-1
+            do j=0,nlat_gs-1
+              if(isal_int(j,i)>0.and.nsal_contrib(j,i)==0) then
+                write(errmsg,*) 'INIT: no resident node for SAL grid point ',j,i,isal_int(j,i)
+                call parallel_abort(errmsg)
+              endif
+            enddo !j
+          enddo !i
+        endif !myrank==0
+      endif !iloadtide==4
+#endif /*USE_SPK*/
 
 !-------------------------------------------------------------------------------
 ! Read in boundary condition and tidal info
@@ -7488,4 +7528,3 @@ function signa3(x1,x2,x3,y1,y2,y3)
   signa3=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2._rkind
   
 end function signa3
-
