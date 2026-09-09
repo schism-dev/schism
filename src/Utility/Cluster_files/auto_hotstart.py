@@ -174,7 +174,7 @@ while (not os.path.exists(f'{rundir}/outputs/schout_000000_{last_stack+1}.nc')) 
             else:
                 print("The last line does not indicate a successful completion, try combining the last hotstart.nc the restart the run.")
                 counter=counter+1
-                shutil.copy(f'{rundir}/outputs/fatal.error',f'{rundir}/outputs/fatal.error.{str(counter)}')
+                shutil.copy(f'{rundir}/outputs/fatal.error',f'{rundir}/outputs/fatal.error.{counter}')
 
         # combine hotstart
         hot_steps = Get_hotstart_step(f'{rundir}/outputs/')
