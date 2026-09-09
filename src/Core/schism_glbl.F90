@@ -423,7 +423,9 @@ module schism_glbl
   ! Dynamic quantities
   integer,save,allocatable :: ieg_source(:)   !global elem. indices for volume/mass sources
   integer,save,allocatable :: ieg_source_ngen(:)   !global elem. indices for T-Route only volume/mass sources in NextGen
-  integer,save,allocatable :: isal_int(:,:)
+  integer,save,allocatable :: isal_int(:,:) !Global node at each SAL grid point
+  integer,save,allocatable :: isal_lcl(:,:) !Local resident node at each SAL grid point
+  integer,save,allocatable :: nsal_contrib(:,:) !Number of resident copies for each SAL grid point
   real(rkind),save,allocatable :: ieg_source_flowpath_ids(:)   ! T-Route flowpath ids needed for NextGen framework coupling with SCHISM sources
   integer,save,allocatable :: ieg_sink(:)   !global elem. indices for volume/mass sinks
   real(rkind),save,allocatable :: ieg_sink_flowpath_ids(:)   ! T-Route flowpath ids needed for NextGen framework coupling with SCHISM sinks

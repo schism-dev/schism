@@ -6726,9 +6726,9 @@
 !     From Delfs3D: Delft3D/src/engines_gpl/dflowfm/packages/dflowfm_kernel/src/dflowfm_kernel/timespace/meteo1.f90 
       !subroutine selfattraction(avhs, self, i1, i2, j1, j2,jaselfal)
       subroutine selfattraction
-        use schism_glbl, only : rkind,pi,npa,saltide,eta2,xlon,ylat,iplg,area,np_global,np, &
-               &nlon_gs,nlat_gs,isal_int,dp,errmsg
-        use schism_msgp, only : parallel_abort,rtype,itype,comm,myrank,parallel_finalize
+        use schism_glbl, only : rkind,pi,npa,saltide,eta2,xlon,ylat,iplg, &
+               &nlon_gs,nlat_gs,isal_lcl,nsal_contrib,dp,errmsg
+        use schism_msgp, only : parallel_abort,rtype,comm,myrank
         use spherepack, only: shaec, shaeci, shsec, shseci
         implicit none
         include 'mpif.h'
@@ -6739,16 +6739,15 @@
 !        integer, intent(in) :: i1, i2, j1, j2 !, jaselfal
 !        real(rkind), parameter :: Me = 5.9726e24, R = 6371e3, g = 9.81, pi = 4.0 * atan(1.0), rhow = 1.0240164e3, rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
         real(rkind) :: Me,R,rhow,rhoe
-        integer :: i,j,itmp,ierror,isym,nt,l,mdab,ndab,k1,k3(1), &
-     &ie,nd,ix,ix2,iy,iy2,iwork1(np_global),iwork2(np_global)
-        !avhs: gathered SSH and interpolated onto 1 deg regular lon/lat grid 
+        integer :: i,j,ierror,isym,nt,l,mdab,ndab,nd,ix,ix2,iy,iy2
+        !avhs1: SSH reduced directly onto the regular 1-degree lon/lat grid
 !        real(rkind) :: avhs(0:359,-90:90),self(0:359,-90:90)
         real(rkind),save :: llnh(0:1024),llnk(0:1024)
         real(rkind),save :: wshaec(lsave),wshsec(lsave)
         logical,save :: spherepack_initialized=.false.
         real(rkind) :: a(nlat_gs,nlat_gs), b(nlat_gs,nlat_gs)
+        real(rkind) :: avhs_lcl(0:nlat_gs-1,0:nlon_gs-1)
         real(rkind) :: avhs1(0:nlat_gs-1,0:nlon_gs-1),self1(0:nlat_gs-1,0:nlon_gs-1) !0:180,0:359)
-        real(rkind) :: eta_gb(np_global),work1(np_global)
         real(rkind) :: xtmp0,xtmp,ytmp0,ytmp,xrat,yrat,tmp1,tmp2
   
         Me = 5.9726e24; R = 6371e3; rhow = 1.0240164e3 
@@ -6779,51 +6778,23 @@
 !          k1=k1+1
 !        enddo !i
   
-        !Gather elev
-        work1=0.d0
-        iwork1=0
-        do i=1,np
-          nd=iplg(i)
-
-          if(dp(i)>0.d0) then !make sure it's deep enough
-            work1(nd)=eta2(i)
-          endif !dp
-          iwork1(nd)=iwork1(nd)+1
+        !Reduce elevations directly onto the regular SAL grid
+        avhs_lcl=0.d0
+        do i=0,nlon_gs-1
+          do j=0,nlat_gs-1
+            nd=isal_lcl(j,i)
+            if(nd>0) then
+              if(dp(nd)>0.d0) avhs_lcl(j,i)=eta2(nd)
+            endif
+          enddo !j
         enddo !i
-        call mpi_reduce(work1,eta_gb,np_global,rtype,MPI_SUM,0,comm,ierror)
-        call mpi_reduce(iwork1,iwork2,np_global,itype,MPI_SUM,0,comm,ierror)
+        call mpi_reduce(avhs_lcl(0,0),avhs1(0,0),nlat_gs*nlon_gs,rtype,MPI_SUM,0,comm,ierror)
+        if(ierror/=MPI_SUCCESS) call parallel_abort(error=ierror)
 
         if(myrank==0) then
-          do i=1,np_global
-            if(iwork2(i)==0) then
-              write(errmsg,*) 'selfattraction: missing node ',i
-              call parallel_abort(errmsg)
-            endif
-            eta_gb(i)=eta_gb(i)/dble(iwork2(i))
-
-!            write(98,*)i,eta_gb(i)
-          enddo !i
-!          close(98)
-
-          !Interp onto regular 1-degree lon/lat grid
           !avhs1(i,j) contains the waterlevel on the point with longitude phi(j)=(j-1)*360/nlon
           !and colatitude theta(i)=(i-1)*180/nlat
-          !If avhs1 is smaller then 0 is chosen at the location of the missing values
-          avhs1=0.d0 !init for land etc
-          nt=0 !debug
-          do i=0,359 
-            do j=-90,90
-              nd=isal_int(j+90,i) !global node # or -1
-              if(nd>0) avhs1(j+90,i)=eta_gb(nd)
-
-              !Debug
-!              nt=nt+1
-!              itmp=i
-!              if(itmp>180) itmp=itmp-360
-!              write(98,*)nt,itmp,j,real(avhs1(j,i)),nd
-            enddo !j
-          enddo !i
-!          close(98)
+          where(nsal_contrib>0) avhs1=avhs1/real(nsal_contrib,rkind)
 
           !Computation
           isym = 0
@@ -6938,32 +6909,6 @@
 !          write(12,*)'saltide=',iplg(i),real(xtmp0),real(ytmp0),real(saltide(i)),real(xtmp)
         enddo !i=1,npa
 
-        !Debug
-!        work1=0.d0
-!        iwork1=0
-!        do i=1,np
-!          nd=iplg(i)
-!          work1(nd)=saltide(i)
-!          iwork1(nd)=iwork1(nd)+1
-!        enddo !i
-!        call mpi_reduce(work1,eta_gb,np_global,rtype,MPI_SUM,0,comm,ierror)
-!        call mpi_reduce(iwork1,iwork2,np_global,itype,MPI_SUM,0,comm,ierror)
-!
-!        if(myrank==0) then
-!          do i=1,np_global
-!            if(iwork2(i)==0) then
-!              write(errmsg,*) 'selfattraction: missing node ',i
-!              call parallel_abort(errmsg)
-!            endif
-!            eta_gb(i)=eta_gb(i)/dble(iwork2(i))
-!            write(97,*)i,eta_gb(i)
-!          enddo !i
-!          close(97)
-!        endif !myrank
-!
-!        call parallel_finalize
-!        stop
-  
       end subroutine selfattraction
   
       subroutine loadlovenumber(llnh, llnk)
