@@ -1122,11 +1122,11 @@
 !-----------------------------------------------------------------------
 ! Analysis module outputs (USE_ANALYSIS)
 !-----------------------------------------------------------------------
-!  iof_ana(1) = 0 !min time step at each element over all subcycles in horizontal transport solver [s]   {minTransportTimeStep}  2D
-!  iof_ana(2) = 0 !x-component of \nabla air_pres /\rho_0 [m/s/s] {airPressureGradientX}  2D
-!  iof_ana(3) = 0 !y-component of \nabla air_pres /\rho_0 [m/s/s] {airPressureGradientY}  2D
-!  iof_ana(4) = 0  !\alpha*g*\nabla \Psi [m/s/s] (gradient of tidal potential) {tidePotentialGradX}  2D
-!  iof_ana(5) = 0  !\alpha*g*\nabla \Psi [m/s/s] {tidePotentialGradY}  2D
+!  iof_ana(1) = 0 !min time step at each element over all subcycles and layers in horizontal transport solver [s]   {minTransportTimeStep}  2D
+!  iof_ana(2) = 0 !x-component of \nabla air_pres /\rho_0 [m/s/s] {airPressureGradientX}  2D side
+!  iof_ana(3) = 0 !y-component of \nabla air_pres /\rho_0 [m/s/s] {airPressureGradientY}  2D side
+!  iof_ana(4) = 0  !\alpha*g*\nabla \Psi [m/s/s] (gradient of tidal potential) {tidePotentialGradX}  2D side
+!  iof_ana(5) = 0  !\alpha*g*\nabla \Psi [m/s/s] {tidePotentialGradY}  2D side
 !  iof_ana(6) = 0 !\nabla \cdot (\mu \nabla u) [m/s/s] (horizontal momentum mixing) {horzontalViscosityX}  3D side
 !  iof_ana(7) = 0 !\nabla \cdot (\mu \nabla v) [m/s/s] {horzontalViscosityY}   3D side
 !  iof_ana(8) = 0 !-g/rho0* \int_z^\eta dr_dx dz  [m/s/s] (b-clinic gradient) {baroclinicForceX}  3D side

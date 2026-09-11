@@ -1107,6 +1107,7 @@
                 write(errmsg,*) 'turb_flux(17): ',theta_v_air
                 call parallel_abort(errmsg)
               endif
+              write(12,*)'theta_v_air=',theta_v_air
               w_star = (-g*theta_v_star*u_star*z_i/theta_v_air)**one_third
 
               speed =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+ &
