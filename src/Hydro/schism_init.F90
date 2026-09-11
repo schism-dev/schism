@@ -211,7 +211,7 @@
      &rho0,shw,iveg,nstep_ice,iunder_deep,h1_bcc,h2_bcc,hw_depth,hw_ratio, &
      &level_age,vclose_surf_frac0,iadjust_mass_consv0,ipre2, &
      &ielm_transport,max_subcyc,i_hmin_airsea_ex,hmin_airsea_ex,itransport_only, &
-     &iloadtide,loadtide_coef,nstep_sal,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
+     &iloadtide,loadtide_coef,nstep_sal,nlon_gs,nlat_gs,nu_sum_mult,i_hmin_salt_ex,hmin_salt_ex,h_massconsv,lev_tr_source, &
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,istemp,relax_2_airt, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_cw, &
      &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
@@ -501,7 +501,7 @@
       ielm_transport=0; max_subcyc=10
       hmin_airsea_ex=0.2_rkind; hmin_salt_ex=0.2_rkind
       itransport_only=0 
-      iloadtide=0; loadtide_coef=0.1d0; nstep_sal=1
+      iloadtide=0; loadtide_coef=0.1d0; nstep_sal=1; nlon_gs=360; nlat_gs=181
       nu_sum_mult=1
       h_massconsv=2.d0; rinflation_icm=1.d-3
       lev_tr_source=-9 !bottom
@@ -639,6 +639,9 @@
         call parallel_abort('INIT: iloadtide=4 requires SPK')
 #endif
         if(ics/=2) call parallel_abort('INIT: iloadtide=4 requires ics=2')
+        if(nlon_gs<4) call parallel_abort('INIT: nlon_gs must be >=4')
+        if(nlat_gs<3.or.nlat_gs>1025) call parallel_abort('INIT: nlat_gs must be between 3 and 1025')
+        if(nlon_gs>huge(nlon_gs)/(2*nlat_gs)) call parallel_abort('INIT: SAL grid is too large')
       endif 
 
 !...  Shapiro filter 
@@ -2364,7 +2367,7 @@
 !...  Calculate interpolation info (nearest global node) for spherical SAL
       !lon range must be either [-180,180] or [0,360]!
       if(iloadtide==4.and.myrank==0) then !ics=2; only rank 0 doing global operation
-        allocate(nwild3(4,ne_global),swild99(0:180,0:359),stat=istat) !conn table 
+        allocate(nwild3(4,ne_global),swild99(0:nlat_gs-1,0:nlon_gs-1),stat=istat) !conn table
         if(istat/=0) call parallel_abort('INIT: alloc nwild3')
         open(32,file=in_dir(1:len_in_dir)//'hgrid.ll',status='old')
         read(32,*); read(32,*) !ne,np
@@ -2387,7 +2390,7 @@
         tmp1=maxval(buf4(1:np_global))
         if(abs(tmp1-90.d0)<0.2d0) then !make sure it's close enough
           nwild=maxloc(buf4(1:np_global)) !needa an array
-          isal_int(180,:)=nwild(1) !global node #
+          isal_int(nlat_gs-1,:)=nwild(1) !global node #
           write(12,*)'Max lat for north pole=',tmp1
         endif !abs
         tmp1=minval(buf4(1:np_global))
@@ -2399,8 +2402,8 @@
 
         !Other lat than poles
         do ie=1,ne_global
-          do i=0,359 !lon
-            xtmp=i !lon
+          do i=0,nlon_gs-1 !lon
+            xtmp=real(i,rkind)*360.d0/real(nlon_gs,rkind) !lon
             !Test closest lon (jump) by shifting \pm 360
             do m=1,nwild2(ie)
               nd=nwild3(m,ie)
@@ -2414,8 +2417,8 @@
             !Add cushion for jump in lon. At continental land pt this condition
             !may cycle for most pts except when range is very large (near some jump)
             if(xtmp<minval(swild3(1:nwild2(ie)))-aux1.or.xtmp>maxval(swild3(1:nwild2(ie)))+aux1) cycle
-            do j=1,179 !co-lat
-              ytmp=j-90.d0 !lat
+            do j=1,nlat_gs-2 !lat
+              ytmp=-90.d0+real(j,rkind)*180.d0/real(nlat_gs-1,rkind) !lat
               if(ytmp<minval(buf4(nwild3(1:nwild2(ie),ie)))-aux1.or. &
                 &ytmp>maxval(buf4(nwild3(1:nwild2(ie),ie)))+aux1) cycle 
 
@@ -2429,20 +2432,20 @@
                 nwild=minloc(swild(1:nwild2(ie)))
                 isal_int(j,i)=nwild3(nwild(1),ie) !save global node #
               endif !tmp
-            enddo !j=1,179
-          enddo !i=0,359
+            enddo !j=1,nlat_gs-2
+          enddo !i=0,nlon_gs-1
         enddo !ie
 
         !Debug
 !        nd=0
-!        write(99,*)'Regular 1-degree lon/lat grid'
-!        write(99,*)360*181
-!        do i=0,359
-!          itmp=i
+!        write(99,*)'Regular lon/lat grid'
+!        write(99,*)nlon_gs*nlat_gs
+!        do i=0,nlon_gs-1
+!          itmp=nint(real(i,rkind)*360.d0/real(nlon_gs,rkind))
 !          if(itmp>180) itmp=itmp-360
-!          do j=0,180
+!          do j=0,nlat_gs-1
 !            nd=nd+1
-!            write(99,*)nd,itmp,j-90,isal_int(j,i)
+!            write(99,*)nd,itmp,-90.d0+real(j,rkind)*180.d0/real(nlat_gs-1,rkind),isal_int(j,i)
 !          enddo !j
 !        enddo !i
 !        close(99)

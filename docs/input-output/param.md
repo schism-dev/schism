@@ -188,7 +188,7 @@ Hot start flag. If `ihot=0`, cold start; if $ihot \neq 0$, hot start from `hotst
 Hydraulic model option. If $ihydraulics \neq 0$, `hydraulics.in` is required (cf. hydraulics user manual).
 
 
-### iloadtide=0 (int), loadtide_coef=0.1 (double), nstep_sal=1 (int)
+### iloadtide=0 (int), loadtide_coef=0.1 (double), nstep_sal=1 (int), nlon_gs=360 (int), nlat_gs=181 (int)
 Option to specify Self Attraction and Loading (SAL) tide, usually used for basin- or global-scale applications. 
 If `iloadtide=0`, SAL is off. If `iloadtide=1`, the SAL input is interpolated values from a tide database,
  e.g., FES2014, given in `loadtide_[FREQ].gr3`, where `[FREQ]` are frequency names (shared with 
@@ -202,8 +202,12 @@ If iloadtide=2 or 3, use a simple scaling for gravity approach (in this option,
 If `iloadtide=2`, a simple scaling specified by `loadtide_coef` is used to reduce 
 the gravity. If `iloadtide=3`, the scaling is dependent on the local depth _a la_ Stepanov & Hughes (2004),
  with a maximum value of `loadtide_coef`.
-If `iloadtide=4`, SAL is calculated using spherical harmonics on a global regular 1-degree
-longitude-latitude grid (360 x 181 points, including both poles).
+If `iloadtide=4`, SAL is calculated using spherical harmonics on a configurable global regular
+longitude-latitude grid. `nlon_gs` is the number of distinct longitude points and must be at least 4.
+`nlat_gs` is the number of latitude points, including both poles, and must be between 3 and 1025.
+The longitude spacing is `360 / nlon_gs` degrees and the latitude spacing is
+`180 / (nlat_gs - 1)` degrees. Their defaults are 360 and 181, which give the existing 1-degree
+grid. For equal spacing, set `nlon_gs = 2 * (nlat_gs - 1)`; for example, use 720 and 361 for 0.5 degrees.
 `nstep_sal` sets the calculation interval in time steps for this option. It must be at least 1 and
 defaults to 1. SAL is calculated on the first step after initialization, then every `nstep_sal`
 steps. The most recently calculated SAL field is used between calculations.
