@@ -405,6 +405,15 @@ Coefficient to adjust the vertical velocity. `1` would keep the orignal value, w
  keeping the conservation. If `vclose_surf_frac0<0`, needs vclose.gr3 (depth in [0,1]).
 
 ## SCHOUT block
+### save_sal_grid=0 (int)
+Write spherical-harmonic Self Attraction and Loading results to `outputs/sal_grid.nc`.
+Set it to `1` to enable output. Only `0` and `1` are valid. This option applies only when `iloadtide=4`
+and `nc_out>0`. The file stores one `sal` record after each SAL
+calculation, at the interval selected by `nstep_sal`. The field is in meters on the regular grid
+defined by `nlon_gs` and `nlat_gs`; it is saved before interpolation to the SCHISM mesh. A continuing
+hot start (`ihot=2`) appends to an existing file when its grid dimensions match. Time values are
+seconds since the configured model start.
+
 ### iout_sta=0, nspool_sta=10 (int)
 Station output flag. If `iout_sta≠0`, an input [station.in](optional-inputs.html#stationin-bp-format) is needed. In addition, `nspool_sta` specifies the spool for station output. In this case, **make sure `nhot_write` is a multiple of `nspool_sta`**.
 If `iout_sta=1`, each line of outputs `staout_[1-]` represents time series of the variable at each station location (and vertical 

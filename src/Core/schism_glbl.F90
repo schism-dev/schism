@@ -85,6 +85,9 @@ module schism_glbl
   !# of lon/lat pts used in global regular grid (for spherical SAL)
   integer,save :: nlon_gs,nlat_gs
 
+  !Optional output of spherical SAL results on the regular lon/lat grid
+  integer,save :: save_sal_grid
+
   !Parameters from param.nml
   integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,iwindoff, &
                   &ibc,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &

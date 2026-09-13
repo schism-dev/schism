@@ -220,7 +220,7 @@
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm, &
      &iof_icm_ba,iof_icm_clam,iof_cos,iof_fib,iof_sed2d,iof_ice,iof_mice,iof_ana,iof_marsh,iof_dvd, &
-     &nhot,nhot_write,iout_sta,nspool_sta,iof_ugrid,chunk_size_vrt
+     &nhot,nhot_write,iout_sta,nspool_sta,iof_ugrid,chunk_size_vrt,save_sal_grid
 
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
@@ -534,6 +534,7 @@
       iof_icm_marsh=0; iof_icm_sfm=0; iof_icm_ba=0; iof_icm_clam=0; iof_cos=0; iof_fib=0; iof_sed2d=0
       iof_ice=0; iof_mice=0; iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
       chunk_size_vrt=-1 !default: whole-volume chunk (>0: # of layers per chunk)
+      save_sal_grid=0
 
       read(15,nml=OPT)
       read(15,nml=SCHOUT)
@@ -634,6 +635,7 @@
 !...  SAL
       if(iloadtide<0.or.iloadtide>4) call parallel_abort('INIT: iloadtide')
       if(nstep_sal<1) call parallel_abort('INIT: nstep_sal must be >=1')
+      if(save_sal_grid<0.or.save_sal_grid>1) call parallel_abort('INIT: save_sal_grid must be 0 or 1')
       if(iloadtide==4) then !spherical harmonics
 #ifndef USE_SPK             
         call parallel_abort('INIT: iloadtide=4 requires SPK')

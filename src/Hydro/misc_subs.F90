@@ -6727,8 +6727,9 @@
       !subroutine selfattraction(avhs, self, i1, i2, j1, j2,jaselfal)
       subroutine selfattraction
         use schism_glbl, only : rkind,pi,npa,saltide,eta2,xlon,ylat,iplg, &
-               &nlon_gs,nlat_gs,isal_lcl,nsal_contrib,dp,errmsg
+               &nlon_gs,nlat_gs,isal_lcl,nsal_contrib,dp,errmsg,save_sal_grid,nc_out
         use schism_msgp, only : parallel_abort,rtype,comm,myrank
+        use sal_grid_output, only : write_sal_grid
         use spherepack, only: shaec, shaeci, shsec, shseci
         implicit none
         include 'mpif.h'
@@ -6827,6 +6828,8 @@
             write(errmsg,*) 'selfattraction: shsec failed, ierror=',ierror
             call parallel_abort(errmsg)
           endif
+
+          if(save_sal_grid==1.and.nc_out>0) call write_sal_grid(self1)
   
 !          write(12,*)'B4 |self1| sum=',sum(abs(self1))
         endif !myrank==0
@@ -6868,7 +6871,7 @@
         enddo !i=1,npa
 
       end subroutine selfattraction
-  
+
       subroutine loadlovenumber(llnh, llnk)
         !Define the second load Love number h' and k' up to degree 1024
         use schism_glbl, only : rkind
