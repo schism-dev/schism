@@ -261,6 +261,18 @@ def gen_diffmin(hgrid: pylib.schism_grid):
             'diffmin': 0.001,
             'region_file': f'{script_path}/Gr3/Diffmin/Shap_Narrows.rgn'
         },
+        'StJohn_diffmin.rgn': {
+            'diffmin': 0.0005,
+            'region_file': f'{script_path}/Gr3/Diffmin/StJohn_diffmin.rgn'
+        },
+        'Sava_diffmin.rgn': {
+            'diffmin': 0.0005,
+            'region_file': f'{script_path}/Gr3/Diffmin/Sava_diffmin.rgn'
+        },
+        'Charleston_diffmin.rgn': {
+            'diffmin': 0.0005,
+            'region_file': f'{script_path}/Gr3/Diffmin/Charleston_diffmin.rgn'
+        },
     }
     for _, tweak in region_tweaks.items():
         print(f"Applying diffmin {tweak['diffmin']} in {tweak['region_file']}")
@@ -277,9 +289,22 @@ def gen_drag(hgrid: pylib.schism_grid):
     # - overall: depth based
     grid_depths = [-3, -1]
     # default [0.025, 0.0025]; [0.005, 0.0025] for STOFS-3D v8 R20e/f; [0.02, 0.001] for R13r_v7
+    drag_coef_0 = [0.025, 0.00025]
     drag_coef = [0.025, 0.0025]
     # linear interpolation with constant extrapolation of nearest end values
+    drag_0 = np.interp(hgrid.dp, grid_depths, drag_coef_0, left=drag_coef_0[0], right=drag_coef_0[-1])
     drag = np.interp(hgrid.dp, grid_depths, drag_coef, left=drag_coef[0], right=drag_coef[-1])
+
+    # - replace:regions with drag_0
+    region_files = [
+        f'{script_path}/Gr3/Drag/Cd_small_region_v2.reg',
+    ]
+
+    for region_file in region_files:
+        reg = read_schism_reg(region_file)
+        idx = inside_polygon(np.c_[hgrid.x, hgrid.y], reg.x, reg.y).astype(bool)
+        new_drag = drag_0[idx]
+        drag[idx] = new_drag
 
     # - tweak: regions with constant drag
     region_files = [
@@ -362,7 +387,7 @@ def gen_drag(hgrid: pylib.schism_grid):
         },
         'StJohns_0': {  # from SECOFS
             'drag': 0.0,
-            'region_file': f'{script_path}/Gr3/Drag/StJohns_0.reg'
+            'region_file': f'{script_path}/Gr3/Drag/St_Johns_0_v1.reg'
         },
         # 'Virginia_Key_0.0035': {
         #     'drag': 0.01,
@@ -415,6 +440,30 @@ def gen_drag(hgrid: pylib.schism_grid):
         'Atchafalaya_0.reg': {
             'drag': 0.002,
             'region_file': f'{script_path}/Gr3/Drag/Atchafalaya_0.reg'
+        },
+        '0_fricition_Tampa_t0101.rgn': {
+            'drag': 0,
+            'region_file': f'{script_path}/Gr3/Drag/0_fricition_Tampa_t0101.rgn'
+        },
+        'Charleston_0.rgn': {
+            'drag': 0,
+            'region_file': f'{script_path}/Gr3/Drag/Charleston_0.rgn'
+        },
+        'Sava_0.rgn': {
+            'drag': 0,
+            'region_file': f'{script_path}/Gr3/Drag/Sava_0.rgn'
+        },
+        'Chatham_0.00025_drag.rgn': {
+            'drag': 0.00025,
+            'region_file': f'{script_path}/Gr3/Drag/Chatham_0.00025_drag.rgn'
+        },
+        'Ocean_City_Inlet_0.0075_drag.rgn': {
+            'drag': 0.0075,
+            'region_file': f'{script_path}/Gr3/Drag/Ocean_City_Inlet_0.0075_drag.rgn'
+        },
+        'Virginia_Key_0.0075_drag.rgn': {
+            'drag': 0.0075,
+            'region_file': f'{script_path}/Gr3/Drag/Virginia_Key_0.0075_drag.rgn'
         },
     }
     for _, tweak in region_tweaks.items():
@@ -557,3 +606,25 @@ def gen_elev_ic(hgrid=None, h0=0.1, city_shape_fnames=None, base_elev_ic=None):
     elev_ic[ind] = - hgrid.dp[ind] - h0
 
     return elev_ic
+
+def gen_watertype(hgrid: pylib.schism_grid):
+    '''generate watertype based on the regions'''
+
+    watertype = np.full(hgrid.np, fill_value=1.0, dtype=float)
+
+    region_files = [
+        f'{script_path}/Gr3/Watertype/iso_10m_edited.rgn',
+        f'{script_path}/Gr3/Watertype/PR.rgn',
+    ]
+
+    for region_file in region_files:
+        reg = read_schism_reg(region_file)
+        idx = inside_polygon(
+            np.c_[hgrid.x, hgrid.y],
+            reg.x,
+            reg.y
+        ).astype(bool)
+
+        watertype[idx] = 7.0
+
+    return watertype

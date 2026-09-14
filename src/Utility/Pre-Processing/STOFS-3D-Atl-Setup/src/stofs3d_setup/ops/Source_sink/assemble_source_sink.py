@@ -363,6 +363,7 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
     # ---------- set constant sinks (pumps and background sinks) ----------
     mkcd_new_dir(f'{wdir}/constant_sink/')
     constant_sink_shapefile = getattr(config, 'constant_sink_shapefile', None)
+    exclude_shapefile = getattr(config, 'exclude_shapefile', None)
     if constant_sink_shapefile is None:
         constant_sink_shapefile = Path(
             f'{script_path}/Constant_sinks/levee_pump_polys_2026_with_poly_type.shp'
@@ -370,15 +371,29 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
     else:
         constant_sink_shapefile = Path(constant_sink_shapefile)
 
+    if exclude_shapefile is None:
+        exclude_shapefile = Path(
+            f'{script_path}/Constant_sinks/excluding_savannah_charleston.shp'
+        )
+    else:
+        exclude_shapefile = Path(exclude_shapefile)
+
     for shapefile_component in constant_sink_shapefile.parent.glob(
         f'{constant_sink_shapefile.stem}.*'
     ):
         shutil.copy2(shapefile_component, '.')
 
+    for shapefile_component in exclude_shapefile.parent.glob(
+        f'{exclude_shapefile.stem}.*'
+    ):
+        shutil.copy2(shapefile_component, '.')
+
+
     background_ss = set_constant_sink(
         wdir=f'{wdir}/constant_sink/',
         shapefile_name=constant_sink_shapefile.name,
         hgrid=hgrid,  # lon/lat
+        exclude_shapefile=exclude_shapefile.name,
     )
 
     # ------------- assemble source/sink files and write to files ------------
