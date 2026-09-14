@@ -29,6 +29,7 @@ inputs:
   flux_th: false
   source_sink: false
   soil: false
+  watertype: false
   "hotstart.nc": false
   "3D.th.nc": false
   "*nu.nc": false

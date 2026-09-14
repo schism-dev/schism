@@ -88,6 +88,7 @@ class ConfigStofs3dAtlantic(BaseModel):
     usgs_cache_folder: Optional[Path] = None
     source_ele_replace_dict: Dict[int, int] = None  # temporary fix for isolated feeder channels
     constant_sink_shapefile: Optional[Path] = None
+    exclude_shapefile: Optional[Path] = None
     artificial_island_source_sink_info: Optional[Path] = None
 
     # === Miscellaneous values ===
@@ -207,7 +208,7 @@ class ConfigStofs3dAtlantic(BaseModel):
             bc_relax=[[None, None, None, None]],
             bc_const=[[None, None, None, None]],
         )
-    
+
     @classmethod
     def v1_capefear(cls):
         '''Factory method to create a configuration for STOFS3D-v8's local test in Cape Fear Area'''
@@ -339,6 +340,10 @@ class ConfigStofs3dAtlantic(BaseModel):
                 STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
                 'Constant_sinks' / 'levee_pump_polys_2026_with_poly_type.shp'
             ),
+            exclude_shapefile=(
+                STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
+                'Constant_sinks' / 'excluding_savannah_charleston.shp'
+            ),
             #artificial_island_source_sink_info= None,
             artificial_island_source_sink_info=(
                 STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
@@ -348,16 +353,22 @@ class ConfigStofs3dAtlantic(BaseModel):
                 [5, 5, 4, 4],  # Atlantic Ocean
                 [5, 5, 4, 4],  # Gulf of St. Lawrence
                 [0, 1, 1, 2],  # St. Lawrence River
+                [0, 1, 1, 2],  # Clyo
+                [0, 1, 1, 2],  # Moultrie
             ],
             bc_const=[
                 [None, None, None, None],  # Atlantic Ocean
                 [None, None, None, None],  # Gulf of St. Lawrence
                 [None, None, None, 0.0],  # St. Lawrence River
+                [None, None, None, 0.0],  # Clyo
+                [None, None, None, 0.0],  # Moultrie
             ],
             bc_relax=[  # relaxation timescale for each boundary variable
                 [None, None, 0.5, 0.5],  # Atlantic Ocean
                 [None, None, 0.5, 0.5],  # Gulf of St. Lawrence
                 [None, None, 0.01, 1.0],  # St. Lawrence River
+                [None, None, 1.0, 1.0],  # Clyo
+                [None, None, 1.0, 1.0],  # Moultrie
             ],
             tvd_regions=[
                 'iso_10m_edited.rgn',
@@ -365,8 +376,6 @@ class ConfigStofs3dAtlantic(BaseModel):
                 'DEBay.rgn',
                 'Hudson.rgn',
                 'upwind_Honduras.reg',
-                'upwind_east_Caribbean.rgn',
-                'upwind_west_Caribbean.rgn',
             ],
 
             tvd_hmin = 6.0
