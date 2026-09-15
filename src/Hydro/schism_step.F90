@@ -9149,7 +9149,8 @@ real (rkind) :: aux                               ! ustar
         noutput=32 !total # of outputs so far (dim of id_out_var)
 
         !'Modules
-        !'4' in noutput+i+4 due to the first 4 reserved outputs 
+        !'4' in noutput+i+4 due to the first 4 reserved outputs (since zcor is
+        !removed from that list, '3' is sufficient but '4' leaves 1 ID vacant)
 #ifdef USE_GEN
         do i=1,ntrs(3)
           write(it_char,'(i72)')i

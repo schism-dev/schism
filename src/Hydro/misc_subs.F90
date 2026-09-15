@@ -2267,7 +2267,7 @@
       enddo !i=1,nsa
 !$OMP end do
 
-!     Compute vel., S,T for re-wetted sides 
+!     Compute vel for re-wetted sides 
       if(it/=iths) then
 !$OMP   do
         do i=1,ns

@@ -8,3 +8,7 @@ The 2nd option (`inunfl=1`) uses a shoreline tracking algorithm which requires f
 ![alt-text](../assets/shoreline-tracking.png){width=700}
 <figcaption>Shoreline tracking algorithm. (a) The orange line is the shoreline from step n, and the light blue line is the updated portion since A is wetted and B becomes dry at step n+1. (b) At the end of the tracking, constant extrapolation of elevation is used at the new shoreline position, which may flood the next dry node.</figcaption>
 </figure>
+
+For a deeper understanding of how SCHISM treats wetting & drying in the hydrodynamic 
+and transport parts, and how to interpret conservation across wet/dry interface, 
+see this [article](https://cadwrdeltamodeling.github.io/BayDeltaSCHISM/topics/wetdry.html#wetdry-state-classification) from CA-DWR.
