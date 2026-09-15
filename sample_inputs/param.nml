@@ -911,6 +911,7 @@
   iof_hydro(30) = 0 !S @prism centers [PSU] {salinityAtElement} 3D
   iof_hydro(31) = 0 !Barotropic pressure gradient force vector (m.s-2) @side centers  {pressure_gradient} 2D vector
   iof_hydro(32) = 0 !sediment termperature @elem [C] {sedTemperature} 2D 
+  iof_hydro(33) = 0 !min time step at each element over all subcycles and layers in horizontal transport solver [s]   {minTransportTimeStep}  2D
 
 !-----------------------------------------------------------------------
 ! Outputs from optional modules. Only uncomment these if the USE_* is on
@@ -1122,18 +1123,17 @@
 !-----------------------------------------------------------------------
 ! Analysis module outputs (USE_ANALYSIS)
 !-----------------------------------------------------------------------
-!  iof_ana(1) = 0 !min time step at each element over all subcycles and layers in horizontal transport solver [s]   {minTransportTimeStep}  2D
-!  iof_ana(2) = 0 !x-component of \nabla air_pres /\rho_0 [m/s/s] {airPressureGradientX}  2D side
-!  iof_ana(3) = 0 !y-component of \nabla air_pres /\rho_0 [m/s/s] {airPressureGradientY}  2D side
-!  iof_ana(4) = 0  !\alpha*g*\nabla \Psi [m/s/s] (gradient of tidal potential) {tidePotentialGradX}  2D side
-!  iof_ana(5) = 0  !\alpha*g*\nabla \Psi [m/s/s] {tidePotentialGradY}  2D side
-!  iof_ana(6) = 0 !\nabla \cdot (\mu \nabla u) [m/s/s] (horizontal momentum mixing) {horzontalViscosityX}  3D side
-!  iof_ana(7) = 0 !\nabla \cdot (\mu \nabla v) [m/s/s] {horzontalViscosityY}   3D side
-!  iof_ana(8) = 0 !-g/rho0* \int_z^\eta dr_dx dz  [m/s/s] (b-clinic gradient) {baroclinicForceX}  3D side
-!  iof_ana(9) = 0 !-g/rho0* \int_z^\eta dr_dy dz  [m/s/s] {baroclinicForceY}  3D side
-!  iof_ana(10) = 0 !d (\nu du/dz)/dz [m/s/s] - no vegetation effects (vertical momentum mixing) {verticalViscosityX}  3D side
-!  iof_ana(11) = 0 !d (\nu dv/dz)/dz [m/s/s] - no vegetation effects {verticalViscosityY}  3D side
-!  iof_ana(12) = 0 !(u \cdot \nabla) u [m/s/s] (momentum advection) {mommentumAdvectionX}  3D side
-!  iof_ana(13) = 0 !(u \cdot \nabla) u [m/s/s] {mommentumAdvectionY}  3D side
-!  iof_ana(14) = 0 !gradient Richardson number [-] {gradientRichardson}   3D
+!  iof_ana(1) = 0 !x-component of \nabla air_pres /\rho_0 [m/s/s] {airPressureGradientX}  2D side
+!  iof_ana(2) = 0 !y-component of \nabla air_pres /\rho_0 [m/s/s] {airPressureGradientY}  2D side
+!  iof_ana(3) = 0  !\alpha*g*\nabla \Psi [m/s/s] (gradient of tidal potential) {tidePotentialGradX}  2D side
+!  iof_ana(4) = 0  !\alpha*g*\nabla \Psi [m/s/s] {tidePotentialGradY}  2D side
+!  iof_ana(5) = 0 !\nabla \cdot (\mu \nabla u) [m/s/s] (horizontal momentum mixing) {horzontalViscosityX}  3D side
+!  iof_ana(6) = 0 !\nabla \cdot (\mu \nabla v) [m/s/s] {horzontalViscosityY}   3D side
+!  iof_ana(7) = 0 !-g/rho0* \int_z^\eta dr_dx dz  [m/s/s] (b-clinic gradient) {baroclinicForceX}  3D side
+!  iof_ana(8) = 0 !-g/rho0* \int_z^\eta dr_dy dz  [m/s/s] {baroclinicForceY}  3D side
+!  iof_ana(9) = 0 !d (\nu du/dz)/dz [m/s/s] - no vegetation effects (vertical momentum mixing) {verticalViscosityX}  3D side
+!  iof_ana(10) = 0 !d (\nu dv/dz)/dz [m/s/s] - no vegetation effects {verticalViscosityY}  3D side
+!  iof_ana(11) = 0 !(u \cdot \nabla) u [m/s/s] (momentum advection) {mommentumAdvectionX}  3D side
+!  iof_ana(12) = 0 !(u \cdot \nabla) u [m/s/s] {mommentumAdvectionY}  3D side
+!  iof_ana(13) = 0 !gradient Richardson number [-] {gradientRichardson}   3D
 /

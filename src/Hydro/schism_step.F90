@@ -9146,7 +9146,8 @@ real (rkind) :: aux                               ! ustar
         if(iof_hydro(30)==1) call writeout_nc(id_out_var(33),'salt_elem',6,nvrt,nea,tr_el(2,:,:))
         if(iof_hydro(31)==1) call writeout_nc(id_out_var(34),'pressure_gradient',7,1,nsa,bpgr(:,1),bpgr(:,2))
         if(iof_hydro(32)==1) call writeout_nc(id_out_var(35),'sedTemperature',4,1,nea,stemp)
-        noutput=32 !total # of outputs so far (dim of id_out_var)
+        if(iof_hydro(33)==1) call writeout_nc(id_out_var(36),'transport_min_dt_elem',4,1,ne,dtbe)
+        noutput=33 !total # of outputs so far (dim of id_out_var)
 
         !'Modules
         !'4' in noutput+i+4 due to the first 4 reserved outputs (since zcor is
@@ -9545,34 +9546,34 @@ real (rkind) :: aux                               ! ustar
 #endif /*USE_ICE*/
 
 #ifdef USE_ANALYSIS
-        if(iof_ana(1)==1) call writeout_nc(id_out_var(noutput+5), &
-     &'ANA_transport_min_dt_elem',4,1,ne,dtbe)
-        if(iof_ana(2)==1) call writeout_nc(id_out_var(noutput+6), &
+!        if(iof_ana(1)==1) call writeout_nc(id_out_var(noutput+5), &
+!     &'ANA_transport_min_dt_elem',4,1,ne,dtbe)
+        if(iof_ana(1)==1) call writeout_nc(id_out_var(noutput+6), &
      &'ANA_air_pres_grad_x',7,1,nsa,dpr_dx/rho0)
-        if(iof_ana(3)==1) call writeout_nc(id_out_var(noutput+7), &
+        if(iof_ana(2)==1) call writeout_nc(id_out_var(noutput+7), &
      &'ANA_air_pres_grad_y',7,1,nsa,dpr_dy/rho0)
-        if(iof_ana(4)==1) call writeout_nc(id_out_var(noutput+8), &
+        if(iof_ana(3)==1) call writeout_nc(id_out_var(noutput+8), &
 !Error: grav
      &'ANA_tide_pot_grad_x',7,1,nsa,grav*detp_dx)
-        if(iof_ana(5)==1) call writeout_nc(id_out_var(noutput+9), &
+        if(iof_ana(4)==1) call writeout_nc(id_out_var(noutput+9), &
      &'ANA_tide_pot_grad_y',7,1,nsa,grav*detp_dy)
-        if(iof_ana(6)==1) call writeout_nc(id_out_var(noutput+10), &
+        if(iof_ana(5)==1) call writeout_nc(id_out_var(noutput+10), &
      &'ANA_hor_viscosity_x',8,nvrt,nsa,d2uv(1,:,:))
-        if(iof_ana(7)==1) call writeout_nc(id_out_var(noutput+11), &
+        if(iof_ana(6)==1) call writeout_nc(id_out_var(noutput+11), &
      &'ANA_hor_viscosity_y',8,nvrt,nsa,d2uv(2,:,:))
-        if(iof_ana(8)==1) call writeout_nc(id_out_var(noutput+12), &
+        if(iof_ana(7)==1) call writeout_nc(id_out_var(noutput+12), &
      &'ANA_bclinic_force_x',8,nvrt,nsa,swild95(:,:,1))
-        if(iof_ana(9)==1) call writeout_nc(id_out_var(noutput+13), &
+        if(iof_ana(8)==1) call writeout_nc(id_out_var(noutput+13), &
      &'ANA_bclinic_force_y',8,nvrt,nsa,swild95(:,:,2))
-        if(iof_ana(10)==1) call writeout_nc(id_out_var(noutput+14), &
+        if(iof_ana(9)==1) call writeout_nc(id_out_var(noutput+14), &
      &'ANA_vert_viscosity_x',8,nvrt,nsa,swild95(:,:,3))
-        if(iof_ana(11)==1) call writeout_nc(id_out_var(noutput+15), &
+        if(iof_ana(10)==1) call writeout_nc(id_out_var(noutput+15), &
      &'ANA_vert_viscosity_y',8,nvrt,nsa,swild95(:,:,4))
-        if(iof_ana(12)==1) call writeout_nc(id_out_var(noutput+16), &
+        if(iof_ana(11)==1) call writeout_nc(id_out_var(noutput+16), &
      &'ANA_mom_advection_x',8,nvrt,nsa,swild95(:,:,5))
-        if(iof_ana(13)==1) call writeout_nc(id_out_var(noutput+17), &
+        if(iof_ana(12)==1) call writeout_nc(id_out_var(noutput+17), &
      &'ANA_mom_advection_y',8,nvrt,nsa,swild95(:,:,6))
-        if(iof_ana(14)==1) call writeout_nc(id_out_var(noutput+18), &
+        if(iof_ana(13)==1) call writeout_nc(id_out_var(noutput+18), &
      &'ANA_Richardson',2,nvrt,npa,swild95(:,1:npa,7))
         noutput=14
 #endif /*USE_ANALYSIS*/
@@ -9842,6 +9843,11 @@ real (rkind) :: aux                               ! ustar
           icount=icount+1
           varout_2delem(icount,:)=stemp(1:ne)
         endif !iof_hydro
+        if(iof_hydro(33)/=0) then
+          icount=icount+1
+          !if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.4)')
+          varout_2delem(icount,:)=dtbe(1:ne)
+        endif
         if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(2.1)')
 
         !Modules output
@@ -9909,13 +9915,6 @@ real (rkind) :: aux                               ! ustar
         endif
 #endif
 
-#ifdef USE_ANALYSIS
-      if(iof_ana(1)==1) then
-        icount=icount+1
-        if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(1.4)')
-        varout_2delem(icount,:)=dtbe(1:ne)
-      endif
-#endif
 
         !Check total # of vars
         if(icount/=ncount_2delem) then
@@ -9938,18 +9937,18 @@ real (rkind) :: aux                               ! ustar
 
         !Modules output
 #ifdef USE_ANALYSIS
-      do i=2,5
+      do i=1,4
         if(iof_ana(i)==1) then
           icount=icount+1
           if(icount>ncount_2dside) call parallel_abort('STEP: icount>nscribes(2.4)')
           select case(i)
-            case(2)
+            case(1)
               varout_2dside(icount,:)=dpr_dx(1:ns)/rho0
-            case(3)
+            case(2)
               varout_2dside(icount,:)=dpr_dy(1:ns)/rho0
-            case(4)
+            case(3)
               varout_2dside(icount,:)=grav*detp_dx(1:ns)
-            case(5)
+            case(4)
               varout_2dside(icount,:)=grav*detp_dy(1:ns)
           end select
         endif      
@@ -9963,7 +9962,7 @@ real (rkind) :: aux                               ! ustar
         endif
 !end of 2D side
 !------------------
-        !Send 2D node first (elem/side last as nsend_varout is shared)
+        !Send 2D node first (elem/side last as nsend_varout is shared, for convenience of srqst7)
         nsend_varout=1
         iscribe_2d=nproc_schism-nsend_varout !dest rank (scribe)
         if(nsend_varout>nscribes) call parallel_abort('STEP: nsend_varout>nscribes(3.2)')
@@ -10090,7 +10089,7 @@ real (rkind) :: aux                               ! ustar
 #endif
 
 #ifdef USE_ANALYSIS
-      if(iof_ana(14)==1) then
+      if(iof_ana(13)==1) then
         call savensend3D_scribe(icount,1,1,nvrt,np,swild95(:,1:np,7))
       endif
 #endif
@@ -10116,12 +10115,12 @@ real (rkind) :: aux                               ! ustar
 #endif /*USE_WWM*/
 
 #ifdef USE_ANALYSIS
-      do i=6,13
+      do i=5,12
         if(iof_ana(i)/=0) then
-          if(i<=7) then
-            call savensend3D_scribe(icount,3,1,nvrt,ns,d2uv(i-5,:,1:ns))
+          if(i<=6) then
+            call savensend3D_scribe(icount,3,1,nvrt,ns,d2uv(i-4,:,1:ns))
           else
-            call savensend3D_scribe(icount,3,1,nvrt,ns,swild95(:,1:ns,i-7))
+            call savensend3D_scribe(icount,3,1,nvrt,ns,swild95(:,1:ns,i-6))
           endif
         endif !iof_ana
       enddo !i

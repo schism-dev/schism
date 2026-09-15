@@ -1404,7 +1404,8 @@
           &bdy_frc(ntracers,nvrt,nea),flx_sf(ntracers,nea),flx_bt(ntracers,nea), &
           &xlon_el(nea),ylat_el(nea),albedo(npa),flux_adv_vface(nvrt,ntracers,nea), &
           &wsett(ntracers,nvrt,nea),iwsett(ntracers),total_mass_error(ntracers), &
-          &iadjust_mass_consv(ntracers),wind_rotate_angle(npa),lev_tr_source2(ntracers),stemp(nea),stat=istat)
+          &iadjust_mass_consv(ntracers),wind_rotate_angle(npa),lev_tr_source2(ntracers), &
+          &stemp(nea),dtbe(ne),stat=istat)
       if(istat/=0) call parallel_abort('INIT: dynamical arrays allocation failure')
 !'
 
@@ -1490,10 +1491,10 @@
      if(istat/=0) call parallel_abort('INIT: alloc rkai_num')
 #endif
 
-#ifdef USE_ANALYSIS
-      allocate(dtbe(ne),stat=istat)
-      if(istat/=0) call parallel_abort('INIT: lloc failed (ANA)')
-#endif
+!#ifdef USE_ANALYSIS
+!      allocate(dtbe(ne),stat=istat)
+!      if(istat/=0) call parallel_abort('INIT: lloc failed (ANA)')
+!#endif
 
 #ifdef USE_ECO
       if(ntrs(6)>62) call parallel_abort('INIT: ntracer>62 in ecosim')
@@ -1806,6 +1807,7 @@
       diffmin=1.d-6; diffmax=1.d0
       deta1_dxy_elem=0.d0
       stemp=0.d0 !init for output
+      dtbe=-99.d0
 #ifdef USE_MARSH
       age_marsh=0.d0
 #endif
@@ -6788,6 +6790,12 @@
         out_name(counter_out_name)='sedTemperature'
         iout_23d(counter_out_name)=4
       endif !iof_hydro
+      if(iof_hydro(33)/=0) then
+        ncount_2delem=ncount_2delem+1
+        counter_out_name=counter_out_name+1
+        out_name(counter_out_name)='minTransportTimeStep'
+        iout_23d(counter_out_name)=4
+      endif
 
 !     Add module outputs of 2D elem below (scalars&vectors)
 #ifdef USE_SED
@@ -6861,15 +6869,6 @@
       endif
 #endif
 
-#ifdef USE_ANALYSIS
-      if(iof_ana(1)==1) then
-        ncount_2delem=ncount_2delem+1
-        counter_out_name=counter_out_name+1
-        out_name(counter_out_name)='minTransportTimeStep'
-        iout_23d(counter_out_name)=4
-      endif
-#endif
-
 !end of 2D elem
 !------------------
 !---  2D side
@@ -6888,19 +6887,19 @@
 
 !     Add module outputs of 2D side below (scalars&vectors)
 #ifdef USE_ANALYSIS
-      do i=2,5
+      do i=1,4
         if(iof_ana(i)==1) then
           ncount_2dside=ncount_2dside+1
           counter_out_name=counter_out_name+1
           iout_23d(counter_out_name)=7
           select case(i)
-            case(2)
+            case(1)
               out_name(counter_out_name)='airPressureGradientX'
-            case(3)
+            case(2)
               out_name(counter_out_name)='airPressureGradientY'
-            case(4)
+            case(3)
               out_name(counter_out_name)='tidePotentialGradX'
-            case(5)
+            case(4)
               out_name(counter_out_name)='tidePotentialGradY'
           end select
         endif
@@ -7079,7 +7078,7 @@
 #endif/*USE_FABM*/
 
 #ifdef USE_ANALYSIS
-      if(iof_ana(14)==1) then
+      if(iof_ana(13)==1) then
         ncount_3dnode=ncount_3dnode+1
         counter_out_name=counter_out_name+1
         iout_23d(counter_out_name)=2
@@ -7120,27 +7119,27 @@
 #endif /*USE_WWM*/
 
 #ifdef USE_ANALYSIS
-      do i=6,13
+      do i=5,12
         if(iof_ana(i)/=0) then
           ncount_3dside=ncount_3dside+1
           counter_out_name=counter_out_name+1
           iout_23d(counter_out_name)=8
           select case(i)
-            case(6)
+            case(5)
               out_name(counter_out_name)='horzontalViscosityX'
-            case(7)
+            case(6)
               out_name(counter_out_name)='horzontalViscosityY'
-            case(8)
+            case(7)
               out_name(counter_out_name)='baroclinicForceX'
-            case(9)
+            case(8)
               out_name(counter_out_name)='baroclinicForceY'
-            case(10)
+            case(9)
               out_name(counter_out_name)='verticalViscosityX'
-            case(11)
+            case(10)
               out_name(counter_out_name)='verticalViscosityY'
-            case(12)
+            case(11)
               out_name(counter_out_name)='mommentumAdvectionX'
-            case(13)
+            case(12)
               out_name(counter_out_name)='mommentumAdvectionY'
           end select 
         endif

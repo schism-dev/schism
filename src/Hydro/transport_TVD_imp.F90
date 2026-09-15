@@ -306,11 +306,11 @@
 !$OMP same_sign,vj,tmp,m,wm,sum1,wm1,wm2,b1,b2,b3,b4,b5,n1,n2,trsd,kk,bigv,dtb_by_bigv, &
 !$OMP iweno,iel,ibnd,nwild,ll,ndo,lll,ind1,ind2,jj,adv_tr,trel_tmp_outside,nd)
 !'
-#ifdef USE_ANALYSIS
+!#ifdef USE_ANALYSIS
 !$OMP workshare
       dtbe=dt !min (over all subcycles and all levels) time step allowed at each element
 !$OMP end workshare
-#endif
+!#endif
 
 !$OMP single
       it_sub=0
@@ -402,9 +402,9 @@
             dtb_min3(i)=dtbl2
 
 
-#ifdef USE_ANALYSIS
+!#ifdef USE_ANALYSIS
             dtbe(i)=dtb_min3(i) !only calculate during 1st iteration
-#endif
+!#endif
 
 !!WARNING: 'critical' has to be outside if; otherwise some threads are
 !modifying while others may be comapring a transient 'dtbl'!!
@@ -922,11 +922,11 @@
 !$OMP delta_tr,jj,rat,ref_flux,same_sign,vj,bigv,dtb_by_bigv,adv_tr,iel,trel_tmp_outside, &
 !$OMP ibnd,nwild,ll,ndo,lll,dtbl2,ie02,lev02,in_st2,n1,n2,swild4)
 
-#ifdef USE_ANALYSIS
+!#ifdef USE_ANALYSIS
 !$OMP workshare
       dtbe=dt !min (over all subcycles and all levels) time step allowed at each element
 !$OMP end workshare
-#endif
+!#endif
 
       do i=1,ntr
 !$OMP   workshare
@@ -1238,9 +1238,9 @@
             endif
             dtb_min3(i)=dtbl2
 
-#ifdef USE_ANALYSIS
+!#ifdef USE_ANALYSIS
             if(dtbl2<dtbe(i)) dtbe(i)=dtbl2
-#endif
+!#endif
 
 !!WARNING: 'critical' has to be outside if; otherwise some threads are
 !modifying while others may be comparing a transient 'dtbl'!!

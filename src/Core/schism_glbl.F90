@@ -647,10 +647,9 @@ module schism_glbl
   real(rkind),save,allocatable :: wsett(:,:,:) 
   integer,save,allocatable :: iwsett(:) !iwsett(ntracers)
   integer,save,allocatable :: inu_pts_gb(:,:)
+  real(rkind),save,allocatable :: dtbe(:)
 
   !Declarations for other modules
-! ANALYSIS
-  real(rkind),save,allocatable :: dtbe(:)
 
 ! WWM & WW3
   character(len=3) :: RADFLAG
