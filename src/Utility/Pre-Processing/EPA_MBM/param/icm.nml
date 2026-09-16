@@ -69,7 +69,7 @@ nsub= 12
 !-----------------------------------------------------------------------
 iKe = 1
 
-Ke0    = 0.26            !backgroud light extinction coefficient (1/m)
+Ke0    = 0.20            !backgroud light extinction coefficient (1/m)
 KeC    = 0.017           !Light attenu. due to chlorophyll
 KeS    = 0.07            !Light attenu. due to TSS
 KeSalt = -0.02           !Light attenu. due to CDOM (related to salinity)
@@ -86,16 +86,16 @@ alpha  = 8.0   8.0  8.0  !init. slope of P-I curve (g[C]*m2/g[Chl]/E), (iLight=0
 !-----------------------------------------------------------------------
 !options of phytoplankton' predation term
 !-----------------------------------------------------------------------
-iPR = 1    1    1 !(0: linear formulation; 1: quadratic)
-PRR = 0.15  0.35 0.05   !predation rate by higher trophic level (day-1, or day-1.g-1.m3)
+iPR = 1    1     1    !(0: linear formulation; 1: quadratic)
+PRR = 0.5  0.5  0.05   !predation rate by higher trophic level (day-1, or day-1.g-1.m3)
 
 !-----------------------------------------------------------------------
 !ICM init. value (wqc0), settling velocity (WSP), net settling velocity (WSPn) (m.day-1)
 !-----------------------------------------------------------------------
 !name: (PB1,PB2,PB3)   (RPOC,LPOC,DOC)   (RPON,LPON,DON,NH4,NO3)     (RPOP,LPOP,DOP,PO4)    (COD,DO)    (SRPOM, PIP)
 wqc0 = 1.0  0.5  0.05  1.0  0.5  0.5     0.15 0.15 0.05 0.01 0.05   0.005 0.005 0.01 0.05   0.0 12.0    0.0  0.0  0.0  0.0 
-WSP  = 0.6  0.4  0.0   0.25 0.25 0.0     0.25 0.25 0.0  0.0  0.0    0.25  0.25  0.0  0.0    0.0 0.0     0.5  0.5  0.5  0.25
-WSPn = 0.1  0.1  0.0   0.25 0.25 0.0     0.25 0.25 0.0  0.0  0.0    0.25  0.25  0.0  0.0    0.0 0.0     0.5  0.5  0.5  0.25
+WSP  = 1.5  0.1  0.0   0.8  0.2  0.0     0.8  0.2  0.0  0.0  0.0    0.8   0.2   0.0  0.0    0.0  0.0    0.5  0.5  0.5  0.25
+WSPn = 0.0  0.0  0.0  -999 -999  0.0    -999 -999  0.0  0.0  0.0   -999  -999   0.0  0.0    0.0  0.0    0.5  0.5  0.5  0.10
 
 !-----------------------------------------------------------------------
 !Silica model (0: OFF;  1: ON)
@@ -120,12 +120,12 @@ iSRM = 1
 !-----------------------------------------------------------------------
 !Submerged Aquatic Vegetation switch (0: OFF;  1: SAV;  2: SAV+epiphytes)
 !-----------------------------------------------------------------------
-isav_icm = 0
+isav_icm = 2
 
 !-----------------------------------------------------------------------
 !Intertidal marsh switch; nmarsh: number of marsh species
 !-----------------------------------------------------------------------
-imarsh_icm = 0   !0: off;  1: mechanistic model;  2: simple formulation
+imarsh_icm = 2   !0: off;  1: mechanistic model;  2: simple formulation
 nmarsh     = 3   !parameters in marsh module must be consistent with
 
 !-----------------------------------------------------------------------
@@ -142,7 +142,7 @@ iBA = 0
 !-----------------------------------------------------------------------
 !Clam Model switch: iClam;  nclam: number of clam species
 !-----------------------------------------------------------------------
-iClam = 0
+iClam = 1
 nclam = 5
 
 !-----------------------------------------------------------------------
@@ -195,50 +195,50 @@ idry_icm = 0
 !SRM module parameters are included: (SRPOC,SRPON,SRPOP,PIP)
 !-----------------------------------------------------------------------
 !phytoplankton growth
-GPM  = 3.5    3.0    3.5         !PB growth rates (day-1)
-TGP  = 13.0   32.0   32.0        !optimal temp. for PB growth (oC)
-KTGP = 0.005  0.0012  0.0018    0.008  0.005  0.005  !temp. dependence for PB growth; dim(PB=1:3,1:2) (oC-2)
+GPM  = 3.0    2.5    2.5         !PB growth rates (day-1)
+TGP  = 15.0   25.0   32.0        !optimal temp. for PB growth (oC)
+KTGP = 0.008  0.0035  0.0018    0.02  0  0.005  !temp. dependence for PB growth; dim(PB=1:3,1:2) (oC-2)
 
 !phytoplankton photorespiration & metabolism
 MTR  = 0.0    0.0    0.0          !PB photorespiration coefficient (0<MTR<1)
-MTB  = 0.1    0.1    0.25         !PB metabolism rates (day-1)
+MTB  = 0.15   0.12   0.1         !PB metabolism rates (day-1)
 TMT  = 20.0   20.0   20.0         !reference temp. for PB metabolism (oC)  
-KTMT = 0.069  0.069  0.069        !temp. dependence for PB metabolism (oC-1)
+KTMT = 0.12   0.069  0.069        !temp. dependence for PB metabolism (oC-1)
 
 !partition of phytoplankton biomass (predation)
-FCP  = 0.2  0.2  0.2   0.70 0.70 0.70  0.10 0.10 0.10  0.0  0.0  0.0 !fractions of PB carbon into (RPOC,LPOC,DOC,SRPOC); dim(PB=1:3,3)
-FNP  = 0.15 0.15 0.15  0.70 0.70 0.70  0.10 0.10 0.10  0.05 0.05 0.05  0.0 0.0 0.0  !fractions of PB nitrogen into (RPON,LPON,DON,NH4,SRPON) 
-FPP  = 0.15 0.15 0.15  0.50 0.50 0.50  0.20 0.20 0.20  0.15 0.15 0.15  0.0 0.0 0.0  !fractions of PB Phosphorus into (RPOP,LPOP,DOP,PO4,SRPOP)
+FCP  = 0.7 0.2 0.2   0.2 0.7 0.7   0.1 0.1 0.1   0.0 0.0 0.0 !fractions of PB carbon into (RPOC,LPOC,DOC,SRPOC); dim(PB=1:3,3)
+FNP  = 0.7 0.2 0.2   0.2 0.7 0.7   0.1 0.1 0.1   0.0 0.0 0.0  0.0 0.0 0.0  !fractions of PB nitrogen into (RPON,LPON,DON,NH4,SRPON) 
+FPP  = 0.7 0.2 0.2   0.2 0.7 0.7   0.1 0.1 0.1   0.0 0.0 0.0  0.0 0.0 0.0  !fractions of PB Phosphorus into (RPOP,LPOP,DOP,PO4,SRPOP)
 
 !partition of metabolized phytoplankton biomass
-FCM  = 0.0 0.0 0.0   0.0 0.0 0.0   0.1 0.3 0.3   0.0 0.0 0.0 !fractions of PB metabolism carbon into (RPOC,LPOC,DOC,SRPOC); dim(PB=1:3,4)
-FNM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0  0.0 0.0 0.0 !fractions of PB metabolism N. into (RPON,LPON,DON,NH4,SRPON); dim(PB=1:3,5)
-FPM  = 0.0 0.0 0.0   0.0 0.0 0.0   1.0 1.0 1.0   0.0 0.0 0.0  0.0 0.0 0.0 !fractions of PB metabolism P. into (RPOP,LPOP,DOP,PO4,SRPOP); dim(PB=1:3,5)
+FCM  = 0.0 0.0 0.0   0.3 0.3 0.3   0.4 0.4 0.4   0.0 0.0 0.0 !fractions of PB metabolism carbon into (RPOC,LPOC,DOC,SRPOC); dim(PB=1:3,4)
+FNM  = 0.0 0.0 0.0   0.7 0.7 0.7   0.3 0.3 0.3   0.0 0.0 0.0  0.0 0.0 0.0 !fractions of PB metabolism N. into (RPON,LPON,DON,NH4,SRPON); dim(PB=1:3,5)
+FPM  = 0.0 0.0 0.0   0.7 0.7 0.7   0.3 0.3 0.3   0.0 0.0 0.0  0.0 0.0 0.0 !fractions of PB metabolism P. into (RPOP,LPOP,DOP,PO4,SRPOP); dim(PB=1:3,5)
 
 !nitrification
-Nit    = 0.1                      !maximum nitrification rate (day-1)
+Nit    = 0.15                     !maximum nitrification rate (day-1)
 TNit   = 27.0                     !optimal temp. for nitrification (oC)
-KTNit  = 0.0045  0.0045           !temp. dependence (T<=TNit & T>TNit) for nitrification (oC-2)
+KTNit  = 0.003  0.003             !temp. dependence (T<=TNit & T>TNit) for nitrification (oC-2)
 KhDOn  = 1.0                      !DO half saturation for nitrification (mg/L)
 !KhNH4n = 1.0                      !NH4 half saturation for nitrification (mg/L)
 
 !denitrifcation
-KhDOox  = 0.0                     !DO half saturation for dentrification & DOC's oxic respiration (mg/L)
+KhDOox  = 0.5                     !DO half saturation for dentrification & DOC's oxic respiration (mg/L)
 KhNO3dn = 0.1                     !NO3 half saturation for denitrification (mg/L)
 
 !decay coefficients for organic matters (C,N,P); SRM module: (KSR,TRSR,KTRSR,KPIP) 
-KC0   = 0.03   0.05   0.05        !minimum decay rate of RPOC,LPOC,DOC (day-1)
-KN0   = 0.005  0.05   0.05        !minimum decay rate of RPON,LPON,DON (day-1)
-KP0   = 0.005  0.075  0.15        !minimum decay rate of RPOP,LPOP,DOP (day-1)
-KCalg = 0.0    0.0    0.0         !algae effect on RPOC,LPOC,DOC decay (day-1.m3.g[C]-1)
-KNalg = 0.0    0.0    0.0         !algae effect on RPON,LPON,DON decay (day-1.m3.g[C]-1)
-KPalg = 0.0    0.0    0.0         !algae effect on RPOP,LPOP,DOP decay (day-1.m3.g[C]-1)
-TRM   = 20.0   20.0   20.0        !reference temp. for (RPOM,LPOM,DOM) decay (oC)
-KTRM  = 0.069  0.069  0.069       !temp. dependence for (RPOM,LPOM,DOM) decay (oC-1)
+KC0   = 0.05   0.1    0.02        !minimum decay rate of RPOC,LPOC,DOC (day-1)
+KN0   = 0.05   0.1    0.02        !minimum decay rate of RPON,LPON,DON (day-1)
+KP0   = 0.05   0.1    0.05        !minimum decay rate of RPOP,LPOP,DOP (day-1)
+KCalg = 0.0    0.0    0.03        !algae effect on RPOC,LPOC,DOC decay (day-1.m3.g[C]-1)
+KNalg = 0.0    0.0    0.5         !algae effect on RPON,LPON,DON decay (day-1.m3.g[C]-1)
+KPalg = 0.0    0.0    0.5        !algae effect on RPOP,LPOP,DOP decay (day-1.m3.g[C]-1)
+TRM   = 15.0   15.0   15.0        !reference temp. for (RPOM,LPOM,DOM) decay (oC)
+KTRM  = 0.05   0.05   0.08        !temp. dependence for (RPOM,LPOM,DOM) decay (oC-1)
 KSR0  = 0.001  0.001  0.001       !decay rates of SRPOC,SRPON,SRPOP (day-1)
 TRSR  = 20.0   20.0   20.0        !reference temp. for (SRPOC,SRPON,SRPOP) decay (oC)
 KTRSR = 0.069  0.069  0.069       !temp. dependence for (SRPOC,SRPON,SRPOP) decay (oC-1)
-KPIP  = 0.0                       !dissolution rate of PIP (day-1)
+KhDOp = 5.0			  !DO half saturation for PO4 sorption converting to PIP (mg[O2]/L)
 
 !decay coefficient for chemical oxygen demand (COD)
 KCD   = 1.0                       !oxidation rate of COD at TRCOD (day-1)
@@ -248,8 +248,8 @@ KhCOD=  1.5                       !COD half saturation for COD oxidation (mg[O2]
 
 !nutrient limitation & salinity stress
 KhN  = 0.01   0.01   0.01         !nitrogen half saturation (mg/L)
-KhP  = 0.001  0.001  0.001        !phosphorus half saturation (mg/L)
-KhSal= 1e6    1e6    0.1          !salinity when PB growth is halved (PSU); (1e6: no salinity stress)
+KhP  = 0.003  0.001  0.003        !phosphorus half saturation (mg/L)
+KhSal= 1e6    1e6    3.0          !salinity when PB growth is halved (PSU); (1e6: no salinity stress)
 
 !conversion coeffiecients
 c2chl= 0.075   0.06    0.06       !carbon to chlorophyll ratio (g[C]/mg[Chl])
@@ -262,9 +262,9 @@ an2c = 0.5                        !ratio of denit. rate to oxic DOC respiration 
 
 !misc
 KhDO =   0.5   0.5   0.5          !DO half saturation for PB's DOC excretion (mg/L)
-KPO4p=   0.0                      !coefficient relating PO4 sorption to TSS
+KPO4p=   0.01                     !coefficient relating PO4 sorption to TSS
 WDOs=    1.0                      !coefficient for DO release under super-saturation (m2.day-1.L.mg-1)
-WRea =   0.0                      !baseline wind-induced reaeration coefficient for DO (day-1)
+WRea =   1.0                      !baseline wind-induced reaeration coefficient for DO (day-1)
 PBmin=   0.01  0.01  0.01         !minimum PB concentration (mg[C]/L)
 dz_flux= 1.0   1.0                !surface/bottom thikness (m) within which sflux/bflux are redistributed
 /
@@ -331,7 +331,7 @@ bFPM = 0.0  1.0  0.0          !refractory POP into sed POP(3G)
 
 !nitrification (NH4)
 bKNH4f    = 0.20    !NH4 reaction rate in freshwater  at bTR (1st layer) (m/day)
-bKNH4s    = 0.140   !NH4 reaction rate in salty water at bTR (1st layer) (m/day)
+bKNH4s    = 0.20    !NH4 reaction rate in salty water at bTR (1st layer) (m/day)
 bKTNH4    = 1.08    !temp. dependency for NH4 reaction (oC-1)
 bKhNH4    = 1.5     !half-stauration NH4 for nitrification (g/m3)
 bKhDO_NH4 = 2.00    !half-stauration DO for nitrification (g/m3)
@@ -340,7 +340,7 @@ bsaltn    = 1.0     !salinity criteria of fresh/salty water for NH4/NO3 reaction
 
 !denitrification (NO3)
 bKNO3f    = 0.30    !NO3 reaction rate in freshwater at bTR (1st layer) (m/day)
-bKNO3s    = 0.125   !NO3 reaction rate in salty water at bTR (1st layer) (m/day)
+bKNO3s    = 0.30    !NO3 reaction rate in salty water at bTR (1st layer) (m/day)
 bKNO3     = 0.25    !NO3 reaction rate (2nd layer) (m/day)
 bKTNO3    = 1.08    !temp. dependency for NO3 reaction (oC-1)
 
@@ -360,7 +360,7 @@ bKhDO_CH4 = 0.2     !half-saturation DO for CH4 oxidation (g[O2]/m3)
 bo2n      = 2.86    !oxygen to nitrogen ratio in sediment (denitrification)
 
 !phosphate reaction (PO4)
-bpiePO4   = 200.0    !partition coefficient of PO4 in Layer 2 (Kg-1.L)
+bpiePO4   = 180.0   !partition coefficient of PO4 in Layer 2 (Kg-1.L)
 bKOPO4f   = 3000.0  !oxygen dependency for PO4 sorption in freshwater in Layer 1
 bKOPO4s   = 300.0   !oxygen dependency for PO4 sorption in salty water in Layer 1
 bDOc_PO4  = 1.0     !DO criteria for PO4 sorptiona (g[O2]/m3)
@@ -448,7 +448,7 @@ inu_ph   = 0                  !nudge option for pH model
 !Submerged Aquatic Vegetation (SAV) parameters
 !-----------------------------------------------------------------------
 spatch0 = -999                     !region flag for SAV. (1: ON all elem.; -999: spatial)
-sFc     = 1.0                      !SAV bed fraction [0,1]
+sFc     = -999                      !SAV bed fraction [0,1]
 iMTs    = 1                        !1:1st-order metabolism;  2: 2nd-order metabolism formulation
 sav0    = 30.0  30.0  30.0  10.0   !init. SAV leaf/stem/root/tuber conc. (g[C].m-2)
 
@@ -463,9 +463,9 @@ sFCP  = 0.55   0.3   0.1   0.05  !fractions of production to leaf/stem/root/tube
 sMTB  = 0.02   0.02   0.02  0.02  !metabolism rates of leaf/stem/root/tuber (day-1)
 sTMT  = 20     20     20    20    !reference temp. for leaf/stem/root/tuber metabolism (oC)
 sKTMT = 0.069  0.069  0.069 0.069 !temp. dependence of leaf/stem/root/tuber metabolism (oC-1)
-sFCM  = 0.05   0.15   0.3   0.5   !fractions of metabolism leaf/stem C into (RPOC,LPOC,DOC,CO2)
-sFNM  = 0.05   0.15   0.3   0.5   !fractions of metabolism leaf/stem N into (RPON,LPON,DON,NH4)
-sFPM  = 0.05   0.1    0.35  0.5   !fractions of metabolism leaf/stem P into (RPOP,LPOP,DOP,PO4)
+sFCM  = 0.1    0.1    0.1   0.7  !fractions of metabolism leaf/stem C into (RPOC,LPOC,DOC,CO2)
+sFNM  = 0.1    0.1    0.1   0.7   !fractions of metabolism leaf/stem N into (RPON,LPON,DON,NH4)
+sFPM  = 0.1    0.1    0.1   0.7   !fractions of metabolism leaf/stem P into (RPOP,LPOP,DOP,PO4)
 sFCMb = 0.65   0.255  0.095 0.0   !fractions of metabolism root C into (G1/G2/G3 POC, CO2) in sediment
 sFNMb = 0.65   0.300  0.050 0.0   !fractions of metabolism root N into (G1/G2/G3 PON, NH4) in sediment
 sFPMb = 0.65   0.255  0.095 0.0   !fractions of metabolism root P into (G1/G2/G3 POP, PO4) in sediment
@@ -559,7 +559,7 @@ vp2c   = 0.01   0.01   0.01   !phosphorus to carbon ratio [nmarsh]
 !simple wetland model (imarsh=2)
 !vKPOM (order same as WSP): (PB1,PB2,PB3)   (RPOC,LPOC,DOC)   (RPON,LPON,DON,NH4,NO3)     (RPOP,LPOP,DOP,PO4)    (COD,DO)    (SRPOM, PIP)
 !----------------------
-vAw    =   0.1                !ratio between marsh area to adjacent water volume (m-1)
+vAw    = -999                !ratio between marsh area to adjacent water volume (m-1)
 vdz    =   2.0                !surface layer thickness that wetland effect is applied on (m)
 vKNO3  =   0.05               !mass-transfer coefficient for NO3 removal (m.day-1)
 vKTw   =   0.069              !temperature dependence for wetland effect (oC-1)
@@ -600,7 +600,7 @@ gFPP    = 0.5 0.45 0.05  !fraction of predation BA P into 3G classes in sediment
 !calpha(clam=1:nclam, PC); cKTFR=(clam,2);  cTSS=(clam, 4)
 !-----------------------------------------------------------------------
 cpatch0 =  -999          !region flag for clam. (1: ON all elem.; -999: spatial)
-cFc     =  1.0    1.0    1.0    1.0    1.0     !fraction of clam coverage
+cFc     = -999   -999   -999   -999   -999                    !fraction of clam coverage
 clam0   =  0.1    0.1    0.1    0.1    0.1     !initial clam conc. (g[C].m-2)
 cfrmax  =  0.006  0.007  0.025  0.015  0.012   !maximum filtration rate (m3.g[C]-1.day-1)
 cTFR    =  25.0   25.0   25.0   25.0   25.0    !optimal temperature of filtration (oC)
@@ -614,7 +614,7 @@ cTSS    =  4 4 4 4 4   5 5 5 5 5   20 20 20 20 20  25 25 25 25 25 !TSS values fo
 cRF     =  0.1    0.1    0.1    0.1    0.1     !active respiration rate when filtering water
 cIFmax  =  0.01   0.02   0.02   0.01   0.01    !maximum ingestion rate (g[C_food].g[C_clam]-1.day-1)
 calpha  =  0.3 0.5 0.5 0.4 0.4    0.3 0.5 0.5 0.4 0.4    0.3 0.5 0.5 0.4 0.4    0.3 0.5 0.5 0.4 0.4   0.0 0.0 0.0 0.0 0.0 !assimilation rate
-cMTB    =  0.008  0.008  0.008  0.008  0.008   !basal metabolism rate (day-1)
+cMTB    = -999   -999   -999   -999   -999                     !basal metabolism rate (day-1)
 cTMT    =  20.0   20.0   20.0   20.0   20.0    !reference temperature for metabolism (oC)
 cKTMT   =  0.069  0.069  0.069  0.069  0.069   !temperature dependence for metabolism (oC-1)
 cMRT    =  0.02   0.01   0.01   0.02   0.02    !mortality rate (day-1)

@@ -15,7 +15,7 @@ p=zdata(); p.flag={}
 #       if base is None: skip this file
 #  flag=1: re-generate input file
 #----------------------------------------------------------------------
-p.StartT=datenum(1991,1,1);  p.EndT=datenum(1995,12,31) #simulation time
+p.StartT=datenum(1991,1,1);  p.EndT=datenum(2000,12,31) #simulation time
 
 p.base= 'None' # reference run
 p.grid_dir='/sciclone/data10/wangzg/CBP/grid/v9d' #directory of hgrid & vgrid; p.grid_dir=p.base if it is None
@@ -40,7 +40,7 @@ p.flag['SAL_nu.nc']            = 0 #hydro
 p.flag['uv3D.th.nc']           = 0 #hydro
 p.flag['sflux']                = 0 #hydro
 p.flag['albedo.gr3']           = 0 #hydro
-p.flag['watertype.gr3']        = 0 #hydro (1: max=7; 2: max=8)
+p.flag['watertype.gr3']        = 0 #hydro (1: max=8; 2: max=7)
 p.flag['diffmin.gr3']          = 0 #hydro
 p.flag['diffmax.gr3']          = 0 #hydro
 p.flag['shapiro.gr3']          = 0 #hydro
@@ -52,8 +52,8 @@ p.flag['rough.gr3']            = 0 #hydro,SED
 p.flag['bctides.in']           = 0 #hydro,SED,ICM
 p.flag['hotstart.nc']          = 0 #hydro,SED,ICM
 p.flag['source.nc']            = 0 #hydro,SED,ICM
-p.flag['ICM_3D.th.nc']         = 0 #ICM
-p.flag['ICM_nu.nc']            = 0 #ICM
+p.flag['ICM_3D.th.nc']         = 0 #ICM (1: WOA data; 2: NEFSC data)
+p.flag['ICM_nu.nc']            = 0 #ICM (1: nudging at ocean bnd; 2: nuding near bay mouth)
 p.flag['ICM_sflux.th.nc']      = 0 #ICM
 p.flag['ICM_param.nc']         = 0 #ICM
 p.flag['SED_hvar_*.ic']        = 0 #SED
@@ -73,7 +73,7 @@ p.atmdep    = p.bdir+'atm_p7_v1.npz'                   #CBP atmospheric depositi
 p.hycom     = p.bdir+'hycom_dist.nc'                   #HYCOM database
 p.sflux     = p.bdir+'sflux_ERA5'                      #sflux database
 p.WW3       = p.bdir+'WW3'                             #WW3 wave forcing
-p.hydro_out = p.bdir+'hydro/RUN11fb/outputs'             #hydro_out for offline ICM model
+p.hydro_out = p.bdir+'hydro/RUN17/outputs'             #hydro_out for offline ICM model
 p.region    = p.bdir+'region/'                         #region files
 p.outdir    = '/sciclone/scr30/{}/CBP'.format(os.environ['USER']) #parental direcotry of outputs
 p.dt_offline= 1800 #sec: time step for offline ICM mode
@@ -322,7 +322,7 @@ if p.flag[fname]!=0:
 fname='watertype.gr3'
 if p.flag[fname]!=0:
    print('writing '+fname)
-   vi=M.f2(gd.xy,value=M.watertype.clip(1,7) if p.flag[fname]==1 else M.watertype)
+   vi=M.f2(gd.xy,value=M.watertype.clip(1,8) if p.flag[fname]==1 else M.watertype.clip(1,7))
    gd.save(fname,value=round(vi).astype('int'),outfmt='{:d}')
 
 fname='diffmin.gr3'
@@ -351,7 +351,7 @@ if p.flag[fname]==1:
 fname='SED_nudge.gr3'
 if p.flag['SED']==1 and not fexist(fname): 
    dist=abs(gd.cxy[:,None]-gd.cxy[gd.iobn[0]][None,:]).min(axis=1); x1,x2=[1e3,3e4]
-   vi=1.15740741e-05*((dist-x2)/(x1-x2)).clip(0,1); gd.save(fname,value=vi,outfmt='{:16.8e}') 
+   vi=1.15740741e-05*((dist-x2)/(x1-x2)).clip(0,1); gd.save(fname,value=vi,outfmt='{:16.8e}')
 
 fname='tvd.prop'
 if p.flag[fname]==1:
@@ -459,7 +459,7 @@ for fname in ['TEM_3D.th.nc','TEM_nu.nc','uv3D.th.nc']:
 
     #write TEM_nudge.gr3
     if fname=='TEM_nu.nc':
-       dist=abs(gd.cxy[:,None]-gd.cxy[gd.iobn[0]][None,:]).min(axis=1); x1,x2=[8e3,5e4]; 
+       dist=abs(gd.cxy[:,None]-gd.cxy[gd.iobn[0]][None,:]).min(axis=1); x1,x2=[8e3,4.5e4]; 
        vi=1.15740741e-05*((dist-x2)/(x1-x2)).clip(0,1); gd.save('TEM_nudge.gr3',value=vi,outfmt='{:16.8e}') 
    
     #read hycom database
@@ -563,10 +563,67 @@ for fname in ['SAL_3D.th.nc','SAL_nu.nc']:
     C.save(fname,zlib=True); C,salt=None,None
 
 #----------------------------------------------------------------------
+#ICM_3D.th.nc ICM_nu.nc, ICM_nudge.gr3: based on WOA database
+#----------------------------------------------------------------------
+for fname in ['ICM_3D.th.nc','ICM_nu.nc']:
+    if p.flag[fname]!=1: continue
+    print('writing '+fname)
+
+    #inputs
+    vnames=['PB1', 'PB2', 'PB3','RPOC','LPOC','DOC','RPON','LPON','DON','NH4', 'NO3', 'RPOP','LPOP','DOP', 'PO4', 'COD','DOX','SRPOC','SRPON','SRPOP','PIP']
+    svars =['DOX', 'DOX', 'DOX','DOX', 'DOX', 'DOX','DOX', 'DOX', 'DOX','PO4', 'NO3', 'DOX', 'DOX', 'DOX', 'PO4', 'DOX','DOX' ,'DOX', 'DOX',  'DOX',  'DOX']
+    vms   =[0.225, 0.06,   0.0,  1,     0.1,    2,   0.1,   0.01,  0.2,  0.05,  nan ,  0.04, 0.004 ,0.005,  nan,   0.0,  nan,   0.0,    0.0,    0.0,   0.0]
+    if p.flag['ICM'] in [2,20]: vnames,svars,vms=vnames[:-4],svars[:-4],vms[:-4]
+
+    #write TEM_nudge.gr3
+    if fname=='ICM_nu.nc':
+       dist=abs(gd.cxy[:,None]-gd.cxy[gd.iobn[0]][None,:]).min(axis=1); x1,x2=[8e3,1.35e4];
+       vi=1.15740741e-05*((dist-x2)/(x1-x2)).clip(0,1); gd.save('ICM_nudge.gr3',value=vi,outfmt='{:16.8e}')
+
+    #read database and remove nan,  do interpolation to schism grid points
+    S=read(p.bdir+'/WOA_MBM.npz'); clon=S.lon; clat=S.lat; cdepth=S.depth; S.data=[]
+    mti=arange(p.StartT,p.EndT+2); doy=array([i-datenum(num2date(i).year,1,1) for i in mti])
+    cxy=clon[:,None]+1j*clat[None,:]; ds=cxy.shape; cxy=r_[cxy.real.ravel(),cxy.imag.ravel()]
+    fmt=0 if fname.endswith('th.nc') else 1;  bind=gd.iobn[0] if fmt==0 else pindex(read(fname[:4]+'nudge.gr3').z!=0) 
+    lx,ly=gd.lxy[bind].T; lz=abs(compute_zcor(vd.sigma[bind],gd.dp[bind])).T; nobn=bind.size
+    idx=(lx[:,None]>clon[None,:]).sum(axis=1)-1; ratx=(lx-clon[idx])/(clon[idx+1]-clon[idx]); ratx=ratx[None,:,None]
+    idy=(ly[:,None]>clat[None,:]).sum(axis=1)-1; raty=(ly-clat[idy])/(clat[idy+1]-clat[idy]); raty=raty[None,:,None]
+    for svar in ['NO3','PO4','DOX']:
+        vs=S.attr(svar)
+        #remove nan
+        for m in arange(12):
+            v=vs[m,...,0].ravel(); fp=isnan(v); sindp=pindex(~fp); sindn=pindex(fp)
+            fpn=near_pts(cxy[sindn],cxy[sindp]); v[sindn]=v[sindp[fpn]]; vs[m,:,:,0]=v.reshape(ds)
+        for k in arange(cdepth.size-1): v0=vs[...,k]; v1=vs[...,k+1]; fpn=isnan(v1); v1[fpn]=v0[fpn]; vs[...,k+1]=v1 
+
+        #interp
+        v11=vs[:,idx,idy]; v12=vs[:,idx+1,idy]; v21=vs[:,idx,idy+1]; v22=vs[:,idx+1,idy+1]
+        v0=(v11*(1-ratx)+v12*ratx)*(1-raty)+(v21*(1-ratx)+v22*ratx)*raty #horizontal
+        v1=interpv(v0.transpose([2,1,0]),cdepth,lz).transpose([2,1,0]) #vertical
+        ctime=r_[S.time[-1]-365,S.time,S.time[0]+365]; v1=r_[v1[-1:,...],v1,v1[:1,...]]
+        v2=interp(ctime,v1,doy,axis=0); S.attr(svar,v2.astype('float32'))
+    for m, [vname,svar,vm] in enumerate(zip(vnames,svars,vms)):
+       v=S.attr(svar); x1=v.min(); x2=v.max(); y1=0.1*vm; y2=vm
+       S.data.append(v if isnan(vm) else y1+(y2-y1)*(v-x1)/(x2-x1+1e-8))
+    S.data=array(S.data).transpose([1,2,3,0])
+
+    #write files
+    dns=['nOpenBndNodes' if fmt==0 else 'node','nLevels','one','time','nComponents']; dms=[nobn,vd.nvrt,1,mti.size,len(vnames)]
+    C=zdata(); C.dimname=dns; C.dims=dms
+    add_var(C,'time',('time',),(mti-mti[0])*86400) #add time 
+    if fmt==0:
+       add_var(C,'time_step',('one',),array(86400.0))
+       add_var(C,'time_series',('time','nOpenBndNodes','nLevels','nComponents'),S.data)
+    else:
+       add_var(C,'map_to_global_node',('node',),bind+1)
+       add_var(C,'tracer_concentration',('time','node','nLevels','nComponents'),S.data)
+    C.save(fname,zlib=True); C,S=None,None
+
+#----------------------------------------------------------------------
 #ICM_3D.th.nc
 #----------------------------------------------------------------------
 fname='ICM_3D.th.nc'
-if p.flag[fname]!=0:
+if p.flag[fname]==2:
    print('writing '+fname)
 
    #inputs
@@ -596,8 +653,8 @@ if p.flag[fname]!=0:
 #ICM_nu.nc, ICM_nudge.gr3
 #----------------------------------------------------------------------
 fname='ICM_nu.nc'
-if p.flag[fname]!=0:
-   print('writing '+fname)
+if p.flag[fname]==2:
+   print('writing '+fname) #ICM nudging at bay mouth using CB7.4 Obs
 
    #write TEM_nudge.gr3
    fnudge=1.15740741e-05; vi=zeros(gd.np); vi[read(p.region+'ICM_nudge.reg').inside(gd.xy)]=fnudge
@@ -630,6 +687,7 @@ if p.flag[fname]!=0:
        fvar['tracer_concentration'][fpt]=trs.transpose([3,1,0,2])
    fvar['time'][:]=(mti-mti[0])*86400.0; fvar['map_to_global_node'][:]=bind+1
    fid.close(); trs,mys=None,None
+
 
 #----------------------------------------------------------------------
 #ICM_sflux.th.nc: atmosheric loading
