@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 from pylib import *
+import multiprocessing as mp
 close("all")
+
+#nproc=1; backend='QtAgg' #for parallel plotting
+nproc=32; backend='Agg' #for parallel plotting
 
 #------------------------------------------------------------------------------
 #inputs
 #------------------------------------------------------------------------------
-runs=['CH3D','RUN12f']; StartTs=[datenum(1991,1,1),datenum(1991,1,1),]
-xm=[datenum(1991,1,1),datenum(2001,1,1)]   #time range for plotting
+runs=['RUN17e','RUN17ea']; StartTs=[datenum(1991,1,1),datenum(1991,1,1),]
+xm=[datenum(1991,1,1),datenum(2000,1,1)]   #time range for plotting
 
 #variables
 mvars=['temp', 'salt',    'chla','DO','TN','TP','NO3',  'NH4', 'PO4', 'DOC','POC','PON','POP','RPOC','LPOC','RPON','LPON','RPOP','LPOP','PB1', 'PB2', 'PB3', 'DON','DOP'] #model variables
@@ -28,21 +32,24 @@ pstations=(['CB1.1','CB2.1','CB2.2','CB3.1','CB3.2','CB3.3C','CB4.1C','CB4.2C','
 layers=['S','B']  #surface and bottom
 iflags=[1, 0, 1] # TS(1 var, stations), TS(vars, 1 station), statistics
 bdir='/sciclone/data10/wangzg/CBP/'
+tvars=['run','region','layer','station','var','R','ME','MAE','RMSD']; sdir='_'.join(runs); 
+if not fexist(sdir): os.mkdir(sdir)
 #------------------------------------------------------------------------------
 #read data and obs info
 #------------------------------------------------------------------------------
+mpl.use(backend) #change backends for efficiency
 fnames=[bdir+ ('Data/CH3D/CH3D.npz' if i=='CH3D' else i+'/results/icm.npz') for i in runs]; C=read(bdir+'Data/cbp/CBP_WQData.npz')
 models=[]; svars=[]; mtimes=[]; mzs=[]; mstations=[]
 for run,StartT,fname in zip(runs,StartTs,fnames):
-    M=read(fname,1); svar=M.attr(); mtime=M.time[:] if run=='CH3D' else M.time[:]+StartT
+    M=read(fname,1) if nproc==1 else read(fname); svar=M.attr(); mtime=M.time[:] if run=='CH3D' else M.time[:]+StartT
     mz,mstation=[M.bp.z,M.bp.station] if M.hasattr('bp') else [M.z[:],M.station[:]]
     #add conversion coefficients
     M.c2chl=[0.75, 0.06, 0.06]; M.n2c=[0.167, 0.167, 0.167]; M.p2c=[0.0125, 0.0125, 0.0125] #default values
     for i in ['c2chl','n2c','p2c']: M.attr(i,array(M.icm.attr(i) if M.hasattr('icm') else M.param.attr(i) if M.hasattr('param') else M.attr(i))); 
     models.append(M); svars.append(svar); mtimes.append(mtime); mzs.append(mz); mstations.append(mstation)
 
-def get_icm_var(model,mvar):
-    M=model; mdata=None; 
+def get_icm_var(im,mvar):
+    M=models[im]; mdata=None; 
     if M.hasattr(mvar): return M.attr(mvar) if (mvar not in ['PB1','PB2','PB3']) else M.attr(mvar)/M.c2chl[int(mvar[-1])-1] #variable exist
     #original variable not exist (for chlorophyll, POC,PON,POP,DO TN, TP, etc)
     if mvar=='chla':  mdata=M.chla if M.hasattr('chla') else M.CHLA if M.hasattr('CHLA') else (c_[M.attr(['PB1','PB2','PB3'])]/M.c2chl[:,None,None]).sum(axis=0)
@@ -66,62 +73,68 @@ cs=array([['g','k'],['b','m'],['c','r']]); ms=array([['-','-'],['-','-'],['-','-
 #plot variable at stations based on regions
 #------------------------------------------------------------------------------
 if iflags[0]==1:
-   S=zdata(); st_vars=['run','region','layer','station','var','R','ME','MAE','RMSD']; [S.attr(i,[]) for i in st_vars] #init. statistics capsule
-   for m, [mvar,ovar] in enumerate(zip(mvars,ovars)):
+   def plot_ts(mvar,ovar,region,stations):
+       n=len(stations); fsize=[19,9.4]; fsub=[int(len(stations)/5)+1, 5]; nrun=len(runs)
+       S=zdata(tvars) #init. statistics capsule
        #read model variable, obs data
-       mys=[]; icheck=0; t0=time.time()
-       for n,[run,fname,M,mtime,mstation] in enumerate(zip(runs,fnames,models,mtimes,mstations)):
-           my=get_icm_var(M,mvar); mys.append(my); icheck=icheck+(my is None)
-       if icheck==len(runs): continue # no available data
+       mys=[get_icm_var(n,mvar) for n in arange(nrun)]
+       if sum([i is None for i in mys])==nrun: return #no data
        fp=(C.var==ovar)*((C.layer=='S')|(C.layer=='B')); otime,ostation,odata,olayer=C.time[fp],C.station[fp],C.data[fp],C.layer[fp] #obs
 
-       #for each region and each station
-       for nn,[region, stations] in enumerate(zip(regions,pstations)):
-           fsizes=[[19,9.4],[19,9.4],[19,9.4],[19,9.4],[19,9.4],[19,9.4],[19,9.4],[19,9.4],[19,9.4]]
-           fsubs= [[5,5],   [4,5],   [3,4],   [5,5],   [3,4],   [3,4],   [3,5],   [3,5],   [3,5]]
-           hf=figure(figsize=fsizes[nn])
-           print('plotting time series: {}, {}'.format(mvar,region))
-           for i,station in enumerate(stations):
-               subplot(*fsubs[nn],i+1); lstr=[]
-               fp=(ostation==station)*(otime>=xm[0])*(otime<=xm[1])*(olayer=='S'); ots=otime[fp]; oys=odata[fp] #get surf. obs
-               fp=(ostation==station)*(otime>=xm[0])*(otime<=xm[1])*(olayer=='B'); otb=otime[fp]; oyb=odata[fp] #get bott. obs
-               for n,[run,mtime,my,mz,mstation] in enumerate(zip(runs,mtimes,mys,mzs,mstations)): #plot model
-                   if my is None: continue
-                   #get model variable
-                   for k, layer in enumerate(layers):
-                       sids=pindex(mstation==station); zs=mz[sids] 
-                       fps=mstation==station; sids=nonzero(fps)[0]; zs=mz[fps]; sid=sids[argmin(zs) if layer=='S' else argmax(zs)]
-                       myi=my[sid]; myi[myi<-1e4]=nan; tag='surface' if layer=='S' else 'bottom'
-                       plot(mtime,myi,ms[n,k],color=cs[n,k],alpha=aps[n,k]); lstr.append('{}: {}'.format(run,tag))
+       hf=figure(figsize=fsize)
+       #print('plotting time series: {}, {}'.format(mvar,region))
+       for i,station in enumerate(stations):
+           subplot(*fsub,i+1); lstr=[]
+           fp=(ostation==station)*(otime>=xm[0])*(otime<=xm[1])*(olayer=='S'); ots=otime[fp]; oys=odata[fp] #get surf. obs
+           fp=(ostation==station)*(otime>=xm[0])*(otime<=xm[1])*(olayer=='B'); otb=otime[fp]; oyb=odata[fp] #get bott. obs
+           for n,[run,mtime,my,mz,mstation] in enumerate(zip(runs,mtimes,mys,mzs,mstations)): #plot model
+               if my is None: continue
+               #get model variable
+               for k, layer in enumerate(layers):
+                   sids=pindex(mstation==station); zs=mz[sids] 
+                   fps=mstation==station; sids=nonzero(fps)[0]; zs=mz[fps]; sid=sids[argmin(zs) if layer=='S' else argmax(zs)]
+                   myi=my[sid]; myi[myi<-1e4]=nan; tag='surface' if layer=='S' else 'bottom'
+                   plot(mtime,myi,ms[n,k],color=cs[n,k],alpha=aps[n,k]); lstr.append('{}: {}'.format(run,tag))
    
-                       #do statistics
-                       if iflags[2]==1:
-                          if (mvar in ['PB1','PB2','PB3','LPOC','RPOC','LPON','RPON','LPOP','RPOP']) or len(otime)==0: continue
-                          ot,oy=[ots,oys] if layer=='S' else [otb,oyb]
-                          if len(ot)!=0: fp=(ot>=tm[0])*(ot<=tm[1]); ot,oy=ot[fp],oy[fp];  fmyi=[]
-                          if len(ot)==0: continue #no obs. data in this period
-                          if sum(~isnan(myi))==0:
-                             [S.attr(i).append(nan) for i in ['R','ME','MAE','RMSD']]
-                          else:
-                             for oti,oyi in zip(ot,oy): fp=(abs(mtime-oti)<=0.5)*(~isnan(myi)); myii=myi[fp]; fmyi.append(myii[argmin(abs(myii-oyi))]) #find best match
-                             s=get_stat(array(fmyi),oy); [S.attr(i).append(s.attr(i)) for i in ['R','ME','MAE','RMSD']]; 
-                          S.run.append(run); S.region.append(region); S.layer.append(layer); S.station.append(station); S.var.append(mvar)
-               plot(ots,oys,'r^',ms=2); lstr.append('Obs: {}_surface'.format(mvar)) #plot surf. obs
-               plot(otb,oyb,linestyle='None',color='orange',marker='s',ms=2); lstr.append('Obs: {}_bottom'.format(mvar)) #plot bott. obs
+                   #do statistics
+                   if iflags[2]==1:
+                      if (mvar in ['PB1','PB2','PB3','LPOC','RPOC','LPON','RPON','LPOP','RPOP']) or len(otime)==0: continue
+                      ot,oy=[ots,oys] if layer=='S' else [otb,oyb]
+                      if len(ot)!=0: fp=(ot>=tm[0])*(ot<=tm[1]); ot,oy=ot[fp],oy[fp];  fmyi=[]
+                      if len(ot)==0: continue #no obs. data in this period
+                      if sum(~isnan(myi))==0:
+                         [S.attr(i).append(nan) for i in ['R','ME','MAE','RMSD']]
+                      else:
+                         for oti,oyi in zip(ot,oy): fp=(abs(mtime-oti)<=0.5)*(~isnan(myi)); myii=myi[fp]; fmyi.append(myii[argmin(abs(myii-oyi))]) #find best match
+                         s=get_stat(array(fmyi),oy); [S.attr(i).append(s.attr(i)) for i in ['R','ME','MAE','RMSD']]; 
+                      S.run.append(run); S.region.append(region); S.layer.append(layer); S.station.append(station); S.var.append(mvar)
+           plot(ots,oys,'r^',ms=2); lstr.append('Obs: {}_surface'.format(mvar)) #plot surf. obs
+           plot(otb,oyb,linestyle='None',color='orange',marker='s',ms=2); lstr.append('Obs: {}_bottom'.format(mvar)) #plot bott. obs
        
-               #note
-               setp(gca(),xticks=xts,xticklabels=xls,xlim=xm); gca().xaxis.grid('on')
-               text(xlim()[0]+0.03*diff(xlim()),ylim()[0]+0.8*diff(ylim()),station,fontsize=12,fontweight='bold')
-               if i==0: hl=legend(lstr)
-           gcf().tight_layout()
-           hl.set_bbox_to_anchor([0.82,0.075,0.1,0.1],transform=gcf().transFigure)
-        
-           #save fig
-           sdir='_'.join(runs); sname=sdir+'/icm_{}_{}'.format(region,mvar); 
-           if not fexist(sdir): os.mkdir(sdir)
-           #show(block=False); sys.exit()
-           #savefig(sname+'.pp')
-           savefig(sname,dpi=300); close()
+           #note
+           setp(gca(),xticks=xts,xticklabels=xls,xlim=xm); gca().xaxis.grid('on')
+           text(xlim()[0]+0.03*diff(xlim()),ylim()[0]+0.8*diff(ylim()),station,fontsize=12,fontweight='bold')
+           if i==0: hl=legend(lstr)
+       gcf().tight_layout()
+       hl.set_bbox_to_anchor([0.82,0.075,0.1,0.1],transform=gcf().transFigure)
+       
+       #save fig
+       sname=sdir+'/icm_{}_{}'.format(region,mvar)
+       #show(block=False); sys.exit()
+       #savefig(sname+'.pp')
+       savefig(sname,dpi=300); close()
+       return S
+
+   #plot all figures
+   ps=[]; [[ps.append([*i,*k]) for k in zip(regions,pstations)] for i in zip(mvars,ovars)]; S=zdata(tvars) #init. statistics capsule
+   if nproc==1:
+      for i in ps: s=plot_ts(*i); [S.attr(k).extend(s.attr(k))  for k in tvars]
+   else:
+      pp0=mp.Pool(processes=nproc)
+      for n in range(int(len(ps)/nproc)+1):
+          i1=n*nproc; i2=min([(n+1)*nproc,len(ps)]); npc=int(i2-i1);  pp=pp0 if npc==nproc else mp.Pool(processes=nproc); print('[{}-{}]/{}'.format(i1,i2,len(ps)))
+          pd=pp.starmap(plot_ts,ps[i1:i2]); [[S.attr(k).extend(s.attr(k))  for k in tvars] for s in pd]  
+      pp0.close(); pp.close()
    if iflags[2]==1: 
       S.x,S.y=proj_pts(*array([[C.lon[i],C.lat[i]] for i in S.station]).T,'epsg:4326','epsg:26918')
       S.to_array(); S.save('stat_'+'_'.join(runs))
