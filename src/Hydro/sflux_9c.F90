@@ -852,7 +852,7 @@
           theta_v_air = theta_air * (1.0d0 + 0.608d0 * mix_ratio)
           delta_theta = theta_air -(tr_nd(1,sfc_lev,i_node) + t_freeze)
           delta_q = q_air(i_node) - q_sfc
-          delta_theta_v = delta_theta * (1.0d0 + 0.608d0 * mix_ratio)+0.608 * theta_air * delta_q
+          delta_theta_v = delta_theta * (1.0d0 + 0.608d0 * mix_ratio)+0.608d0*theta_air*delta_q
 
 ! calculate the air virtual temperature and density
           t_v = (t_air(i_node) + t_freeze) * (1.0d0 + 0.608d0 * mix_ratio)
@@ -900,8 +900,8 @@
           u_star = 0.06d0
           w_star = 0.5d0
           if (delta_theta_v .ge. 0) then  ! stable
-            speed=max(sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+ &
-                          &(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0),0.1_rkind)
+            speed=max(sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+ &
+                          &(v_air(i_node)-vv2(sfc_lev,i_node))**2),0.1_rkind)
           else  ! unstable
             speed =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2+(beta * w_star)**2) !>0
           endif !stable
@@ -1001,6 +1001,7 @@
                 write(errmsg,*) 'turb_flux (5):',monin,z_0
                 call parallel_abort(errmsg)
               endif
+              !zeta_u<0
               tmp=log(zeta_m*monin/z_0)-psi_m(zeta_m)+ psi_m(z_0/monin) &
      &+1.14d0*((-zeta_u)**(one_third)-(-zeta_m)**(one_third))
               if(tmp==0.d0) then
@@ -1042,6 +1043,7 @@
                 write(errmsg,*) 'turb_flux (11):',zeta_h,monin,z_0_t
                 call parallel_abort(errmsg)
               endif
+              !zeta_t<0
               tmp2=log(zeta_h*monin/z_0_t)-psi_h(zeta_h) &
      &+ psi_h(z_0_t/monin)+0.8d0*((-zeta_h)**(-one_third)-(-zeta_t)**(-one_third))
               if(tmp2==0.d0) then
@@ -1089,38 +1091,23 @@
 ! near-surface wind speed
 ! (ie relative to the flowing water surface)
             if (delta_theta_v .ge. 0.0d0) then ! stable
-              speed =max(sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+ &
-                             &(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0),0.1_rkind) !>0
-!#ifndef SCHISM
-!     &                 (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
-!     &                 (v_air(i_node) - vv2(i_node, sfc_lev))**2 ), &
-!#else /* SCHISM */
-!     &                 (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
-!     &                 (v_air(i_node) - vv2(sfc_lev,i_node))**2 ), &
-!#endif /* SCHISM */
-!     &               0.1_rkind)
-
+              speed =max(sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+ &
+                             &(v_air(i_node)-vv2(sfc_lev,i_node))**2),0.1_rkind) !>0
             else ! unstable
-
 ! calculate the convective velocity scale
               if(theta_v_air==0.d0) then !theta_v_air has been checked before but just to be sure..
                 write(errmsg,*) 'turb_flux(17): ',theta_v_air
                 call parallel_abort(errmsg)
               endif
-!              write(12,*)'theta_v_air=',theta_v_air
-              w_star = (-g*theta_v_star*u_star*z_i/theta_v_air)**one_third
+              tmp=-g*theta_v_star*u_star*z_i/theta_v_air
+              if(tmp>0.d0) then
+                w_star=tmp**one_third !(-g*theta_v_star*u_star*z_i/theta_v_air)**one_third
+              else !! downward buoyancy flux: no free convection
+                w_star=0.d0
+              endif
 
-              speed =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+ &
-                         &(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0+(beta * w_star)**2.d0) !>=0
-!#ifndef SCHISM
-!     &          sqrt( (u_air(i_node) - uu2(i_node, sfc_lev))**2 + &
-!     &                (v_air(i_node) - vv2(i_node, sfc_lev))**2 + &
-!#else /* SCHISM */
-!     &          sqrt( (u_air(i_node) - uu2(sfc_lev,i_node))**2 + &
-!     &                (v_air(i_node) - vv2(sfc_lev,i_node))**2 + &
-!#endif /* SCHISM */
-!     &                (beta * w_star)**2 )
-
+              speed =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+ &
+                         &(v_air(i_node)-vv2(sfc_lev,i_node))**2+(beta * w_star)**2) !>=0
             endif !stable||unstable
 
 #ifdef DEBUG
@@ -1146,7 +1133,7 @@
 #endif
 
 ! calculate wind stresses
-          speed_res =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2.d0+(v_air(i_node)-vv2(sfc_lev,i_node))**2.d0)
+          speed_res =sqrt((u_air(i_node)-uu2(sfc_lev,i_node))**2+(v_air(i_node)-vv2(sfc_lev,i_node))**2)
 
           if(speed_res>0.0d0.and.speed>0.1d0) then
             tau = rho_air * u_star * u_star * speed_res / speed
