@@ -25,6 +25,10 @@
       USE fabm_schism, only: fabm_schism_close_output_netcdf
 #endif
 
+#ifdef USE_SPK
+      use sal_grid_output, only : close_sal_grid
+#endif
+
 #ifdef USE_PETSC
       USE petsc_schism
 #endif
@@ -151,6 +155,10 @@
 #ifdef USE_WWM
       call TERMINATE_WWM
 #endif /*USE_WWM*/
+
+#ifdef USE_SPK
+      call close_sal_grid
+#endif
 
 #ifdef USE_FABM
       call fabm_schism_close_output_netcdf()

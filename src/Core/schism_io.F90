@@ -43,8 +43,48 @@
     public :: report_timers
     public :: writeout_nc
     public :: fill_nc_header
+    public :: schism_timing_start_impl
+    public :: schism_timing_accumulate_impl
+    public :: schism_timer2_checkpoint_impl
 
     contains
+
+      subroutine schism_timing_start_impl(started_at)
+      implicit none
+      include 'mpif.h'
+      real(rkind),intent(out) :: started_at
+
+      started_at=mpi_wtime()
+
+      end subroutine schism_timing_start_impl
+
+
+      subroutine schism_timing_accumulate_impl(accumulator,started_at)
+      implicit none
+      include 'mpif.h'
+      real(rkind),intent(inout) :: accumulator,started_at
+      real(rkind) :: finished_at
+
+      finished_at=mpi_wtime()
+      accumulator=accumulator+finished_at-started_at
+      started_at=finished_at
+
+      end subroutine schism_timing_accumulate_impl
+
+
+      subroutine schism_timer2_checkpoint_impl(label,step,started_at)
+      implicit none
+      include 'mpif.h'
+      character(len=*),intent(in) :: label
+      integer,intent(in) :: step
+      real(rkind),intent(inout) :: started_at
+      real(rkind) :: finished_at
+
+      finished_at=mpi_wtime()
+      write(12,*)label,finished_at-started_at,step
+      started_at=finished_at
+
+      end subroutine schism_timer2_checkpoint_impl
 
       subroutine write_obe
 !-------------------------------------------------------------------------------

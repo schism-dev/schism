@@ -21,6 +21,9 @@ endif()
 #if(${USE_HA})
 #  set (hydro_extra_src ${hydro_extra_src} harm.F90)
 #endif()
+if(${USE_SPK})
+  set (hydro_extra_src ${hydro_extra_src} sal_grid_output.F90)
+endif()
 
 message(STATUS "hydro_extra_src=${hydro_extra_src}")
 

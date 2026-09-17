@@ -6726,112 +6726,83 @@
 !     From Delfs3D: Delft3D/src/engines_gpl/dflowfm/packages/dflowfm_kernel/src/dflowfm_kernel/timespace/meteo1.f90 
       !subroutine selfattraction(avhs, self, i1, i2, j1, j2,jaselfal)
       subroutine selfattraction
-        use schism_glbl, only : rkind,pi,npa,saltide,eta2,xlon,ylat,iplg,area,np_global,np, &
-               &nlon_gs,nlat_gs,isal_int,dp,errmsg
-        use schism_msgp, only : parallel_abort,rtype,itype,comm,myrank,parallel_finalize
+        use schism_glbl, only : rkind,pi,npa,saltide,eta2,xlon,ylat,iplg, &
+               &nlon_gs,nlat_gs,isal_lcl,nsal_contrib,dp,errmsg,save_sal_grid,nc_out
+        use schism_msgp, only : parallel_abort,rtype,comm,myrank
+        use sal_grid_output, only : write_sal_grid
         use spherepack, only: shaec, shaeci, shsec, shseci
         implicit none
         include 'mpif.h'
   
-        !Hardwire 1 deg resolution
-!        integer, parameter :: nlat=181,nlon=360,
-        integer, parameter :: lsave=nlat_gs*(nlat_gs+1)+3*((nlat_gs-2)*(2*nlat_gs-nlat_gs-1)+nlon_gs+15)
 !        integer, intent(in) :: i1, i2, j1, j2 !, jaselfal
 !        real(rkind), parameter :: Me = 5.9726e24, R = 6371e3, g = 9.81, pi = 4.0 * atan(1.0), rhow = 1.0240164e3, rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
         real(rkind) :: Me,R,rhow,rhoe
-        integer :: i,j,itmp,ierror,isym,nt,l,mdab,ndab,k1,k3(1), &
-     &ie,nd,ix,ix2,iy,iy2,iwork1(np_global),iwork2(np_global)
-        !avhs: gathered SSH and interpolated onto 1 deg regular lon/lat grid 
-!        real(rkind) :: avhs(0:359,-90:90),self(0:359,-90:90)
-        real(rkind) :: llnh(0:1024),llnk(0:1024),wshaec(lsave),wshsec(lsave)
-        real(rkind) :: a(nlat_gs,nlat_gs), b(nlat_gs,nlat_gs)
-        real(rkind) :: avhs1(0:nlat_gs-1,0:nlon_gs-1),self1(0:nlat_gs-1,0:nlon_gs-1) !0:180,0:359)
-        real(rkind) :: eta_gb(np_global),work1(np_global)
+        integer :: i,j,ierror,isym,nt,l,mdab,ndab,nd,ix,ix2,iy,iy2,lsave,l2
+        !avhs1: SSH reduced directly onto the regular lon/lat grid
+        real(rkind),save :: llnh(0:1024),llnk(0:1024)
+        real(rkind),allocatable,save :: wshaec(:),wshsec(:)
+        real(rkind),allocatable,save :: a(:,:),b(:,:)
+        real(rkind),allocatable,save :: avhs_lcl(:,:),avhs1(:,:),self1(:,:)
+        logical,save :: spherepack_initialized=.false.
         real(rkind) :: xtmp0,xtmp,ytmp0,ytmp,xrat,yrat,tmp1,tmp2
   
         Me = 5.9726e24; R = 6371e3; rhow = 1.0240164e3 
         rhoe = 3.0 * Me / (4.0 * pi * R * R * R)
-        mdab = nlat_gs
+        mdab = min(nlat_gs,nlon_gs/2+1)
         ndab = nlat_gs
-  
-!        allocate (wshaec(1:lsave))
-!        allocate (wshsec(1:lsave))
-!        allocate (a(1:mdab, 1:ndab))
-!        allocate (b(1:mdab, 1:ndab))
-!        allocate (llnh(0:1024))
-!        allocate (llnk(0:1024))
-!        allocate (avhs1(0:180, 0:359))
-!        allocate (self1(0:180, 0:359))
 
-        !Change to co-latitude: avhs1(i,j) contains the waterlevel on the point with longitude phi(j)=(j-1)*2*pi/nlon
-        ! and colatitude theta(i)=(i-1)*pi/(nlat)
-        !If avhs is smaller then 0 is chosen at the location of the missing values
-        !avhs1=0.d0 !init
-!        k1=0
-        !do i=i1,min(i2,i1+360-1)
-        !  do j = j1, j2
-!        do i=0,359
-!          do j=-90,90
-!            avhs1(j+90,k1)=avhs(i,j) !note the index swap and lat-> co-lat
-!          enddo !j
-!          k1=k1+1
-!        enddo !i
+        if(.not.allocated(avhs_lcl)) then
+          allocate(avhs_lcl(0:nlat_gs-1,0:nlon_gs-1), &
+                 &avhs1(0:nlat_gs-1,0:nlon_gs-1),self1(0:nlat_gs-1,0:nlon_gs-1),stat=ierror)
+          if(ierror/=0) call parallel_abort('selfattraction: failed to allocate SAL grids')
+        endif
   
-        !Gather elev
-        work1=0.d0
-        iwork1=0
-        do i=1,np
-          nd=iplg(i)
-
-          if(dp(i)>0.d0) then !make sure it's deep enough
-            work1(nd)=eta2(i)
-          endif !dp
-          iwork1(nd)=iwork1(nd)+1
+        !Reduce elevations directly onto the regular SAL grid
+        avhs_lcl=0.d0
+        do i=0,nlon_gs-1
+          do j=0,nlat_gs-1
+            nd=isal_lcl(j,i)
+            if(nd>0) then
+              if(dp(nd)>0.d0) avhs_lcl(j,i)=eta2(nd)
+            endif
+          enddo !j
         enddo !i
-        call mpi_reduce(work1,eta_gb,np_global,rtype,MPI_SUM,0,comm,ierror)
-        call mpi_reduce(iwork1,iwork2,np_global,itype,MPI_SUM,0,comm,ierror)
+        call mpi_reduce(avhs_lcl(0,0),avhs1(0,0),nlat_gs*nlon_gs,rtype,MPI_SUM,0,comm,ierror)
+        if(ierror/=MPI_SUCCESS) call parallel_abort(error=ierror)
 
         if(myrank==0) then
-          do i=1,np_global
-            if(iwork2(i)==0) then
-              write(errmsg,*) 'selfattraction: missing node ',i
-              call parallel_abort(errmsg)
-            endif
-            eta_gb(i)=eta_gb(i)/dble(iwork2(i))
-
-!            write(98,*)i,eta_gb(i)
-          enddo !i
-!          close(98)
-
-          !Interp onto Gaussian grid (1 deg)
-          !avhs1(i,j) contains the waterlevel on the point with longitude phi(j)=(j-1)*360/nlon
-          !and colatitude theta(i)=(i-1)*180/nlat
-          !If avhs1 is smaller then 0 is chosen at the location of the missing values
-          avhs1=0.d0 !init for land etc
-          nt=0 !debug
-          do i=0,359 
-            do j=-90,90
-              nd=isal_int(j+90,i) !global node # or -1
-              if(nd>0) avhs1(j+90,i)=eta_gb(nd)
-
-              !Debug
-!              nt=nt+1
-!              itmp=i
-!              if(itmp>180) itmp=itmp-360
-!              write(98,*)nt,itmp,j,real(avhs1(j,i)),nd
-            enddo !j
-          enddo !i
-!          close(98)
-
-          !Load Love numbers
-          call loadlovenumber(llnh, llnk)
+          !avhs1(j,i) is at lon=i*360/nlon_gs and lat=-90+j*180/(nlat_gs-1)
+          where(nsal_contrib>0) avhs1=avhs1/real(nsal_contrib,rkind)
 
           !Computation
           isym = 0
           nt = 1
+          !Initialize constant SAL data once
+          if(.not.spherepack_initialized) then
+            l2=(nlat_gs+1)/2
+            lsave=2*nlat_gs*l2+3*((mdab-2)*(2*nlat_gs-mdab-1))/2+nlon_gs+15
+            allocate(a(mdab,ndab),b(mdab,ndab),wshaec(lsave),wshsec(lsave),stat=ierror)
+            if(ierror/=0) call parallel_abort('selfattraction: failed to allocate Spherepack work arrays')
+            call loadlovenumber(llnh, llnk)
+            call shaeci(nlat_gs,nlon_gs,wshaec,ierror)
+            if(ierror/=0) then
+              write(errmsg,*) 'selfattraction: shaeci failed, ierror=',ierror
+              call parallel_abort(errmsg)
+            endif
+            call shseci(nlat_gs,nlon_gs,wshsec,ierror)
+            if(ierror/=0) then
+              write(errmsg,*) 'selfattraction: shseci failed, ierror=',ierror
+              call parallel_abort(errmsg)
+            endif
+            spherepack_initialized=.true.
+          endif
+
           !Spherical harmonic analysis
-          call shaeci(nlat_gs,nlon_gs,wshaec,ierror)
           call shaec(nlat_gs,nlon_gs,isym,nt,avhs1,nlat_gs,nlon_gs,a,b,mdab,ndab,wshaec,ierror)
+          if(ierror/=0) then
+            write(errmsg,*) 'selfattraction: shaec failed, ierror=',ierror
+            call parallel_abort(errmsg)
+          endif
   
           !Multiplication in spherical harmonic space (=convolution)
 !        if (jaselfal == 2) then
@@ -6852,67 +6823,41 @@
 !        end if
   
           !Spherical harmonic synthesis (inverse transform)
-          call shseci(nlat_gs,nlon_gs,wshsec,ierror)
           call shsec(nlat_gs,nlon_gs,isym,nt,self1,nlat_gs,nlon_gs,a,b,mdab,ndab,wshsec,ierror)
+          if(ierror/=0) then
+            write(errmsg,*) 'selfattraction: shsec failed, ierror=',ierror
+            call parallel_abort(errmsg)
+          endif
+
+          if(save_sal_grid==1.and.nc_out>0) call write_sal_grid(self1)
   
-        !May not need this conversion - just use self1 directly
-        !self1 is defined on the same grid than avhs1, we put it back in the same grid as avhs
-!        self=0.d0
-!        k1=0
-!        do i=0,359 !i1,i2
-!          if(k1>=360) k1=0
-!          do j=-90,90 !j1,j2
-!            if(j+90>=0.and.j-90<=180) then
-!              self(i,j)=self1(j+90,k1)
-!            endif
-!          enddo !j
-!          k1=k1+1
-!        enddo !i
-
-          !Debug
-!          nd=0
-!          do i=0,359
-!            do j=0,180
-!              nd=nd+1
-!              write(99,*)nd,i,j-90,real(self1(j,i))
-!            enddo !j
-!          enddo !i
-!          close(99)
-
 !          write(12,*)'B4 |self1| sum=',sum(abs(self1))
         endif !myrank==0
 
         !Bcast self1; need (0,0) to get receiving buffer address right
         call mpi_bcast(self1(0,0),nlat_gs*nlon_gs,rtype,0,comm,ierror)
         if(ierror/=MPI_SUCCESS) call parallel_abort(error=ierror)
-!        write(12,*)'|self1| sum=',sum(abs(self1)),real(self1(1,1)),real(self1(180,359))
 
-        !Interpolate self1(0:180,0:359) back to UG; saltide has same unit as etp [m]
+        !Interpolate self1 back to UG; saltide has same unit as etp [m]
         do i=1,npa
           xtmp0=xlon(i)/pi*180.d0
           ytmp0=ylat(i)/pi*180.d0
-          xtmp=xtmp0
-          ytmp=ytmp0+90.d0 !co-lat
-          !Put lon in [0,360]
-          if(xtmp<0.d0) xtmp=xtmp+360.d0
-          if(xtmp>360.d0) xtmp=xtmp-360.d0
-          if(xtmp<0.d0.or.xtmp>360.d0) then
-            write(errmsg,*)'selfattraction: wrong lon:',iplg(i),xtmp0,ytmp0
+          if(ytmp0< -90.d0-1.d-10.or.ytmp0>90.d0+1.d-10) then
+            write(errmsg,*)'selfattraction: wrong lat:',iplg(i),xtmp0,ytmp0
             call parallel_abort(errmsg)
           endif
+          ytmp0=max(-90.d0,min(90.d0,ytmp0))
+          xtmp=modulo(xtmp0,360.d0)*real(nlon_gs,rkind)/360.d0
+          ytmp=(ytmp0+90.d0)*real(nlat_gs-1,rkind)/180.d0
 
-          ix=int(xtmp) !index into selfe1
-          iy=int(ytmp)
-          if(min(ix,iy)<0.or.ix>359.or.iy>180) then
+          ix=min(nlon_gs-1,floor(xtmp)) !index into self1
+          iy=min(nlat_gs-1,floor(ytmp))
+          if(min(ix,iy)<0.or.ix>nlon_gs-1.or.iy>nlat_gs-1) then
             write(errmsg,*)'selfattraction out of bound: ',iplg(i),xtmp0,ytmp0
             call parallel_abort(errmsg)
           endif
-          if(ix>=359) then !jump
-            ix2=0
-          else
-            ix2=ix+1
-          endif !ix
-          iy2=min(180,iy+1)
+          ix2=modulo(ix+1,nlon_gs)
+          iy2=min(nlat_gs-1,iy+1)
           !ix2,iy2 properly bounded
 
           xrat=xtmp-ix
@@ -6925,34 +6870,8 @@
 !          write(12,*)'saltide=',iplg(i),real(xtmp0),real(ytmp0),real(saltide(i)),real(xtmp)
         enddo !i=1,npa
 
-        !Debug
-!        work1=0.d0
-!        iwork1=0
-!        do i=1,np
-!          nd=iplg(i)
-!          work1(nd)=saltide(i)
-!          iwork1(nd)=iwork1(nd)+1
-!        enddo !i
-!        call mpi_reduce(work1,eta_gb,np_global,rtype,MPI_SUM,0,comm,ierror)
-!        call mpi_reduce(iwork1,iwork2,np_global,itype,MPI_SUM,0,comm,ierror)
-!
-!        if(myrank==0) then
-!          do i=1,np_global
-!            if(iwork2(i)==0) then
-!              write(errmsg,*) 'selfattraction: missing node ',i
-!              call parallel_abort(errmsg)
-!            endif
-!            eta_gb(i)=eta_gb(i)/dble(iwork2(i))
-!            write(97,*)i,eta_gb(i)
-!          enddo !i
-!          close(97)
-!        endif !myrank
-!
-!        call parallel_finalize
-!        stop
-  
       end subroutine selfattraction
-  
+
       subroutine loadlovenumber(llnh, llnk)
         !Define the second load Love number h' and k' up to degree 1024
         use schism_glbl, only : rkind

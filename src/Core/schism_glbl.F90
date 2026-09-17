@@ -82,9 +82,11 @@ module schism_glbl
   integer,parameter :: natrm=12 !# of _available_ tracer models at the moment (including T,S)
   integer,parameter :: mntracers=30 !max # of tracers, used only for dimensioning btrack arrays. Must >=ntracers
 
-  !# of lon/lat pts used in global Gaussian grid (for sphereical SAL)
-  !Please do not change this - some code is hardwired
-  integer,parameter :: nlon_gs=360,nlat_gs=181
+  !# of lon/lat pts used in global regular grid (for spherical SAL)
+  integer,save :: nlon_gs,nlat_gs
+
+  !Optional output of spherical SAL results on the regular lon/lat grid
+  integer,save :: save_sal_grid
 
   !Parameters from param.nml
   integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,iwindoff, &
@@ -96,7 +98,7 @@ module schism_glbl
                   &moitn0,mxitn0,nchi,ibtrack_test,nramp_elev,islip,ibtp,inunfl,shorewafo, &
                   &inv_atm_bnd,ieos_type,ieos_pres,iupwind_mom,inter_mom,ishapiro,iveg, &
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
-                  &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
+                  &itransport_only,iloadtide,nstep_sal,nc_out,nu_sum_mult,iprecip_off_bnd, &
                   &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm,iof_icm_ba,&
                   &iof_icm_clam,nbins_veg_vert,niter_hdif,nmarsh_types,istemp,chunk_size_vrt
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
@@ -423,7 +425,9 @@ module schism_glbl
   ! Dynamic quantities
   integer,save,allocatable :: ieg_source(:)   !global elem. indices for volume/mass sources
   integer,save,allocatable :: ieg_source_ngen(:)   !global elem. indices for T-Route only volume/mass sources in NextGen
-  integer,save,allocatable :: isal_int(:,:)
+  integer,save,allocatable :: isal_int(:,:) !Global node at each SAL grid point
+  integer,save,allocatable :: isal_lcl(:,:) !Local resident node at each SAL grid point
+  integer,save,allocatable :: nsal_contrib(:,:) !Number of resident copies for each SAL grid point
   real(rkind),save,allocatable :: ieg_source_flowpath_ids(:)   ! T-Route flowpath ids needed for NextGen framework coupling with SCHISM sources
   integer,save,allocatable :: ieg_sink(:)   !global elem. indices for volume/mass sinks
   real(rkind),save,allocatable :: ieg_sink_flowpath_ids(:)   ! T-Route flowpath ids needed for NextGen framework coupling with SCHISM sinks
