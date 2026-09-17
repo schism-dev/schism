@@ -650,6 +650,7 @@ git versions:
 164. `e08db1ce` (17 Mar 2026): Zhiyun Du fixed a bug in WWM hotstart;
 165. `d58cbccf` (3 Aug 2026): made offline partition more mem friendly by bypassing aquire_hgrid(.false.) (c/o Panos)
 166. `24df08ef` (3 Sept 2026): added error checks in sflux_9c.F90
+167. `e2b6967a` (17 Sept 2026): fixed a bug in sflux c/o Scott Durski (negative base of power 1/3)
 
 ================================================================================================
 (D) Auto-test history:
