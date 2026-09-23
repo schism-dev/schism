@@ -147,6 +147,7 @@ for fname,module in zip(fnames,modules):
        if p.flag['SED']==1 and fname=='param.nml': #add sediment output channel
           P=read(fname,1); nsed=max([i for i in arange(23) if 'iof_sed({})'.format(i) in P])
           for i in arange(nsed+1,28):
+              if 'iof_sed({})'.format(i) in P: continue
               chparam(fname,'iof_sed({})'.format(i-1),'1\n   iof_sed({}) = 1'.format(i))
 
 #change parameter values in [param.nml, wwminput.nml,icm.nml]
@@ -161,7 +162,7 @@ if not fexist(sname):
 if p.flag['ICM'] in [10,20]: #offline ICM mode
    pm['nspool']=int(6*3600/p.dt_offline); pm['ihfskip']=int(720*3600/p.dt_offline)
    pm['nhot_write']=pm['ihfskip']; pm['dt']=p.dt_offline; pm['wtiminc']=pm['dt']
-   pm['itransport_only']=2; pm['nadv']=1; pm['itr_met']=3; pm['ielm_transport']=1; pm['max_subcyc']=30
+   pm['itransport_only']=2; pm['nadv']=1; pm['itr_met']=3; pm['ielm_transport']=1; pm['max_subcyc']=20
 for i in pm: chparam(fname,i,pm[i]) #update param.nml
 
 fname='wwminput.nml'; sname='{}/{}'.format(p.base,fname); pm={}

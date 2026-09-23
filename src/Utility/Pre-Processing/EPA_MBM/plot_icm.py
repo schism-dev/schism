@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 from pylib import *
-import multiprocessing as mp
 close("all")
-
-#nproc=1; backend='QtAgg' #for parallel plotting
-nproc=32; backend='Agg' #for parallel plotting
 
 #------------------------------------------------------------------------------
 #inputs
 #------------------------------------------------------------------------------
-runs=['RUN17e','RUN17ea']; StartTs=[datenum(1991,1,1),datenum(1991,1,1),]
+runs=['RUN17e','RUN17k']
+StartTs=[datenum(1991,1,1),datenum(1991,1,1),]
 xm=[datenum(1991,1,1),datenum(2000,1,1)]   #time range for plotting
 
 #variables
@@ -33,7 +30,22 @@ layers=['S','B']  #surface and bottom
 iflags=[1, 0, 1] # TS(1 var, stations), TS(vars, 1 station), statistics
 bdir='/sciclone/data10/wangzg/CBP/'
 tvars=['run','region','layer','station','var','R','ME','MAE','RMSD']; sdir='_'.join(runs); 
-if not fexist(sdir): os.mkdir(sdir)
+
+#------------------------------------------------------------------------------
+#ibatch,  0: serial;  1: mp;  2: mpi4py
+#------------------------------------------------------------------------------
+ibatch= 0
+
+if ibatch==0:
+   nproc=1; myrank=0; backend='QtAgg'
+elif ibatch==1:
+   import multiprocessing as mp;
+   nproc=32; myrank=0; backend='Agg'
+elif ibatch==2:
+   from mpi4py import MPI
+   comm=MPI.COMM_WORLD; nproc=comm.Get_size(); myrank=comm.Get_rank(); backend='Agg'
+
+if myrank==0 and (not fexist(sdir)): os.mkdir(sdir)
 #------------------------------------------------------------------------------
 #read data and obs info
 #------------------------------------------------------------------------------
@@ -82,7 +94,7 @@ if iflags[0]==1:
        fp=(C.var==ovar)*((C.layer=='S')|(C.layer=='B')); otime,ostation,odata,olayer=C.time[fp],C.station[fp],C.data[fp],C.layer[fp] #obs
 
        hf=figure(figsize=fsize)
-       #print('plotting time series: {}, {}'.format(mvar,region))
+       print('plotting time series: {}, {}'.format(mvar,region))
        for i,station in enumerate(stations):
            subplot(*fsub,i+1); lstr=[]
            fp=(ostation==station)*(otime>=xm[0])*(otime<=xm[1])*(olayer=='S'); ots=otime[fp]; oys=odata[fp] #get surf. obs
@@ -128,21 +140,29 @@ if iflags[0]==1:
    #plot all figures
    ps=[]; [[ps.append([*i,*k]) for k in zip(regions,pstations)] for i in zip(mvars,ovars)]; S=zdata(tvars) #init. statistics capsule
    if nproc==1:
-      for i in ps: s=plot_ts(*i); [S.attr(k).extend(s.attr(k))  for k in tvars]
-   else:
+      for m in ps: s=plot_ts(*m); [S.attr(k).extend(s.attr(k))  for k in tvars]
+   elif ibatch==1:
       pp0=mp.Pool(processes=nproc)
       for n in range(int(len(ps)/nproc)+1):
           i1=n*nproc; i2=min([(n+1)*nproc,len(ps)]); npc=int(i2-i1);  pp=pp0 if npc==nproc else mp.Pool(processes=nproc); print('[{}-{}]/{}'.format(i1,i2,len(ps)))
-          pd=pp.starmap(plot_ts,ps[i1:i2]); [[S.attr(k).extend(s.attr(k))  for k in tvars] for s in pd]  
+          ss=pp.starmap(plot_ts,ps[i1:i2]); [[S.attr(k).extend(s.attr(k))  for k in tvars] for s in ss]  
       pp0.close(); pp.close()
-   if iflags[2]==1: 
+   elif ibatch==2:
+      for i, m in enumerate(ps):
+          if i%nproc!=myrank: continue
+          s=plot_ts(*m); [S.attr(k).extend(s.attr(k))  for k in tvars]
+      ss=comm.gather(S,root=0)
+      if myrank==0: S=zdata(tvars); [[S.attr(k).extend(s.attr(k))  for k in tvars] for s in ss]
+
+   #statistic numbers
+   if iflags[2]==1 and myrank==0: 
       S.x,S.y=proj_pts(*array([[C.lon[i],C.lat[i]] for i in S.station]).T,'epsg:4326','epsg:26918')
       S.to_array(); S.save('stat_'+'_'.join(runs))
             
 #------------------------------------------------------------------------------
 #Plot all variables for each station
 #------------------------------------------------------------------------------
-if iflags[1]==1:
+if iflags[1]==1 and myrank==0:
    for nn,[region, stations] in enumerate(zip(regions,pstations)):
        for i,station in enumerate(stations):
            figure(figsize=(28,14))
@@ -191,7 +211,7 @@ if iflags[1]==1:
 #------------------------------------------------------------------------------
 #write statistics excel files
 #------------------------------------------------------------------------------
-if iflags[2]!=0:
+if iflags[2]!=0 and myrank==0:
    S=read('stat_{}.npz'.format('_'.join(runs))); tname='statistics_'+'_'.join(runs)+'.xlsx'
    xvars=['temp','salt','chla', 'DO', 'TN', 'TP','NH4', 'NO3', 'PO4', 'DOC', 'DON', 'DOP', 'POC', 'PON', 'POP','TSS']
    vms  =[1.5,     2,     10,    2,    1,   0.1,  0.1,  0.4,   0.02 ,  2,    0.3,   0.02,  2,     0.2,   0.05, 10]
