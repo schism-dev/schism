@@ -22,7 +22,7 @@ from pyschism.mesh import Hgrid as pyschism_Hgrid
 
 # Import from the sub folders. These are not from installed packages.
 from ..ops.simple_tasks import gen_nudge_coef, gen_shapiro_strength, gen_soil, gen_drag, gen_elev_ic
-from ..ops.simple_tasks import gen_3dbc, gen_elev2d, gen_nudge_stofs, gen_diffmin
+from ..ops.simple_tasks import gen_3dbc, gen_elev2d, gen_nudge_stofs, gen_diffmin, gen_watertype
 from ..ops.Vgrid.gen_vqs import gen_vqs
 from ..ops.River.gen_Canada_river_flux_th import gen_Canada_river_flux_th
 from ..utils.utils import (
@@ -301,6 +301,19 @@ def stofs3d_atl_driver(
 
         os.chdir(run_dir)
         os.system(f'ln -sf ../I{runid}/{sub_dir}/elev.ic .')
+        os.chdir(model_input_path)
+
+    # -----------------drag.gr3---------------------
+    if input_files['watertype']:
+        sub_dir = 'Watertype'
+        print(f'{DRIVER_PRINT_PREFIX}Generating watertype.gr3 ...')
+        mkcd_new_dir(f'{model_input_path}/{sub_dir}')
+        watertype = gen_watertype(hgrid)
+
+        hgrid.save(f'{model_input_path}/{sub_dir}/watertype.gr3', value=watertype)
+
+        os.chdir(run_dir)
+        os.system(f'ln -sf ../I{runid}/{sub_dir}/watertype.gr3 .')
         os.chdir(model_input_path)
 
     # ----- end spatially varying Gr3 -----------------
