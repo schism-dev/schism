@@ -17,6 +17,8 @@
 !    Time loop part of SCHISM
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
+#include "schism_timing_macros.inc"
+
       subroutine schism_step(it)
 
       use schism_glbl
@@ -368,14 +370,10 @@ real (rkind) :: aux                               ! ustar
 
 !      do it=iths+1,ntime
 
-#ifdef INCLUDE_TIMING
-      wtmp1=mpi_wtime() !Forcing preparation section
-#endif
+      SCHISM_TIMING_START(wtmp1) !Forcing preparation section
 
 !TIMER2 for easier timing of major blocks
-#ifdef TIMER2
-      cwtmp3=mpi_wtime()
-#endif
+      SCHISM_TIMER2_START(cwtmp3)
 
       time=it*dt 
      
@@ -432,17 +430,8 @@ real (rkind) :: aux                               ! ustar
         ramp=1.d0
       endif
 
-!$OMP parallel default(shared) private(i,j,ncyc,arg)
-
-!...  Compute new bed deformation
-!$OMP do
-      do i=1,npa
-        bdef2(i)=bdef(i)/real(ibdef,rkind)*real(min0(it,ibdef),rkind)
-      enddo !i
-!$OMP end do
-
 !...  SAL from spherical harmonic option
-      if(iloadtide==4) then
+      if(iloadtide==4.and.mod(it-iths_main-1,nstep_sal)==0) then
 #ifdef USE_SPK
 
         !Debug
@@ -458,7 +447,16 @@ real (rkind) :: aux                               ! ustar
 
         call selfattraction
 #endif /*USE_SPK*/
-      endif !iloadtide=4
+      endif !iloadtide=4 and SAL calculation step
+
+!$OMP parallel default(shared) private(i,j,ncyc,arg)
+
+!...  Compute new bed deformation
+!$OMP do
+      do i=1,npa
+        bdef2(i)=bdef(i)/real(ibdef,rkind)*real(min0(it,ibdef),rkind)
+      enddo !i
+!$OMP end do
 
 !...  Earth tidal potential and loading tide at nodes: pre-compute to save time
 !... 
@@ -1511,13 +1509,9 @@ real (rkind) :: aux                               ! ustar
 
 !$OMP end parallel
 
-#ifdef INCLUDE_TIMING
-        cwtmp=mpi_wtime()
-#endif
+        SCHISM_TIMING_START(cwtmp)
         call mpi_allreduce(buf1,buf2,2*nhtblocks,rtype,MPI_SUM,comm,ierr)
-#ifdef INCLUDE_TIMING
-        wtimer(3,2)=wtimer(3,2)+mpi_wtime()-cwtmp
-#endif
+        SCHISM_TIMING_ACCUMULATE(wtimer(3,2),cwtmp)
 
         !Check
         !write(12,*)'Block face area:',it,(real(buf2(i,1:2)),i=1,nhtblocks) !,(real(buf1(i,1:2)),i=1,nhtblocks)
@@ -2031,13 +2025,9 @@ real (rkind) :: aux                               ! ustar
           endif
         enddo !k=1,nope
 
-#ifdef INCLUDE_TIMING
-        cwtmp=mpi_wtime()
-#endif
+        SCHISM_TIMING_START(cwtmp)
         call mpi_allreduce(buf1,buf2,nope_global*2,rtype,MPI_SUM,comm,ierr)
-#ifdef INCLUDE_TIMING
-        wtimer(3,2)=wtimer(3,2)+mpi_wtime()-cwtmp
-#endif
+        SCHISM_TIMING_ACCUMULATE(wtimer(3,2),cwtmp)
         carea=0.d0
         clen=0.d0
         do k=1,nope_global
@@ -2185,13 +2175,9 @@ real (rkind) :: aux                               ! ustar
 !$OMP master
       if(myrank==0) write(16,*)'done flow b.c.'
 
-#ifdef INCLUDE_TIMING
 !     End forcing preparation section
-      wtmp2=mpi_wtime()
-      wtimer(3,1)=wtimer(3,1)+wtmp2-wtmp1
+      SCHISM_TIMING_ACCUMULATE(wtimer(3,1),wtmp1)
 !     Start btrack
-      wtmp1=wtmp2
-#endif
 !$OMP end master
 
 !...  Bottom drag coefficients for nchi=-1 or 1; Cd and Cdp for nchi=0 already read in
@@ -3935,13 +3921,9 @@ real (rkind) :: aux                               ! ustar
 
 !$OMP end parallel
 
-#ifdef INCLUDE_TIMING
 !     end turbulence
-      wtmp2=mpi_wtime()
-      wtimer(5,1)=wtimer(5,1)+wtmp2-wtmp1
+      SCHISM_TIMING_ACCUMULATE(wtimer(5,1),wtmp1)
 !     start prepations
-      wtmp1=wtmp2
-#endif
 
 !...  Horizontal viscosity, implemented as a filter
 !     In ll frame if ics=2
@@ -4032,14 +4014,10 @@ real (rkind) :: aux                               ! ustar
 
 !$OMP   master
 !       Update ghost 
-#ifdef INCLUDE_TIMING
-        cwtmp=mpi_wtime()
-#endif
+        SCHISM_TIMING_START(cwtmp)
         call exchange_s3d_2(d2uv)
         call exchange_s3d_2(swild98)
-#ifdef INCLUDE_TIMING
-        wtimer(3,2)=wtimer(3,2)+mpi_wtime()-cwtmp
-#endif
+        SCHISM_TIMING_ACCUMULATE(wtimer(3,2),cwtmp)
 !$OMP   end master
 !$OMP   barrier
 
@@ -4262,11 +4240,7 @@ real (rkind) :: aux                               ! ustar
 
       if(myrank==0) write(16,*)'done hvis... '
 
-#ifdef TIMER2
-      tmp=mpi_wtime()
-      write(12,*)'Time (sec) taken for force prep=',tmp-cwtmp3,it
-      cwtmp3=tmp !reset
-#endif
+      SCHISM_TIMER2_CHECKPOINT('Time (sec) taken for force prep=',it,cwtmp3)
 
 !=================================================================================
       endif !itransport_only
@@ -4664,13 +4638,9 @@ real (rkind) :: aux                               ! ustar
 !     Complete inter-subdomain backtracking (if necessary)
       if(nproc>1) then
         lbt(1)=(nbtrk/=0)
-#ifdef INCLUDE_TIMING
-        cwtmp=mpi_wtime()
-#endif
+        SCHISM_TIMING_START(cwtmp)
         call mpi_allreduce(lbt,lbtgb,1,MPI_LOGICAL,MPI_LOR,comm,ierr)
-#ifdef INCLUDE_TIMING
-        wtimer(4,2)=wtimer(4,2)+mpi_wtime()-cwtmp
-#endif
+        SCHISM_TIMING_ACCUMULATE(wtimer(4,2),cwtmp)
         if(ierr/=MPI_SUCCESS) call parallel_abort('MAIN: allreduce lbtgb',ierr)
 !'
 
@@ -4743,9 +4713,7 @@ real (rkind) :: aux                               ! ustar
       endif !nproc>1
 
 !     Update ghost backtracked momentum
-#ifdef INCLUDE_TIMING
-      cwtmp=mpi_wtime()
-#endif
+      SCHISM_TIMING_START(cwtmp)
       call exchange_s3d_4(swild98)
 
       allocate(swild96(2,nvrt,nsa),stat=istat)
@@ -4766,9 +4734,7 @@ real (rkind) :: aux                               ! ustar
 
       if(ibtrack_test==1) call exchange_s3dw(tsd)
 
-#ifdef INCLUDE_TIMING
-      wtimer(4,2)=wtimer(4,2)+mpi_wtime()-cwtmp
-#endif
+      SCHISM_TIMING_ACCUMULATE(wtimer(4,2),cwtmp)
 
 !     ELAD for kriging
       if(inter_mom/=0) then
@@ -5005,13 +4971,9 @@ real (rkind) :: aux                               ! ustar
 
       if(myrank==0) write(16,*)'done backtracking'
 
-#ifdef INCLUDE_TIMING
 !     End timing first backtracking section
-      wtmp2=mpi_wtime()
-      wtimer(4,1)=wtimer(4,1)+wtmp2-wtmp1
+      SCHISM_TIMING_ACCUMULATE(wtimer(4,1),wtmp1)
 !     start turbulence timing
-      wtmp1=wtmp2
-#endif
  
       deallocate(swild98)
 
@@ -5130,13 +5092,9 @@ real (rkind) :: aux                               ! ustar
 !$OMP end do 
 !$OMP end parallel
 
-#ifdef INCLUDE_TIMING
-      cwtmp=mpi_wtime()
-#endif
+      SCHISM_TIMING_START(cwtmp)
       call exchange_p3d_2(bcc)
-#ifdef INCLUDE_TIMING
-      wtimer(4,2)=wtimer(4,2)+mpi_wtime()-cwtmp
-#endif
+      SCHISM_TIMING_ACCUMULATE(wtimer(4,2),cwtmp)
 
       !Vertical advection part
 !$OMP parallel default(shared) private(i,alow,icount,j,ie,tmp1,tmp2,swild,swild2,n1,n2,k,vn1,vn2,tt1,ss1)
@@ -5200,9 +5158,7 @@ real (rkind) :: aux                               ! ustar
 !$OMP end do
 !$OMP end parallel
 
-#ifdef INCLUDE_TIMING
-      cwtmp=mpi_wtime()
-#endif
+      SCHISM_TIMING_START(cwtmp)
 !      call exchange_s3d_4(sdbt)
       allocate(swild96(2,nvrt,nsa),stat=istat)
       if(istat/=0) call parallel_abort('MAIN: fail to allocate swild96 (3.4)')
@@ -5211,18 +5167,12 @@ real (rkind) :: aux                               ! ustar
       sdbt(1:2,:,:)=swild96
       deallocate(swild96)
 
-#ifdef INCLUDE_TIMING
-      wtimer(4,2)=wtimer(4,2)+mpi_wtime()-cwtmp
-#endif
+      SCHISM_TIMING_ACCUMULATE(wtimer(4,2),cwtmp)
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       endif !ELM or upwind
 
-#ifdef TIMER2
-      tmp=mpi_wtime()
-      write(12,*)'Time taken for mom advection=',tmp-cwtmp3,it
-      cwtmp3=tmp !reset
-#endif
+      SCHISM_TIMER2_CHECKPOINT('Time taken for mom advection=',it,cwtmp3)
 
       if(itransport_only==0) then
 !=================================================================================
@@ -5561,13 +5511,9 @@ real (rkind) :: aux                               ! ustar
 !$OMP   end do
 
 !$OMP   master
-#ifdef INCLUDE_TIMING
-        cwtmp=mpi_wtime()
-#endif
+        SCHISM_TIMING_START(cwtmp)
         call exchange_e3d_2(dr_dxy)
-#ifdef INCLUDE_TIMING
-        wtimer(6,2)=wtimer(6,2)+mpi_wtime()-cwtmp
-#endif
+        SCHISM_TIMING_ACCUMULATE(wtimer(6,2),cwtmp)
 !$OMP   end master
 !$OMP   barrier
 
@@ -5623,13 +5569,9 @@ real (rkind) :: aux                               ! ustar
 !            write(98,'(3(1x,e12.4))')((ze(k,i)+ze(k-1,i))/2,dr_dxy(1:2,k,i),k=kbe(i)+1,nvrt)
 !          enddo !i
 !        endif
-#ifdef INCLUDE_TIMING
-        cwtmp=mpi_wtime()
-#endif
+        SCHISM_TIMING_START(cwtmp)
         call exchange_s3d_2(bcc)
-#ifdef INCLUDE_TIMING
-        wtimer(6,2)=wtimer(6,2)+mpi_wtime()-cwtmp
-#endif
+        SCHISM_TIMING_ACCUMULATE(wtimer(6,2),cwtmp)
 
       endif !ibc==0
 
@@ -5927,13 +5869,9 @@ real (rkind) :: aux                               ! ustar
 
       if(myrank==0) write(16,*)'done 2nd preparation'
 
-#ifdef INCLUDE_TIMING
 ! end preparations
-      wtmp2=mpi_wtime()
-      wtimer(6,1)=wtimer(6,1)+wtmp2-wtmp1
+      SCHISM_TIMING_ACCUMULATE(wtimer(6,1),wtmp1)
 ! start solver
-      wtmp1=wtmp2
-#endif
 
 !...  setup coefficient matrix, sparsem, for the wave equation
 !...  No elevation essential b.c. are imposed yet but other b.c. is imposed
@@ -6332,11 +6270,7 @@ real (rkind) :: aux                               ! ustar
       endif !iveg
 #endif /*DEBUG*/
 
-#ifdef TIMER2
-      tmp=mpi_wtime()
-      write(12,*)'Time taken for maxtrix prep=',tmp-cwtmp3,it
-      cwtmp3=tmp !reset
-#endif
+      SCHISM_TIMER2_CHECKPOINT('Time taken for maxtrix prep=',it,cwtmp3)
 
 #ifdef USE_PETSC
       if(myrank==0) write(16,*)'starting petsc...'
@@ -6403,13 +6337,9 @@ real (rkind) :: aux                               ! ustar
 #endif /*USE_PETSC*/
 
 !     Exchange eta2 to ensure consistency across processors
-#ifdef INCLUDE_TIMING
-      cwtmp=mpi_wtime()
-#endif
+      SCHISM_TIMING_START(cwtmp)
       call exchange_p2d(eta2)
-#ifdef INCLUDE_TIMING
-      wtimer(7,2)=wtimer(7,2)+mpi_wtime()-cwtmp
-#endif
+      SCHISM_TIMING_ACCUMULATE(wtimer(7,2),cwtmp)
 
 !     Update cumsum
       nsteps_from_cold=nsteps_from_cold+1
@@ -6434,30 +6364,18 @@ real (rkind) :: aux                               ! ustar
 !$OMP end do
 !$OMP end parallel
 
-#ifdef INCLUDE_TIMING
-      cwtmp=mpi_wtime()
-#endif
+      SCHISM_TIMING_START(cwtmp)
       call mpi_allreduce(etatotl,etatot,1,rtype,MPI_SUM,comm,ierr)
-#ifdef INCLUDE_TIMING
-      wtimer(7,2)=wtimer(7,2)+mpi_wtime()-cwtmp
-#endif
+      SCHISM_TIMING_ACCUMULATE(wtimer(7,2),cwtmp)
 
       if(myrank==0) write(16,*)'done solver; ', 'etatot=',etatot, &
      &'; average |eta|=',etatot/np_global
 
-#ifdef INCLUDE_TIMING
 !  end solver
-      wtmp2=mpi_wtime()
-      wtimer(7,1)=wtimer(7,1)+wtmp2-wtmp1
+      SCHISM_TIMING_ACCUMULATE(wtimer(7,1),wtmp1)
 !  start momentum
-      wtmp1=wtmp2
-#endif
 
-#ifdef TIMER2
-      tmp=mpi_wtime()
-      write(12,*)'Time for solver=',tmp-cwtmp3,it
-      cwtmp3=tmp !reset
-#endif
+      SCHISM_TIMER2_CHECKPOINT('Time for solver=',it,cwtmp3)
 
 !
 !************************************************************************
@@ -6580,14 +6498,10 @@ real (rkind) :: aux                               ! ustar
 !$OMP end workshare
 
 !$OMP master
-#ifdef INCLUDE_TIMING
-      cwtmp=mpi_wtime()
-#endif
+      SCHISM_TIMING_START(cwtmp)
       call exchange_s2d_9(swild99)
 
-#ifdef INCLUDE_TIMING
-      wtimer(8,2)=wtimer(8,2)+mpi_wtime()-cwtmp
-#endif
+      SCHISM_TIMING_ACCUMULATE(wtimer(8,2),cwtmp)
 !$OMP end master
 !$OMP barrier
 
@@ -7054,13 +6968,9 @@ real (rkind) :: aux                               ! ustar
 !$OMP     end workshare
 
 !$OMP     master
-#ifdef INCLUDE_TIMING
-          cwtmp=mpi_wtime()
-#endif
+          SCHISM_TIMING_START(cwtmp)
           call exchange_s3d_2(swild98)
-#ifdef INCLUDE_TIMING
-          wtimer(8,2)=wtimer(8,2)+mpi_wtime()-cwtmp
-#endif
+          SCHISM_TIMING_ACCUMULATE(wtimer(8,2),cwtmp)
 !$OMP     end master
 !$OMP     barrier
 
@@ -7419,13 +7329,9 @@ real (rkind) :: aux                               ! ustar
 
       if(myrank==0) write(16,*)'done solving w'
 
-#ifdef INCLUDE_TIMING
 !  end momentum
-      wtmp2=mpi_wtime()
-      wtimer(8,1)=wtimer(8,1)+wtmp2-wtmp1
+      SCHISM_TIMING_ACCUMULATE(wtimer(8,1),wtmp1)
 !  start transport
-      wtmp1=wtmp2
-#endif
 
 !     Test backtracking alone with rotating Gausshill
       if(ibtrack_test==1) then !b-tropic w/o transport
@@ -7506,11 +7412,7 @@ real (rkind) :: aux                               ! ustar
         call exchange_p3d_tr(tr_nd)
       endif !ibtrack_test
 
-#ifdef TIMER2
-      tmp=mpi_wtime()
-      write(12,*)'Time taken for 3D vel=',tmp-cwtmp3,it
-      cwtmp3=tmp !reset
-#endif
+      SCHISM_TIMER2_CHECKPOINT('Time taken for 3D vel=',it,cwtmp3)
 
 !*************************************************************************************
 !
@@ -8271,14 +8173,10 @@ real (rkind) :: aux                               ! ustar
 !Debug
 !        write(12,*)'stage 2'
 
-#ifdef INCLUDE_TIMING
-          cwtmp=mpi_wtime()
-#endif
+          SCHISM_TIMING_START(cwtmp)
           call exchange_p3d_tr(tr_nd)
 
-#ifdef INCLUDE_TIMING
-          wtimer(9,2)=wtimer(9,2)+mpi_wtime()-cwtmp
-#endif
+          SCHISM_TIMING_ACCUMULATE(wtimer(9,2),cwtmp)
 
 !...  End of tracer transport
 !----------------------------------------------------------------------
@@ -8295,31 +8193,19 @@ real (rkind) :: aux                               ! ustar
       endif
 #endif
 
-#ifdef TIMER2
-      tmp=mpi_wtime()
-      write(12,*)'Time taken for transport=',tmp-cwtmp3,it
-      cwtmp3=tmp !reset
-#endif
+      SCHISM_TIMER2_CHECKPOINT('Time taken for transport=',it,cwtmp3)
 
 #ifdef USE_SED2D
-#ifdef INCLUDE_TIMING
-      cwtmp2=mpi_wtime() !start of timer
-#endif
+      SCHISM_TIMING_START(cwtmp2) !start of timer
 
       call sed2d_main(it)
 
-#ifdef INCLUDE_TIMING
-      timer_ns(3)=timer_ns(3)+mpi_wtime()-cwtmp2 !end timing this section
-#endif 
+      SCHISM_TIMING_ACCUMULATE(timer_ns(3),cwtmp2) !end timing this section
 #endif /*USE_SED2D*/
 
-#ifdef INCLUDE_TIMING
 ! end transport
-      wtmp2=mpi_wtime()
-      wtimer(9,1)=wtimer(9,1)+wtmp2-wtmp1
+      SCHISM_TIMING_ACCUMULATE(wtimer(9,1),wtmp1)
 ! start computing levels
-      wtmp1=wtmp2
-#endif
 
 !$OMP parallel default(shared) private(i,dep,swild,n1,n2,smax,smin,ifl,j,ie,nd,tmp2,icount2,m)
 
@@ -8818,13 +8704,9 @@ real (rkind) :: aux                               ! ustar
 !$OMP end do
 
 !$OMP master
-#ifdef  INCLUDE_TIMING
-      cwtmp=mpi_wtime()
-#endif
+      SCHISM_TIMING_START(cwtmp)
       call mpi_allreduce(swild,swild3,ntracers,rtype,MPI_SUM,comm,ierr)
-#ifdef  INCLUDE_TIMING
-      wtimer(9,2)=wtimer(9,2)+mpi_wtime()-cwtmp
-#endif
+      SCHISM_TIMING_ACCUMULATE(wtimer(9,2),cwtmp)
 
       if(myrank==0) write(25,*)real(time/86400.d0),swild3(1:ntracers)
 
@@ -8972,13 +8854,9 @@ real (rkind) :: aux                               ! ustar
 !$OMP master
       allocate(buf3(6)); buf3=0
       swild(1)=tvol; swild(2)=tmass; swild(3)=tpe; swild(4)=tkne; swild(5)=enerf; swild(6)=ener_ob
-#ifdef INCLUDE_TIMING
-      cwtmp=mpi_wtime()
-#endif
+      SCHISM_TIMING_START(cwtmp)
       call mpi_reduce(swild,buf3,6,rtype,MPI_SUM,0,comm,ierr)
-#ifdef INCLUDE_TIMING
-      wtimer(11,2)=wtimer(11,2)+mpi_wtime()-cwtmp
-#endif
+      SCHISM_TIMING_ACCUMULATE(wtimer(11,2),cwtmp)
 
       if(myrank==0) write(13,*)time/86400,buf3(1:4),buf3(3)+buf3(4),buf3(5:6)
       deallocate(buf3)
@@ -9035,13 +8913,9 @@ real (rkind) :: aux                               ! ustar
 !$OMP end do
 
 !$OMP master
-#ifdef INCLUDE_TIMING
-      cwtmp=mpi_wtime()
-#endif
+      SCHISM_TIMING_START(cwtmp)
       call mpi_reduce(fluxes_tr,fluxes_tr_gb,max_flreg*(3+2*ntracers),rtype,MPI_SUM,0,comm,ierr)
-#ifdef INCLUDE_TIMING
-      wtimer(11,2)=wtimer(11,2)+mpi_wtime()-cwtmp
-#endif
+      SCHISM_TIMING_ACCUMULATE(wtimer(11,2),cwtmp)
       if(myrank==0) then
         write(9,'(f16.6,20000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,1)
         if(iflux==2) then
@@ -9070,13 +8944,9 @@ real (rkind) :: aux                               ! ustar
         rho_mean=0.d0
       endif
 
-#ifdef INCLUDE_TIMING
 ! end flux compution
-      wtmp2=mpi_wtime()
-      wtimer(10,1)=wtimer(10,1)+wtmp2-wtmp1
+      SCHISM_TIMING_ACCUMULATE(wtimer(10,1),wtmp1)
 ! Start timing global output section
-      wtmp1=wtmp2
-#endif
 
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
@@ -10428,13 +10298,9 @@ real (rkind) :: aux                               ! ustar
       ENDIF
 #endif /*USE_HA*/
 
-#ifdef INCLUDE_TIMING
 ! End timing global output section
-      wtmp2=mpi_wtime()
-      wtimer(12,1)=wtimer(12,1)+wtmp2-wtmp1
+      SCHISM_TIMING_ACCUMULATE(wtimer(12,1),wtmp1)
 ! Start timing write hotstart section
-      wtmp1=wtmp2
-#endif
 
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
@@ -10770,11 +10636,8 @@ real (rkind) :: aux                               ! ustar
         if(myrank==0) write(16,*) 'hot start written',it,time,ifile,nvars_hot
       endif !nhot
 
-#ifdef INCLUDE_TIMING
 ! End hotstart output section
-      wtmp2=mpi_wtime()
-      wtimer(13,1)=wtimer(13,1)+wtmp2-wtmp1
-#endif
+      SCHISM_TIMING_ACCUMULATE(wtimer(13,1),wtmp1)
 
       if(myrank==0) then
         write(16,'(a,i12,a,f20.6)') 'TIME STEP= ',it,';  TIME= ',time
@@ -10819,10 +10682,6 @@ real (rkind) :: aux                               ! ustar
       if(allocated(veg_alpha3D)) deallocate(veg_alpha3D)
       if(allocated(veg_alpha_vert_mean)) deallocate(veg_alpha_vert_mean)
 
-#ifdef TIMER2
-      tmp=mpi_wtime()
-      write(12,*)'Time taken for outputs=',tmp-cwtmp3,it
-      cwtmp3=tmp !reset
-#endif
+      SCHISM_TIMER2_CHECKPOINT('Time taken for outputs=',it,cwtmp3)
 
       end subroutine schism_step
