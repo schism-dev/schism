@@ -101,7 +101,25 @@ Supported YAML patch types
        replace_temperature: true
        allow_negative_sink: false
 
-3. ``large_constant_sink_artificial_island_locations``
+3. ``zero_source_regions``
+
+   Set the complete ``vsource`` time series to zero for existing relocated
+   source elements whose element centers fall inside one or more SCHISM
+   ``*.rgn`` polygons. Source elements remain in ``source_sink.in``;
+   ``msource`` and ``vsink`` are not modified by this operation.
+
+   Relative region paths are resolved from the directory containing this
+   YAML file. Each list entry may be either a path string or a mapping with
+   ``name`` and ``region_file``.
+
+   Example
+   -------
+   zero_source_regions:
+     - name: Upper Hudson
+       region_file: regions/upper_Hudson.rgn
+     - regions/another_region.rgn
+
+4. ``large_constant_sink_artificial_island_locations``
 
    Add a constant sink of -1000 m3/s at the main-grid element nearest each
    listed longitude/latitude location.
@@ -120,7 +138,7 @@ Supported YAML patch types
        x: -79.6996536667
        y: 32.9802923333
 
-4. ``exclude_source_sink_locations``
+5. ``exclude_source_sink_locations``
 
    Remove existing source and/or sink columns whose main-grid element
    centers lie within the specified radius.
@@ -154,11 +172,12 @@ Processing order
 2. Optionally replace temperatures for all relocated sources using upstream
    NWM-to-USGS associations.
 3. Apply explicit ``replace_only_source_locations`` replacements.
-4. Add -1000 m3/s constant sinks for entries under
+4. Set ``vsource`` to zero inside entries under ``zero_source_regions``.
+5. Add -1000 m3/s constant sinks for entries under
    ``large_constant_sink_artificial_island_locations``.
-5. Restore or create entries under ``force_source_sink_locations``.
-6. Remove entries under ``exclude_source_sink_locations``.
-7. Return a new ``source_sink`` object. The input ``base_ss`` is not modified.
+6. Restore or create entries under ``force_source_sink_locations``.
+7. Remove entries under ``exclude_source_sink_locations``.
+8. Return a new ``source_sink`` object. The input ``base_ss`` is not modified.
 """
 
 from __future__ import annotations
@@ -190,7 +209,7 @@ from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
 
 # USGS station mapping used when YAML has ``use_usgs_obs: true``.
 # Wando is left as None until a station is selected.
-USGS_STATION_BY_NAME = {
+USGS_FLOW_STATION_BY_NAME = {
     # Forced/restored artificial-island sources
     "Wando": None,
     "Turkey": "02172035",
@@ -202,10 +221,24 @@ USGS_STATION_BY_NAME = {
     "Hudson River": "01358000",
 }
 
+USGS_TEMPERATURE_STATION_BY_NAME = {
+    "Wando": None,
+    "Turkey": None,
+    "Buffalo Bluff": "02244040",
+    "Dunns Creek": "02244440",
+    "Delaware": "01463500",
+
+    # Hudson River at Albany, NY
+    "Hudson River": "01359139",
+}
+
 USGS_FLOW_PARAMETER_ID = "00060"
 USGS_TEMPERATURE_PARAMETER_ID = "00010"
 CFS_TO_CMS = 0.028316846592
 MAX_USGS_INTERPOLATION_GAP = pd.Timedelta("6 hours")
+HUDSON_USGS_DOWNLOAD_CHUNK_DAYS = 100
+HUDSON_USGS_RETRY_CHUNK_DAYS = 20
+HUDSON_USGS_MIN_CHUNK_DAYS = 5
 
 
 def _as_dict(value: Any) -> dict:
@@ -312,10 +345,13 @@ def _normalize_replace_relocated_points(patch_info: dict) -> list[dict]:
             )
 
         name = str(p.get("name", "unnamed"))
-        if name not in USGS_STATION_BY_NAME:
+        if (
+            name not in USGS_FLOW_STATION_BY_NAME
+            and name not in USGS_TEMPERATURE_STATION_BY_NAME
+        ):
             raise ValueError(
                 f"{name!r} is listed for relocated-source replacement, "
-                "but it is missing from USGS_STATION_BY_NAME"
+                "but no USGS flow or temperature station is configured"
             )
 
         points.append(
@@ -373,6 +409,57 @@ def _normalize_large_constant_sink_points(
     return points
 
 
+def _normalize_zero_source_regions(
+    patch_info: dict,
+    yaml_dir: Path,
+) -> list[dict]:
+    """Normalize SCHISM regions whose existing source flows are zeroed."""
+    raw_regions = patch_info.get("zero_source_regions") or []
+    if isinstance(raw_regions, (str, Path, dict)):
+        raw_regions = [raw_regions]
+
+    regions = []
+    for raw in raw_regions:
+        if isinstance(raw, (str, Path)):
+            entry = {
+                "name": Path(raw).stem,
+                "region_file": raw,
+            }
+        else:
+            entry = _as_dict(raw)
+
+        region_value = entry.get(
+            "region_file",
+            entry.get("rgn_file", entry.get("file")),
+        )
+        if region_value is None:
+            raise ValueError(
+                "Each zero_source_regions entry requires region_file: "
+                f"{entry}"
+            )
+
+        region_file = Path(region_value).expanduser()
+        if not region_file.is_absolute():
+            region_file = yaml_dir / region_file
+        region_file = region_file.resolve()
+
+        if not region_file.is_file():
+            raise FileNotFoundError(
+                "Zero-source SCHISM region does not exist: "
+                f"{region_file}"
+            )
+
+        regions.append(
+            {
+                **entry,
+                "name": str(entry.get("name", region_file.stem)),
+                "region_file": region_file,
+            }
+        )
+
+    return regions
+
+
 def _normalize_exclude_points(patch_info: dict) -> list[dict]:
     """Normalize source/sink exclusion locations."""
     raw_points = patch_info.get("exclude_source_sink_locations") or []
@@ -413,6 +500,21 @@ def _normalize_exclude_points(patch_info: dict) -> list[dict]:
 
     return points
 
+def _normalize_usgs_station_id(value) -> str:
+    """Normalize a USGS station ID while preserving leading zeros."""
+    if value is None:
+        return ""
+
+    value = str(value).strip()
+
+    if value.endswith(".0"):
+        value = value[:-2]
+
+    if value.isdigit():
+        value = value.zfill(8)
+
+    return value
+
 
 def _compute_grid_centers(hgrid) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -451,6 +553,77 @@ def _compute_grid_centers(hgrid) -> tuple[np.ndarray, np.ndarray]:
             delattr(hgrid, "yctr")
 
     return xctr, yctr
+
+
+def _zero_sources_inside_regions(
+    regions: list[dict],
+    source_eles: list[int],
+    source_time_and_data: tuple[np.ndarray, np.ndarray] | None,
+    xctr: np.ndarray,
+    yctr: np.ndarray,
+) -> tuple[tuple[np.ndarray, np.ndarray] | None, int]:
+    """
+    Set all vsource records to zero for source centers inside SCHISM regions.
+
+    Source element IDs are retained. This function changes neither msource
+    nor sink forcing.
+    """
+    if not regions:
+        return source_time_and_data, 0
+
+    if source_time_and_data is None or not source_eles:
+        print(
+            "[REGION SOURCE ZERO] no source forcing exists; "
+            "nothing was changed."
+        )
+        return source_time_and_data, 0
+
+    from pylib import inside_polygon, read_schism_reg
+
+    source_time, source_data = source_time_and_data
+    source_data = np.asarray(source_data, dtype=float).copy()
+    source_eles_array = np.asarray(source_eles, dtype=int)
+    source_xy = np.c_[
+        xctr[source_eles_array - 1],
+        yctr[source_eles_array - 1],
+    ]
+    zeroed_elements: set[int] = set()
+
+    for entry in regions:
+        region_file = Path(entry["region_file"])
+        region = read_schism_reg(str(region_file))
+        inside = np.asarray(
+            inside_polygon(source_xy, region.x, region.y)
+        ).reshape(-1) == 1
+        affected_indices = np.flatnonzero(inside)
+
+        if affected_indices.size == 0:
+            print(
+                f"[REGION SOURCE ZERO] {entry['name']}: no source "
+                f"center found inside {region_file.name}."
+            )
+            continue
+
+        means_before = np.mean(
+            source_data[:, affected_indices],
+            axis=0,
+        )
+        source_data[:, affected_indices] = 0.0
+        affected_elements = source_eles_array[affected_indices]
+        zeroed_elements.update(int(ele) for ele in affected_elements)
+
+        print(
+            f"[REGION SOURCE ZERO] {entry['name']}: set vsource=0 "
+            f"for {affected_indices.size} source(s) inside "
+            f"{region_file.name}."
+        )
+        for ele, mean_before in zip(affected_elements, means_before):
+            print(
+                f"[REGION SOURCE ZERO] element {int(ele)}: "
+                f"mean vsource {float(mean_before):.6f} -> 0.0 m3/s"
+            )
+
+    return (source_time, source_data), len(zeroed_elements)
 
 def _make_transformer() -> Transformer:
     """
@@ -911,7 +1084,7 @@ def _model_datetimes(start_time, model_time: np.ndarray) -> pd.DatetimeIndex:
 def _station_id_from_record(record) -> str:
     """Return a normalized USGS station ID from a download record."""
     info = getattr(record, "station_info", {}) or {}
-    return str(info.get("id", "")).strip()
+    return _normalize_usgs_station_id(info.get("id", ""))
 
 
 def _extract_usgs_values(record) -> pd.Series:
@@ -946,39 +1119,40 @@ def _extract_usgs_values(record) -> pd.Series:
     return series
 
 
-def _download_usgs_series(
+
+
+def _download_usgs_series_standard(
     station_id: str,
     parameter_id: str,
     start_time,
     end_time,
     usgs_cache_folder,
 ) -> pd.Series | None:
-    """Download and validate one USGS station/parameter time series."""
+    """Standard full-period download used for all locations except Hudson."""
     cache_dir = Path(usgs_cache_folder)
     cache_dir.mkdir(parents=True, exist_ok=True)
 
+    station_id = _normalize_usgs_station_id(station_id)
     start = _as_utc_timestamp(start_time)
     end = _as_utc_timestamp(end_time)
     padded_start = start - pd.Timedelta(days=1)
     padded_end = end + pd.Timedelta(days=1)
 
-    cache_file = (
-        cache_dir
-        / (
-            f"artificial_island_usgs_{station_id}_{parameter_id}_"
-            f"{padded_start.strftime('%Y%m%d')}_"
-            f"{padded_end.strftime('%Y%m%d')}.pq"
-        )
+    cache_file = cache_dir / (
+        f"artificial_island_usgs_{station_id}_{parameter_id}_"
+        f"{padded_start.strftime('%Y%m%d')}_"
+        f"{padded_end.strftime('%Y%m%d')}.pq"
     )
 
     try:
         records = download_stations(
             param_id=str(parameter_id),
-            station_ids=[str(station_id)],
+            station_ids=[station_id],
             cache_fname=str(cache_file),
             datelist=pd.date_range(
                 start=padded_start.tz_localize(None),
                 end=padded_end.tz_localize(None),
+                freq="D",
             ),
         )
     except Exception as exc:
@@ -989,9 +1163,8 @@ def _download_usgs_series(
         return None
 
     matching = [
-        record
-        for record in records
-        if _station_id_from_record(record) == str(station_id)
+        record for record in records
+        if _station_id_from_record(record) == station_id
     ]
     if not matching:
         print(
@@ -1000,9 +1173,8 @@ def _download_usgs_series(
         )
         return None
 
-    record = matching[0]
     try:
-        series = _extract_usgs_values(record)
+        series = _extract_usgs_values(matching[0])
     except Exception as exc:
         print(
             f"[ARTIFICIAL ISLAND PATCH] warning: failed to parse USGS "
@@ -1010,12 +1182,194 @@ def _download_usgs_series(
         )
         return None
 
-    if series.empty:
+    return None if series.empty else series
+
+
+def _iter_hudson_chunks(start_time, end_time, chunk_days=HUDSON_USGS_DOWNLOAD_CHUNK_DAYS):
+    """Yield Hudson-only non-overlapping date windows."""
+    start = _as_utc_timestamp(start_time)
+    end = _as_utc_timestamp(end_time)
+
+    chunk_start = start
+    n = 1
+    while chunk_start <= end:
+        chunk_end = min(
+            chunk_start + pd.Timedelta(days=chunk_days - 1),
+            end,
+        )
+        yield n, chunk_start, chunk_end
+        chunk_start = chunk_end + pd.Timedelta(days=1)
+        n += 1
+
+
+def _merge_usgs_series(series_list):
+    """Merge successful USGS pieces preserving original observation times."""
+    usable = [s for s in series_list if s is not None and not s.empty]
+    if not usable:
+        return None
+    merged = pd.concat(usable).sort_index()
+    merged = merged[~merged.index.duplicated(keep="first")]
+    return merged.replace([np.inf, -np.inf], np.nan).dropna()
+
+
+def _download_hudson_window(
+    station_id,
+    parameter_id,
+    window_start,
+    window_end,
+    cache_dir,
+):
+    """Download one Hudson window."""
+    station_id = _normalize_usgs_station_id(station_id)
+
+    cache_file = cache_dir / (
+        f"hudson_usgs_{station_id}_{parameter_id}_"
+        f"{window_start.strftime('%Y%m%d')}_"
+        f"{window_end.strftime('%Y%m%d')}.pq"
+    )
+
+    try:
+        records = download_stations(
+            param_id=str(parameter_id),
+            station_ids=[station_id],
+            cache_fname=str(cache_file),
+            datelist=pd.date_range(
+                start=window_start.tz_localize(None),
+                end=window_end.tz_localize(None),
+                freq="D",
+            ),
+        )
+    except Exception as exc:
+        print(
+            f"[HUDSON USGS] warning: request failed "
+            f"{window_start:%Y-%m-%d} to {window_end:%Y-%m-%d}: {exc}"
+        )
         return None
 
-    # Keep partial records. Missing intervals and long gaps are filled later
-    # with the original NWM/source forcing rather than rejecting the station.
-    return series
+    matching = [
+        record for record in records
+        if _station_id_from_record(record) == station_id
+    ]
+    if not matching:
+        return None
+
+    try:
+        series = _extract_usgs_values(matching[0])
+    except Exception:
+        return None
+
+    return None if series.empty else series
+
+
+def _download_hudson_window_adaptive(
+    station_id,
+    parameter_id,
+    window_start,
+    window_end,
+    cache_dir,
+    retry_chunk_days=HUDSON_USGS_RETRY_CHUNK_DAYS,
+    min_chunk_days=HUDSON_USGS_MIN_CHUNK_DAYS,
+):
+    """Retry failed Hudson windows as 20-day, then 10-day, then 5-day pieces."""
+    series = _download_hudson_window(
+        station_id,
+        parameter_id,
+        window_start,
+        window_end,
+        cache_dir,
+    )
+    if series is not None:
+        return [series]
+
+    span_days = (window_end.normalize() - window_start.normalize()).days + 1
+    if span_days <= min_chunk_days:
+        print(
+            f"[HUDSON USGS] giving up: "
+            f"{window_start:%Y-%m-%d} to {window_end:%Y-%m-%d}"
+        )
+        return []
+
+    if span_days > retry_chunk_days:
+        pieces = []
+        for _, s, e in _iter_hudson_chunks(
+            window_start,
+            window_end,
+            chunk_days=retry_chunk_days,
+        ):
+            pieces.extend(
+                _download_hudson_window_adaptive(
+                    station_id,
+                    parameter_id,
+                    s,
+                    e,
+                    cache_dir,
+                    retry_chunk_days,
+                    min_chunk_days,
+                )
+            )
+        return pieces
+
+    left_days = span_days // 2
+    left_end = window_start + pd.Timedelta(days=left_days - 1)
+    right_start = left_end + pd.Timedelta(days=1)
+
+    pieces = _download_hudson_window_adaptive(
+        station_id,
+        parameter_id,
+        window_start,
+        left_end,
+        cache_dir,
+        retry_chunk_days,
+        min_chunk_days,
+    )
+    pieces.extend(
+        _download_hudson_window_adaptive(
+            station_id,
+            parameter_id,
+            right_start,
+            window_end,
+            cache_dir,
+            retry_chunk_days,
+            min_chunk_days,
+        )
+    )
+    return pieces
+
+
+def _download_hudson_usgs_series(
+    station_id,
+    parameter_id,
+    start_time,
+    end_time,
+    usgs_cache_folder,
+):
+    """Hudson-only 100d -> 20d -> 10d -> 5d adaptive downloader."""
+    cache_dir = Path(usgs_cache_folder)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    start = _as_utc_timestamp(start_time) - pd.Timedelta(days=1)
+    end = _as_utc_timestamp(end_time) + pd.Timedelta(days=1)
+
+    pieces = []
+    chunks = list(_iter_hudson_chunks(start, end))
+
+    print(
+        f"[HUDSON USGS] adaptive download for {station_id}/{parameter_id}: "
+        f"{len(chunks)} primary chunk(s)"
+    )
+
+    for _, chunk_start, chunk_end in chunks:
+        pieces.extend(
+            _download_hudson_window_adaptive(
+                station_id,
+                parameter_id,
+                chunk_start,
+                chunk_end,
+                cache_dir,
+            )
+        )
+
+    return _merge_usgs_series(pieces)
 
 
 def _interpolate_usgs_with_original_fallback(
@@ -1139,50 +1493,73 @@ def _interpolate_usgs_with_original_fallback(
     return blended, use_usgs
 
 
+
 def _get_usgs_forcing(
     name: str,
     start_time,
     model_time: np.ndarray,
     usgs_cache_folder,
-) -> tuple[pd.Series | None, pd.Series | None, str | None]:
-    """
-    Return raw USGS flow and temperature series plus station ID.
-
-    The caller blends these series with original forcing on the model time
-    axis, retaining original NWM/source values outside valid USGS coverage.
-    """
-    station_id = USGS_STATION_BY_NAME.get(name)
-    if not station_id:
-        print(
-            f"[ARTIFICIAL ISLAND PATCH] warning: {name} has "
-            "use_usgs_obs=true but no station ID in USGS_STATION_BY_NAME; "
-            "original forcing will be used."
-        )
-        return None, None, None
+) -> tuple[
+    pd.Series | None,
+    pd.Series | None,
+    str | None,
+    str | None,
+]:
+    """Return explicit USGS flow/temperature; chunk only Hudson River."""
+    flow_station_id = USGS_FLOW_STATION_BY_NAME.get(name)
+    temperature_station_id = USGS_TEMPERATURE_STATION_BY_NAME.get(name)
 
     target_time = _model_datetimes(start_time, model_time)
     period_start = target_time[0]
     period_end = target_time[-1]
 
-    flow_series = _download_usgs_series(
-        station_id=station_id,
-        parameter_id=USGS_FLOW_PARAMETER_ID,
-        start_time=period_start,
-        end_time=period_end,
-        usgs_cache_folder=usgs_cache_folder,
+    flow_series = None
+    temperature_series = None
+
+    downloader = (
+        _download_hudson_usgs_series
+        if name == "Hudson River"
+        else _download_usgs_series_standard
     )
 
-    temperature_series = _download_usgs_series(
-        station_id=station_id,
-        parameter_id=USGS_TEMPERATURE_PARAMETER_ID,
-        start_time=period_start,
-        end_time=period_end,
-        usgs_cache_folder=usgs_cache_folder,
+    if flow_station_id:
+        flow_station_id = _normalize_usgs_station_id(flow_station_id)
+        flow_series = downloader(
+            flow_station_id,
+            USGS_FLOW_PARAMETER_ID,
+            period_start,
+            period_end,
+            usgs_cache_folder,
+        )
+    else:
+        print(
+            f"[ARTIFICIAL ISLAND PATCH] {name}: "
+            "no USGS flow station configured."
+        )
+
+    if temperature_station_id:
+        temperature_station_id = _normalize_usgs_station_id(
+            temperature_station_id
+        )
+        temperature_series = downloader(
+            temperature_station_id,
+            USGS_TEMPERATURE_PARAMETER_ID,
+            period_start,
+            period_end,
+            usgs_cache_folder,
+        )
+    else:
+        print(
+            f"[ARTIFICIAL ISLAND PATCH] {name}: "
+            "no USGS temperature station configured."
+        )
+
+    return (
+        flow_series,
+        temperature_series,
+        flow_station_id,
+        temperature_station_id,
     )
-
-    return flow_series, temperature_series, station_id
-
-
 
 
 def _load_relocated_source_fids(
@@ -1206,23 +1583,6 @@ def _load_relocated_source_fids(
         mapping[int(ele)] = [int(fid) for fid in fids]
 
     return mapping
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def _add_large_constant_sinks(
@@ -1524,13 +1884,14 @@ def _find_station_ids_for_relocated_sources(
     return source_station_ids
 
 
+
 def _download_temperature_station_map(
     station_ids: list[str],
     start_time,
     end_time,
     usgs_cache_folder,
 ) -> dict[str, pd.Series]:
-    """Download USGS 00010 for all required stations and return usable series."""
+    """Original bulk temperature download; no custom chunking."""
     station_ids = sorted({str(station_id) for station_id in station_ids})
     if not station_ids:
         return {}
@@ -1566,7 +1927,7 @@ def _download_temperature_station_map(
         )
         return {}
 
-    result: dict[str, pd.Series] = {}
+    result = {}
     for record in records:
         station_id = _station_id_from_record(record)
         if not station_id:
@@ -1731,9 +2092,9 @@ def _replace_existing_relocated_source(
     """
     Replace flow and/or temperature in one existing relocated source column.
 
-    The source element and source-column count are unchanged. USGS records are
-    blended with the existing relocated forcing: unsupported times retain the
-    existing values.
+    The source element and source-column count are unchanged. Flow and
+    temperature may come from different explicitly configured USGS stations.
+    Unsupported periods retain the existing relocated forcing.
     """
     name = point["name"]
     radius_m = point["max_search_radius_m"]
@@ -1764,17 +2125,32 @@ def _replace_existing_relocated_source(
             "Replace-only entries never create a new source."
         )
 
-    station_id = USGS_STATION_BY_NAME.get(name)
-    if not station_id:
+    flow_station_id = USGS_FLOW_STATION_BY_NAME.get(name)
+    temperature_station_id = USGS_TEMPERATURE_STATION_BY_NAME.get(name)
+
+    if point["replace_flow"] and not flow_station_id:
         raise ValueError(
-            f"[ARTIFICIAL ISLAND PATCH] {name}: no USGS station is configured"
+            f"[ARTIFICIAL ISLAND PATCH] {name}: "
+            "no USGS flow station is configured"
+        )
+
+    if point["replace_temperature"] and not temperature_station_id:
+        print(
+            f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+            "no USGS temperature station is configured; "
+            "temperature replacement will be skipped."
         )
 
     source_time, source_data = source_time_and_data
     source_idx = source_eles.index(target_ele)
     target_datetime = _model_datetimes(start_time, source_time)
 
-    flow_series, temperature_series, _ = _get_usgs_forcing(
+    (
+        flow_series,
+        temperature_series,
+        flow_station_id,
+        temperature_station_id,
+    ) = _get_usgs_forcing(
         name=name,
         start_time=start_time,
         model_time=source_time,
@@ -1784,8 +2160,9 @@ def _replace_existing_relocated_source(
     if point["replace_flow"]:
         if flow_series is None:
             print(
-                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: USGS station "
-                f"{station_id} returned no flow; relocated vsource is unchanged."
+                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                f"USGS flow station {flow_station_id} returned no flow; "
+                "relocated vsource is unchanged."
             )
         else:
             original_flow = source_data[:, source_idx].copy()
@@ -1801,23 +2178,42 @@ def _replace_existing_relocated_source(
 
             print(
                 f"[ARTIFICIAL ISLAND PATCH] {name}: replaced relocated "
-                f"vsource at element {target_ele} using station {station_id} "
-                f"for {int(use_usgs_flow.sum())}/{len(use_usgs_flow)} records; "
+                f"vsource at element {target_ele} using USGS flow station "
+                f"{flow_station_id} for "
+                f"{int(use_usgs_flow.sum())}/{len(use_usgs_flow)} records; "
                 f"existing relocated forcing retained for "
                 f"{int((~use_usgs_flow).sum())} records."
             )
 
+            if not np.any(use_usgs_flow):
+                print(
+                    f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                    f"USGS flow station {flow_station_id} was downloaded, "
+                    "but zero model-time records were replaced. "
+                    f"Model period={target_datetime[0]} to {target_datetime[-1]}; "
+                    f"USGS period={flow_series.index.min()} to "
+                    f"{flow_series.index.max()}."
+                )
+
     if point["replace_temperature"]:
         if not msource_data_list:
             print(
-                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: base_ss has no "
-                "msource tracer; temperature replacement was skipped."
+                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                "base_ss has no msource tracer; temperature replacement "
+                "was skipped."
+            )
+        elif temperature_station_id is None:
+            print(
+                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                "no USGS temperature station configured; relocated "
+                "temperature msource is unchanged."
             )
         elif temperature_series is None:
             print(
-                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: USGS station "
-                f"{station_id} returned no temperature; relocated temperature "
-                "msource is unchanged."
+                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                f"USGS temperature station {temperature_station_id} "
+                "returned no temperature; relocated temperature msource "
+                "is unchanged."
             )
         else:
             tracer_time, tracer_data = msource_data_list[0]
@@ -1836,14 +2232,15 @@ def _replace_existing_relocated_source(
                     scale=1.0,
                 )
             )
+
             tracer_data[:, source_idx] = replaced_temperature
             msource_data_list[0] = (tracer_time, tracer_data)
 
             print(
                 f"[ARTIFICIAL ISLAND PATCH] {name}: replaced relocated "
-                f"temperature msource tracer 1 at element {target_ele} using "
-                f"station {station_id} for "
-                f"{int(use_usgs_temperature.sum())}/"
+                f"temperature msource tracer 1 at element {target_ele} "
+                f"using USGS temperature station {temperature_station_id} "
+                f"for {int(use_usgs_temperature.sum())}/"
                 f"{len(use_usgs_temperature)} records; existing temperature "
                 f"retained for {int((~use_usgs_temperature).sum())} records."
             )
@@ -2053,10 +2450,19 @@ def patch_artificial_island_source_sink(
             f"{original_hgrid_file}"
         )
 
+    yaml_dir = (
+        Path.cwd()
+        if isinstance(patch_info_file, dict)
+        else Path(patch_info_file).expanduser().resolve().parent
+    )
     patch_info = _load_patch_info(patch_info_file)
     force_points = _normalize_force_points(patch_info)
     replace_relocated_points = _normalize_replace_relocated_points(
         patch_info
+    )
+    zero_source_regions = _normalize_zero_source_regions(
+        patch_info,
+        yaml_dir=yaml_dir,
     )
     large_constant_sink_points = (
         _normalize_large_constant_sink_points(patch_info)
@@ -2066,6 +2472,7 @@ def patch_artificial_island_source_sink(
     if (
         not force_points
         and not replace_relocated_points
+        and not zero_source_regions
         and not large_constant_sink_points
         and not exclude_points
     ):
@@ -2111,6 +2518,7 @@ def patch_artificial_island_source_sink(
     restored_source_count = 0
     restored_sink_count = 0
     replaced_relocated_count = 0
+    region_zeroed_source_count = 0
     large_constant_sink_count = 0
     automatically_temperature_replaced_count = 0
 
@@ -2170,6 +2578,25 @@ def patch_artificial_island_source_sink(
             usgs_cache_folder=usgs_cache_folder,
         )
         replaced_relocated_count += 1
+
+    # ------------------------------------------------------------------
+    # Zero the complete time-varying discharge for existing relocated
+    # source elements whose centers fall inside YAML-listed *.rgn files.
+    # Source elements and msource columns are intentionally retained.
+    # Forced/restored artificial-island sources are added afterward and are
+    # therefore not affected by this step.
+    # ------------------------------------------------------------------
+    if zero_source_regions:
+        (
+            source_time_and_data,
+            region_zeroed_source_count,
+        ) = _zero_sources_inside_regions(
+            regions=zero_source_regions,
+            source_eles=source_eles,
+            source_time_and_data=source_time_and_data,
+            xctr=xctr,
+            yctr=yctr,
+        )
 
     # ------------------------------------------------------------------
     # Add a -1000 m3/s constant sink at the main-grid element nearest
@@ -2264,7 +2691,8 @@ def patch_artificial_island_source_sink(
             use_usgs = bool(point.get("use_usgs_obs", False))
             usgs_flow_series = None
             usgs_temperature_series = None
-            station_id = None
+            flow_station_id = None
+            temperature_station_id = None
 
             if use_usgs:
                 model_time_for_obs = (
@@ -2281,7 +2709,8 @@ def patch_artificial_island_source_sink(
                 (
                     usgs_flow_series,
                     usgs_temperature_series,
-                    station_id,
+                    flow_station_id,
+                    temperature_station_id,
                 ) = _get_usgs_forcing(
                     name=name,
                     start_time=start_time,
@@ -2340,8 +2769,8 @@ def patch_artificial_island_source_sink(
                     )
 
                 print(
-                    f"[ARTIFICIAL ISLAND PATCH] {name}: USGS station "
-                    f"{station_id} supplied vsource for "
+                    f"[ARTIFICIAL ISLAND PATCH] {name}: USGS flow station "
+                    f"{flow_station_id} supplied vsource for "
                     f"{int(use_usgs_flow.sum())}/{len(use_usgs_flow)} "
                     "records; original NWM supplied "
                     f"{int((~use_usgs_flow).sum())} records."
@@ -2349,8 +2778,9 @@ def patch_artificial_island_source_sink(
 
                 if tracer_columns:
                     print(
-                        f"[ARTIFICIAL ISLAND PATCH] {name}: USGS station "
-                        f"{station_id} supplied temperature msource for "
+                        f"[ARTIFICIAL ISLAND PATCH] {name}: "
+                        f"USGS temperature station {temperature_station_id} "
+                        f"supplied temperature msource for "
                         f"{int(use_usgs_temperature.sum())}/"
                         f"{len(use_usgs_temperature)} records; original "
                         "msource supplied "
@@ -2358,7 +2788,7 @@ def patch_artificial_island_source_sink(
                     )
 
                 source_origin_message = (
-                    f"USGS station {station_id} blended with original "
+                    f"USGS flow station {flow_station_id} blended with original "
                     f"source element {original_ele} "
                     f"(distance={original_distance_m:.1f} m)"
                 )
@@ -2589,6 +3019,11 @@ def patch_artificial_island_source_sink(
     print(
         "[ARTIFICIAL ISLAND PATCH] replaced "
         f"{replaced_relocated_count} existing relocated source(s)."
+    )
+    print(
+        "[ARTIFICIAL ISLAND PATCH] zeroed vsource for "
+        f"{region_zeroed_source_count} unique relocated source(s) "
+        "inside YAML region(s)."
     )
     print(
         "[ARTIFICIAL ISLAND PATCH] added large constant sinks to "

@@ -1,53 +1,69 @@
-# Version-specific source/sink patch information for artificial-island rivers.
+# Version-specific source/sink corrections for artificial-island rivers and
+# selected relocated sources.
 #
-# Artificial-island and relocated-source patch configuration.
+# Detailed implementation is in:
+#   Patch_artificial_island/patch_artificial_island_source_sink.py
 #
-# Detailed parameter descriptions and processing order are documented in:
+# This file controls two separate workflow stages.
 #
-# Patch_artificial_island/patch_artificial_island_source_sink.py
+# A. PRE-RELOCATION SOURCE ZEROING
 #
-# Supported patch types:
+# ``remove_source_locations_in_artificial_island`` is used after the standard
+# USGS flow replacement and before source relocation. Existing original source
+# elements within 500 m of each listed x/y location are retained, but their
+# complete vsource time series is set to zero. This stage does not change
+# source_sink.in, sources.json, sinks.json, msource, or vsink.
 #
-# 1. force_source_sink_locations
+# B. POST-RELOCATION ARTIFICIAL-ISLAND PATCH
 #
-# Create a new source or sink at the nearest main-grid element.
-# Original forcing is restored when available. For source entries,
-# flow and temperature may optionally be replaced with USGS observations.
+# ``patch_artificial_island_source_sink()`` operates on ``base_ss`` after
+# relocation. The execution order is fixed by the Python code and does not
+# depend on the order of sections in this YAML file:
 #
-# 2. replace_only_source_locations
+#   1. Automatically replace temperature for relocated sources where an
+#      upstream USGS temperature record is available.
+#   2. Apply ``replace_only_source_locations`` as explicit flow/temperature
+#      overrides for matched relocated sources.
+#   3. Apply ``zero_source_regions`` by setting vsource=0 for relocated source
+#      element centers inside the listed SCHISM *.rgn polygons.
+#   4. Add ``large_constant_sink_artificial_island_locations``.
+#   5. Restore or create ``force_source_sink_locations``.
+#   6. Apply ``exclude_source_sink_locations``.
 #
-# Replace flow and/or temperature in an existing relocated source.
-# This operation does not create, remove, or move the source element.
+# Supported post-relocation sections:
 #
-# 3. large_constant_sink_artificial_island_locations
+# ``replace_only_source_locations``
+#   Match the nearest element among the current relocated source elements in
+#   ``base_ss.source_eles``. Replace flow and/or temperature only where valid
+#   USGS observations are available; retain the relocated forcing elsewhere.
+#   This operation never creates, removes, or moves a source element.
 #
-# Add a constant sink of -1000 m3/s at the main-grid element nearest
-# each specified x/y location.
+# ``zero_source_regions``
+#   Set the full vsource time series to zero for existing relocated source
+#   elements whose centers lie inside a listed SCHISM region. The source
+#   elements remain in source_sink.in, and msource and vsink are unchanged.
+#   Relative region paths are resolved from the directory containing this
+#   YAML file. Forced sources created later in step 5 are not affected.
 #
-# No NWM feature search or upstream-network analysis is performed.
-# If a sink already exists at the selected element, -1000 m3/s is
-# added to the existing sink time series.
+# ``large_constant_sink_artificial_island_locations``
+#   Apply -1000 m3/s at the nearest main-grid element for the full model
+#   period. If that element already has a sink, add -1000 m3/s to its existing
+#   time series. No NWM-network search is performed.
 #
-# 4. exclude_source_sink_locations
+# ``force_source_sink_locations``
+#   Create a source or sink at the nearest main-grid element. Copy nearby
+#   original forcing where available. For a source with use_usgs_obs=true,
+#   replace supported flow and temperature records with configured USGS data
+#   and retain original forcing where observations are unavailable.
 #
-# Remove existing source and/or sink columns whose element centers
-# lie within the specified radius.
+# ``exclude_source_sink_locations``
+#   Remove selected source and/or sink columns whose main-grid element centers
+#   lie within the configured radius.
 #
-# 5. remove_source_locations_in_artificial_island
-#
-# Before source relocation, set the vsource time series to zero for
-# original source elements located within the fixed search radius of
-# each specified x/y location.
-#
-# The source element remains in source_sink.in and sources.json.
-# Only its vsource values are set to zero.
-#
-# A per-run YAML file can override this default through:
+# A per-run configuration can override this YAML path through:
 #
 # model:
 #   artificial_island_source_sink_info: "/path/to/artificial_island_source_sink.yml"
-#
-#
 
 
 # ----------------------------------------------------------------------
@@ -75,7 +91,7 @@ force_source_sink_locations:
     y: 32.9802923333
     max_search_radius_m: 1500.0
     allow_negative_sink: false
-    use_usgs_obs: true
+    use_usgs_obs: false
 
   - name: "Turkey"
     source_sink_type: "source"
@@ -122,7 +138,7 @@ replace_only_source_locations:
   - name: "Hudson River"
     x: -73.693816
     y: 42.73321625
-    max_search_radius_m: 500.0
+    max_search_radius_m: 2500.0
     replace_flow: true
     replace_temperature: true
     allow_negative_sink: false
@@ -141,25 +157,10 @@ replace_only_source_locations:
 # ----------------------------------------------------------------------
 
 large_constant_sink_artificial_island_locations:
-  - name: "Wando"
-    x: -79.699338
-    y: 32.982254
-
-  - name: "Turkey"
-    x: -79.820038
-    y: 33.121854
 
   - name: "Buffalo Bluff"
     x: -81.683949
     y: 29.584587
-
-  - name: "Clyo"
-    x: -81.269874
-    y: 32.529153
-
-  - name: "Moultrie"
-    x: -79.974086
-    y: 33.211381
 
 # ----------------------------------------------------------------------
 # Remove existing source and/or sink forcing near selected locations.
@@ -184,8 +185,8 @@ exclude_source_sink_locations:
 # source relocation.
 #
 # For each x/y location, original source elements within the fixed
-# search radius are retained, but their complete vsource time series
-# is set to zero.
+# 500 m search radius are retained, but their complete vsource time
+# series is set to zero.
 #
 # This operation does not remove source elements and does not modify:
 #   source_sink.in
@@ -199,10 +200,6 @@ remove_source_locations_in_artificial_island:
   - name: "Buffalo Bluff"
     x: -81.683455
     y: 29.58590625
-
-  - name: "Wando"
-    x: -79.6996536667
-    y: 32.9802923333
 
   - name: "Turkey"
     x: -79.82117533
@@ -219,3 +216,24 @@ remove_source_locations_in_artificial_island:
   - name: "Moultrie"
     x: -79.9726690
     y: 33.2072897
+
+
+# ----------------------------------------------------------------------
+# Set relocated source flow to zero inside SCHISM *.rgn polygons.
+#
+# This operation is part of the post-relocation patch. It is applied after
+# automatic temperature replacement and replace_only_source_locations, but
+# before large constant sinks and forced/restored artificial-island sources.
+#
+# A source is selected when its main-grid element center lies inside the
+# region polygon. Its complete vsource time series is set to 0.0, while the
+# source element, source order, msource values, and vsink values are retained.
+#
+# region_file may be an absolute path. A relative path is interpreted from
+# the directory containing this YAML file; therefore, the example below
+# expects the *.rgn file to be in the same directory as this YAML file.
+# ----------------------------------------------------------------------
+
+zero_source_regions:
+  - name: Upstream Savannah
+    region_file: upstream_of_artificial_island_at_Clyo.rgn

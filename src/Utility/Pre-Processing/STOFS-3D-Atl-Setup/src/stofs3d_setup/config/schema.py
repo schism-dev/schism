@@ -34,6 +34,7 @@ class Inputs(BaseModel):
     elev_ic: bool = False
     soil: bool = False
     source_sink: bool = False
+    watertype: bool = False
 
     hotstart_nc: bool | None = Field(None, alias="hotstart.nc")
     th3d_nc: bool | None = Field(None, alias="3D.th.nc")
