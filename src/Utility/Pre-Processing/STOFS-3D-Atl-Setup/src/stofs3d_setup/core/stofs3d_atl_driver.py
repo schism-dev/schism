@@ -303,7 +303,7 @@ def stofs3d_atl_driver(
         os.system(f'ln -sf ../I{runid}/{sub_dir}/elev.ic .')
         os.chdir(model_input_path)
 
-    # -----------------drag.gr3---------------------
+    # -----------------watertype.gr3---------------------
     if input_files['watertype']:
         sub_dir = 'Watertype'
         print(f'{DRIVER_PRINT_PREFIX}Generating watertype.gr3 ...')

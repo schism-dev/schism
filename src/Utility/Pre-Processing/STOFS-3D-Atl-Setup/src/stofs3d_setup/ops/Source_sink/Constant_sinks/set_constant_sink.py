@@ -44,7 +44,7 @@ def find_ele_in_shpfile(shapefile_name, hgrid: schism_grid, type=True):
     return ele_types
 
 
-def set_constant_sink(wdir='./', shapefile_name='levee_4_pump_polys.shp', hgrid: schism_grid = None, exclude_shapefile=None):
+def set_constant_sink(wdir='./', shapefile_name='levee_4_pump_polys.shp', hgrid: schism_grid = None, exclude_constant_sink_shapefile=None):
     """
     Set constant sink on land and within polygons defined in shapefile_name
     The sink rate within polygons is set to 0.5 inch/hour, as an estimation of pump capacity
@@ -106,12 +106,12 @@ def set_constant_sink(wdir='./', shapefile_name='levee_4_pump_polys.shp', hgrid:
     const_sinks = np.minimum(background_sink, leveed_sinks)  # take the larger sink (more negative)
 
     total_sink_eles = (land + leveed_sink_mask).astype(bool)
-    if exclude_shapefile is not None:
+    if exclude_constant_sink_shapefile is not None:
         exclude_ele_types = find_ele_in_shpfile(
-            shapefile_name=f'{wdir}/{exclude_shapefile}',
+            shapefile_name=f'{wdir}/{exclude_constant_sink_shapefile}',
             hgrid=gd,
         )
-        exclude_mask = ~np.equal(exclude_ele_types, None)
+        exclude_mask = np.equal(exclude_ele_types, "No_Sink")
 
         const_sinks[exclude_mask] = 0.0
         total_sink_eles[exclude_mask] = False

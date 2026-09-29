@@ -340,9 +340,9 @@ class ConfigStofs3dAtlantic(BaseModel):
                 STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
                 'Constant_sinks' / 'levee_pump_polys_2026_with_poly_type.shp'
             ),
-            exclude_shapefile=(
+            exclude_constant_sink_shapefile=(
                 STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
-                'Constant_sinks' / 'excluding_savannah_charleston.shp'
+                'Constant_sinks' / 'exclude_constant_sink_at_savannah_charleston.shp'
             ),
             #artificial_island_source_sink_info= None,
             artificial_island_source_sink_info=(

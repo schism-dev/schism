@@ -289,13 +289,14 @@ def gen_drag(hgrid: pylib.schism_grid):
     # - overall: depth based
     grid_depths = [-3, -1]
     # default [0.025, 0.0025]; [0.005, 0.0025] for STOFS-3D v8 R20e/f; [0.02, 0.001] for R13r_v7
-    drag_coef_0 = [0.025, 0.00025]
     drag_coef = [0.025, 0.0025]
     # linear interpolation with constant extrapolation of nearest end values
-    drag_0 = np.interp(hgrid.dp, grid_depths, drag_coef_0, left=drag_coef_0[0], right=drag_coef_0[-1])
     drag = np.interp(hgrid.dp, grid_depths, drag_coef, left=drag_coef[0], right=drag_coef[-1])
 
-    # - replace:regions with drag_0
+    # - replace:regions with reduced drag
+    drag_coef_reduced = [0.025, 0.00025]
+    drag_reduced = np.interp(hgrid.dp, grid_depths, drag_coef_reduced, left=drag_coef_reduced[0], right=drag_coef_reduced[-1])
+
     region_files = [
         f'{script_path}/Gr3/Drag/Cd_small_region_v2.reg',
     ]
@@ -303,8 +304,7 @@ def gen_drag(hgrid: pylib.schism_grid):
     for region_file in region_files:
         reg = read_schism_reg(region_file)
         idx = inside_polygon(np.c_[hgrid.x, hgrid.y], reg.x, reg.y).astype(bool)
-        new_drag = drag_0[idx]
-        drag[idx] = new_drag
+        drag[idx] = drag_reduced[idx]
 
     # - tweak: regions with constant drag
     region_files = [
