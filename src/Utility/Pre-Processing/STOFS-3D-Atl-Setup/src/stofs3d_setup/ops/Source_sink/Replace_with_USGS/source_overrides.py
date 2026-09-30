@@ -15,9 +15,14 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.usgs_series import (
 )
 from stofs3d_setup.ops.Source_sink.source_sink_components import (
     _add_negative_source_part_to_sink,
+    _build_source_sink,
     _check_matching_time,
+    _copy_sink_components,
+    _copy_source_components,
 )
 from stofs3d_setup.ops.Source_sink.spatial_corrections import (
+    _compute_grid_centers,
+    _make_transformer,
     _nearest_element,
 )
 
@@ -234,3 +239,45 @@ def _replace_existing_relocated_source(
         sink_eles,
         sink_time_and_data,
     )
+
+
+def apply_source_overrides(
+    base_ss,
+    hgrid,
+    points: list[dict],
+    start_time,
+    usgs_cache_folder,
+):
+    """Apply configured USGS flow/temperature overrides to existing sources."""
+    source_eles, source_values, msource_values = _copy_source_components(
+        base_ss
+    )
+    sink_eles, sink_values = _copy_sink_components(base_ss)
+    xctr, yctr = _compute_grid_centers(hgrid)
+    transformer = _make_transformer()
+
+    for point in points:
+        source_values, msource_values, sink_eles, sink_values = (
+            _replace_existing_relocated_source(
+                point=point,
+                source_eles=source_eles,
+                source_time_and_data=source_values,
+                msource_data_list=msource_values,
+                sink_eles=sink_eles,
+                sink_time_and_data=sink_values,
+                xctr=xctr,
+                yctr=yctr,
+                transformer=transformer,
+                start_time=start_time,
+                usgs_cache_folder=usgs_cache_folder,
+            )
+        )
+
+    corrected_ss = _build_source_sink(
+        source_eles=source_eles,
+        source_time_and_data=source_values,
+        msource_data_list=msource_values,
+        sink_eles=sink_eles,
+        sink_time_and_data=sink_values,
+    )
+    return corrected_ss, len(points)

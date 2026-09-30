@@ -330,7 +330,7 @@ scope.
 
 ## Phase 8: Restore Independent Workflow Controls
 
-Status: **Not started**
+Status: **In progress**
 
 This phase changes orchestration and configuration, so it must remain separate
 from mechanical extraction commits.
@@ -366,6 +366,17 @@ if config.artificial_island_corrections:
 - [ ] Generic spatial corrections do not depend on artificial-island settings.
 - [ ] Disabled operations do not require their input files.
 - [ ] Defaults are documented and tested.
+
+Current incremental state:
+
+- [x] `assemble_source_sink.py` calls public temperature, explicit override,
+      region-zeroing, and artificial-island stages in visible order.
+- [x] Temperature processing selects `original_source_sink/sources.json` when
+      relocation is disabled.
+- [x] The artificial-island stage no longer repeats the extracted explicit
+      overrides or region zeroing when called by the main workflow.
+- [ ] Add separate configuration switches; the existing shared YAML path is
+      still the temporary enable/disable control for all four stages.
 
 Deliverable: independently configurable workflow stages.
 
@@ -463,3 +474,4 @@ Complete before Phase 9:
 |---|---|---|---|---|
 | 2026-09-30 | Setup | Created refactor branch and tracking plan. | Pending | Pending |
 | 2026-09-30 | 0-7 | Added characterization tests and extracted USGS series, station mappings, automatic temperature processing, Delaware/Hudson overrides, aligned source/sink components, spatial helpers, configuration, diagnostics, and background-sink overlap handling. | 22 focused tests and 87 repository tests passed; compile checks passed; 47 extracted function bodies match `master` by AST comparison. | `08252989` |
+| 2026-09-30 | 8 | Added public stage APIs and made the main assembler call temperature replacement, Delaware/Hudson overrides, region zeroing, and artificial-island corrections explicitly. | 26 focused tests and 91 non-MPI repository tests passed; compile and diff checks passed. | Pending |

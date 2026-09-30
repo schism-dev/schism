@@ -1,10 +1,14 @@
 """Characterization tests for source/sink spatial helper operations."""
 
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 
 from stofs3d_setup.ops.Source_sink import spatial_corrections as spatial
+from stofs3d_setup.ops.Source_sink.source_sink_components import (
+    _build_source_sink,
+)
 
 
 class _IdentityTransformer:
@@ -71,6 +75,52 @@ class SpatialCorrectionTests(unittest.TestCase):
 
         self.assertIsNone(element)
         self.assertTrue(np.isinf(distance))
+
+    def test_public_region_stage_preserves_tracers_and_element_order(self):
+        time = np.array([0.0, 3600.0])
+        original = _build_source_sink(
+            source_eles=[1, 2],
+            source_time_and_data=(
+                time,
+                np.array([[1.0, 2.0], [3.0, 4.0]]),
+            ),
+            msource_data_list=[
+                (time, np.array([[10.0, 20.0], [30.0, 40.0]]))
+            ],
+            sink_eles=[],
+            sink_time_and_data=None,
+        )
+
+        def zero_first_source(**kwargs):
+            source_time, source_data = kwargs["source_time_and_data"]
+            source_data[:, 0] = 0.0
+            return (source_time, source_data), 1
+
+        with patch.object(
+            spatial,
+            "_zero_sources_inside_regions",
+            side_effect=zero_first_source,
+        ):
+            corrected, count = spatial.zero_sources_in_regions(
+                original,
+                _Grid(),
+                regions=[{"name": "test"}],
+            )
+
+        self.assertEqual(count, 1)
+        self.assertEqual(np.asarray(corrected.source_eles).tolist(), [1, 2])
+        np.testing.assert_array_equal(
+            corrected.vsource.df.values,
+            [[0.0, 2.0], [0.0, 4.0]],
+        )
+        np.testing.assert_array_equal(
+            corrected.msource[0].df.values,
+            [[10.0, 20.0], [30.0, 40.0]],
+        )
+        np.testing.assert_array_equal(
+            original.vsource.df.values,
+            [[1.0, 2.0], [3.0, 4.0]],
+        )
 
 
 if __name__ == "__main__":

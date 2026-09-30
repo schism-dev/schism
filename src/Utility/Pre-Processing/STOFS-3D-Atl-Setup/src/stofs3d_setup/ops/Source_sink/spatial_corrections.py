@@ -6,6 +6,12 @@ import numpy as np
 from pyproj import Transformer
 from scipy.spatial import cKDTree
 
+from stofs3d_setup.ops.Source_sink.source_sink_components import (
+    _build_source_sink,
+    _copy_sink_components,
+    _copy_source_components,
+)
+
 
 def _compute_grid_centers(hgrid) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -200,3 +206,28 @@ def _elements_within_radius(
     idxs = tree.query_ball_point([xq, yq], r=float(radius_m))
 
     return [int(element_ids[int(idx)]) for idx in idxs]
+
+
+def zero_sources_in_regions(base_ss, hgrid, regions: list[dict]):
+    """Return a copy with source flow zeroed inside configured regions."""
+    source_eles, source_values, msource_values = _copy_source_components(
+        base_ss
+    )
+    sink_eles, sink_values = _copy_sink_components(base_ss)
+    xctr, yctr = _compute_grid_centers(hgrid)
+
+    source_values, zeroed_count = _zero_sources_inside_regions(
+        regions=regions,
+        source_eles=source_eles,
+        source_time_and_data=source_values,
+        xctr=xctr,
+        yctr=yctr,
+    )
+    corrected_ss = _build_source_sink(
+        source_eles=source_eles,
+        source_time_and_data=source_values,
+        msource_data_list=msource_values,
+        sink_eles=sink_eles,
+        sink_time_and_data=sink_values,
+    )
+    return corrected_ss, zeroed_count

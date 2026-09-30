@@ -28,7 +28,13 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.usgs_series import (
     _station_id_from_record,
 )
 from stofs3d_setup.ops.Source_sink.source_sink_components import (
+    _build_source_sink,
     _check_matching_time,
+    _copy_sink_components,
+    _copy_source_components,
+)
+from stofs3d_setup.ops.Source_sink.spatial_corrections import (
+    _compute_grid_centers,
 )
 from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
 
@@ -378,3 +384,54 @@ def _replace_all_relocated_source_temperatures(
     )
 
     return msource_data_list, replaced_count
+
+
+def replace_source_temperatures_with_usgs(
+    base_ss,
+    hgrid,
+    source_mapping_dir: str | Path,
+    start_time,
+    usgs_cache_folder: str | Path,
+    nwm_shapefile: str | Path,
+    states=None,
+    diagnostics_dir: str | Path | None = None,
+):
+    """Return a copy with eligible source temperatures replaced by USGS.
+
+    This stage changes only the first ``msource`` tracer. Source flow, sink
+    flow, element IDs, column ordering, and the input object are unchanged.
+    """
+    source_eles, source_values, msource_values = _copy_source_components(
+        base_ss
+    )
+    sink_eles, sink_values = _copy_sink_components(base_ss)
+    xctr, yctr = _compute_grid_centers(hgrid)
+
+    msource_values, replaced_count = (
+        _replace_all_relocated_source_temperatures(
+            source_eles=source_eles,
+            source_time_and_data=source_values,
+            msource_data_list=msource_values,
+            xctr=xctr,
+            yctr=yctr,
+            relocated_source_sink_dir=source_mapping_dir,
+            start_time=start_time,
+            usgs_cache_folder=usgs_cache_folder,
+            nwm_shapefile=nwm_shapefile,
+            states=list(states or STOFS3D_ATL_STATES),
+            diagnostics_dir=(
+                None
+                if diagnostics_dir is None
+                else Path(diagnostics_dir)
+            ),
+        )
+    )
+
+    corrected_ss = _build_source_sink(
+        source_eles=source_eles,
+        source_time_and_data=source_values,
+        msource_data_list=msource_values,
+        sink_eles=sink_eles,
+        sink_time_and_data=sink_values,
+    )
+    return corrected_ss, replaced_count

@@ -270,3 +270,40 @@ def _normalize_exclude_points(patch_info: dict) -> list[dict]:
         )
 
     return points
+
+
+def load_source_sink_corrections(
+    config_file: str | Path | dict,
+) -> dict:
+    """Load the shared source/sink correction configuration."""
+    return _load_patch_info(config_file)
+
+
+def source_override_points(corrections: dict) -> list[dict]:
+    """Return normalized explicit USGS source overrides."""
+    return _normalize_replace_relocated_points(corrections)
+
+
+def zero_source_regions(
+    corrections: dict,
+    config_dir: str | Path,
+) -> list[dict]:
+    """Return normalized regions used by the source-zeroing stage."""
+    return _normalize_zero_source_regions(
+        corrections,
+        yaml_dir=Path(config_dir),
+    )
+
+
+def artificial_island_corrections(corrections: dict) -> dict:
+    """Return only settings owned by the artificial-island stage."""
+    unrelated_keys = {
+        "replace_relocated_source_locations",
+        "replace_only_source_locations",
+        "zero_source_regions",
+    }
+    return {
+        key: deepcopy(value)
+        for key, value in corrections.items()
+        if key not in unrelated_keys
+    }

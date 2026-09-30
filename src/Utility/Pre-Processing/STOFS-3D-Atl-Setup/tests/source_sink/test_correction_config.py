@@ -56,6 +56,26 @@ class CorrectionConfigTests(unittest.TestCase):
 
         self.assertEqual(regions[0]["region_file"], region_file.resolve())
 
+    def test_artificial_island_config_excludes_independent_stages(self):
+        corrections = {
+            "replace_only_source_locations": [{"name": "Delaware"}],
+            "zero_source_regions": ["region.rgn"],
+            "force_source_sink_locations": [{"name": "Turkey"}],
+            "large_constant_sink_artificial_island_locations": [
+                {"name": "Buffalo Bluff"}
+            ],
+        }
+
+        island = correction_config.artificial_island_corrections(corrections)
+
+        self.assertNotIn("replace_only_source_locations", island)
+        self.assertNotIn("zero_source_regions", island)
+        self.assertIn("force_source_sink_locations", island)
+        self.assertIn(
+            "large_constant_sink_artificial_island_locations",
+            island,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

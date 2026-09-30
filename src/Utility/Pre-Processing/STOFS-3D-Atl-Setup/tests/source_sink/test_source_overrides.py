@@ -10,11 +10,22 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS import source_overrides
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     CFS_TO_CMS,
 )
+from stofs3d_setup.ops.Source_sink.source_sink_components import (
+    _build_source_sink,
+)
 
 
 class _IdentityTransformer:
     def transform(self, x, y):
         return x, y
+
+
+class _Grid:
+    xctr = np.array([0.0])
+    yctr = np.array([0.0])
+
+    def compute_ctr(self):
+        pass
 
 
 class SourceOverrideTests(unittest.TestCase):
@@ -91,6 +102,49 @@ class SourceOverrideTests(unittest.TestCase):
                 start_time=pd.Timestamp("2020-01-01T00:00Z"),
                 usgs_cache_folder=None,
             )
+
+    def test_public_stage_processes_points_in_order(self):
+        time = np.array([0.0])
+        original = _build_source_sink(
+            source_eles=[1],
+            source_time_and_data=(time, np.array([[1.0]])),
+            msource_data_list=[
+                (time, np.array([[10.0]])),
+                (time, np.array([[0.0]])),
+            ],
+            sink_eles=[],
+            sink_time_and_data=None,
+        )
+        processed = []
+
+        def record_override(**kwargs):
+            processed.append(kwargs["point"]["name"])
+            source_time, source_data = kwargs["source_time_and_data"]
+            source_data[:, 0] += 1.0
+            return (
+                (source_time, source_data),
+                kwargs["msource_data_list"],
+                kwargs["sink_eles"],
+                kwargs["sink_time_and_data"],
+            )
+
+        with patch.object(
+            source_overrides,
+            "_replace_existing_relocated_source",
+            side_effect=record_override,
+        ):
+            corrected, count = source_overrides.apply_source_overrides(
+                base_ss=original,
+                hgrid=_Grid(),
+                points=[{"name": "first"}, {"name": "second"}],
+                start_time="2020-01-01",
+                usgs_cache_folder=None,
+            )
+
+        self.assertEqual(count, 2)
+        self.assertEqual(processed, ["first", "second"])
+        np.testing.assert_array_equal(corrected.vsource.df.values, [[3.0]])
+        np.testing.assert_array_equal(original.vsource.df.values, [[1.0]])
 
 
 if __name__ == "__main__":

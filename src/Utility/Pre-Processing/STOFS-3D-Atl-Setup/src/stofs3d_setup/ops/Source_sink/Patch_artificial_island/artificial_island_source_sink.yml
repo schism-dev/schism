@@ -14,11 +14,11 @@
 # complete vsource time series is set to zero. This stage does not change
 # source_sink.in, sources.json, sinks.json, msource, or vsink.
 #
-# B. POST-RELOCATION ARTIFICIAL-ISLAND PATCH
+# B. POST-GENERATION SOURCE/SINK CORRECTIONS
 #
-# ``patch_artificial_island_source_sink()`` operates on ``base_ss`` after
-# relocation. The execution order is fixed by the Python code and does not
-# depend on the order of sections in this YAML file:
+# ``assemble_source_sink.py`` invokes public correction stages on ``base_ss``
+# after optional relocation. The execution order is fixed by the Python code
+# and does not depend on the order of sections in this YAML file:
 #
 #   1. Automatically replace temperature for relocated sources where an
 #      upstream USGS temperature record is available.
@@ -26,9 +26,10 @@
 #      overrides for matched relocated sources.
 #   3. Apply ``zero_source_regions`` by setting vsource=0 for relocated source
 #      element centers inside the listed SCHISM *.rgn polygons.
-#   4. Add ``large_constant_sink_artificial_island_locations``.
-#   5. Restore or create ``force_source_sink_locations``.
-#   6. Apply ``exclude_source_sink_locations``.
+#   4. Run the artificial-island stage, which adds
+#      ``large_constant_sink_artificial_island_locations``, restores or creates
+#      ``force_source_sink_locations``, and applies
+#      ``exclude_source_sink_locations``.
 #
 # Supported post-relocation sections:
 #

@@ -1016,19 +1016,22 @@ def patch_artificial_island_source_sink(
         sink_time_and_data=sink_time_and_data,
     )
 
-    print(
-        "[ARTIFICIAL ISLAND PATCH] automatically temperature-replaced "
-        f"{automatically_temperature_replaced_count} relocated source(s)."
-    )
-    print(
-        "[ARTIFICIAL ISLAND PATCH] replaced "
-        f"{replaced_relocated_count} existing relocated source(s)."
-    )
-    print(
-        "[ARTIFICIAL ISLAND PATCH] zeroed vsource for "
-        f"{region_zeroed_source_count} unique relocated source(s) "
-        "inside YAML region(s)."
-    )
+    if replace_all_source_temperature:
+        print(
+            "[ARTIFICIAL ISLAND PATCH] automatically temperature-replaced "
+            f"{automatically_temperature_replaced_count} relocated source(s)."
+        )
+    if replace_relocated_points:
+        print(
+            "[ARTIFICIAL ISLAND PATCH] replaced "
+            f"{replaced_relocated_count} existing relocated source(s)."
+        )
+    if zero_source_regions:
+        print(
+            "[ARTIFICIAL ISLAND PATCH] zeroed vsource for "
+            f"{region_zeroed_source_count} unique relocated source(s) "
+            "inside YAML region(s)."
+        )
     print(
         "[ARTIFICIAL ISLAND PATCH] added large constant sinks to "
         f"{large_constant_sink_count} unique artificial-island element(s)."

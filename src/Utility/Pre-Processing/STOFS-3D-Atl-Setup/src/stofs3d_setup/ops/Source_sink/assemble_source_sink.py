@@ -12,7 +12,21 @@ from .NWM.gen_sourcesink_nwm import gen_sourcesink_nwm
 from .Constant_sinks.set_constant_sink import set_constant_sink
 from .Relocate.relocate_source_feeder import relocate_sources2
 from .Replace_with_USGS.replace_with_obs import source_nwm2usgs
-from .Patch_artificial_island.patch_artificial_island_source_sink import patch_artificial_island_source_sink, zero_artificial_island_sources_after_replace_USGS_before_relocation#HJ
+from .Replace_with_USGS.source_temperature import (
+    replace_source_temperatures_with_usgs,
+)
+from .Replace_with_USGS.source_overrides import apply_source_overrides
+from .Patch_artificial_island.patch_artificial_island_source_sink import (
+    patch_artificial_island_source_sink,
+    zero_artificial_island_sources_after_replace_USGS_before_relocation,
+)
+from .correction_config import (
+    artificial_island_corrections,
+    load_source_sink_corrections,
+    source_override_points,
+    zero_source_regions,
+)
+from .spatial_corrections import zero_sources_in_regions
 from ...utils.utils import mkcd_new_dir, STOFS3D_ATL_STATES
 from ...utils.projection import project_geodataframe
 from pylib_experimental.schism_file import source_sink, TimeHistory
@@ -210,8 +224,16 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
 
     # --------------------- exclude the user-defined sources near artificial island -----------------
     artificial_island_info = config.artificial_island_source_sink_info
+    corrections = None
+    corrections_dir = None
 
     if artificial_island_info is not None:
+        corrections = load_source_sink_corrections(artificial_island_info)
+        corrections_dir = (
+            Path.cwd()
+            if isinstance(artificial_island_info, dict)
+            else Path(artificial_island_info).expanduser().resolve().parent
+        )
         zero_artificial_island_sources_after_replace_USGS_before_relocation(
             source_sink_dir=f'{wdir}/original_source_sink/',
             hgrid_file=(
@@ -325,9 +347,7 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
         base_ss = source_sink.from_files(f'{wdir}/original_source_sink/')
 
 
-    #------------ patch artificial island source and sinks ----------------
-
-    artificial_island_info = config.artificial_island_source_sink_info
+    # ---------------------- apply post-generation corrections ----------------------
 
     if artificial_island_info is not None:
         patch_output_dir = (
@@ -335,6 +355,66 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
         )
         mkcd_new_dir(patch_output_dir)
         os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
+
+        source_mapping_dir = (
+            f'{wdir}/relocated_source_sink/'
+            if config.relocate_source
+            else f'{wdir}/original_source_sink/'
+        )
+        usgs_cache_folder = (
+            config.usgs_cache_folder
+            if config.usgs_cache_folder is not None
+            else Path(model_input_path) / 'USGS_cache'
+        )
+        nwm_shapefile = (
+            "/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp"
+        )
+
+        base_ss, temperature_replaced_count = (
+            replace_source_temperatures_with_usgs(
+                base_ss=base_ss,
+                hgrid=hgrid,
+                source_mapping_dir=source_mapping_dir,
+                start_time=config.startdate,
+                usgs_cache_folder=usgs_cache_folder,
+                nwm_shapefile=nwm_shapefile,
+                states=STOFS3D_ATL_STATES,
+                diagnostics_dir=(
+                    Path(patch_output_dir) / 'automatic_temperature'
+                ),
+            )
+        )
+        print(
+            '[SOURCE TEMPERATURE] replaced '
+            f'{temperature_replaced_count} source(s).'
+        )
+
+        override_points = source_override_points(corrections)
+        base_ss, source_override_count = apply_source_overrides(
+            base_ss=base_ss,
+            hgrid=hgrid,
+            points=override_points,
+            start_time=config.startdate,
+            usgs_cache_folder=usgs_cache_folder,
+        )
+        print(
+            '[SOURCE OVERRIDES] processed '
+            f'{source_override_count} configured source(s).'
+        )
+
+        regions = zero_source_regions(
+            corrections,
+            config_dir=corrections_dir,
+        )
+        base_ss, region_zeroed_count = zero_sources_in_regions(
+            base_ss=base_ss,
+            hgrid=hgrid,
+            regions=regions,
+        )
+        print(
+            '[SOURCE REGIONS] zeroed '
+            f'{region_zeroed_count} unique source(s).'
+        )
 
         base_ss = patch_artificial_island_source_sink(
                 base_ss = base_ss,
@@ -345,18 +425,13 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
                 relocated_source_sink_dir=(
                     f'{wdir}/relocated_source_sink/'
                 ),
-                patch_info_file = artificial_island_info,
+                patch_info_file=artificial_island_corrections(corrections),
                 start_time = config.startdate,
                 rnday=config.rnday,
-                usgs_cache_folder=(
-                    config.usgs_cache_folder
-                    if config.usgs_cache_folder is not None
-                    else Path(model_input_path) / 'USGS_cache'
-                ),
-                nwm_shapefile = (
-                    "/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp"
-                ),
+                usgs_cache_folder=usgs_cache_folder,
+                nwm_shapefile=nwm_shapefile,
                 output_dir = patch_output_dir,
+                replace_all_source_temperature=False,
         )
 
 
