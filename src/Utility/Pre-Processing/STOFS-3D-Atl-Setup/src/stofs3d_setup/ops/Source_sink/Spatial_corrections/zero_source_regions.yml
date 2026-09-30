@@ -1,0 +1,8 @@
+# Region-based source-flow corrections.
+#
+# Existing source elements whose centers lie inside a listed SCHISM region
+# retain their source and tracer columns, but their full vsource series is set
+# to zero. Relative paths resolve from this file's directory.
+zero_source_regions:
+  - name: Upstream Savannah
+    region_file: upstream_of_artificial_island_at_Clyo.rgn

@@ -21,7 +21,6 @@ from .Patch_artificial_island.patch_artificial_island_source_sink import (
     zero_artificial_island_sources_after_replace_USGS_before_relocation,
 )
 from .correction_config import (
-    artificial_island_corrections,
     load_source_sink_corrections,
     source_override_points,
     zero_source_regions,
@@ -343,24 +342,19 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
     replace_temperature = config.replace_source_temperature_with_usgs
     replace_selected_sources = config.replace_selected_sources_with_usgs
     zero_regions = config.zero_configured_source_regions
-    correction_info = config.source_sink_correction_info
+    selected_source_override_info = config.selected_source_override_info
+    zero_source_region_info = config.zero_source_region_info
 
-    if (replace_selected_sources or zero_regions) and correction_info is None:
+    if replace_selected_sources and selected_source_override_info is None:
         raise ValueError(
-            'source_sink_correction_info is required when selected-source '
-            'replacement or region zeroing is enabled'
+            'selected_source_override_info is required when selected-source '
+            'replacement is enabled'
         )
-
-    corrections = (
-        load_source_sink_corrections(correction_info)
-        if replace_selected_sources or zero_regions
-        else None
-    )
-    corrections_dir = (
-        None
-        if not zero_regions
-        else Path(correction_info).expanduser().resolve().parent
-    )
+    if zero_regions and zero_source_region_info is None:
+        raise ValueError(
+            'zero_source_region_info is required when region zeroing is '
+            'enabled'
+        )
 
     if replace_temperature or replace_selected_sources:
         usgs_cache_folder = (
@@ -397,7 +391,10 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
         )
 
     if replace_selected_sources:
-        override_points = source_override_points(corrections)
+        override_corrections = load_source_sink_corrections(
+            selected_source_override_info
+        )
+        override_points = source_override_points(override_corrections)
         base_ss, source_override_count = apply_source_overrides(
             base_ss=base_ss,
             hgrid=hgrid,
@@ -411,9 +408,12 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
         )
 
     if zero_regions:
+        region_corrections = load_source_sink_corrections(
+            zero_source_region_info
+        )
         regions = zero_source_regions(
-            corrections,
-            config_dir=corrections_dir,
+            region_corrections,
+            config_dir=Path(zero_source_region_info).resolve().parent,
         )
         base_ss, region_zeroed_count = zero_sources_in_regions(
             base_ss=base_ss,
@@ -435,9 +435,7 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
             hgrid=hgrid,
             original_source_sink_dir=f'{wdir}/original_source_sink/',
             relocated_source_sink_dir=f'{wdir}/relocated_source_sink/',
-            patch_info_file=artificial_island_corrections(
-                load_source_sink_corrections(artificial_island_info)
-            ),
+            patch_info_file=artificial_island_info,
             start_time=config.startdate,
             rnday=config.rnday,
             usgs_cache_folder=(

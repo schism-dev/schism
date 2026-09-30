@@ -15,7 +15,8 @@ class CorrectionConfigTests(unittest.TestCase):
         self.assertFalse(config.replace_source_temperature_with_usgs)
         self.assertFalse(config.replace_selected_sources_with_usgs)
         self.assertFalse(config.zero_configured_source_regions)
-        self.assertIsNone(config.source_sink_correction_info)
+        self.assertIsNone(config.selected_source_override_info)
+        self.assertIsNone(config.zero_source_region_info)
 
     def test_v7p4_preserves_enabled_correction_stages(self):
         config = ConfigStofs3dAtlantic.v7p4()
@@ -23,10 +24,55 @@ class CorrectionConfigTests(unittest.TestCase):
         self.assertTrue(config.replace_source_temperature_with_usgs)
         self.assertTrue(config.replace_selected_sources_with_usgs)
         self.assertTrue(config.zero_configured_source_regions)
-        self.assertEqual(
-            config.source_sink_correction_info,
+        self.assertNotEqual(
+            config.selected_source_override_info,
             config.artificial_island_source_sink_info,
         )
+        self.assertNotEqual(
+            config.zero_source_region_info,
+            config.artificial_island_source_sink_info,
+        )
+        self.assertNotEqual(
+            config.selected_source_override_info,
+            config.zero_source_region_info,
+        )
+
+    def test_v7p4_stage_files_contain_only_owned_sections(self):
+        config = ConfigStofs3dAtlantic.v7p4()
+
+        overrides = correction_config.load_source_sink_corrections(
+            config.selected_source_override_info
+        )
+        regions = correction_config.load_source_sink_corrections(
+            config.zero_source_region_info
+        )
+        islands = correction_config.load_source_sink_corrections(
+            config.artificial_island_source_sink_info
+        )
+
+        self.assertEqual(set(overrides), {"replace_only_source_locations"})
+        self.assertEqual(set(regions), {"zero_source_regions"})
+        self.assertEqual(
+            set(islands),
+            {
+                "remove_source_locations_in_artificial_island",
+                "force_source_sink_locations",
+                "large_constant_sink_artificial_island_locations",
+                "exclude_source_sink_locations",
+            },
+        )
+
+        override_points = correction_config.source_override_points(overrides)
+        self.assertEqual(
+            [point["name"] for point in override_points],
+            ["Delaware", "Hudson River"],
+        )
+        region_points = correction_config.zero_source_regions(
+            regions,
+            config_dir=config.zero_source_region_info.parent,
+        )
+        self.assertEqual(region_points[0]["name"], "Upstream Savannah")
+        self.assertTrue(region_points[0]["region_file"].is_file())
 
     def test_replace_override_defaults_are_normalized(self):
         points = correction_config._normalize_replace_relocated_points(
@@ -75,27 +121,6 @@ class CorrectionConfigTests(unittest.TestCase):
             )
 
         self.assertEqual(regions[0]["region_file"], region_file.resolve())
-
-    def test_artificial_island_config_excludes_independent_stages(self):
-        corrections = {
-            "replace_only_source_locations": [{"name": "Delaware"}],
-            "zero_source_regions": ["region.rgn"],
-            "force_source_sink_locations": [{"name": "Turkey"}],
-            "large_constant_sink_artificial_island_locations": [
-                {"name": "Buffalo Bluff"}
-            ],
-        }
-
-        island = correction_config.artificial_island_corrections(corrections)
-
-        self.assertNotIn("replace_only_source_locations", island)
-        self.assertNotIn("zero_source_regions", island)
-        self.assertIn("force_source_sink_locations", island)
-        self.assertIn(
-            "large_constant_sink_artificial_island_locations",
-            island,
-        )
-
 
 if __name__ == "__main__":
     unittest.main()

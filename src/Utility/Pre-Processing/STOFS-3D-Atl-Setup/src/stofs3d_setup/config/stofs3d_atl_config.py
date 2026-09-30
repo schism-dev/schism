@@ -89,7 +89,8 @@ class ConfigStofs3dAtlantic(BaseModel):
     replace_source_temperature_with_usgs: bool = False
     replace_selected_sources_with_usgs: bool = False
     zero_configured_source_regions: bool = False
-    source_sink_correction_info: Optional[Path] = None
+    selected_source_override_info: Optional[Path] = None
+    zero_source_region_info: Optional[Path] = None
     source_ele_replace_dict: Dict[int, int] = None  # temporary fix for isolated feeder channels
     constant_sink_shapefile: Optional[Path] = None
     exclude_shapefile: Optional[Path] = None
@@ -325,7 +326,15 @@ class ConfigStofs3dAtlantic(BaseModel):
     @classmethod
     def v7p4(cls):
         '''Factory method to create a configuration for STOFS3D-v7.4 3D setup'''
-        correction_info = (
+        selected_source_override_info = (
+            STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
+            'Replace_with_USGS' / 'selected_source_overrides.yml'
+        )
+        zero_source_region_info = (
+            STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
+            'Spatial_corrections' / 'zero_source_regions.yml'
+        )
+        artificial_island_info = (
             STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
             'Patch_artificial_island' / 'artificial_island_source_sink.yml'
         )
@@ -355,8 +364,9 @@ class ConfigStofs3dAtlantic(BaseModel):
             replace_source_temperature_with_usgs=True,
             replace_selected_sources_with_usgs=True,
             zero_configured_source_regions=True,
-            source_sink_correction_info=correction_info,
-            artificial_island_source_sink_info=correction_info,
+            selected_source_override_info=selected_source_override_info,
+            zero_source_region_info=zero_source_region_info,
+            artificial_island_source_sink_info=artificial_island_info,
             bc_flags=[
                 [5, 5, 4, 4],  # Atlantic Ocean
                 [5, 5, 4, 4],  # Gulf of St. Lawrence

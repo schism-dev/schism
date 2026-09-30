@@ -1,0 +1,21 @@
+# Explicit USGS corrections for existing source elements.
+#
+# These entries never create, remove, or move a source. Flow and temperature
+# are replaced only where usable observations exist; current forcing is
+# retained elsewhere.
+replace_only_source_locations:
+  - name: "Delaware"
+    x: -74.9432325
+    y: 40.3422775
+    max_search_radius_m: 500.0
+    replace_flow: true
+    replace_temperature: true
+    allow_negative_sink: false
+
+  - name: "Hudson River"
+    x: -73.693816
+    y: 42.73321625
+    max_search_radius_m: 2500.0
+    replace_flow: true
+    replace_temperature: true
+    allow_negative_sink: false

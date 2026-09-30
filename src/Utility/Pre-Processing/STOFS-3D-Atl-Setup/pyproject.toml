@@ -29,3 +29,9 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "stofs3d_setup.ops.Bathy_edit.Regional_tweaks" = ["*.gpkg"]
+"stofs3d_setup.ops.Source_sink" = [
+    "Patch_artificial_island/*.yml",
+    "Replace_with_USGS/*.yml",
+    "Spatial_corrections/*.yml",
+    "Spatial_corrections/*.rgn",
+]
