@@ -224,16 +224,8 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
 
     # --------------------- exclude the user-defined sources near artificial island -----------------
     artificial_island_info = config.artificial_island_source_sink_info
-    corrections = None
-    corrections_dir = None
 
     if artificial_island_info is not None:
-        corrections = load_source_sink_corrections(artificial_island_info)
-        corrections_dir = (
-            Path.cwd()
-            if isinstance(artificial_island_info, dict)
-            else Path(artificial_island_info).expanduser().resolve().parent
-        )
         zero_artificial_island_sources_after_replace_USGS_before_relocation(
             source_sink_dir=f'{wdir}/original_source_sink/',
             hgrid_file=(
@@ -348,28 +340,41 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
 
 
     # ---------------------- apply post-generation corrections ----------------------
+    replace_temperature = config.replace_source_temperature_with_usgs
+    replace_selected_sources = config.replace_selected_sources_with_usgs
+    zero_regions = config.zero_configured_source_regions
+    correction_info = config.source_sink_correction_info
 
-    if artificial_island_info is not None:
-        patch_output_dir = (
-                f'{wdir}/patch_artificial_island_source_sink/'
+    if (replace_selected_sources or zero_regions) and correction_info is None:
+        raise ValueError(
+            'source_sink_correction_info is required when selected-source '
+            'replacement or region zeroing is enabled'
         )
-        mkcd_new_dir(patch_output_dir)
-        os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
 
-        source_mapping_dir = (
-            f'{wdir}/relocated_source_sink/'
-            if config.relocate_source
-            else f'{wdir}/original_source_sink/'
-        )
+    corrections = (
+        load_source_sink_corrections(correction_info)
+        if replace_selected_sources or zero_regions
+        else None
+    )
+    corrections_dir = (
+        None
+        if not zero_regions
+        else Path(correction_info).expanduser().resolve().parent
+    )
+
+    if replace_temperature or replace_selected_sources:
         usgs_cache_folder = (
             config.usgs_cache_folder
             if config.usgs_cache_folder is not None
             else Path(model_input_path) / 'USGS_cache'
         )
-        nwm_shapefile = (
-            "/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp"
-        )
 
+    if replace_temperature:
+        source_mapping_dir = (
+            f'{wdir}/relocated_source_sink/'
+            if config.relocate_source
+            else f'{wdir}/original_source_sink/'
+        )
         base_ss, temperature_replaced_count = (
             replace_source_temperatures_with_usgs(
                 base_ss=base_ss,
@@ -377,10 +382,12 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
                 source_mapping_dir=source_mapping_dir,
                 start_time=config.startdate,
                 usgs_cache_folder=usgs_cache_folder,
-                nwm_shapefile=nwm_shapefile,
+                nwm_shapefile=(
+                    "/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp"
+                ),
                 states=STOFS3D_ATL_STATES,
                 diagnostics_dir=(
-                    Path(patch_output_dir) / 'automatic_temperature'
+                    Path(wdir) / 'source_temperature'
                 ),
             )
         )
@@ -389,6 +396,7 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
             f'{temperature_replaced_count} source(s).'
         )
 
+    if replace_selected_sources:
         override_points = source_override_points(corrections)
         base_ss, source_override_count = apply_source_overrides(
             base_ss=base_ss,
@@ -402,6 +410,7 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
             f'{source_override_count} configured source(s).'
         )
 
+    if zero_regions:
         regions = zero_source_regions(
             corrections,
             config_dir=corrections_dir,
@@ -416,22 +425,31 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
             f'{region_zeroed_count} unique source(s).'
         )
 
+    if artificial_island_info is not None:
+        patch_output_dir = f'{wdir}/patch_artificial_island_source_sink/'
+        mkcd_new_dir(patch_output_dir)
+        os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
+
         base_ss = patch_artificial_island_source_sink(
-                base_ss = base_ss,
-                hgrid=hgrid,
-                original_source_sink_dir=(
-                    f'{wdir}/original_source_sink/'
-                ),
-                relocated_source_sink_dir=(
-                    f'{wdir}/relocated_source_sink/'
-                ),
-                patch_info_file=artificial_island_corrections(corrections),
-                start_time = config.startdate,
-                rnday=config.rnday,
-                usgs_cache_folder=usgs_cache_folder,
-                nwm_shapefile=nwm_shapefile,
-                output_dir = patch_output_dir,
-                replace_all_source_temperature=False,
+            base_ss=base_ss,
+            hgrid=hgrid,
+            original_source_sink_dir=f'{wdir}/original_source_sink/',
+            relocated_source_sink_dir=f'{wdir}/relocated_source_sink/',
+            patch_info_file=artificial_island_corrections(
+                load_source_sink_corrections(artificial_island_info)
+            ),
+            start_time=config.startdate,
+            rnday=config.rnday,
+            usgs_cache_folder=(
+                config.usgs_cache_folder
+                if config.usgs_cache_folder is not None
+                else Path(model_input_path) / 'USGS_cache'
+            ),
+            nwm_shapefile=(
+                "/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp"
+            ),
+            output_dir=patch_output_dir,
+            replace_all_source_temperature=False,
         )
 
 

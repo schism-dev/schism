@@ -86,6 +86,10 @@ class ConfigStofs3dAtlantic(BaseModel):
     reuse_source_json: bool = False
     replace_nwm_with_usgs: bool = False
     usgs_cache_folder: Optional[Path] = None
+    replace_source_temperature_with_usgs: bool = False
+    replace_selected_sources_with_usgs: bool = False
+    zero_configured_source_regions: bool = False
+    source_sink_correction_info: Optional[Path] = None
     source_ele_replace_dict: Dict[int, int] = None  # temporary fix for isolated feeder channels
     constant_sink_shapefile: Optional[Path] = None
     exclude_shapefile: Optional[Path] = None
@@ -321,6 +325,10 @@ class ConfigStofs3dAtlantic(BaseModel):
     @classmethod
     def v7p4(cls):
         '''Factory method to create a configuration for STOFS3D-v7.4 3D setup'''
+        correction_info = (
+            STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
+            'Patch_artificial_island' / 'artificial_island_source_sink.yml'
+        )
         return cls(
             ocean_bnd_ids=[0, 1],
             elev2d_uniform_shift=-0.42,  # add a uniform shift to elev2D
@@ -344,11 +352,11 @@ class ConfigStofs3dAtlantic(BaseModel):
                 STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
                 'Constant_sinks' / 'exclude_constant_sink_at_savannah_charleston.shp'
             ),
-            #artificial_island_source_sink_info= None,
-            artificial_island_source_sink_info=(
-                STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
-                'Patch_artificial_island' / 'artificial_island_source_sink.yml'
-            ),
+            replace_source_temperature_with_usgs=True,
+            replace_selected_sources_with_usgs=True,
+            zero_configured_source_regions=True,
+            source_sink_correction_info=correction_info,
+            artificial_island_source_sink_info=correction_info,
             bc_flags=[
                 [5, 5, 4, 4],  # Atlantic Ocean
                 [5, 5, 4, 4],  # Gulf of St. Lawrence

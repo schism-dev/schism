@@ -113,7 +113,7 @@ depend on live USGS services.
 
 ## Phase 0: Establish Characterization Tests
 
-Status: **In progress**
+Status: **Completed**
 
 - [ ] Identify the smallest representative source/sink fixture.
 - [ ] Record current source and sink element lists and ordering.
@@ -343,14 +343,14 @@ source_sink = generate_nwm_source_sink(...)
 if config.replace_nwm_flow_with_usgs:
     source_sink = replace_flow_with_usgs(source_sink, ...)
 
+if config.relocate_source:
+    source_sink = relocate_source_sink(source_sink, ...)
+
 if config.replace_source_temperature_with_usgs:
     source_sink = replace_temperature_with_usgs(source_sink, ...)
 
 if config.source_overrides:
     source_sink = apply_source_overrides(source_sink, ...)
-
-if config.relocate_source:
-    source_sink = relocate_source_sink(source_sink, ...)
 
 if config.zero_source_regions:
     source_sink = zero_sources_in_regions(source_sink, ...)
@@ -359,13 +359,13 @@ if config.artificial_island_corrections:
     source_sink = apply_artificial_island_corrections(source_sink, ...)
 ```
 
-- [ ] Each option enables one clear operation.
-- [ ] Temperature processing does not depend on artificial-island settings.
-- [ ] Delaware/Hudson processing does not depend on artificial-island
+- [x] Each option enables one clear operation.
+- [x] Temperature processing does not depend on artificial-island settings.
+- [x] Delaware/Hudson processing does not depend on artificial-island
       settings.
-- [ ] Generic spatial corrections do not depend on artificial-island settings.
-- [ ] Disabled operations do not require their input files.
-- [ ] Defaults are documented and tested.
+- [x] Generic spatial corrections do not depend on artificial-island settings.
+- [x] Disabled operations do not require their input files.
+- [x] Defaults are documented and tested.
 
 Current incremental state:
 
@@ -375,8 +375,9 @@ Current incremental state:
       relocation is disabled.
 - [x] The artificial-island stage no longer repeats the extracted explicit
       overrides or region zeroing when called by the main workflow.
-- [ ] Add separate configuration switches; the existing shared YAML path is
-      still the temporary enable/disable control for all four stages.
+- [x] Added separate configuration switches. The v7.4 factory temporarily
+      points the general correction and artificial-island settings to the same
+      YAML file while the stages remain independently enabled.
 
 Deliverable: independently configurable workflow stages.
 
@@ -467,6 +468,7 @@ Complete before Phase 9:
 | 2026-09-30 | Test after every extraction. | Preserve scientific behavior and array alignment. |
 | 2026-09-30 | Do not immediately merge Hudson into the generic downloader. | Current adaptive retry behavior is not yet proven equivalent. |
 | 2026-09-30 | Do not immediately move Delaware/Hudson into `manual_nwm2usgs`. | The current and proposed flow algorithms differ. |
+| 2026-09-30 | Give temperature, selected-source overrides, region zeroing, and artificial-island work independent configuration controls. | Removing the artificial-island gate restores the original workflow's stage-level control. |
 
 ## Progress Log
 
@@ -475,3 +477,4 @@ Complete before Phase 9:
 | 2026-09-30 | Setup | Created refactor branch and tracking plan. | Pending | Pending |
 | 2026-09-30 | 0-7 | Added characterization tests and extracted USGS series, station mappings, automatic temperature processing, Delaware/Hudson overrides, aligned source/sink components, spatial helpers, configuration, diagnostics, and background-sink overlap handling. | 22 focused tests and 87 repository tests passed; compile checks passed; 47 extracted function bodies match `master` by AST comparison. | `08252989` |
 | 2026-09-30 | 8 | Added public stage APIs and made the main assembler call temperature replacement, Delaware/Hudson overrides, region zeroing, and artificial-island corrections explicitly. | 26 focused tests and 91 non-MPI repository tests passed; compile and diff checks passed. | `d545bd60` |
+| 2026-09-30 | 8 | Moved the extracted stages outside the artificial-island conditional and added independent configuration switches with v7.4 compatibility settings. | 28 focused tests and 93 non-MPI repository tests passed; compile and diff checks passed. | Pending |

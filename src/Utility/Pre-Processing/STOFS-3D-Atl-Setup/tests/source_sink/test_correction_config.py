@@ -5,9 +5,29 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from stofs3d_setup.ops.Source_sink import correction_config
+from stofs3d_setup.config.stofs3d_atl_config import ConfigStofs3dAtlantic
 
 
 class CorrectionConfigTests(unittest.TestCase):
+    def test_independent_correction_stages_are_disabled_by_default(self):
+        config = ConfigStofs3dAtlantic()
+
+        self.assertFalse(config.replace_source_temperature_with_usgs)
+        self.assertFalse(config.replace_selected_sources_with_usgs)
+        self.assertFalse(config.zero_configured_source_regions)
+        self.assertIsNone(config.source_sink_correction_info)
+
+    def test_v7p4_preserves_enabled_correction_stages(self):
+        config = ConfigStofs3dAtlantic.v7p4()
+
+        self.assertTrue(config.replace_source_temperature_with_usgs)
+        self.assertTrue(config.replace_selected_sources_with_usgs)
+        self.assertTrue(config.zero_configured_source_regions)
+        self.assertEqual(
+            config.source_sink_correction_info,
+            config.artificial_island_source_sink_info,
+        )
+
     def test_replace_override_defaults_are_normalized(self):
         points = correction_config._normalize_replace_relocated_points(
             {

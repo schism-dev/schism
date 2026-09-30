@@ -61,10 +61,21 @@
 #   Remove selected source and/or sink columns whose main-grid element centers
 #   lie within the configured radius.
 #
-# A per-run configuration can override this YAML path through:
+# The current v7.4 configuration reuses this YAML for multiple independent
+# stages. Each stage has its own switch:
 #
-# model:
-#   artificial_island_source_sink_info: "/path/to/artificial_island_source_sink.yml"
+#   replace_source_temperature_with_usgs: true
+#   replace_selected_sources_with_usgs: true
+#   zero_configured_source_regions: true
+#   source_sink_correction_info: "/path/to/source_sink_corrections.yml"
+#   artificial_island_source_sink_info: "/path/to/artificial_island.yml"
+#
+# The two paths may point to this same transitional file. Temperature
+# replacement uses no YAML section; its switch is sufficient. Selected-source
+# replacement reads ``replace_only_source_locations`` from
+# ``source_sink_correction_info``. Region zeroing reads ``zero_source_regions``.
+# The artificial-island path controls only the island patch and its temporary
+# pre-relocation suppression step.
 
 
 # ----------------------------------------------------------------------
