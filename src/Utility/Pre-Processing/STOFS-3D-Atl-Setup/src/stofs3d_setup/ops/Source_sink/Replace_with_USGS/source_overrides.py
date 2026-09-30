@@ -1,0 +1,236 @@
+"""Explicit flow and temperature overrides for existing SCHISM sources."""
+
+import numpy as np
+from pyproj import Transformer
+
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
+    CFS_TO_CMS,
+    USGS_FLOW_STATION_BY_NAME,
+    USGS_TEMPERATURE_STATION_BY_NAME,
+)
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS.usgs_series import (
+    _get_usgs_forcing,
+    _interpolate_usgs_with_original_fallback,
+    _model_datetimes,
+)
+from stofs3d_setup.ops.Source_sink.source_sink_components import (
+    _add_negative_source_part_to_sink,
+    _check_matching_time,
+)
+from stofs3d_setup.ops.Source_sink.spatial_corrections import (
+    _nearest_element,
+)
+
+
+def _replace_existing_relocated_source(
+    point: dict,
+    source_eles: list[int],
+    source_time_and_data: tuple[np.ndarray, np.ndarray] | None,
+    msource_data_list: list[tuple[np.ndarray, np.ndarray]],
+    sink_eles: list[int],
+    sink_time_and_data: tuple[np.ndarray, np.ndarray] | None,
+    xctr: np.ndarray,
+    yctr: np.ndarray,
+    transformer: Transformer,
+    start_time,
+    usgs_cache_folder,
+) -> tuple[
+    tuple[np.ndarray, np.ndarray] | None,
+    list[tuple[np.ndarray, np.ndarray]],
+    list[int],
+    tuple[np.ndarray, np.ndarray] | None,
+]:
+    """
+    Replace flow and/or temperature in one existing relocated source column.
+
+    The source element and source-column count are unchanged. Flow and
+    temperature may come from different explicitly configured USGS stations.
+    Unsupported periods retain the existing relocated forcing.
+    """
+    name = point["name"]
+    radius_m = point["max_search_radius_m"]
+
+    if source_time_and_data is None or not source_eles:
+        raise ValueError(
+            f"[ARTIFICIAL ISLAND PATCH] {name}: relocated base has no source"
+        )
+
+    target_ele, distance_m = _nearest_element(
+        x=point["x"],
+        y=point["y"],
+        candidate_element_ids=source_eles,
+        xctr=xctr,
+        yctr=yctr,
+        transformer=transformer,
+    )
+
+    if target_ele is None or distance_m > radius_m:
+        nearest_text = (
+            "none"
+            if target_ele is None
+            else f"element {target_ele} at {distance_m:.1f} m"
+        )
+        raise ValueError(
+            f"[ARTIFICIAL ISLAND PATCH] {name}: no relocated source found "
+            f"within {radius_m:.1f} m; nearest={nearest_text}. "
+            "Replace-only entries never create a new source."
+        )
+
+    flow_station_id = USGS_FLOW_STATION_BY_NAME.get(name)
+    temperature_station_id = USGS_TEMPERATURE_STATION_BY_NAME.get(name)
+
+    if point["replace_flow"] and not flow_station_id:
+        raise ValueError(
+            f"[ARTIFICIAL ISLAND PATCH] {name}: "
+            "no USGS flow station is configured"
+        )
+
+    if point["replace_temperature"] and not temperature_station_id:
+        print(
+            f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+            "no USGS temperature station is configured; "
+            "temperature replacement will be skipped."
+        )
+
+    source_time, source_data = source_time_and_data
+    source_idx = source_eles.index(target_ele)
+    target_datetime = _model_datetimes(start_time, source_time)
+
+    (
+        flow_series,
+        temperature_series,
+        flow_station_id,
+        temperature_station_id,
+    ) = _get_usgs_forcing(
+        name=name,
+        start_time=start_time,
+        model_time=source_time,
+        usgs_cache_folder=usgs_cache_folder,
+    )
+
+    if point["replace_flow"]:
+        if flow_series is None:
+            print(
+                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                f"USGS flow station {flow_station_id} returned no flow; "
+                "relocated vsource is unchanged."
+            )
+        else:
+            original_flow = source_data[:, source_idx].copy()
+            replaced_flow, use_usgs_flow = (
+                _interpolate_usgs_with_original_fallback(
+                    series=flow_series,
+                    target_time=target_datetime,
+                    original_values=original_flow,
+                    scale=CFS_TO_CMS,
+                )
+            )
+            source_data[:, source_idx] = replaced_flow
+
+            print(
+                f"[ARTIFICIAL ISLAND PATCH] {name}: replaced relocated "
+                f"vsource at element {target_ele} using USGS flow station "
+                f"{flow_station_id} for "
+                f"{int(use_usgs_flow.sum())}/{len(use_usgs_flow)} records; "
+                f"existing relocated forcing retained for "
+                f"{int((~use_usgs_flow).sum())} records."
+            )
+
+            if not np.any(use_usgs_flow):
+                print(
+                    f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                    f"USGS flow station {flow_station_id} was downloaded, "
+                    "but zero model-time records were replaced. "
+                    f"Model period={target_datetime[0]} to {target_datetime[-1]}; "
+                    f"USGS period={flow_series.index.min()} to "
+                    f"{flow_series.index.max()}."
+                )
+
+    if point["replace_temperature"]:
+        if not msource_data_list:
+            print(
+                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                "base_ss has no msource tracer; temperature replacement "
+                "was skipped."
+            )
+        elif temperature_station_id is None:
+            print(
+                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                "no USGS temperature station configured; relocated "
+                "temperature msource is unchanged."
+            )
+        elif temperature_series is None:
+            print(
+                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                f"USGS temperature station {temperature_station_id} "
+                "returned no temperature; relocated temperature msource "
+                "is unchanged."
+            )
+        else:
+            tracer_time, tracer_data = msource_data_list[0]
+            _check_matching_time(
+                source_time,
+                tracer_time,
+                f"relocated temperature replacement {name}",
+            )
+
+            original_temperature = tracer_data[:, source_idx].copy()
+            replaced_temperature, use_usgs_temperature = (
+                _interpolate_usgs_with_original_fallback(
+                    series=temperature_series,
+                    target_time=target_datetime,
+                    original_values=original_temperature,
+                    scale=1.0,
+                )
+            )
+
+            tracer_data[:, source_idx] = replaced_temperature
+            msource_data_list[0] = (tracer_time, tracer_data)
+
+            print(
+                f"[ARTIFICIAL ISLAND PATCH] {name}: replaced relocated "
+                f"temperature msource tracer 1 at element {target_ele} "
+                f"using USGS temperature station {temperature_station_id} "
+                f"for {int(use_usgs_temperature.sum())}/"
+                f"{len(use_usgs_temperature)} records; existing temperature "
+                f"retained for {int((~use_usgs_temperature).sum())} records."
+            )
+
+    if point["allow_negative_sink"]:
+        (
+            sink_eles,
+            sink_time_and_data,
+            n_negative,
+            min_negative,
+        ) = _add_negative_source_part_to_sink(
+            target_ele=target_ele,
+            source_column_idx=source_idx,
+            source_data=source_data,
+            source_time=source_time,
+            sink_eles=sink_eles,
+            sink_time_and_data=sink_time_and_data,
+        )
+
+        if n_negative > 0:
+            print(
+                f"[ARTIFICIAL ISLAND PATCH] {name}: moved "
+                f"{n_negative} negative relocated-source record(s) to vsink "
+                f"at element {target_ele}; minimum={min_negative:.6f} m3/s."
+            )
+        else:
+            print(
+                f"[ARTIFICIAL ISLAND PATCH] {name}: "
+                "allow_negative_sink enabled; no negative records."
+            )
+
+    print(
+        f"[ARTIFICIAL ISLAND PATCH] {name}: replace-only operation matched "
+        f"relocated source element {target_ele} at {distance_m:.1f} m."
+    )
+
+    return (
+        (source_time, source_data),
+        msource_data_list,
+        sink_eles,
+        sink_time_and_data,
+    )
