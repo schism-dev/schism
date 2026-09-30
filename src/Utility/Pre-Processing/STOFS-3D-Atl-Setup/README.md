@@ -62,6 +62,8 @@ pip install "git+https://github.com/schism-dev/schism.git@master#subdirectory=sr
 - Several dependencies are currently transitional and will be simplified as upstream packages stabilize.
 - Horizontal-grid preparation is available through `stofs3d-hgrid-preproc`;
   see [`docs/hgrid_preprocessing.md`](docs/hgrid_preprocessing.md).
+- Preprocessing provenance records are described in
+  [`docs/provenance.md`](docs/provenance.md).
 
 
 ## Recommended Usage and Configuration Workflow

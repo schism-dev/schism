@@ -12,6 +12,8 @@ from pathlib import Path
 import sys
 from typing import Sequence
 
+from stofs3d_setup.utils.provenance import ProvenanceRun
+
 from .partition_check import prepare_partition_check as create_partition_check
 
 
@@ -200,7 +202,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         "split": directories["split"] / "hgrid.gr3.new",
         "boundary": directories["boundary"] / "hgrid_with_bnd.gr3",
     }
-
     first = STAGES.index(args.start_at)
     last = STAGES.index(args.stop_after)
     selected = STAGES[first:last + 1]
@@ -208,29 +209,36 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"Output root: {args.output_root}")
     print(f"Stages: {', '.join(selected)}")
 
-    if "improve" in selected:
-        products["improve"] = run_improvement(args, directories["improve"])
+    with ProvenanceRun.for_hgrid(args, argv):
+        if "improve" in selected:
+            products["improve"] = run_improvement(args, directories["improve"])
 
-    if "split" in selected:
-        if not products["improve"].is_file():
-            raise FileNotFoundError(f"missing prior-stage product: {products['improve']}")
-        products["split"] = run_quad_split(
-            args, products["improve"], directories["split"]
-        )
+        if "split" in selected:
+            if not products["improve"].is_file():
+                raise FileNotFoundError(
+                    f"missing prior-stage product: {products['improve']}"
+                )
+            products["split"] = run_quad_split(
+                args, products["improve"], directories["split"]
+            )
 
-    if "boundary" in selected:
-        if not products["split"].is_file():
-            raise FileNotFoundError(f"missing prior-stage product: {products['split']}")
-        products["boundary"] = run_boundaries(
-            args, products["split"], directories["boundary"]
-        )
+        if "boundary" in selected:
+            if not products["split"].is_file():
+                raise FileNotFoundError(
+                    f"missing prior-stage product: {products['split']}"
+                )
+            products["boundary"] = run_boundaries(
+                args, products["split"], directories["boundary"]
+            )
 
-    if "partition" in selected:
-        if not products["boundary"].is_file():
-            raise FileNotFoundError(f"missing prior-stage product: {products['boundary']}")
-        prepare_partition_check(
-            args, products["boundary"], directories["partition"]
-        )
+        if "partition" in selected:
+            if not products["boundary"].is_file():
+                raise FileNotFoundError(
+                    f"missing prior-stage product: {products['boundary']}"
+                )
+            prepare_partition_check(
+                args, products["boundary"], directories["partition"]
+            )
 
     print("\nRequested preprocessing stages completed successfully.")
     return 0

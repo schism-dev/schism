@@ -100,7 +100,7 @@ WORKFLOW_CONSTANTS = {
     'Ensure_channel_connectivity': {
         'min_channel_depth': 2.0,
         'channel_depth_source': 'hydrofabric',
-        'measured_from_high_bank': True,
+        'measured_from_high_bank': False,
         'river_arcs_file': str(
             WORKFLOW_CONSTANTS_DIR /
             'Ensure_channel_connectivity/river_arcs.parquet'
@@ -130,6 +130,7 @@ WORKFLOW_CONSTANTS = {
             ),
         ],
         'max_nearest_distance_m': 500.0,
+        'footprint_buffer_m': 10.0,
         'max_dredging_delta_m': 6.0,
         'intersection_search_radius_m': 200.0,
         'intersection_width_tolerance_m': 10.0,
@@ -183,10 +184,12 @@ WORKFLOW_CONSTANTS = {
         ),
     },
     'sample_usage': {
-        'wdir': Path('/sciclone/schism10/hjyoo/task/task10_Atlantic/TMP/bathy_edit_test_based_on_RUN100n_August_28th_2026/Bathy_edit/'),
+        'wdir': Path(
+            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32g/Bathy_edit'
+        ),
         'hgrid_fname': Path(
-            '/sciclone/schism10/hjyoo/task/task10_Atlantic/TMP/bathy_edit_test_based_on_RUN100n_August_28th_2026/'
-            'hgrid.ll.dem_loaded.mpi.gr3'
+            '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32g/'
+            'Bathy_edit/DEM_loading/hgrid.ll.dem_loaded.mpi.gr3'
         ),
     },
 }
@@ -276,7 +279,7 @@ def prepare_dir(wdir: Path, tasks: List[str]):
     This includes the scripts for each requested task and
     the larger files not in the Git repository.
     '''
-    script_dir = Path(__file__).parent
+    script_dir = Path(__file__).resolve().parent
     if script_dir == wdir:
         print('The script is already in the working directory; no need to copy.')
     else:
@@ -474,6 +477,7 @@ def bathy_edit(wdir: Path, hgrid_fname: Path, tasks: list = None):
             channel_depth_source=task_cfg['channel_depth_source'],
             measured_from_high_bank=task_cfg['measured_from_high_bank'],
             max_nearest_distance_m=task_cfg['max_nearest_distance_m'],
+            footprint_buffer_m=task_cfg.get('footprint_buffer_m', 10.0),
             max_dredging_delta_m=task_cfg['max_dredging_delta_m'],
             intersection_search_radius_m=(
                 task_cfg['intersection_search_radius_m']

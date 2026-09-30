@@ -5,6 +5,30 @@ from pylib import read
 from stofs3d_setup.utils.projection import project_geodataframe, project_grid
 
 
+def _require_matching_hgrid_nodes(target_hgrid, reference_hgrid):
+    """Require identical node coordinates and ordering for indexed depth copy."""
+    coordinates_match = (
+        target_hgrid.np == reference_hgrid.np
+        and np.allclose(
+            target_hgrid.x,
+            reference_hgrid.x,
+            atol=1e-8,
+            rtol=0.0,
+        )
+        and np.allclose(
+            target_hgrid.y,
+            reference_hgrid.y,
+            atol=1e-8,
+            rtol=0.0,
+        )
+    )
+    if not coordinates_match:
+        raise ValueError(
+            'Target and reference hgrids do not have identical '
+            'node coordinates and ordering.'
+        )
+
+
 def temp_fix_v7p2(gd_ll, wdir, reference_hgrid_file):
     '''
     A temporary fix for v7.2:
@@ -83,6 +107,7 @@ def temp_fix_v7p2(gd_ll, wdir, reference_hgrid_file):
         original_dp = gd_ll.dp[idx]
         print(f'{sum(original_dp >= 1.0)} points with large depth in {land_name}.')
         reference_hgrid = read(land_info['reference_hgrid'])
+        _require_matching_hgrid_nodes(gd_ll, reference_hgrid)
         print(f'Forcing minimum depth (maximum ground elevation) for {land_name}.')
         gd_ll.dp[idx] = np.minimum(gd_ll.dp[idx], reference_hgrid.dp[idx])
 

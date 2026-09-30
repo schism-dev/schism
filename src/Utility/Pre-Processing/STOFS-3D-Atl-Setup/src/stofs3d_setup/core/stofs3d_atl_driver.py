@@ -28,10 +28,9 @@ from ..ops.River.gen_Canada_river_flux_th import gen_Canada_river_flux_th
 from ..utils.utils import (
     mkcd_new_dir,
     prep_run_dir,
-    refresh_directory_snapshot,
     try_remove,
-    write_metadata,
 )
+from ..utils.provenance import ProvenanceRun
 from ..ops.Prop.gen_tvd_v1 import gen_tvd_prop
 #from ..ops.Prop.gen_tvd import gen_tvd_prop
 from ..ops.Bctides.bctides.bctides import Bctides  # temporary, bctides.py will be merged into pyschism
@@ -57,13 +56,15 @@ DRIVER_PRINT_PREFIX = '\n-----------------STOFS3D-ATL driver:-------------------
 #       Main function to generate inputs for STOFS-3D-ATL
 #       Only house keeping here, the core functions are imported
 # ---------------------------------------------------------------------
-def stofs3d_atl_driver(
+def _generate_stofs3d_inputs(
     hgrid_path: str,
-    vgrid_path: str,
+    vgrid_path: str | None,
     config: ConfigStofs3dAtlantic,
-    project_dir: str, runid: str, scr_dir: str,
-    input_files: dict = None,
-):
+    project_dir: str,
+    runid: str,
+    scr_dir: str | None,
+    input_files: dict[str, bool | None] | None = None,
+) -> None:
     '''
     Main function to generate inputs for STOFS3D-ATL.
     '''
@@ -72,7 +73,14 @@ def stofs3d_atl_driver(
         input_files = {
             'vgrid': True,
             'bctides': True,
-            'gr3': True, 'nudge_gr3': True, 'shapiro': True, 'drag': True, 'elev_ic': True,
+            'gr3': True,
+            'nudge_gr3': True,
+            'shapiro': True,
+            'drag': True,
+            'diffmin': False,
+            'elev_ic': True,
+            'soil': False,
+            'watertype': False,
             '*.prop': True,
             'flux_th': True, 'source_sink': True,
             'hotstart.nc': False,
@@ -87,20 +95,8 @@ def stofs3d_atl_driver(
     # define and make the model_input_path, the run_dir and the output dir
     model_input_path, run_dir, _ = prep_run_dir(project_dir, runid, scr_dir=scr_dir)
 
-    # Save an exact snapshot, replacing any backup from an earlier invocation.
-    refresh_directory_snapshot(
-        script_path,
-        Path(model_input_path) / "Pre_processing_scripts_backup",
-    )
     # make a copy of the hgrid to the model_input_path
     os.system(f'cp {hgrid_path} {model_input_path}/hgrid.gr3')
-
-    write_metadata(
-        script_path=setup_path,
-        metadata_path=f"{model_input_path}/metadata.yml",
-        project_dir=project_dir,
-        runid=runid,
-    )
 
     # ------------------vgrid---------------------
     if vgrid_path is not None:
@@ -437,6 +433,21 @@ def stofs3d_atl_driver(
         for f in ['SAL_3D.th.nc', 'TEM_3D.th.nc', 'uv3D.th.nc']:
             os.system(f'rm {f}')
             os.system(f'ln -s ../I{runid}/{sub_dir}/{f} .')
+
+
+def stofs3d_atl_driver(
+    hgrid_path: str,
+    vgrid_path: str | None,
+    config: ConfigStofs3dAtlantic,
+    project_dir: str,
+    runid: str,
+    scr_dir: str | None,
+    input_files: dict[str, bool | None] | None = None,
+) -> None:
+    """Generate STOFS-3D inputs with a timestamped provenance record."""
+    driver_arguments = dict(locals())
+    with ProvenanceRun.for_stofs3d_driver(driver_arguments):
+        return _generate_stofs3d_inputs(**driver_arguments)
 
 
 if __name__ == '__main__':

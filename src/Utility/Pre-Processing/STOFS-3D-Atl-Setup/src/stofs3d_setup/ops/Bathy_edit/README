@@ -32,6 +32,8 @@ Bathy_edit/
   DEM_loading/
     hgrid.ll
     hgrid.ll.dem_loaded.mpi.gr3
+  Interpolate_Upper_Hudson/
+  Temporary_Fix_secofs/
   Regional_tweaks/
   NCF/
   Levee_dev/
@@ -109,6 +111,8 @@ The default task set is defined near the top of the file:
 
 ```
 TASKS = {
+    'Interpolate_Upper_Hudson',
+    'Temporary_Fix_secofs',
     'Regional_tweaks',
     'NCF',
     'Levee_dev',
@@ -137,6 +141,77 @@ directory can be shared with external users and relocated by changing only
 workflow constants reproduce one setup version, while the larger NCF, levee,
 and similar source datasets persist across setup versions.
 
+
+STOFS-3D Atlantic v7.4 (v7p4) / v32g Recipe
+-------------------------------------------
+
+The v7.4/v32g production workflow runs these tasks in the order imposed by
+`IMPLEMENTED_TASKS`:
+
+```
+Interpolate_Upper_Hudson
+Temporary_Fix_secofs
+Regional_tweaks
+NCF
+Levee_dev
+xGEOID_cmvd
+Ensure_channel_connectivity
+Temporary_Fix_v7p2
+```
+
+The selected v7.4 channel-connectivity setup uses hydrofabric bankfull depths,
+a 2 m minimum channel depth, the lower-bank reference
+(`measured_from_high_bank = False`), a 10 m metric hgrid-footprint buffer, a
+500 m nearest-node limit, a 6 m maximum applied deepening, and intersection
+recovery. The footprint and nearest-node checks are independent. The archived
+v32g project copy contains the earlier settings used for its completed run.
+When reconstructing this recipe from another copy of `bathy_edit.py`, verify
+them explicitly rather than assuming its current defaults describe v7.4.
+
+On SciClone, the frozen v32g run uses:
+
+```
+working directory:
+/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32g/Bathy_edit
+
+input grid:
+/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32g/Bathy_edit/DEM_loading/hgrid.ll.dem_loaded.mpi.gr3
+```
+
+Run the project copy on a compute node:
+
+```
+python /sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32g/Bathy_edit/bathy_edit.py
+```
+
+The final product is `Bathy_edit/hgrid_dem_edit.ll`.
+
+
+Temporary Fixes in v7.4
+-----------------------
+
+`Temporary_Fix_secofs` and `Temporary_Fix_v7p2` are required parts of the
+selected v7.4 recipe. Their names describe where the corrections originated;
+they do not mean that the corrections can be omitted from v7.4:
+
+- `Temporary_Fix_secofs` replaces depths in the configured SECOFS region with
+  the v7.4 SECOFS reference-grid values.
+- `Temporary_Fix_v7p2` retains the Bayou Lafourche channel, land-surface, and
+  levee corrections inherited from the v7.2 development stream.
+
+Both tasks use reference-grid depths by node position. Their reference grids
+under `WORKFLOW_CONSTANTS_stofs3d_v7.4` must therefore have the same node
+count, coordinates, and ordering as the target hgrid. They were regenerated
+and verified for v32g. Regenerate them after any future mesh change; the task
+code raises an exception when a reference grid is incompatible.
+
+These fixes are version-specific corrections, not universal bathymetry
+operations. A new or more general setup should select tasks from its own data
+requirements and should not enable either temporary fix merely because it is
+available. Prefer incorporating a correction into the authoritative DEM,
+regional-edit, channel, or levee input when that becomes practical. Until
+v7.4 is superseded by such inputs, keep both fixes enabled to reproduce v7.4.
+
 For a new project, update at least:
 
 ```
@@ -160,12 +235,10 @@ Intermediate diagnostic products are written inside each task folder, for
 example:
 
 ```
-Regional_tweaks/hgrid_ll_dem_tweaks.2dm
-NCF/hgrid_ll_dem_NCF.2dm
-Levee_dev/hgrid_ll_dem_NCF_levee.2dm
-xGEOID_cmvd/hgrid_ll_dem_NCF_levee_xGEOID_cmvd.2dm
-Ensure_channel_connectivity/hgrid_ll_dem_NCF_levee_xGEOID_cmvd_channel_connectivity_ensured.gr3
-Temporary_Fix_v7p2/hgrid_ll_dem_NCF_levee_xGEOID_cmvd_channel_connectivity_ensured_temp_fix_v7.2.2dm
+Interpolate_Upper_Hudson/hgrid_ll_dem_upper_Hudson.gr3
+Temporary_Fix_secofs/hgrid_ll_dem_upper_Hudson_temp_fix_secofs.2dm
+Ensure_channel_connectivity/*_channel_connectivity_ensured.gr3
+Temporary_Fix_v7p2/*_temp_fix_v7.2.2dm
 ```
 
 For v7.4/v32e, this organized `bathy_edit.py` reproduced the previous baseline
@@ -174,6 +247,15 @@ For v7.4/v32e, this organized `bathy_edit.py` reproduced the previous baseline
 
 Task Notes
 ----------
+
+`Interpolate_Upper_Hudson`
+  Interpolates the configured reference-grid bathymetry onto target nodes in
+  the Upper Hudson region. The interpolation is spatial and does not require
+  identical reference and target node numbering.
+
+`Temporary_Fix_secofs`
+  Applies the mesh-indexed SECOFS reference depths required by v7.4. This is a
+  version-specific correction; see "Temporary Fixes in v7.4" above.
 
 `Regional_tweaks`
   Applies region-based minimum-depth/depth-shaping edits.
@@ -195,8 +277,9 @@ Task Notes
   `WORKFLOW_CONSTANTS`.
 
 `Temporary_Fix_v7p2`
-  Applies the Bayou Lafourche temporary fix using the reference grid path in
-  `WORKFLOW_CONSTANTS`.
+  Applies the Bayou Lafourche corrections required by v7.4 using the reference
+  grid path in `WORKFLOW_CONSTANTS`. Despite its historical name, keep this
+  task enabled when reproducing v7.4.
 
 
 Good Practice

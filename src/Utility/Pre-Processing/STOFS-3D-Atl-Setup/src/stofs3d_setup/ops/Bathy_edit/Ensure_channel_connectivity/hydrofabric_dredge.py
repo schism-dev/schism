@@ -24,6 +24,7 @@ import json
 import math
 import os
 import shutil
+import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Sequence
@@ -36,6 +37,8 @@ from scipy.spatial import cKDTree
 from shapely import distance as shapely_distance
 from shapely import intersects_xy, points as shapely_points, prepare
 from shapely.geometry import LineString, Polygon, box
+from shapely.geometry.base import BaseGeometry
+from shapely.ops import unary_union
 from shapely.validation import make_valid
 
 try:
@@ -44,12 +47,15 @@ try:
         MATCH_CRS,
         normalized_bbox,
     )
+    from stofs3d_setup.utils.projection import project_geodataframe
 except ModuleNotFoundError:  # Permit direct execution from this directory.
     from hydrofabric_match import (  # type: ignore[no-redef]
         ANALYSIS_GEOGRAPHIC_CRS,
         MATCH_CRS,
         normalized_bbox,
     )
+    sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+    from stofs3d_setup.utils.projection import project_geodataframe
 
 
 DEFAULT_CONNECTIVITY_DIR = Path(
@@ -85,6 +91,7 @@ class DredgeSettings:
     channel_depth_source: str = "hydrofabric"
     measured_from_high_bank: bool = True
     max_nearest_distance_m: float = 500.0
+    footprint_buffer_m: float = 10.0
     intersection_search_radius_m: float = 200.0
     intersection_width_tolerance_m: float = 10.0
     intersection_bank_exclusion_fraction: float = 0.05
@@ -104,6 +111,8 @@ class DredgeSettings:
             )
         if self.max_nearest_distance_m <= 0:
             raise ValueError("max_nearest_distance_m must be positive")
+        if self.footprint_buffer_m < 0:
+            raise ValueError("footprint_buffer_m must be non-negative")
         if self.intersection_search_radius_m < 0:
             raise ValueError("intersection_search_radius_m must be non-negative")
         if self.intersection_width_tolerance_m < 0:
@@ -228,6 +237,93 @@ def points_intersect_region(
         ),
         dtype=bool,
     )
+
+
+def points_intersect_geometry(
+    x: np.ndarray | pd.Series,
+    y: np.ndarray | pd.Series,
+    geometry: BaseGeometry,
+) -> np.ndarray:
+    """Return a boundary-inclusive mask for one polygonal geometry."""
+    if geometry.is_empty:
+        raise ValueError("Point-selection geometry is empty")
+    prepare(geometry)
+    return np.asarray(
+        intersects_xy(
+            geometry,
+            np.asarray(x, dtype=float),
+            np.asarray(y, dtype=float),
+        ),
+        dtype=bool,
+    )
+
+
+def hgrid_footprint_geometry(hgrid_obj) -> BaseGeometry:
+    """Build the element footprint, including holes, from a pylib hgrid."""
+    if not hasattr(hgrid_obj, "bndinfo") or not hasattr(hgrid_obj.bndinfo, "nb"):
+        hgrid_obj.compute_bnd()
+    boundary = hgrid_obj.bndinfo
+    outer_polygons: list[BaseGeometry] = []
+    island_polygons: list[BaseGeometry] = []
+    for boundary_idx in range(int(boundary.nb)):
+        node_positions = np.asarray(boundary.ibn[boundary_idx], dtype=np.int64)
+        coordinates = np.column_stack(
+            (hgrid_obj.x[node_positions], hgrid_obj.y[node_positions])
+        )
+        polygon = make_valid(Polygon(coordinates))
+        if polygon.is_empty:
+            continue
+        if int(boundary.island[boundary_idx]) == 1:
+            island_polygons.append(polygon)
+        else:
+            outer_polygons.append(polygon)
+    if not outer_polygons:
+        raise ValueError("Could not construct an outer boundary from the hgrid")
+    footprint = unary_union(outer_polygons)
+    if island_polygons:
+        footprint = footprint.difference(unary_union(island_polygons))
+    footprint = make_valid(footprint)
+    if footprint.is_empty:
+        raise ValueError("The hgrid footprint is empty")
+    return footprint
+
+
+def read_hgrid_footprint(path: Path) -> BaseGeometry:
+    """Read an hgrid and return only its topology-derived footprint."""
+    from pylib import read_schism_hgrid
+
+    return hgrid_footprint_geometry(read_schism_hgrid(str(path)))
+
+
+def buffer_hgrid_footprint(
+    footprint: BaseGeometry,
+    buffer_m: float,
+) -> BaseGeometry:
+    """Buffer an hgrid footprint in the metric analysis CRS."""
+    if buffer_m < 0:
+        raise ValueError("buffer_m must be non-negative")
+    if buffer_m == 0:
+        return footprint
+    geographic = gpd.GeoDataFrame(
+        {"name": ["hgrid_footprint"]},
+        geometry=[footprint],
+        crs=ANALYSIS_GEOGRAPHIC_CRS,
+    )
+    metric = project_geodataframe(
+        geographic,
+        MATCH_CRS,
+        context="hgrid footprint projection to metric CRS",
+    )
+    metric.geometry = metric.geometry.buffer(buffer_m)
+    buffered = project_geodataframe(
+        metric,
+        ANALYSIS_GEOGRAPHIC_CRS,
+        context="buffered hgrid footprint projection to geographic CRS",
+    ).geometry.iloc[0]
+    buffered = make_valid(buffered)
+    if buffered.is_empty:
+        raise ValueError("The buffered hgrid footprint is empty")
+    return buffered
 
 
 def line_cumulative_measures(line) -> np.ndarray:
@@ -689,7 +785,10 @@ def screen_intersection_mesh_nodes(
             & (hgrid.y <= ymax)
         )
     eligible_positions = np.flatnonzero(mesh_eligible)
-    source = vertices.loc[vertices.inside_watershed].copy()
+    source_mask = vertices.inside_watershed.to_numpy(dtype=bool)
+    if "inside_hgrid_footprint" in vertices:
+        source_mask &= vertices.inside_hgrid_footprint.to_numpy(dtype=bool)
+    source = vertices.loc[source_mask].copy()
     if len(eligible_positions) == 0 or source.empty:
         return _empty_intersection_targets()
 
@@ -1297,9 +1396,13 @@ def apply_station_depths(
     """Compute bankfull targets and collision-safe mesh-node updates."""
     vertices = mapped_vertices.copy()
     keys = ["river_idx", "station_idx"]
+    if "inside_hgrid_footprint" not in vertices:
+        vertices["inside_hgrid_footprint"] = True
+    vertices["inside_hgrid_footprint"] = vertices.inside_hgrid_footprint.astype(bool)
     banks = vertices.loc[vertices.is_bank].copy()
     banks["bank_mapping_valid"] = (
-        banks.nearest_distance_m <= settings.max_nearest_distance_m
+        banks.inside_hgrid_footprint
+        & (banks.nearest_distance_m <= settings.max_nearest_distance_m)
     )
     bank_counts = banks.groupby(keys).bank_mapping_valid.sum().rename("valid_bank_count")
     if settings.measured_from_high_bank:
@@ -1348,6 +1451,7 @@ def apply_station_depths(
     vertices["dredge_request"] = (
         (~vertices.is_bank)
         & vertices.inside_dredge_region
+        & vertices.inside_hgrid_footprint
         & vertices.mapping_valid
         & vertices.station_bank_valid
         & np.isfinite(vertices.target_thalweg_dp)
@@ -1376,7 +1480,8 @@ def apply_station_depths(
         (vertices.dredge_request & (vertices.match_status == "matched")).sum()
     )
     distance = vertices.loc[
-        vertices.inside_dredge_region, "nearest_distance_m"
+        vertices.inside_dredge_region & vertices.inside_hgrid_footprint,
+        "nearest_distance_m",
     ].to_numpy(dtype=float)
     changed_delta = node_changes.dredging_delta_m.to_numpy(dtype=float)
     station_values = vertices.sort_values(keys).drop_duplicates(keys)
@@ -1387,16 +1492,20 @@ def apply_station_depths(
         vertices.dredge_request, "target_thalweg_dp"
     ].to_numpy(dtype=float)
     inside_station_keys = vertices.loc[
-        vertices.inside_dredge_region, keys
+        vertices.inside_dredge_region & vertices.inside_hgrid_footprint,
+        keys,
     ].drop_duplicates()
     matched_inside_station_keys = vertices.loc[
-        vertices.inside_dredge_region & (vertices.match_status == "matched"),
+        vertices.inside_dredge_region
+        & vertices.inside_hgrid_footprint
+        & (vertices.match_status == "matched"),
         keys,
     ].drop_duplicates()
     summary: dict[str, object] = {
         "settings": asdict(settings),
         "river_count": int(vertices.river_idx.nunique()),
-        "arc_vertex_count": len(vertices),
+        "input_arc_vertex_count": len(vertices),
+        "arc_vertex_count": int(vertices.inside_hgrid_footprint.sum()),
         "station_count": int(vertices[keys].drop_duplicates().shape[0]),
         "inside_dredge_region_station_count": len(inside_station_keys),
         "matched_station_count": int(
@@ -1417,12 +1526,30 @@ def apply_station_depths(
         "outside_watershed_vertices_inside_test_region": int(
             (vertices.inside_test_region & ~vertices.inside_watershed).sum()
         ),
+        "inside_buffered_hgrid_footprint_vertices": int(
+            vertices.inside_hgrid_footprint.sum()
+        ),
+        "outside_buffered_hgrid_footprint_vertices": int(
+            (~vertices.inside_hgrid_footprint).sum()
+        ),
+        "outside_buffered_hgrid_footprint_vertices_inside_dredge_region": int(
+            (
+                vertices.inside_dredge_region
+                & ~vertices.inside_hgrid_footprint
+            ).sum()
+        ),
         "invalid_distance_vertices_inside_dredge_region": int(
-            (vertices.inside_dredge_region & ~vertices.mapping_valid).sum()
+            (
+                vertices.inside_dredge_region
+                & vertices.inside_hgrid_footprint
+                & ~vertices.mapping_valid
+            ).sum()
         ),
         "invalid_bank_station_count": int(
             vertices.loc[
-                vertices.inside_dredge_region & ~vertices.station_bank_valid,
+                vertices.inside_dredge_region
+                & vertices.inside_hgrid_footprint
+                & ~vertices.station_bank_valid,
                 keys,
             ].drop_duplicates().shape[0]
         ),
@@ -1567,7 +1694,12 @@ def write_diagnostics(
     node_path = output_dir / "dredged_mesh_nodes.parquet"
     intersection_candidate_path = output_dir / "intersection_candidates_200m.parquet"
     intersection_path = output_dir / "intersection_target_mesh_nodes.parquet"
-    _atomic_parquet(result.vertices, vertex_path)
+    mapped_vertices = (
+        result.vertices.loc[result.vertices.inside_hgrid_footprint]
+        .drop(columns="inside_hgrid_footprint")
+        .copy()
+    )
+    _atomic_parquet(mapped_vertices, vertex_path)
     _atomic_parquet(result.requested_nodes, requested_node_path)
     _atomic_parquet(result.node_changes, node_path)
     _atomic_parquet(result.intersection_candidates, intersection_candidate_path)
@@ -1583,7 +1715,7 @@ def write_diagnostics(
         gpkg_path = output_dir / "hydrofabric_dredge_diagnostics.gpkg"
         if gpkg_path.exists():
             gpkg_path.unlink()
-        vertices = result.vertices
+        vertices = mapped_vertices
         changed_vertices = vertices.loc[vertices.node_dredging_delta_m > 0].copy()
         dredge_requests = vertices.loc[vertices.dredge_request].copy()
         flagged_distance = vertices.loc[
@@ -1694,6 +1826,7 @@ def run_hydrofabric_dredge(
     matches_gpkg_file: str | Path,
     effective_watershed: gpd.GeoDataFrame,
     settings: DredgeSettings,
+    hgrid_footprint: BaseGeometry,
     bbox_lonlat: tuple[float, float, float, float] | None = None,
 ) -> DredgeResult:
     """Calculate hydrofabric-informed connectivity changes for one hgrid."""
@@ -1753,6 +1886,9 @@ def run_hydrofabric_dredge(
         vertices["inside_test_region"] = True
     vertices["inside_watershed"] = points_intersect_region(
         vertices.x, vertices.y, effective_watershed
+    )
+    vertices["inside_hgrid_footprint"] = points_intersect_geometry(
+        vertices.x, vertices.y, hgrid_footprint
     )
     mesh_inside_watershed = points_intersect_region(
         hgrid.x, hgrid.y, effective_watershed
@@ -1834,6 +1970,7 @@ def ensure_channel_connectivity(
     channel_depth_source: str = "hydrofabric",
     measured_from_high_bank: bool = True,
     max_nearest_distance_m: float = 500.0,
+    footprint_buffer_m: float = 10.0,
     max_dredging_delta_m: float = 6.0,
     intersection_search_radius_m: float = 200.0,
     intersection_width_tolerance_m: float = 10.0,
@@ -1896,6 +2033,7 @@ def ensure_channel_connectivity(
         channel_depth_source=channel_depth_source,
         measured_from_high_bank=measured_from_high_bank,
         max_nearest_distance_m=max_nearest_distance_m,
+        footprint_buffer_m=footprint_buffer_m,
         max_dredging_delta_m=max_dredging_delta_m,
         intersection_search_radius_m=intersection_search_radius_m,
         intersection_width_tolerance_m=intersection_width_tolerance_m,
@@ -1921,6 +2059,10 @@ def ensure_channel_connectivity(
         required_files["matches_gpkg_file"],
         effective_watershed,
         settings,
+        buffer_hgrid_footprint(
+            hgrid_footprint_geometry(hgrid_obj),
+            settings.footprint_buffer_m,
+        ),
     )
 
     output_path = Path(output_dir)
@@ -2002,6 +2144,16 @@ def get_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--max-nearest-distance-m", type=float, default=500.0)
     parser.add_argument(
+        "--footprint-buffer-m",
+        type=float,
+        default=10.0,
+        help=(
+            "Metric tolerance outside the topology-derived hgrid footprint "
+            "(default: 10 m). The nearest-node distance guard is applied "
+            "independently."
+        ),
+    )
+    parser.add_argument(
         "--max-dredging-delta-m",
         type=float,
         default=6.0,
@@ -2042,6 +2194,7 @@ def dredge_settings_from_namespace(
         channel_depth_source=args.channel_depth_source,
         measured_from_high_bank=not args.measured_from_lower_bank,
         max_nearest_distance_m=args.max_nearest_distance_m,
+        footprint_buffer_m=args.footprint_buffer_m,
         max_dredging_delta_m=args.max_dredging_delta_m,
         intersection_search_radius_m=args.intersection_search_radius_m,
         intersection_width_tolerance_m=args.intersection_width_tolerance_m,
@@ -2072,6 +2225,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         watershed_regions, exclude_regions
     )
     hgrid = read_hgrid_nodes(args.hgrid, bbox_lonlat=bbox_lonlat)
+    hgrid_footprint = buffer_hgrid_footprint(
+        read_hgrid_footprint(args.hgrid),
+        settings.footprint_buffer_m,
+    )
     result = run_hydrofabric_dredge(
         hgrid,
         args.river_arcs,
@@ -2079,6 +2236,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.matches_gpkg,
         effective_watershed,
         settings,
+        hgrid_footprint,
         bbox_lonlat=bbox_lonlat,
     )
     products = write_diagnostics(

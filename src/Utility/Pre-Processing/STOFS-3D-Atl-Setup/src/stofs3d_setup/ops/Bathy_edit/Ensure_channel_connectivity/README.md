@@ -269,18 +269,29 @@ For each complete RiverMapper river, the driver:
 3. Reconstructs the production connectivity mask from `watershed.shp` minus
    the configured Maine exclusion polygon. The optional test bounding box is
    intersected with this mask; it does not replace it.
-4. Builds one EPSG:5070 `cKDTree` from hgrid nodes inside the effective
+4. Reconstructs the hgrid footprint from element boundaries, buffers it by
+   10 m in EPSG:5070, and classifies RiverMapper vertices against that buffered
+   footprint. The small metric tolerance retains vertices displaced only by
+   coordinate or boundary precision. Vertices outside the buffered footprint
+   cannot supply forward requests or seed the reverse intersection search and
+   are omitted from `river_vertex_mesh_mapping.parquet`. Complete river
+   geometry remains available internally for centerline, bank-line, and
+   channel-polygon calculations near the mesh boundary. The tolerance is
+   configurable with `--footprint-buffer-m` and is independent of the 500 m
+   nearest-node guard.
+5. Builds one EPSG:5070 `cKDTree` from hgrid nodes inside the effective
    watershed and maps every arc vertex to its nearest eligible mesh node. This
    prevents an interior RiverMapper vertex near the mask boundary from
    requesting an outside-watershed mesh node.
-5. Computes the existing high-bank or lower-bank reference at each station.
-6. Uses `max(min_channel_depth, bnk_depth)` for matched stations and, by
+6. Computes the existing high-bank or lower-bank reference at each station.
+7. Uses `max(min_channel_depth, bnk_depth)` for matched stations and, by
    default, the scalar minimum depth for unmatched stations.
-7. Requests changes only from inner arc vertices inside the effective
-   watershed and skips mappings farther than 500 m.
-8. Reduces duplicate vertex requests with `numpy.maximum.at`, ensuring the
+8. Requests changes only from inner arc vertices inside both the buffered
+   hgrid footprint and the effective watershed and skips mappings farther
+   than 500 m from the nearest eligible mesh node.
+9. Reduces duplicate vertex requests with `numpy.maximum.at`, ensuring the
    deepest request wins and no mesh node becomes shallower.
-9. Runs reverse screening to recover mesh nodes around intersections. The 200 m search
+10. Runs reverse screening to recover mesh nodes around intersections. The 200 m search
    first finds mesh-node candidates near at least two distinct `river_idx`
    values. For each contributing river, the local centerline distance is then
    compared with half the maximum RiverMapper bank-to-bank width across the
@@ -321,8 +332,11 @@ python \
 
 Each test directory contains:
 
-- `river_vertex_mesh_mapping.parquet`: full vertex, interval, KD-tree, bank,
-  target, and final-node diagnostics.
+- `river_vertex_mesh_mapping.parquet`: vertex, interval, KD-tree, bank,
+  target, and final-node diagnostics for RiverMapper vertices inside the
+  current buffered hgrid footprint. It is specific to that hgrid and must be
+  regenerated after node numbering, coordinates, connectivity, footprint, or
+  footprint-buffer changes.
 - `dredge_requested_mesh_nodes.parquet`: unique mesh nodes requested by forward
   RiverMapper vertices, accepted intersection targets, or both, before checking
   whether the requested depth is deeper than the existing mesh. The raw

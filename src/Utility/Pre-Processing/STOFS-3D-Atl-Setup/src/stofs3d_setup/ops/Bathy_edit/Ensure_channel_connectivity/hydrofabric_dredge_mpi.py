@@ -26,6 +26,7 @@ import numpy as np
 import pandas as pd
 from mpi4py import MPI
 from scipy.spatial import cKDTree
+from shapely import from_wkb, to_wkb
 from shapely.geometry import box
 
 try:
@@ -42,12 +43,15 @@ try:
         _empty_intersection_targets,
         apply_station_depths,
         assign_intervals_to_stations,
+        buffer_hgrid_footprint,
         dredge_settings_from_namespace,
         expand_stations_to_arc_vertices,
         finalize_mesh_requests,
         load_effective_watershed,
+        points_intersect_geometry,
         points_intersect_region,
         project_lonlat,
+        read_hgrid_footprint,
         read_hgrid_nodes,
         refresh_result_mesh_requests,
         screen_intersection_mesh_nodes,
@@ -71,12 +75,15 @@ except ModuleNotFoundError:  # Permit direct execution from this directory.
         _empty_intersection_targets,
         apply_station_depths,
         assign_intervals_to_stations,
+        buffer_hgrid_footprint,
         dredge_settings_from_namespace,
         expand_stations_to_arc_vertices,
         finalize_mesh_requests,
         load_effective_watershed,
+        points_intersect_geometry,
         points_intersect_region,
         project_lonlat,
+        read_hgrid_footprint,
         read_hgrid_nodes,
         refresh_result_mesh_requests,
         screen_intersection_mesh_nodes,
@@ -176,6 +183,29 @@ def prepare_hgrid_input(source: Path, cache_dir: Path, force: bool = False) -> P
     if hgrid_total_node_count(temporary) != int(grid.np):
         temporary.unlink(missing_ok=True)
         raise RuntimeError(f"Converted GR3 node count is invalid: {temporary}")
+    os.replace(temporary, output)
+    metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")
+    return output
+
+
+def prepare_hgrid_footprint_cache(
+    hgrid_path: Path,
+    cache_dir: Path,
+    force: bool = False,
+) -> Path:
+    """Cache the topology-derived footprint shared by every MPI rank."""
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    output = cache_dir / "hgrid_footprint.wkb"
+    metadata_path = cache_dir / "hgrid_footprint.metadata.json"
+    metadata = {
+        "kind": "hydrofabric_dredge_hgrid_footprint_v1",
+        "hgrid": file_fingerprint(hgrid_path),
+    }
+    if not force and cache_is_current(metadata_path, metadata, [output]):
+        return output
+
+    temporary = output.with_suffix(".tmp.wkb")
+    temporary.write_bytes(to_wkb(read_hgrid_footprint(hgrid_path)))
     os.replace(temporary, output)
     metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")
     return output
@@ -725,6 +755,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.force_input_cache,
         )
         hgrid_root, metric_xy_root, inside_test_root, _ = load_hgrid_cache(hgrid_cache)
+        footprint_cache = prepare_hgrid_footprint_cache(
+            prepared_hgrid,
+            cache_dir,
+            force=args.force_input_cache,
+        )
+        hgrid_footprint_wkb = to_wkb(
+            buffer_hgrid_footprint(
+                from_wkb(footprint_cache.read_bytes()),
+                settings.footprint_buffer_m,
+            )
+        )
         centerlines_root = gpd.read_parquet(args.river_centerlines)
         if bbox_lonlat is not None:
             selection = gpd.GeoDataFrame(
@@ -764,11 +805,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             "river_geometry_inventory": geometry_inventory.to_dict("records"),
             "rivers": len(centerlines_root),
             "source_total_node_count": hgrid_root.total_node_count,
+            "hgrid_footprint_wkb": hgrid_footprint_wkb,
         }
         log(rank, f"planned {sum(map(len, assignments))} tiles; loads={planned_loads}")
     else:
         payload = None
     payload = comm.bcast(payload, root=0)
+    hgrid_footprint = from_wkb(payload["hgrid_footprint_wkb"])
 
     hgrid, metric_xy, inside_test, inside_watershed = load_hgrid_cache(
         Path(payload["hgrid_cache"])
@@ -834,6 +877,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     vertices["inside_watershed"] = points_intersect_region(
         vertices.x, vertices.y, effective_watershed
     )
+    vertices["inside_hgrid_footprint"] = points_intersect_geometry(
+        vertices.x, vertices.y, hgrid_footprint
+    )
     mapped = map_vertices_with_tree(
         vertices, hgrid, mesh_tree, forward_mesh_positions
     )
@@ -864,7 +910,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
 
     part_paths = rank_part_paths(parts_dir, rank)
-    owned_vertices = result.vertices.loc[result.vertices.inside_test_region].copy()
+    owned_mask = result.vertices.inside_test_region
+    outside_buffered_footprint_vertices = int(
+        (owned_mask & ~result.vertices.inside_hgrid_footprint).sum()
+    )
+    owned_vertices = (
+        result.vertices.loc[owned_mask & result.vertices.inside_hgrid_footprint]
+        .drop(columns="inside_hgrid_footprint")
+        .copy()
+    )
     _atomic_parquet(owned_vertices, part_paths["vertices"])
     _atomic_parquet(result.requested_nodes, part_paths["requests"])
     _atomic_parquet(result.intersection_candidates, part_paths["candidates"])
@@ -873,6 +927,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "tiles": len(own_tiles),
         "rivers_loaded": len(own_river_ids),
         "owned_vertices": len(owned_vertices),
+        "outside_buffered_hgrid_footprint_vertices": (
+            outside_buffered_footprint_vertices
+        ),
         "requests": len(result.requested_nodes),
         "intersection_candidates": len(result.intersection_candidates),
         "intersection_targets": len(result.intersection_targets),
@@ -960,6 +1017,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             "cached_hgrid_nodes": len(hgrid.node_id),
             "river_count": payload["rivers"],
             "arc_vertex_count": len(vertices_all),
+            "outside_buffered_hgrid_footprint_vertices": sum(
+                item["outside_buffered_hgrid_footprint_vertices"]
+                for item in all_stats
+            ),
             "dredge_request_vertices": int(vertices_all.dredge_request.sum()),
             "unique_forward_requested_mesh_nodes": int(requested.forward_requested.sum()),
             "intersection_candidate_mesh_nodes_200m": len(candidates),
