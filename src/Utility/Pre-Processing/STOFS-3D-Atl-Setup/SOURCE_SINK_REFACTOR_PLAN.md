@@ -462,4 +462,4 @@ Complete before Phase 9:
 | Date | Phase | Work completed | Tests/results | Commit |
 |---|---|---|---|---|
 | 2026-09-30 | Setup | Created refactor branch and tracking plan. | Pending | Pending |
-| 2026-09-30 | 0-7 | Added characterization tests and extracted USGS series, station mappings, automatic temperature processing, Delaware/Hudson overrides, aligned source/sink components, spatial helpers, configuration, diagnostics, and background-sink overlap handling. | 22 focused tests and 87 repository tests passed; compile checks passed; 47 extracted function bodies match `master` by AST comparison. | Pending |
+| 2026-09-30 | 0-7 | Added characterization tests and extracted USGS series, station mappings, automatic temperature processing, Delaware/Hudson overrides, aligned source/sink components, spatial helpers, configuration, diagnostics, and background-sink overlap handling. | 22 focused tests and 87 repository tests passed; compile checks passed; 47 extracted function bodies match `master` by AST comparison. | `08252989` |
