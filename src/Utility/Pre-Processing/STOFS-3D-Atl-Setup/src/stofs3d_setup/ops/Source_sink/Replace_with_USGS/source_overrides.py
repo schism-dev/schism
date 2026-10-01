@@ -21,8 +21,8 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.source_temperature import (
     _mixed_temperature_columns,
     _validate_temperature_pooling,
 )
-from stofs3d_setup.ops.Source_sink.correction_config import (
-    load_source_sink_corrections,
+from stofs3d_setup.ops.Source_sink.correction_config import load_source_sink_corrections
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS.override_config import (
     source_override_points,
 )
 from stofs3d_setup.ops.Source_sink.source_sink_components import (

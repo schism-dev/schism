@@ -11,8 +11,8 @@ from stofs3d_setup.ops.Source_sink.source_sink_components import (
     _copy_sink_components,
     _copy_source_components,
 )
-from stofs3d_setup.ops.Source_sink.correction_config import (
-    load_source_sink_corrections,
+from stofs3d_setup.ops.Source_sink.correction_config import load_source_sink_corrections
+from stofs3d_setup.ops.Source_sink.Spatial_corrections.region_config import (
     zero_source_regions as configured_zero_source_regions,
 )
 

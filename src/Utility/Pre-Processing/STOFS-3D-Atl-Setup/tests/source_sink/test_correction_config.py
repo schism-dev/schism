@@ -5,6 +5,8 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from stofs3d_setup.ops.Source_sink import correction_config
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS import override_config
+from stofs3d_setup.ops.Source_sink.Spatial_corrections import region_config
 from stofs3d_setup.config.stofs3d_atl_config import ConfigStofs3dAtlantic
 
 
@@ -63,7 +65,7 @@ class CorrectionConfigTests(unittest.TestCase):
             },
         )
 
-        override_points = correction_config.source_override_points(overrides)
+        override_points = override_config.source_override_points(overrides)
         self.assertEqual(
             [point["name"] for point in override_points],
             ["Delaware", "Hudson River"],
@@ -72,7 +74,7 @@ class CorrectionConfigTests(unittest.TestCase):
             override_points[1]["usgs_download"]["retry_chunk_days"],
             [20, 10, 5],
         )
-        region_points = correction_config.zero_source_regions(
+        region_points = region_config.zero_source_regions(
             regions,
             config_dir=config.zero_source_region_info.parent,
         )
@@ -80,7 +82,7 @@ class CorrectionConfigTests(unittest.TestCase):
         self.assertTrue(region_points[0]["region_file"].is_file())
 
     def test_replace_override_defaults_are_normalized(self):
-        points = correction_config._normalize_replace_relocated_points(
+        points = override_config._normalize_replace_relocated_points(
             {
                 "replace_only_source_locations": [
                     {
@@ -103,7 +105,7 @@ class CorrectionConfigTests(unittest.TestCase):
             region_file = directory / "region.rgn"
             region_file.touch()
 
-            regions = correction_config._normalize_zero_source_regions(
+            regions = region_config._normalize_zero_source_regions(
                 {"zero_source_regions": ["region.rgn"]},
                 yaml_dir=directory,
             )

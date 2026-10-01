@@ -128,7 +128,7 @@ from stofs3d_setup.ops.Source_sink.spatial_corrections import (
     _make_transformer,
     _nearest_element,
 )
-from stofs3d_setup.ops.Source_sink.correction_config import (
+from stofs3d_setup.ops.Source_sink.Patch_artificial_island.island_config import (
     _as_dict,
     _load_patch_info,
     _normalize_force_points,
