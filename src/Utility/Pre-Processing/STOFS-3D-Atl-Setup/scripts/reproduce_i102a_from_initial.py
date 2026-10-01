@@ -40,7 +40,7 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.source_temperature import (
 from stofs3d_setup.ops.Source_sink.assemble_source_sink import (
     gen_relocated_source,
 )
-from stofs3d_setup.ops.Source_sink.spatial_corrections import (
+from stofs3d_setup.ops.Source_sink.Spatial_corrections.region_zeroing import (
     zero_configured_source_regions,
 )
 from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES

@@ -32,7 +32,7 @@ from stofs3d_setup.ops.Source_sink.source_sink_components import (
     _copy_sink_components,
     _copy_source_components,
 )
-from stofs3d_setup.ops.Source_sink.spatial_corrections import (
+from stofs3d_setup.ops.Source_sink.spatial_selection import (
     _compute_grid_centers,
     _make_transformer,
     _nearest_element,

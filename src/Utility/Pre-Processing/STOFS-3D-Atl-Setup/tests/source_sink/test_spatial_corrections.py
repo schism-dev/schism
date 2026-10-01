@@ -7,7 +7,8 @@ from unittest.mock import patch
 
 import numpy as np
 
-from stofs3d_setup.ops.Source_sink import spatial_corrections as spatial
+from stofs3d_setup.ops.Source_sink import spatial_selection as spatial
+from stofs3d_setup.ops.Source_sink.Spatial_corrections import region_zeroing
 from stofs3d_setup.ops.Source_sink.source_sink_components import (
     _build_source_sink,
 )
@@ -43,11 +44,11 @@ class SpatialCorrectionTests(unittest.TestCase):
             )
 
             with patch.object(
-                spatial,
+                region_zeroing,
                 "zero_sources_in_regions",
                 return_value=("corrected", 1),
             ) as zero_regions:
-                result = spatial.zero_configured_source_regions(
+                result = region_zeroing.zero_configured_source_regions(
                     base_ss="base",
                     hgrid="grid",
                     correction_info=config_file,
@@ -129,11 +130,11 @@ class SpatialCorrectionTests(unittest.TestCase):
             return (source_time, source_data), 1
 
         with patch.object(
-            spatial,
+            region_zeroing,
             "_zero_sources_inside_regions",
             side_effect=zero_first_source,
         ):
-            corrected, count = spatial.zero_sources_in_regions(
+            corrected, count = region_zeroing.zero_sources_in_regions(
                 original,
                 _Grid(),
                 regions=[{"name": "test"}],

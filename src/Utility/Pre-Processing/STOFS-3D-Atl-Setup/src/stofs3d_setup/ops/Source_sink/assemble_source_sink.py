@@ -24,7 +24,7 @@ from .Patch_artificial_island.patch_artificial_island_source_sink import (
     apply_artificial_island_corrections,
     zero_artificial_island_sources_after_replace_USGS_before_relocation,
 )
-from .spatial_corrections import zero_configured_source_regions
+from .Spatial_corrections.region_zeroing import zero_configured_source_regions
 from ...utils.utils import mkcd_new_dir, STOFS3D_ATL_STATES
 from ...utils.projection import project_geodataframe
 from pylib_experimental.schism_file import source_sink, TimeHistory

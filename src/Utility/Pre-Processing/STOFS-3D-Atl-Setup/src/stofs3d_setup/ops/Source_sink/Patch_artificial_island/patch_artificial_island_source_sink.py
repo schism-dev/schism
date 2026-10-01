@@ -122,7 +122,7 @@ from stofs3d_setup.ops.Source_sink.source_sink_components import (
     _data_array,
     _time_array,
 )
-from stofs3d_setup.ops.Source_sink.spatial_corrections import (
+from stofs3d_setup.ops.Source_sink.spatial_selection import (
     _compute_grid_centers,
     _elements_within_radius,
     _make_transformer,

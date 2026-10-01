@@ -6,7 +6,7 @@ import numpy as np
 
 from pylib_experimental.schism_file import source_sink
 from stofs3d_setup.ops.Source_sink.source_sink_components import _data_array
-from stofs3d_setup.ops.Source_sink.spatial_corrections import (
+from stofs3d_setup.ops.Source_sink.spatial_selection import (
     _compute_grid_centers,
 )
 

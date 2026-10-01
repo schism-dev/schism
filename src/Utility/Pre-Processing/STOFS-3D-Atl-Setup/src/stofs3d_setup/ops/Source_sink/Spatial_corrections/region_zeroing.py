@@ -1,59 +1,21 @@
-"""Generic spatial selection and region corrections for source/sink data."""
+"""Zero existing SCHISM source flow inside configured regions."""
 
 from pathlib import Path
 
 import numpy as np
-from pyproj import Transformer
-from scipy.spatial import cKDTree
 
+from stofs3d_setup.ops.Source_sink.correction_config import (
+    load_source_sink_corrections,
+)
 from stofs3d_setup.ops.Source_sink.source_sink_components import (
     _build_source_sink,
     _copy_sink_components,
     _copy_source_components,
 )
-from stofs3d_setup.ops.Source_sink.correction_config import load_source_sink_corrections
+from stofs3d_setup.ops.Source_sink.spatial_selection import _compute_grid_centers
 from stofs3d_setup.ops.Source_sink.Spatial_corrections.region_config import (
     zero_source_regions as configured_zero_source_regions,
 )
-
-
-def _compute_grid_centers(hgrid) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Return element-center coordinates without leaving new xctr/yctr
-    attributes on the caller's hgrid object.
-    """
-    had_xctr = hasattr(hgrid, "xctr")
-    had_yctr = hasattr(hgrid, "yctr")
-
-    old_xctr = (
-        np.asarray(hgrid.xctr).copy()
-        if had_xctr
-        else None
-    )
-    old_yctr = (
-        np.asarray(hgrid.yctr).copy()
-        if had_yctr
-        else None
-    )
-
-    try:
-        hgrid.compute_ctr()
-
-        xctr = np.asarray(hgrid.xctr, dtype=float).copy()
-        yctr = np.asarray(hgrid.yctr, dtype=float).copy()
-
-    finally:
-        if had_xctr:
-            hgrid.xctr = old_xctr
-        elif hasattr(hgrid, "xctr"):
-            delattr(hgrid, "xctr")
-
-        if had_yctr:
-            hgrid.yctr = old_yctr
-        elif hasattr(hgrid, "yctr"):
-            delattr(hgrid, "yctr")
-
-    return xctr, yctr
 
 
 def _zero_sources_inside_regions(
@@ -63,12 +25,7 @@ def _zero_sources_inside_regions(
     xctr: np.ndarray,
     yctr: np.ndarray,
 ) -> tuple[tuple[np.ndarray, np.ndarray] | None, int]:
-    """
-    Set all vsource records to zero for source centers inside SCHISM regions.
-
-    Source element IDs are retained. This function changes neither msource
-    nor sink forcing.
-    """
+    """Zero source flows inside regions without changing tracers or sinks."""
     if not regions:
         return source_time_and_data, 0
 
@@ -125,91 +82,6 @@ def _zero_sources_inside_regions(
             )
 
     return (source_time, source_data), len(zeroed_elements)
-
-def _make_transformer() -> Transformer:
-    """
-    Build a lon/lat-to-meter transformer.
-
-    EPSG:3857 is used only for local nearest-neighbor screening. For the
-    O(1 km) search radii used here, it is adequate and consistent with the
-    earlier user-defined patch utilities.
-    """
-    return Transformer.from_crs(
-        "EPSG:4326",
-        "EPSG:3857",
-        always_xy=True,
-    )
-
-
-def _element_center_tree(
-    element_ids: list[int] | np.ndarray,
-    xctr: np.ndarray,
-    yctr: np.ndarray,
-    transformer: Transformer,
-) -> tuple[np.ndarray, cKDTree | None]:
-    """Build a KDTree for selected SCHISM element centers."""
-    element_ids = np.asarray(element_ids, dtype=int).reshape(-1)
-
-    if len(element_ids) == 0:
-        return element_ids, None
-
-    xp, yp = transformer.transform(
-        xctr[element_ids - 1],
-        yctr[element_ids - 1],
-    )
-
-    return element_ids, cKDTree(np.c_[xp, yp])
-
-
-def _nearest_element(
-    x: float,
-    y: float,
-    candidate_element_ids: list[int] | np.ndarray,
-    xctr: np.ndarray,
-    yctr: np.ndarray,
-    transformer: Transformer,
-) -> tuple[int | None, float]:
-    """Find the nearest candidate element center and return distance in meters."""
-    element_ids, tree = _element_center_tree(
-        candidate_element_ids,
-        xctr,
-        yctr,
-        transformer,
-    )
-
-    if tree is None:
-        return None, np.inf
-
-    xq, yq = transformer.transform(x, y)
-    distance_m, idx = tree.query([xq, yq])
-
-    return int(element_ids[int(idx)]), float(distance_m)
-
-
-def _elements_within_radius(
-    x: float,
-    y: float,
-    radius_m: float,
-    candidate_element_ids: list[int] | np.ndarray,
-    xctr: np.ndarray,
-    yctr: np.ndarray,
-    transformer: Transformer,
-) -> list[int]:
-    """Return candidate element IDs whose centers are within radius_m."""
-    element_ids, tree = _element_center_tree(
-        candidate_element_ids,
-        xctr,
-        yctr,
-        transformer,
-    )
-
-    if tree is None:
-        return []
-
-    xq, yq = transformer.transform(x, y)
-    idxs = tree.query_ball_point([xq, yq], r=float(radius_m))
-
-    return [int(element_ids[int(idx)]) for idx in idxs]
 
 
 def zero_sources_in_regions(base_ss, hgrid, regions: list[dict]):
