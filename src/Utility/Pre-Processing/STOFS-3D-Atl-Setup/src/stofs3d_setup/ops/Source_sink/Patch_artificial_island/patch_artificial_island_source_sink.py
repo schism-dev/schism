@@ -134,7 +134,7 @@ from stofs3d_setup.ops.Source_sink.Patch_artificial_island.island_config import 
     _normalize_force_points,
     _normalize_large_constant_sink_points,
 )
-from stofs3d_setup.ops.Source_sink.source_sink_diagnostics import (
+from stofs3d_setup.ops.Source_sink.Patch_artificial_island.island_diagnostics import (
     _write_diagnostics,
 )
 

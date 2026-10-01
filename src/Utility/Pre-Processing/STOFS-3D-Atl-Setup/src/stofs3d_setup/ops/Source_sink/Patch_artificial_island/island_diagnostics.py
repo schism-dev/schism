@@ -1,4 +1,4 @@
-"""Diagnostic writers for SCHISM source/sink forcing."""
+"""Diagnostic writers for artificial-island source/sink corrections."""
 
 from pathlib import Path
 
