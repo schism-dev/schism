@@ -277,7 +277,7 @@ station or location policy.
 
 ## Phase 6: Extract Generic Spatial Corrections
 
-Status: **In progress**
+Status: **Completed**
 
 Create `Source_sink/spatial_corrections.py`.
 
@@ -302,35 +302,35 @@ policy.
 
 ## Phase 7: Reduce the Artificial-Island Module
 
-Status: **In progress**
+Status: **Completed**
 
 After the preceding extractions, retain only genuinely artificial-island
 behavior:
 
-- [ ] Forced Wando source placement.
-- [ ] Forced Turkey source placement.
-- [ ] Forced Buffalo Bluff source placement.
-- [ ] Forced Dunns Creek source placement.
-- [ ] Buffalo Bluff special sink.
-- [ ] Artificial-island-specific negative-flow handling.
-- [ ] Pre-relocation suppression temporarily, until relocation is decoupled.
-- [ ] Artificial-island-specific diagnostics.
+- [x] Forced Wando source placement.
+- [x] Forced Turkey source placement.
+- [x] Forced Buffalo Bluff source placement.
+- [x] Forced Dunns Creek source placement.
+- [x] Buffalo Bluff special sink.
+- [x] Artificial-island-specific negative-flow handling.
+- [x] Pre-relocation suppression temporarily, until relocation is decoupled.
+- [x] Artificial-island-specific diagnostics.
 
 Remove from the artificial-island module:
 
-- [ ] General USGS series downloading.
-- [ ] Automatic all-source temperature replacement.
-- [ ] Delaware/Hudson replacement.
-- [ ] Generic region zeroing.
-- [ ] Generic exclusions.
-- [ ] Duplicated station mappings.
+- [x] General USGS series downloading.
+- [x] Automatic all-source temperature replacement.
+- [x] Delaware/Hudson replacement.
+- [x] Generic region zeroing.
+- [x] Generic exclusions.
+- [x] Duplicated station mappings.
 
 Deliverable: a small artificial-island module with a defensible name and
 scope.
 
 ## Phase 8: Restore Independent Workflow Controls
 
-Status: **In progress**
+Status: **Completed**
 
 This phase changes orchestration and configuration, so it must remain separate
 from mechanical extraction commits.
@@ -380,6 +380,150 @@ Current incremental state:
 
 Deliverable: independently configurable workflow stages.
 
+## Phase 8A: Integrate Extracted Post-Relocation Stages
+
+Status: **Completed**
+
+Scope this phase to the extracted post-relocation stages beginning at
+`apply post-generation corrections` in `assemble_source_sink.py`. Preserve the
+earlier NWM-flow replacement, pre-relocation artificial-island suppression,
+and relocation behavior until Phase 9. The caller order is the integration
+order; do not combine the following steps into one commit.
+
+Baseline gate for every step:
+
+- Run focused unit tests for the stage being integrated.
+- Run the fast non-MPI repository tests.
+- Run the cached I102a post-relocation reproduction, which currently takes
+  about two minutes.
+- Compare `source_sink.in`, `vsource.th`, `msource.th`, and `vsink.th`
+  byte-for-byte with HJ's reference.
+- Compare every `source.nc` dimension and variable, using exact equality where
+  possible and an absolute `vsource` tolerance of `1e-10` m3/s for the
+  already-observed serialization roundoff.
+- Confirm that no constant-sink directory is created by the focused test.
+
+### Step 8A.1: Integrate Selected Delaware/Hudson Flow Overrides
+
+This is the first post-relocation caller in `assemble_source_sink.py`.
+
+- [x] Add a dedicated `apply_source_flow_overrides()` stage under
+      `Replace_with_USGS`.
+- [x] Split named USGS flow retrieval from temperature retrieval so the flow
+      stage does not download or modify temperature.
+- [x] Call selected-source flow replacement before temperature processing in
+      `assemble_source_sink.py`.
+- [x] Preserve direct replacement with original relocated forcing in data
+      gaps; do not substitute the different pre-relocation
+      USGS-minus-NWM-difference algorithm from `source_nwm2usgs()`.
+- [x] Verify that only relocated elements 2 (Hudson) and 948 (Delaware) change
+      and both temperature tracers remain exact.
+- [x] Pass the cached I102a reproduction with byte-identical text forcing and
+      the established `source.nc` tolerance.
+
+Deliverable: Delaware/Hudson flow correction is an independent
+`Replace_with_USGS` stage.
+
+### Step 8A.2: Integrate Automatic Source Temperature Replacement
+
+This is the second post-relocation caller in `assemble_source_sink.py`.
+
+- [x] Make `source_temperature.py` the sole owner of automatic all-source
+      temperature replacement.
+- [x] Keep the direct call from `assemble_source_sink.py` and its independent
+      configuration switch.
+- [x] Make the temperature stage create and own its diagnostics directory;
+      prevent `invalid_usgs_station_coordinates.csv` or other diagnostics
+      from leaking into the process working directory.
+- [x] Remove `replace_all_source_temperature`, the automatic-temperature
+      branch, and the corresponding private import from
+      `patch_artificial_island_source_sink()`.
+- [x] Verify that this operation changes only temperature tracer 1 and retains
+      source flow, sinks, element IDs, column order, and time arrays.
+- [x] Reproduce the current count of 25 temperature-adjusted I102a sources.
+
+Deliverable: temperature replacement has one production implementation and
+one caller-visible workflow stage.
+
+### Step 8A.3: Integrate Selected Delaware/Hudson Temperature Overrides
+
+This is the third post-relocation caller. Its explicit station values override
+the preceding automatic temperature result for Delaware and Hudson.
+
+- [x] Make `source_overrides.py` own loading and normalizing its selected-source
+      configuration, while retaining the array-level helper for focused tests.
+- [x] Keep the direct, independently controlled call from
+      `assemble_source_sink.py`.
+- [x] Remove compatibility imports and parameters that are no longer used by
+      the artificial-island module.
+- [x] Remove `replace_only_source_locations` handling and its generic loop from
+      `patch_artificial_island_source_sink()` after both flow and temperature
+      have independent production callers.
+- [x] Verify that only temperature tracer 1 changes for Delaware and Hudson;
+      source flow, sinks, source IDs, and ordering remain unchanged.
+- [x] Verify the cached temperature fallback behavior for the known Hudson
+      data gap.
+
+Deliverable: Delaware/Hudson temperature correction is independent of its
+flow correction and has no artificial-island fallback path.
+
+### Step 8A.4: Integrate Configured Region Zeroing
+
+This is the fourth post-relocation caller.
+
+- [x] Make the spatial-correction stage own loading and resolving its region
+      configuration, while retaining the polygon/array helper for focused
+      tests.
+- [x] Keep the direct, independently controlled call from
+      `assemble_source_sink.py`.
+- [x] Remove `zero_source_regions` parsing and execution from
+      `patch_artificial_island_source_sink()`.
+- [x] Verify that only `vsource` values change; retain source elements,
+      tracers, sinks, ordering, and time arrays.
+- [x] Reproduce the current I102a result of three zeroed Savannah-region
+      sources.
+
+Deliverable: generic region zeroing is owned completely by the spatial
+correction module.
+
+### Step 8A.5: Integrate the Reduced Artificial-Island Stage
+
+This is the fifth and final post-relocation correction caller.
+
+- [x] Rename or expose the production entry point as
+      `apply_artificial_island_corrections()`; retain a temporary compatibility
+      alias only if an external caller requires it.
+- [x] Reduce its interface after Steps 8A.1-8A.3: remove the relocated mapping,
+      NWM shapefile, state list, and generic-stage mode flags that are no longer
+      needed.
+- [x] Retain only forced Wando, Turkey, Buffalo Bluff, and Dunns Creek source
+      handling, Buffalo Bluff's large sink, island-specific negative-flow
+      handling, forcing-template access, and island diagnostics.
+- [x] Characterize any configured island exclusion before deciding whether to
+      delete it or move it to the generic spatial stage; do not silently retain
+      a generic responsibility in this module.
+- [x] Reproduce the current I102a final count of 1,343 sources and 3 sinks.
+
+Deliverable: the artificial-island stage has a narrow name, interface, and
+responsibility.
+
+### Step 8A.6: Clean Up the Caller
+
+- [x] Remove obsolete compatibility variables, imports, comments, and YAML
+      parsing from `assemble_source_sink.py`.
+- [x] Keep the five stage calls visibly ordered as selected-source flow,
+      automatic temperature, selected-source temperature, region zeroing, and
+      artificial-island corrections.
+- [x] Resolve the USGS cache path once and only when a USGS-backed stage is
+      enabled.
+- [x] Verify independently that each stage can be disabled without requiring
+      its YAML, cache, mapping, or diagnostics path.
+- [x] Run the complete focused reproduction once more and record timings and
+      comparisons in the progress log.
+
+Deliverable: `assemble_source_sink.py` is a readable workflow caller, while
+scientific behavior and configuration ownership reside in the stage modules.
+
 ## Phase 9: Decouple Artificial-Island Corrections from Relocation
 
 Status: **Not started**
@@ -408,33 +552,67 @@ relocation.
 
 ## Phase 10: Evaluate Generalizing the Hudson Downloader
 
-Status: **Not started**
+Status: **Completed**
 
 Only begin after the current Hudson behavior is covered by tests and moved
 under `Replace_with_USGS`.
 
-- [ ] Compare Hudson retry behavior with `download_stations()`.
-- [ ] Determine whether `days_per_chunk` and existing fallback are sufficient.
-- [ ] If necessary, add a configurable retry schedule to the generic layer.
-- [ ] Verify identical merged series for cached representative data.
-- [ ] Remove Hudson-specific downloader functions only after equivalence is
+- [x] Compare Hudson retry behavior with `download_stations()`.
+- [x] Determine whether `days_per_chunk` and existing fallback are sufficient.
+- [x] If necessary, add a configurable retry schedule to the generic layer.
+- [x] Verify identical merged series for cached representative data.
+- [x] Remove Hudson-specific downloader functions only after equivalence is
       established.
 
 Possible future interface:
 
 ```python
-download_station_series(
+download_usgs_series(
     station_id,
     parameter_id,
     start_time,
     end_time,
-    primary_chunk_days=100,
-    retry_chunk_days=(20, 10, 5),
+    policy=UsgsDownloadPolicy(
+        primary_chunk_days=100,
+        retry_chunk_days=(20, 10, 5),
+    ),
 )
 ```
 
 Deliverable: Hudson-specific behavior represented as downloader configuration
 if equivalence can be demonstrated.
+
+## Phase 11: Make Source/Sink Stage Outputs Explicit
+
+Status: **Deferred until all behavior-preserving reproduction tests pass**
+
+The name `original_source_sink` is currently misleading. It represents the
+current pre-relocation source/sink state, rather than an immutable copy of the
+original NWM result. The workflow recreates the directory at startup, replaces
+its `vsource.th` during NWM-to-USGS adjustment, and may subsequently modify the
+linked adjusted flow during pre-relocation zeroing.
+
+Treat this as the final cleanup step so that changing file ownership and data
+lineage does not complicate the reproduction test or the earlier scientific
+decoupling work.
+
+- [ ] Preserve the initial NWM result as an immutable, clearly named stage
+      output.
+- [ ] Give USGS flow adjustment, pre-relocation corrections, relocation, and
+      post-generation corrections separate explicit outputs.
+- [ ] Stop replacing `original_source_sink/vsource.th` with a symlink to a
+      mutable downstream result.
+- [ ] Make each stage consume the preceding stage explicitly rather than
+      relying on the evolving meaning of `original_source_sink`.
+- [ ] Define safe rerun behavior so that an existing stage output is not
+      silently removed.
+- [ ] Update diagnostics, documentation, configuration, and tests to reflect
+      the new stage names and data lineage.
+- [ ] Verify final source/sink products against the behavior-preserving
+      reference run before removing compatibility paths.
+
+Deliverable: explicit, independently inspectable stage directories with an
+immutable original NWM source/sink result.
 
 ## Collaboration and Review
 
@@ -469,6 +647,15 @@ Complete before Phase 9:
 | 2026-09-30 | Do not immediately move Delaware/Hudson into `manual_nwm2usgs`. | The current and proposed flow algorithms differ. |
 | 2026-09-30 | Give temperature, selected-source overrides, region zeroing, and artificial-island work independent configuration controls. | Removing the artificial-island gate restores the original workflow's stage-level control. |
 | 2026-09-30 | Split the shared correction YAML by stage ownership. | Each operation should load only the configuration and supporting files it owns. |
+| 2026-09-30 | Integrate extracted post-relocation stages in their caller order and remove the corresponding compatibility branch after each stage passes the cached I102a gate. | Small commits isolate numerical regressions and progressively make each module the sole owner of its responsibility. |
+| 2026-09-30 | Integrate Delaware/Hudson flow before temperature, but keep it post-relocation for the reference reproduction. | Direct relocated-source replacement and NWM gap fallback reproduce the reference; the pre-relocation `source_nwm2usgs()` algorithm is not byte-equivalent. |
+| 2026-09-30 | Use the soft pre-relocation NWM-to-USGS associations for Delaware and Hudson in the eventual simplified workflow. | The I102a comparison showed nearly identical Delaware flow and a defensible Hudson difference because the soft method retains the other relocated FeatureID contributions. |
+| 2026-09-30 | Do not enable the Delaware/Hudson soft links while reproducing HJ's I102a; retain the post-relocation overrides for now. | A post-relocation override replaces soft flow where USGS is supported but retains the soft result during long gaps, so enabling both would not be byte-identical to HJ. Add the two manual mappings and disable their post-relocation flow overrides together in a later transition. |
+| 2026-10-01 | Keep `first_usable` as the v7.4 replication default and add `discharge_weighted` as an opt-in temperature mode. | This preserves HJ's output while allowing multiple upstream temperature stations to be combined using discharge from each station's associated NWM feature. |
+| 2026-10-01 | Apply no spatial discharge-coverage threshold, but require a complete finite time series before writing a weighted temperature column. | A lone small-creek temperature may still represent nearby water temperature; atomic replacement prevents SCHISM from interpolating unpredictably between numeric values and the `-9999` ambient-temperature sentinel. |
+| 2026-10-01 | Keep generic region zeroing immediately before artificial-island corrections. | Zeroing remains an optional manual enforcement step, while the following island stage can restore required island sources so they are not erased accidentally. |
+| 2026-10-01 | Remove post-generation island exclusion handling. | The v7.4 island exclusion list was empty, so retaining the generic removal machinery added responsibility without affecting output. Non-empty generic spatial sections now fail explicitly in the island stage. |
+| 2026-10-01 | Represent adaptive USGS retrieval as source configuration rather than a Hudson code branch. | A generic primary/retry-window policy preserves the cached Hudson behavior and can be assigned to any configured source. |
 
 ## Progress Log
 
@@ -479,3 +666,9 @@ Complete before Phase 9:
 | 2026-09-30 | 8 | Added public stage APIs and made the main assembler call temperature replacement, Delaware/Hudson overrides, region zeroing, and artificial-island corrections explicitly. | 26 focused tests and 91 non-MPI repository tests passed; compile and diff checks passed. | `d545bd60` |
 | 2026-09-30 | 8 | Moved the extracted stages outside the artificial-island conditional and added independent configuration switches with v7.4 compatibility settings. | 28 focused tests and 93 non-MPI repository tests passed; compile and diff checks passed. | `8503e7b3` |
 | 2026-09-30 | 8 | Split Delaware/Hudson overrides, Savannah region zeroing, and artificial-island settings into separate YAML files and moved the region asset beside its configuration. | YAML values and region bytes match the previous combined configuration; 28 focused tests and 93 non-MPI repository tests passed. | `8c47653a` |
+| 2026-09-30 | 8 | Reproduced the post-relocation stages from HJ's cached I102a relocated forcing, stopping before constant-sink generation. | Completed in 122.5 seconds. `source_sink.in`, `vsource.th`, `msource.th`, and `vsink.th` are byte-identical to the reference. NetCDF dimensions and variables match; only `vsource` has floating-point roundoff, with maximum absolute difference `1.46e-11` m3/s. | Pending |
+| 2026-09-30 | 8A.1 | Split selected Delaware/Hudson flow from temperature retrieval and made flow the first post-relocation correction stage. | 29 focused tests and 94 non-MPI repository tests passed. The cached I102a chain completed in 119.5 seconds with byte-identical text forcing and maximum NetCDF `vsource` difference `1.46e-11` m3/s. | Pending |
+| 2026-09-30 | 8A investigation | Compared manual pre-relocation NWM-to-USGS associations for Hudson (`6186156 -> 01358000`) and Delaware (`2590217 -> 01463500`) with HJ's direct post-relocation replacements using pinned cached observations and the same relocation mapping. | Both manual corrections ran successfully across 9,505 records. During records where HJ's direct USGS replacement was active, the soft method differed by a mean/MAE of `15.54/15.54` m3/s for Hudson and `1.25/1.26` m3/s for Delaware. The retained contributions from the other relocated feature IDs explain the predominantly positive differences. Full-period discrepancies are larger around direct-replacement fallback gaps. Results are under `manual_nwm2usgs_delaware_hudson/` in the I102a test area. | Pending |
+| 2026-10-01 | 8A.2-8A.3 | Made automatic temperature and selected Delaware/Hudson temperature overrides independent production stages, removed both compatibility paths from the artificial-island module, and added opt-in discharge-weighted pooling with atomic all-numeric/all-ambient columns. | 100 non-MPI tests passed. Cached I102a legacy reproduction completed in 118.7 seconds with 25 automatic replacements, 2 selected temperature overrides, 3 region-zeroed sources, and 1,343 final sources/3 sinks. All text forcing files are byte-identical; NetCDF dimensions/variables match and the maximum `vsource` difference is `1.46e-11` m3/s. Output: `I102a_temperature_integration/`. | Pending |
+| 2026-10-01 | 8A.4-8A.6 | Gave the spatial stage ownership of region configuration, reduced the island entry point to island responsibilities, removed the empty exclusion path, and cleaned the five-stage caller. | 100 non-MPI tests passed. Final cached I102a gate completed in 118.1 seconds with three region-zeroed sources and 1,343 final sources/3 sinks. All text forcing files are byte-identical; NetCDF dimensions and variables match with maximum `vsource` difference `1.46e-11` m3/s. No constant-sink directory was created. Output: `I102a_final_integration/`. | Pending |
+| 2026-10-01 | 10 | Replaced the Hudson-only downloader branch and helpers with a generic configurable USGS download policy. The Hudson override selects `100 -> 20 -> 10 -> 5` day windows in YAML while retaining its existing cache prefix. | Cached I102a gate completed in 118.5 seconds with unchanged operation counts. All text forcing files and the prior integration `source.nc` are byte-identical. Output: `I102a_generic_usgs_downloader/`. | Pending |

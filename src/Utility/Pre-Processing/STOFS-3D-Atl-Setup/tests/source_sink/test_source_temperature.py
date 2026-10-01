@@ -3,10 +3,12 @@
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
 import numpy as np
+import pandas as pd
 
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS import source_temperature
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
@@ -36,14 +38,16 @@ class SourceTemperatureTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            mapping = source_temperature._load_relocated_source_fids(directory)
+            mapping = source_temperature._load_source_feature_mapping(
+                directory
+            )
 
         self.assertEqual(mapping, {10: [1, 2], 20: [3]})
 
     def test_source_mapping_loader_requires_sources_json(self):
         with TemporaryDirectory() as directory:
             with self.assertRaisesRegex(FileNotFoundError, "sources.json"):
-                source_temperature._load_relocated_source_fids(directory)
+                source_temperature._load_source_feature_mapping(directory)
 
     def test_explicit_hudson_station_mappings_are_parameter_specific(self):
         self.assertEqual(USGS_FLOW_STATION_BY_NAME["Hudson River"], "01358000")
@@ -52,6 +56,42 @@ class SourceTemperatureTests(unittest.TestCase):
             "01359139",
         )
         self.assertEqual(MANUAL_NWM_TO_USGS_FLOW[6186156], "01358000")
+
+    def test_station_search_preserves_station_feature_pair(self):
+        def add_candidate(**kwargs):
+            kwargs["vsource"].usgs_st.append(
+                SimpleNamespace(st_id="01234567", nearby_nwm_fid=202)
+            )
+
+        with patch.object(
+            source_temperature,
+            "find_usgs_along_nwm",
+            side_effect=add_candidate,
+        ):
+            find_candidates = (
+                source_temperature._find_temperature_station_candidates
+            )
+            candidates = find_candidates(
+                source_eles=[1],
+                source_element_to_fids={1: [101]},
+                source_time_and_data=(
+                    np.array([0.0]),
+                    np.array([[1.0]]),
+                ),
+                xctr=np.array([0.0]),
+                yctr=np.array([0.0]),
+                nwm_shp=None,
+            )
+
+        self.assertEqual(
+            candidates[1],
+            [
+                source_temperature.TemperatureStationCandidate(
+                    station_id="01234567",
+                    nwm_feature_id=202,
+                )
+            ],
+        )
 
     def test_public_stage_changes_temperature_without_changing_flow(self):
         time = np.array([0.0, 3600.0])
@@ -73,7 +113,7 @@ class SourceTemperatureTests(unittest.TestCase):
 
         with patch.object(
             source_temperature,
-            "_replace_all_relocated_source_temperatures",
+            "_apply_automatic_temperature_replacements",
             side_effect=replace_temperature,
         ):
             corrected, count = (
@@ -101,6 +141,107 @@ class SourceTemperatureTests(unittest.TestCase):
             original.msource[0].df.values,
             [[10.0], [11.0]],
         )
+
+    def test_discharge_weighted_temperature_uses_associated_feature_flow(self):
+        target_time = pd.date_range(
+            "2020-01-01", periods=3, freq="1h", tz="UTC"
+        )
+        candidates = [
+            source_temperature.TemperatureStationCandidate("A", 101),
+            source_temperature.TemperatureStationCandidate("B", 202),
+        ]
+        temperatures = {
+            "A": pd.Series([10.0, 10.0, 10.0], index=target_time),
+            "B": pd.Series([20.0, 20.0, 20.0], index=target_time),
+        }
+        discharges = {
+            101: np.array([1.0, 3.0, 1.0]),
+            202: np.array([3.0, 1.0, 1.0]),
+        }
+
+        result, diagnostics = (
+            source_temperature._discharge_weighted_temperature(
+                candidates=candidates,
+                temperature_by_station=temperatures,
+                discharge_by_feature=discharges,
+                target_time=target_time,
+            )
+        )
+
+        np.testing.assert_allclose(result, [17.5, 12.5, 15.0])
+        self.assertEqual(diagnostics["complete"], 1)
+
+    def test_discharge_weighted_temperature_has_no_spatial_threshold(self):
+        target_time = pd.date_range(
+            "2020-01-01", periods=2, freq="1h", tz="UTC"
+        )
+        candidates = [
+            source_temperature.TemperatureStationCandidate("creek", 1),
+            source_temperature.TemperatureStationCandidate("main", 2),
+        ]
+        temperatures = {
+            "creek": pd.Series([8.0, 9.0], index=target_time),
+        }
+        discharges = {
+            1: np.array([1.0, 1.0]),
+            2: np.array([99.0, 99.0]),
+        }
+
+        result, diagnostics = (
+            source_temperature._discharge_weighted_temperature(
+                candidates=candidates,
+                temperature_by_station=temperatures,
+                discharge_by_feature=discharges,
+                target_time=target_time,
+            )
+        )
+
+        np.testing.assert_array_equal(result, [8.0, 9.0])
+        self.assertAlmostEqual(
+            diagnostics["minimum_discharge_coverage"], 0.01
+        )
+
+    def test_incomplete_weighted_temperature_preserves_ambient_column(self):
+        target_time = pd.date_range(
+            "2020-01-01", periods=3, freq="1h", tz="UTC"
+        )
+        candidates = [
+            source_temperature.TemperatureStationCandidate("A", 101),
+        ]
+        temperatures = {
+            "A": pd.Series([10.0], index=target_time[:1]),
+        }
+
+        result, diagnostics = (
+            source_temperature._discharge_weighted_temperature(
+                candidates=candidates,
+                temperature_by_station=temperatures,
+                discharge_by_feature={101: np.ones(3)},
+                target_time=target_time,
+            )
+        )
+
+        self.assertIsNone(result)
+        self.assertEqual(diagnostics["complete"], 0)
+
+    def test_atomic_temperature_blend_rejects_partial_station_series(self):
+        target_time = pd.date_range(
+            "2020-01-01", periods=3, freq="1h", tz="UTC"
+        )
+        original = np.full(3, -9999.0)
+        partial = pd.Series([10.0], index=target_time[:1])
+
+        blended, use_usgs, applied = (
+            source_temperature._blend_complete_temperature_or_preserve(
+                series=partial,
+                target_time=target_time,
+                original_values=original,
+            )
+        )
+
+        np.testing.assert_array_equal(blended, original)
+        np.testing.assert_array_equal(use_usgs, [False, False, False])
+        self.assertFalse(applied)
 
 
 if __name__ == "__main__":

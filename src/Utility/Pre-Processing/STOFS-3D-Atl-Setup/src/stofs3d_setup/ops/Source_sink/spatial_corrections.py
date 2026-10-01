@@ -11,6 +11,10 @@ from stofs3d_setup.ops.Source_sink.source_sink_components import (
     _copy_sink_components,
     _copy_source_components,
 )
+from stofs3d_setup.ops.Source_sink.correction_config import (
+    load_source_sink_corrections,
+    zero_source_regions as configured_zero_source_regions,
+)
 
 
 def _compute_grid_centers(hgrid) -> tuple[np.ndarray, np.ndarray]:
@@ -231,3 +235,22 @@ def zero_sources_in_regions(base_ss, hgrid, regions: list[dict]):
         sink_time_and_data=sink_values,
     )
     return corrected_ss, zeroed_count
+
+
+def zero_configured_source_regions(base_ss, hgrid, correction_info):
+    """Load one region-zeroing configuration and apply it to source flow."""
+    corrections = load_source_sink_corrections(correction_info)
+    config_dir = (
+        Path.cwd()
+        if isinstance(correction_info, dict)
+        else Path(correction_info).expanduser().resolve().parent
+    )
+    regions = configured_zero_source_regions(
+        corrections,
+        config_dir=config_dir,
+    )
+    return zero_sources_in_regions(
+        base_ss=base_ss,
+        hgrid=hgrid,
+        regions=regions,
+    )

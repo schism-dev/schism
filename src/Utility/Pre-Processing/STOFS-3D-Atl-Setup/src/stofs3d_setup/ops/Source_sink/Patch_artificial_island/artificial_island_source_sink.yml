@@ -69,6 +69,3 @@ large_constant_sink_artificial_island_locations:
   - name: "Buffalo Bluff"
     x: -81.683949
     y: 29.584587
-
-# Remove existing source and/or sink columns near island-specific locations.
-exclude_source_sink_locations:

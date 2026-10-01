@@ -9,9 +9,21 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     USGS_TEMPERATURE_STATION_BY_NAME,
 )
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.usgs_series import (
-    _get_usgs_forcing,
+    _get_usgs_flow,
+    _get_usgs_temperature,
     _interpolate_usgs_with_original_fallback,
     _model_datetimes,
+)
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS.source_temperature import (
+    DISCHARGE_WEIGHTED,
+    FIRST_USABLE,
+    _blend_complete_temperature_or_preserve,
+    _mixed_temperature_columns,
+    _validate_temperature_pooling,
+)
+from stofs3d_setup.ops.Source_sink.correction_config import (
+    load_source_sink_corrections,
+    source_override_points,
 )
 from stofs3d_setup.ops.Source_sink.source_sink_components import (
     _add_negative_source_part_to_sink,
@@ -39,6 +51,7 @@ def _replace_existing_relocated_source(
     transformer: Transformer,
     start_time,
     usgs_cache_folder,
+    temperature_pooling: str = FIRST_USABLE,
 ) -> tuple[
     tuple[np.ndarray, np.ndarray] | None,
     list[tuple[np.ndarray, np.ndarray]],
@@ -50,14 +63,18 @@ def _replace_existing_relocated_source(
 
     The source element and source-column count are unchanged. Flow and
     temperature may come from different explicitly configured USGS stations.
-    Unsupported periods retain the existing relocated forcing.
+    In ``first_usable`` mode, unsupported periods retain the existing
+    relocated forcing. In ``discharge_weighted`` mode, a temperature
+    override is atomic: it is applied only if every model time receives a
+    finite numeric temperature.
     """
     name = point["name"]
     radius_m = point["max_search_radius_m"]
+    temperature_pooling = _validate_temperature_pooling(temperature_pooling)
 
     if source_time_and_data is None or not source_eles:
         raise ValueError(
-            f"[ARTIFICIAL ISLAND PATCH] {name}: relocated base has no source"
+            f"[SOURCE OVERRIDE] {name}: relocated base has no source"
         )
 
     target_ele, distance_m = _nearest_element(
@@ -76,7 +93,7 @@ def _replace_existing_relocated_source(
             else f"element {target_ele} at {distance_m:.1f} m"
         )
         raise ValueError(
-            f"[ARTIFICIAL ISLAND PATCH] {name}: no relocated source found "
+            f"[SOURCE OVERRIDE] {name}: no relocated source found "
             f"within {radius_m:.1f} m; nearest={nearest_text}. "
             "Replace-only entries never create a new source."
         )
@@ -86,13 +103,13 @@ def _replace_existing_relocated_source(
 
     if point["replace_flow"] and not flow_station_id:
         raise ValueError(
-            f"[ARTIFICIAL ISLAND PATCH] {name}: "
+            f"[SOURCE OVERRIDE] {name}: "
             "no USGS flow station is configured"
         )
 
     if point["replace_temperature"] and not temperature_station_id:
         print(
-            f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+            f"[SOURCE OVERRIDE] warning: {name}: "
             "no USGS temperature station is configured; "
             "temperature replacement will be skipped."
         )
@@ -101,22 +118,30 @@ def _replace_existing_relocated_source(
     source_idx = source_eles.index(target_ele)
     target_datetime = _model_datetimes(start_time, source_time)
 
-    (
-        flow_series,
-        temperature_series,
-        flow_station_id,
-        temperature_station_id,
-    ) = _get_usgs_forcing(
-        name=name,
-        start_time=start_time,
-        model_time=source_time,
-        usgs_cache_folder=usgs_cache_folder,
-    )
+    flow_series = None
+    temperature_series = None
+    download_policy = point.get("usgs_download")
+    if point["replace_flow"]:
+        flow_series, flow_station_id = _get_usgs_flow(
+            name=name,
+            start_time=start_time,
+            model_time=source_time,
+            usgs_cache_folder=usgs_cache_folder,
+            download_policy=download_policy,
+        )
+    if point["replace_temperature"]:
+        temperature_series, temperature_station_id = _get_usgs_temperature(
+            name=name,
+            start_time=start_time,
+            model_time=source_time,
+            usgs_cache_folder=usgs_cache_folder,
+            download_policy=download_policy,
+        )
 
     if point["replace_flow"]:
         if flow_series is None:
             print(
-                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                f"[SOURCE OVERRIDE] warning: {name}: "
                 f"USGS flow station {flow_station_id} returned no flow; "
                 "relocated vsource is unchanged."
             )
@@ -133,7 +158,7 @@ def _replace_existing_relocated_source(
             source_data[:, source_idx] = replaced_flow
 
             print(
-                f"[ARTIFICIAL ISLAND PATCH] {name}: replaced relocated "
+                f"[SOURCE OVERRIDE] {name}: replaced relocated "
                 f"vsource at element {target_ele} using USGS flow station "
                 f"{flow_station_id} for "
                 f"{int(use_usgs_flow.sum())}/{len(use_usgs_flow)} records; "
@@ -143,7 +168,7 @@ def _replace_existing_relocated_source(
 
             if not np.any(use_usgs_flow):
                 print(
-                    f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                    f"[SOURCE OVERRIDE] warning: {name}: "
                     f"USGS flow station {flow_station_id} was downloaded, "
                     "but zero model-time records were replaced. "
                     f"Model period={target_datetime[0]} to {target_datetime[-1]}; "
@@ -154,19 +179,19 @@ def _replace_existing_relocated_source(
     if point["replace_temperature"]:
         if not msource_data_list:
             print(
-                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                f"[SOURCE OVERRIDE] warning: {name}: "
                 "base_ss has no msource tracer; temperature replacement "
                 "was skipped."
             )
         elif temperature_station_id is None:
             print(
-                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                f"[SOURCE OVERRIDE] warning: {name}: "
                 "no USGS temperature station configured; relocated "
                 "temperature msource is unchanged."
             )
         elif temperature_series is None:
             print(
-                f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
+                f"[SOURCE OVERRIDE] warning: {name}: "
                 f"USGS temperature station {temperature_station_id} "
                 "returned no temperature; relocated temperature msource "
                 "is unchanged."
@@ -180,26 +205,50 @@ def _replace_existing_relocated_source(
             )
 
             original_temperature = tracer_data[:, source_idx].copy()
-            replaced_temperature, use_usgs_temperature = (
-                _interpolate_usgs_with_original_fallback(
+            if temperature_pooling == DISCHARGE_WEIGHTED:
+                (
+                    replaced_temperature,
+                    use_usgs_temperature,
+                    temperature_applied,
+                ) = _blend_complete_temperature_or_preserve(
                     series=temperature_series,
                     target_time=target_datetime,
                     original_values=original_temperature,
-                    scale=1.0,
                 )
-            )
+            else:
+                replaced_temperature, use_usgs_temperature = (
+                    _interpolate_usgs_with_original_fallback(
+                        series=temperature_series,
+                        target_time=target_datetime,
+                        original_values=original_temperature,
+                        scale=1.0,
+                    )
+                )
+                temperature_applied = bool(
+                    np.any(use_usgs_temperature)
+                )
 
             tracer_data[:, source_idx] = replaced_temperature
             msource_data_list[0] = (tracer_time, tracer_data)
 
-            print(
-                f"[ARTIFICIAL ISLAND PATCH] {name}: replaced relocated "
-                f"temperature msource tracer 1 at element {target_ele} "
-                f"using USGS temperature station {temperature_station_id} "
-                f"for {int(use_usgs_temperature.sum())}/"
-                f"{len(use_usgs_temperature)} records; existing temperature "
-                f"retained for {int((~use_usgs_temperature).sum())} records."
-            )
+            if temperature_applied:
+                print(
+                    f"[SOURCE OVERRIDE] {name}: replaced relocated "
+                    f"temperature msource tracer 1 at element {target_ele} "
+                    "using USGS temperature station "
+                    f"{temperature_station_id} for "
+                    f"{int(use_usgs_temperature.sum())}/"
+                    f"{len(use_usgs_temperature)} records; existing "
+                    "temperature retained for "
+                    f"{int((~use_usgs_temperature).sum())} records."
+                )
+            else:
+                print(
+                    f"[SOURCE OVERRIDE] warning: {name}: retained the "
+                    "complete original temperature column because station "
+                    f"{temperature_station_id} could not provide a complete "
+                    "numeric replacement."
+                )
 
     if point["allow_negative_sink"]:
         (
@@ -218,18 +267,18 @@ def _replace_existing_relocated_source(
 
         if n_negative > 0:
             print(
-                f"[ARTIFICIAL ISLAND PATCH] {name}: moved "
+                f"[SOURCE OVERRIDE] {name}: moved "
                 f"{n_negative} negative relocated-source record(s) to vsink "
                 f"at element {target_ele}; minimum={min_negative:.6f} m3/s."
             )
         else:
             print(
-                f"[ARTIFICIAL ISLAND PATCH] {name}: "
+                f"[SOURCE OVERRIDE] {name}: "
                 "allow_negative_sink enabled; no negative records."
             )
 
     print(
-        f"[ARTIFICIAL ISLAND PATCH] {name}: replace-only operation matched "
+        f"[SOURCE OVERRIDE] {name}: replace-only operation matched "
         f"relocated source element {target_ele} at {distance_m:.1f} m."
     )
 
@@ -241,14 +290,14 @@ def _replace_existing_relocated_source(
     )
 
 
-def apply_source_overrides(
+def _apply_source_overrides(
     base_ss,
     hgrid,
     points: list[dict],
     start_time,
     usgs_cache_folder,
+    temperature_pooling: str = FIRST_USABLE,
 ):
-    """Apply configured USGS flow/temperature overrides to existing sources."""
     source_eles, source_values, msource_values = _copy_source_components(
         base_ss
     )
@@ -270,8 +319,21 @@ def apply_source_overrides(
                 transformer=transformer,
                 start_time=start_time,
                 usgs_cache_folder=usgs_cache_folder,
+                temperature_pooling=temperature_pooling,
             )
         )
+
+    if temperature_pooling == DISCHARGE_WEIGHTED and msource_values:
+        mixed_columns = np.flatnonzero(
+            _mixed_temperature_columns(msource_values[0][1])
+        )
+        if len(mixed_columns) > 0:
+            mixed_elements = [source_eles[idx] for idx in mixed_columns]
+            raise ValueError(
+                "discharge_weighted selected-source temperature overrides "
+                "left columns that are not uniformly all-ambient or "
+                f"all-finite-numeric for source elements {mixed_elements}"
+            )
 
     corrected_ss = _build_source_sink(
         source_eles=source_eles,
@@ -281,3 +343,79 @@ def apply_source_overrides(
         sink_time_and_data=sink_values,
     )
     return corrected_ss, len(points)
+
+
+def apply_source_flow_overrides(
+    base_ss,
+    hgrid,
+    points: list[dict],
+    start_time,
+    usgs_cache_folder,
+):
+    """Replace configured source flows without changing source temperature."""
+    flow_points = [
+        {**point, "replace_temperature": False}
+        for point in points
+        if point.get("replace_flow", False)
+    ]
+    return _apply_source_overrides(
+        base_ss=base_ss,
+        hgrid=hgrid,
+        points=flow_points,
+        start_time=start_time,
+        usgs_cache_folder=usgs_cache_folder,
+        temperature_pooling=FIRST_USABLE,
+    )
+
+
+def apply_source_temperature_overrides(
+    base_ss,
+    hgrid,
+    points: list[dict],
+    start_time,
+    usgs_cache_folder,
+    temperature_pooling: str = FIRST_USABLE,
+):
+    """Replace configured source temperatures without changing source flow."""
+    temperature_points = [
+        {
+            **point,
+            "replace_flow": False,
+            "allow_negative_sink": False,
+        }
+        for point in points
+        if point.get("replace_temperature", False)
+    ]
+    return _apply_source_overrides(
+        base_ss=base_ss,
+        hgrid=hgrid,
+        points=temperature_points,
+        start_time=start_time,
+        usgs_cache_folder=usgs_cache_folder,
+        temperature_pooling=temperature_pooling,
+    )
+
+
+def apply_source_overrides(
+    base_ss,
+    hgrid,
+    points: list[dict],
+    start_time,
+    usgs_cache_folder,
+    temperature_pooling: str = FIRST_USABLE,
+):
+    """Apply configured USGS flow/temperature overrides to existing sources."""
+    return _apply_source_overrides(
+        base_ss=base_ss,
+        hgrid=hgrid,
+        points=points,
+        start_time=start_time,
+        usgs_cache_folder=usgs_cache_folder,
+        temperature_pooling=temperature_pooling,
+    )
+
+
+def load_source_override_points(correction_info) -> list[dict]:
+    """Load and normalize selected-source corrections for this stage."""
+    corrections = load_source_sink_corrections(correction_info)
+    return source_override_points(corrections)

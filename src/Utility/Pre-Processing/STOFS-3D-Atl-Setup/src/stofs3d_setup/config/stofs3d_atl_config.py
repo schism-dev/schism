@@ -7,7 +7,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 import numpy as np
 
 from ..ops.Source_sink.Relocate import relocate_source_feeder as rsf
@@ -87,6 +87,9 @@ class ConfigStofs3dAtlantic(BaseModel):
     replace_nwm_with_usgs: bool = False
     usgs_cache_folder: Optional[Path] = None
     replace_source_temperature_with_usgs: bool = False
+    source_temperature_pooling: Literal[
+        "first_usable", "discharge_weighted"
+    ] = "first_usable"
     replace_selected_sources_with_usgs: bool = False
     zero_configured_source_regions: bool = False
     selected_source_override_info: Optional[Path] = None
@@ -362,6 +365,7 @@ class ConfigStofs3dAtlantic(BaseModel):
                 'Constant_sinks' / 'exclude_constant_sink_at_savannah_charleston.shp'
             ),
             replace_source_temperature_with_usgs=True,
+            source_temperature_pooling="first_usable",
             replace_selected_sources_with_usgs=True,
             zero_configured_source_regions=True,
             selected_source_override_info=selected_source_override_info,

@@ -231,47 +231,6 @@ def _normalize_zero_source_regions(
     return regions
 
 
-def _normalize_exclude_points(patch_info: dict) -> list[dict]:
-    """Normalize source/sink exclusion locations."""
-    raw_points = patch_info.get("exclude_source_sink_locations") or []
-
-    points = []
-    for raw in raw_points:
-        p = _as_dict(raw)
-
-        if "x" not in p or "y" not in p:
-            raise ValueError(
-                f"Artificial-island exclusion entry requires x and y: {p}"
-            )
-
-        remove = p.get("remove", ["source", "sink"])
-        if isinstance(remove, str):
-            remove = [remove]
-        remove = [str(v).lower() for v in remove]
-
-        invalid = sorted(set(remove) - {"source", "sink"})
-        if invalid:
-            raise ValueError(
-                f"Unsupported exclusion types {invalid} for "
-                f"entry {p.get('name', '')!r}"
-            )
-
-        points.append(
-            {
-                **p,
-                "name": str(p.get("name", "unnamed")),
-                "x": float(p["x"]),
-                "y": float(p["y"]),
-                "radius_m": float(
-                    p.get("radius_m", p.get("max_search_radius_m", 500.0))
-                ),
-                "remove": remove,
-            }
-        )
-
-    return points
-
-
 def load_source_sink_corrections(
     config_file: str | Path | dict,
 ) -> dict:

@@ -1,6 +1,8 @@
 """Characterization tests for source/sink spatial helper operations."""
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import numpy as np
@@ -27,6 +29,36 @@ class _Grid:
 
 
 class SpatialCorrectionTests(unittest.TestCase):
+    def test_configured_region_stage_owns_loading_and_path_resolution(self):
+        with TemporaryDirectory() as directory:
+            directory = Path(directory)
+            region_file = directory / "test.rgn"
+            region_file.touch()
+            config_file = directory / "regions.yml"
+            config_file.write_text(
+                "zero_source_regions:\n"
+                "  - name: test region\n"
+                "    region_file: test.rgn\n",
+                encoding="utf-8",
+            )
+
+            with patch.object(
+                spatial,
+                "zero_sources_in_regions",
+                return_value=("corrected", 1),
+            ) as zero_regions:
+                result = spatial.zero_configured_source_regions(
+                    base_ss="base",
+                    hgrid="grid",
+                    correction_info=config_file,
+                )
+
+        self.assertEqual(result, ("corrected", 1))
+        self.assertEqual(
+            zero_regions.call_args.kwargs["regions"],
+            [{"name": "test region", "region_file": region_file}],
+        )
+
     def test_compute_grid_centers_restores_existing_grid_attributes(self):
         grid = _Grid()
 

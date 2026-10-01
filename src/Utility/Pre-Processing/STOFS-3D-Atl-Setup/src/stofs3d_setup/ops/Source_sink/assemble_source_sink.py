@@ -15,17 +15,16 @@ from .Replace_with_USGS.replace_with_obs import source_nwm2usgs
 from .Replace_with_USGS.source_temperature import (
     replace_source_temperatures_with_usgs,
 )
-from .Replace_with_USGS.source_overrides import apply_source_overrides
+from .Replace_with_USGS.source_overrides import (
+    apply_source_flow_overrides,
+    apply_source_temperature_overrides,
+    load_source_override_points,
+)
 from .Patch_artificial_island.patch_artificial_island_source_sink import (
-    patch_artificial_island_source_sink,
+    apply_artificial_island_corrections,
     zero_artificial_island_sources_after_replace_USGS_before_relocation,
 )
-from .correction_config import (
-    load_source_sink_corrections,
-    source_override_points,
-    zero_source_regions,
-)
-from .spatial_corrections import zero_sources_in_regions
+from .spatial_corrections import zero_configured_source_regions
 from ...utils.utils import mkcd_new_dir, STOFS3D_ATL_STATES
 from ...utils.projection import project_geodataframe
 from pylib_experimental.schism_file import source_sink, TimeHistory
@@ -356,13 +355,37 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
             'enabled'
         )
 
-    if replace_temperature or replace_selected_sources:
+    if (
+        replace_temperature
+        or replace_selected_sources
+        or artificial_island_info is not None
+    ):
         usgs_cache_folder = (
             config.usgs_cache_folder
             if config.usgs_cache_folder is not None
             else Path(model_input_path) / 'USGS_cache'
         )
 
+    override_points = None
+
+    # 1. Selected Delaware/Hudson source-flow overrides.
+    if replace_selected_sources:
+        override_points = load_source_override_points(
+            selected_source_override_info
+        )
+        base_ss, source_flow_override_count = apply_source_flow_overrides(
+            base_ss=base_ss,
+            hgrid=hgrid,
+            points=override_points,
+            start_time=config.startdate,
+            usgs_cache_folder=usgs_cache_folder,
+        )
+        print(
+            '[SOURCE FLOW OVERRIDES] processed '
+            f'{source_flow_override_count} configured source(s).'
+        )
+
+    # 2. Automatic source-temperature correction.
     if replace_temperature:
         source_mapping_dir = (
             f'{wdir}/relocated_source_sink/'
@@ -383,6 +406,8 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
                 diagnostics_dir=(
                     Path(wdir) / 'source_temperature'
                 ),
+                pooling=config.source_temperature_pooling,
+                nwm_data_dir=config.nwm_cache_folder,
             )
         )
         print(
@@ -390,64 +415,49 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
             f'{temperature_replaced_count} source(s).'
         )
 
+    # 3. Selected Delaware/Hudson temperature overrides.
     if replace_selected_sources:
-        override_corrections = load_source_sink_corrections(
-            selected_source_override_info
-        )
-        override_points = source_override_points(override_corrections)
-        base_ss, source_override_count = apply_source_overrides(
-            base_ss=base_ss,
-            hgrid=hgrid,
-            points=override_points,
-            start_time=config.startdate,
-            usgs_cache_folder=usgs_cache_folder,
+        base_ss, source_temperature_override_count = (
+            apply_source_temperature_overrides(
+                base_ss=base_ss,
+                hgrid=hgrid,
+                points=override_points,
+                start_time=config.startdate,
+                usgs_cache_folder=usgs_cache_folder,
+                temperature_pooling=config.source_temperature_pooling,
+            )
         )
         print(
-            '[SOURCE OVERRIDES] processed '
-            f'{source_override_count} configured source(s).'
+            '[SOURCE TEMPERATURE OVERRIDES] processed '
+            f'{source_temperature_override_count} configured source(s).'
         )
 
+    # 4. Configured source-region zeroing.
     if zero_regions:
-        region_corrections = load_source_sink_corrections(
-            zero_source_region_info
-        )
-        regions = zero_source_regions(
-            region_corrections,
-            config_dir=Path(zero_source_region_info).resolve().parent,
-        )
-        base_ss, region_zeroed_count = zero_sources_in_regions(
+        base_ss, region_zeroed_count = zero_configured_source_regions(
             base_ss=base_ss,
             hgrid=hgrid,
-            regions=regions,
+            correction_info=zero_source_region_info,
         )
         print(
             '[SOURCE REGIONS] zeroed '
             f'{region_zeroed_count} unique source(s).'
         )
 
+    # 5. Artificial-island source/sink corrections.
     if artificial_island_info is not None:
         patch_output_dir = f'{wdir}/patch_artificial_island_source_sink/'
         mkcd_new_dir(patch_output_dir)
         os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
 
-        base_ss = patch_artificial_island_source_sink(
+        base_ss = apply_artificial_island_corrections(
             base_ss=base_ss,
             hgrid=hgrid,
             original_source_sink_dir=f'{wdir}/original_source_sink/',
-            relocated_source_sink_dir=f'{wdir}/relocated_source_sink/',
             patch_info_file=artificial_island_info,
             start_time=config.startdate,
-            rnday=config.rnday,
-            usgs_cache_folder=(
-                config.usgs_cache_folder
-                if config.usgs_cache_folder is not None
-                else Path(model_input_path) / 'USGS_cache'
-            ),
-            nwm_shapefile=(
-                "/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp"
-            ),
+            usgs_cache_folder=usgs_cache_folder,
             output_dir=patch_output_dir,
-            replace_all_source_temperature=False,
         )
 
 

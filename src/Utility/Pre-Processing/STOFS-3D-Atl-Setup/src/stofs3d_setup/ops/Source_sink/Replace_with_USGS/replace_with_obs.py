@@ -217,7 +217,8 @@ def associate_poi_with_nwm(
     nwm_shp, poi: np.ndarray,
     poi_names: list = None,
     poi_label: str = 'poi',
-    diag_output: str = None
+    diag_output: str = None,
+    invalid_poi_output: str = "invalid_usgs_station_coordinates.csv",
 ) -> gpd.geodataframe.GeoDataFrame:
     '''
     Associate USGS stations with NWM segment fid.
@@ -264,16 +265,14 @@ def associate_poi_with_nwm(
                 f"lon={xy[0]}, lat={xy[1]}"
             )
 
-        pd.DataFrame(
-            {
-                "station_id": poi_names[bad_poi],
-                "longitude": poi[bad_poi, 0],
-                "latitude": poi[bad_poi, 1],
-            }
-        ).to_csv(
-            "invalid_usgs_station_coordinates.csv",
-            index=False,
-        )
+        if invalid_poi_output is not None:
+            pd.DataFrame(
+                {
+                    "station_id": poi_names[bad_poi],
+                    "longitude": poi[bad_poi, 0],
+                    "latitude": poi[bad_poi, 1],
+                }
+            ).to_csv(invalid_poi_output, index=False)
 
         poi = poi[~bad_poi]
         poi_names = poi_names[~bad_poi]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Post-process an already assembled SCHISM ``source_sink`` object for
-artificial-island rivers and selected relocated sources.
+artificial-island rivers.
 
 This module intentionally does not call or modify:
 
@@ -13,15 +13,13 @@ This module intentionally does not call or modify:
 The main function operates directly on ``base_ss`` after source relocation
 and the standard USGS replacement procedure:
 
-    base_ss = patch_artificial_island_source_sink(
+    base_ss = apply_artificial_island_corrections(
         base_ss=base_ss,
         hgrid=hgrid,
         original_source_sink_dir=original_source_sink_dir,
-        relocated_source_sink_dir=relocated_source_sink_dir,
         patch_info_file=config.artificial_island_source_sink_info,
         start_time=config.startdate,
         usgs_cache_folder=usgs_cache_folder,
-        nwm_shapefile=nwm_shapefile,
         output_dir=Path(wdir) / "patch_artificial_island_source_sink",
     )
 
@@ -67,59 +65,7 @@ Supported YAML patch types
        allow_negative_sink: false
        use_usgs_obs: true
 
-2. ``replace_only_source_locations``
-
-   Replace flow and/or temperature values in an existing relocated source
-   column. This operation does not create, remove, or move a source element.
-
-   Parameters
-   ----------
-   name : str
-       Descriptive location name associated with a station in
-       ``USGS_STATION_BY_NAME``.
-   x, y : float
-       Longitude and latitude used to locate the nearest relocated source.
-   max_search_radius_m : float
-       Maximum permitted distance between the specified location and the
-       matched relocated source element.
-   replace_flow : bool
-       Replace available ``vsource`` records with USGS streamflow.
-   replace_temperature : bool
-       Replace available temperature values in msource tracer 1.
-   allow_negative_sink : bool
-       Move negative replaced-flow values to ``vsink`` at the same element
-       and clip the corresponding ``vsource`` values to zero.
-
-   Example
-   -------
-   replace_only_source_locations:
-     - name: Delaware
-       x: -74.9432325
-       y: 40.3422775
-       max_search_radius_m: 500.0
-       replace_flow: true
-       replace_temperature: true
-       allow_negative_sink: false
-
-3. ``zero_source_regions``
-
-   Set the complete ``vsource`` time series to zero for existing relocated
-   source elements whose element centers fall inside one or more SCHISM
-   ``*.rgn`` polygons. Source elements remain in ``source_sink.in``;
-   ``msource`` and ``vsink`` are not modified by this operation.
-
-   Relative region paths are resolved from the directory containing this
-   YAML file. Each list entry may be either a path string or a mapping with
-   ``name`` and ``region_file``.
-
-   Example
-   -------
-   zero_source_regions:
-     - name: Upper Hudson
-       region_file: regions/upper_Hudson.rgn
-     - regions/another_region.rgn
-
-4. ``large_constant_sink_artificial_island_locations``
+2. ``large_constant_sink_artificial_island_locations``
 
    Add a constant sink of -1000 m3/s at the main-grid element nearest each
    listed longitude/latitude location.
@@ -138,46 +84,13 @@ Supported YAML patch types
        x: -79.6996536667
        y: 32.9802923333
 
-5. ``exclude_source_sink_locations``
-
-   Remove existing source and/or sink columns whose main-grid element
-   centers lie within the specified radius.
-
-   Parameters
-   ----------
-   name : str
-       Descriptive exclusion name.
-   x, y : float
-       Longitude and latitude of the exclusion center.
-   radius_m : float
-       Search radius around the specified coordinate.
-   remove : list[str]
-       Forcing types to remove. Entries may include ``source``, ``sink``,
-       or both.
-
-   Example
-   -------
-   exclude_source_sink_locations:
-     - name: Example open boundary
-       x: -79.0
-       y: 33.0
-       radius_m: 1000.0
-       remove:
-         - source
-         - sink
-
 Processing order
 ----------------
 1. Copy the relocated source/sink forcing from ``base_ss``.
-2. Optionally replace temperatures for all relocated sources using upstream
-   NWM-to-USGS associations.
-3. Apply explicit ``replace_only_source_locations`` replacements.
-4. Set ``vsource`` to zero inside entries under ``zero_source_regions``.
-5. Add -1000 m3/s constant sinks for entries under
+2. Add -1000 m3/s constant sinks for entries under
    ``large_constant_sink_artificial_island_locations``.
-6. Restore or create entries under ``force_source_sink_locations``.
-7. Remove entries under ``exclude_source_sink_locations``.
-8. Return a new ``source_sink`` object. The input ``base_ss`` is not modified.
+3. Restore or create entries under ``force_source_sink_locations``.
+4. Return a new ``source_sink`` object. The input ``base_ss`` is not modified.
 """
 
 from __future__ import annotations
@@ -191,8 +104,6 @@ from pyproj import Transformer
 
 from pylib import schism_grid as read_schism_grid
 from pylib_experimental.schism_file import source_sink
-from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
-
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     CFS_TO_CMS,
 )
@@ -200,12 +111,6 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.usgs_series import (
     _get_usgs_forcing,
     _interpolate_usgs_with_original_fallback,
     _model_datetimes,
-)
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS.source_temperature import (
-    _replace_all_relocated_source_temperatures,
-)
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS.source_overrides import (
-    _replace_existing_relocated_source,
 )
 from stofs3d_setup.ops.Source_sink.source_sink_components import (
     _add_negative_source_part_to_sink,
@@ -215,8 +120,6 @@ from stofs3d_setup.ops.Source_sink.source_sink_components import (
     _copy_sink_components,
     _copy_source_components,
     _data_array,
-    _remove_sink_columns,
-    _remove_source_columns,
     _time_array,
 )
 from stofs3d_setup.ops.Source_sink.spatial_corrections import (
@@ -224,22 +127,15 @@ from stofs3d_setup.ops.Source_sink.spatial_corrections import (
     _elements_within_radius,
     _make_transformer,
     _nearest_element,
-    _zero_sources_inside_regions,
 )
 from stofs3d_setup.ops.Source_sink.correction_config import (
     _as_dict,
     _load_patch_info,
-    _normalize_exclude_points,
     _normalize_force_points,
     _normalize_large_constant_sink_points,
-    _normalize_replace_relocated_points,
-    _normalize_zero_source_regions,
 )
 from stofs3d_setup.ops.Source_sink.source_sink_diagnostics import (
     _write_diagnostics,
-)
-from stofs3d_setup.ops.Source_sink.Constant_sinks.background_sink import (
-    remove_overlapping_background_sinks,
 )
 
 
@@ -396,19 +292,14 @@ def _add_large_constant_sinks(
     )
 
 
-def patch_artificial_island_source_sink(
+def apply_artificial_island_corrections(
     base_ss: source_sink,
     hgrid,
     original_source_sink_dir,
     patch_info_file: str | Path | dict,
     start_time=None,
-    rnday=None,
     usgs_cache_folder=None,
     output_dir: str | Path | None = None,
-    relocated_source_sink_dir: str | Path | None = None,
-    nwm_shapefile: str | Path | None = None,
-    states=None,
-    replace_all_source_temperature: bool = True,
 ) -> source_sink:
     """
     Restore only YAML-listed artificial-island source/sink forcing.
@@ -417,16 +308,10 @@ def patch_artificial_island_source_sink(
     appended to the already relocated ``base_ss``. Existing relocated source
     or sink columns are never moved.
 
-    Before YAML-specific operations, all relocated sources can receive
-    automatic USGS temperature replacement using relocated sources.json and
-    the same upstream NWM/USGS search logic as source_nwm2usgs(). Explicit
-    USGS_STATION_BY_NAME replacements are applied afterward as overrides.
-    ``rnday`` is retained for workflow compatibility.
     """
     if base_ss is None:
         raise ValueError("base_ss must not be None")
 
-    _ = rnday
     if start_time is None:
         raise ValueError("start_time is required for artificial-island patching")
     usgs_cache_folder = Path(
@@ -434,12 +319,6 @@ def patch_artificial_island_source_sink(
     )
 
     original_source_sink_dir = Path(original_source_sink_dir)
-    relocated_source_sink_dir = Path(
-        relocated_source_sink_dir
-        or original_source_sink_dir.parent / "relocated_source_sink"
-    )
-    nwm_shapefile = Path(nwm_shapefile)
-    states = list(states or STOFS3D_ATL_STATES)
 
     if not original_source_sink_dir.is_dir():
         raise FileNotFoundError(
@@ -454,31 +333,28 @@ def patch_artificial_island_source_sink(
             f"{original_hgrid_file}"
         )
 
-    yaml_dir = (
-        Path.cwd()
-        if isinstance(patch_info_file, dict)
-        else Path(patch_info_file).expanduser().resolve().parent
-    )
     patch_info = _load_patch_info(patch_info_file)
+    unsupported_sections = [
+        section
+        for section in (
+            "zero_source_regions",
+            "exclude_source_sink_locations",
+        )
+        if patch_info.get(section)
+    ]
+    if unsupported_sections:
+        raise ValueError(
+            "Generic spatial corrections are not artificial-island "
+            f"operations: {unsupported_sections}"
+        )
     force_points = _normalize_force_points(patch_info)
-    replace_relocated_points = _normalize_replace_relocated_points(
-        patch_info
-    )
-    zero_source_regions = _normalize_zero_source_regions(
-        patch_info,
-        yaml_dir=yaml_dir,
-    )
     large_constant_sink_points = (
         _normalize_large_constant_sink_points(patch_info)
     )
-    exclude_points = _normalize_exclude_points(patch_info)
 
     if (
         not force_points
-        and not replace_relocated_points
-        and not zero_source_regions
         and not large_constant_sink_points
-        and not exclude_points
     ):
         print("[ARTIFICIAL ISLAND PATCH] no YAML entries; returning base_ss.")
         return deepcopy(base_ss)
@@ -521,86 +397,7 @@ def patch_artificial_island_source_sink(
 
     restored_source_count = 0
     restored_sink_count = 0
-    replaced_relocated_count = 0
-    region_zeroed_source_count = 0
     large_constant_sink_count = 0
-    automatically_temperature_replaced_count = 0
-
-    # ------------------------------------------------------------------
-    # First, apply automatic USGS temperature replacement to every
-    # relocated source using the same upstream NWM/USGS association logic
-    # as source_nwm2usgs(). Explicit YAML replacements are applied later
-    # and therefore override this automatic result.
-    # ------------------------------------------------------------------
-    if replace_all_source_temperature:
-        diagnostics_dir = (
-            None
-            if output_dir is None
-            else Path(output_dir) / "automatic_temperature"
-        )
-        if diagnostics_dir is not None:
-            diagnostics_dir.mkdir(parents=True, exist_ok=True)
-
-        (
-            msource_data_list,
-            automatically_temperature_replaced_count,
-        ) = _replace_all_relocated_source_temperatures(
-            source_eles=source_eles,
-            source_time_and_data=source_time_and_data,
-            msource_data_list=msource_data_list,
-            xctr=xctr,
-            yctr=yctr,
-            relocated_source_sink_dir=relocated_source_sink_dir,
-            start_time=start_time,
-            usgs_cache_folder=usgs_cache_folder,
-            nwm_shapefile=nwm_shapefile,
-            states=states,
-            diagnostics_dir=diagnostics_dir,
-        )
-
-    # ------------------------------------------------------------------
-    # Replace values in existing relocated sources.
-    # No source element is added, removed, or moved in this step.
-    # ------------------------------------------------------------------
-    for point in replace_relocated_points:
-        (
-            source_time_and_data,
-            msource_data_list,
-            sink_eles,
-            sink_time_and_data,
-        ) = _replace_existing_relocated_source(
-            point=point,
-            source_eles=source_eles,
-            source_time_and_data=source_time_and_data,
-            msource_data_list=msource_data_list,
-            sink_eles=sink_eles,
-            sink_time_and_data=sink_time_and_data,
-            xctr=xctr,
-            yctr=yctr,
-            transformer=transformer,
-            start_time=start_time,
-            usgs_cache_folder=usgs_cache_folder,
-        )
-        replaced_relocated_count += 1
-
-    # ------------------------------------------------------------------
-    # Zero the complete time-varying discharge for existing relocated
-    # source elements whose centers fall inside YAML-listed *.rgn files.
-    # Source elements and msource columns are intentionally retained.
-    # Forced/restored artificial-island sources are added afterward and are
-    # therefore not affected by this step.
-    # ------------------------------------------------------------------
-    if zero_source_regions:
-        (
-            source_time_and_data,
-            region_zeroed_source_count,
-        ) = _zero_sources_inside_regions(
-            regions=zero_source_regions,
-            source_eles=source_eles,
-            source_time_and_data=source_time_and_data,
-            xctr=xctr,
-            yctr=yctr,
-        )
 
     # ------------------------------------------------------------------
     # Add a -1000 m3/s constant sink at the main-grid element nearest
@@ -943,62 +740,6 @@ def patch_artificial_island_source_sink(
                 f"{target_distance_m:.1f} m."
             )
 
-    # ------------------------------------------------------------------
-    # Remove source/sink forcing near YAML exclusion points.
-    # ------------------------------------------------------------------
-    remove_sources: set[int] = set()
-    remove_sinks: set[int] = set()
-
-    for point in exclude_points:
-        if "source" in point["remove"]:
-            found = _elements_within_radius(
-                x=point["x"],
-                y=point["y"],
-                radius_m=point["radius_m"],
-                candidate_element_ids=source_eles,
-                xctr=xctr,
-                yctr=yctr,
-                transformer=transformer,
-            )
-            remove_sources.update(found)
-            print(
-                f"[ARTIFICIAL ISLAND PATCH] {point['name']}: "
-                f"marked {len(found)} source(s) for removal: {found}"
-            )
-
-        if "sink" in point["remove"]:
-            found = _elements_within_radius(
-                x=point["x"],
-                y=point["y"],
-                radius_m=point["radius_m"],
-                candidate_element_ids=sink_eles,
-                xctr=xctr,
-                yctr=yctr,
-                transformer=transformer,
-            )
-            remove_sinks.update(found)
-            print(
-                f"[ARTIFICIAL ISLAND PATCH] {point['name']}: "
-                f"marked {len(found)} sink(s) for removal: {found}"
-            )
-
-    (
-        source_eles,
-        source_time_and_data,
-        msource_data_list,
-    ) = _remove_source_columns(
-        source_eles=source_eles,
-        source_time_and_data=source_time_and_data,
-        msource_data_list=msource_data_list,
-        remove_eles=remove_sources,
-    )
-
-    sink_eles, sink_time_and_data = _remove_sink_columns(
-        sink_eles=sink_eles,
-        sink_time_and_data=sink_time_and_data,
-        remove_eles=remove_sinks,
-    )
-
     if len(source_eles) != len(set(source_eles)):
         raise ValueError(
             "Artificial-island patch produced duplicate source elements"
@@ -1016,22 +757,6 @@ def patch_artificial_island_source_sink(
         sink_time_and_data=sink_time_and_data,
     )
 
-    if replace_all_source_temperature:
-        print(
-            "[ARTIFICIAL ISLAND PATCH] automatically temperature-replaced "
-            f"{automatically_temperature_replaced_count} relocated source(s)."
-        )
-    if replace_relocated_points:
-        print(
-            "[ARTIFICIAL ISLAND PATCH] replaced "
-            f"{replaced_relocated_count} existing relocated source(s)."
-        )
-    if zero_source_regions:
-        print(
-            "[ARTIFICIAL ISLAND PATCH] zeroed vsource for "
-            f"{region_zeroed_source_count} unique relocated source(s) "
-            "inside YAML region(s)."
-        )
     print(
         "[ARTIFICIAL ISLAND PATCH] added large constant sinks to "
         f"{large_constant_sink_count} unique artificial-island element(s)."
@@ -1303,7 +1028,6 @@ def zero_artificial_island_sources_after_replace_USGS_before_relocation(
         )
 
 __all__ = [
-    "patch_artificial_island_source_sink",
+    "apply_artificial_island_corrections",
     "zero_artificial_island_sources_after_replace_USGS_before_relocation",
-    "remove_overlapping_background_sinks",
 ]

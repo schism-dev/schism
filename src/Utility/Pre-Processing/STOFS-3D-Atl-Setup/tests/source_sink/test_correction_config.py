@@ -13,6 +13,7 @@ class CorrectionConfigTests(unittest.TestCase):
         config = ConfigStofs3dAtlantic()
 
         self.assertFalse(config.replace_source_temperature_with_usgs)
+        self.assertEqual(config.source_temperature_pooling, "first_usable")
         self.assertFalse(config.replace_selected_sources_with_usgs)
         self.assertFalse(config.zero_configured_source_regions)
         self.assertIsNone(config.selected_source_override_info)
@@ -22,6 +23,7 @@ class CorrectionConfigTests(unittest.TestCase):
         config = ConfigStofs3dAtlantic.v7p4()
 
         self.assertTrue(config.replace_source_temperature_with_usgs)
+        self.assertEqual(config.source_temperature_pooling, "first_usable")
         self.assertTrue(config.replace_selected_sources_with_usgs)
         self.assertTrue(config.zero_configured_source_regions)
         self.assertNotEqual(
@@ -58,7 +60,6 @@ class CorrectionConfigTests(unittest.TestCase):
                 "remove_source_locations_in_artificial_island",
                 "force_source_sink_locations",
                 "large_constant_sink_artificial_island_locations",
-                "exclude_source_sink_locations",
             },
         )
 
@@ -66,6 +67,10 @@ class CorrectionConfigTests(unittest.TestCase):
         self.assertEqual(
             [point["name"] for point in override_points],
             ["Delaware", "Hudson River"],
+        )
+        self.assertEqual(
+            override_points[1]["usgs_download"]["retry_chunk_days"],
+            [20, 10, 5],
         )
         region_points = correction_config.zero_source_regions(
             regions,
@@ -91,23 +96,6 @@ class CorrectionConfigTests(unittest.TestCase):
         self.assertTrue(points[0]["replace_flow"])
         self.assertTrue(points[0]["replace_temperature"])
         self.assertFalse(points[0]["allow_negative_sink"])
-
-    def test_exclusion_remove_string_becomes_list(self):
-        points = correction_config._normalize_exclude_points(
-            {
-                "exclude_source_sink_locations": [
-                    {
-                        "name": "test",
-                        "x": 1,
-                        "y": 2,
-                        "remove": "source",
-                    }
-                ]
-            }
-        )
-
-        self.assertEqual(points[0]["remove"], ["source"])
-        self.assertEqual(points[0]["radius_m"], 500.0)
 
     def test_relative_region_path_resolves_from_yaml_directory(self):
         with TemporaryDirectory() as directory:

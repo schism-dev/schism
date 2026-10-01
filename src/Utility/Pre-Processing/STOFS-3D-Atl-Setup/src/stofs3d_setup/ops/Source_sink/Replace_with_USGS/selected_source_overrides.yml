@@ -19,3 +19,9 @@ replace_only_source_locations:
     replace_flow: true
     replace_temperature: true
     allow_negative_sink: false
+    # Use smaller windows only when a larger USGS request returns no data.
+    # This policy can be applied to any configured source.
+    usgs_download:
+      primary_chunk_days: 100
+      retry_chunk_days: [20, 10, 5]
+      cache_prefix: "hudson_usgs"
