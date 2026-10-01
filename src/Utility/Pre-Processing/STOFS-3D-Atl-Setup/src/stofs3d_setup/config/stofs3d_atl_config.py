@@ -352,9 +352,10 @@ class ConfigStofs3dAtlantic(BaseModel):
                 'feeder_heads_bases.xy'
             ),
             hgrid_without_feeders=None,  # feeders are removed in v7.4, set this to None and the main hgrid will be used.
-            relocate_source=True,
+            relocate_source=False,
             mandatory_sources_coor=rsf.v19p2_for_sms_v32c_mandatory_sources_coor,
             nwm_cache_folder=None,
+            replace_nwm_with_usgs=False,
             source_ele_replace_dict={},
             constant_sink_shapefile=(
                 STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
