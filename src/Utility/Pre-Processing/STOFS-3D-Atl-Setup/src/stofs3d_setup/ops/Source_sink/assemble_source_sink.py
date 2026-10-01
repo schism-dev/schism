@@ -510,7 +510,7 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
 
     # temporary fix for isolated feeder channels; Note this doesn't change sources.json or source.nc
     if config.source_ele_replace_dict is not None and config.source_ele_replace_dict != {}:
-        from .patch_feeder_source_sink_in import replace_ele_in_source_sink
+        from .Relocate.patch_feeder_source_sink_in import replace_ele_in_source_sink
         replace_ele_in_source_sink(wdir, config.source_ele_replace_dict)
 
     # -------------------------- write diagnostic outputs --------------------------
