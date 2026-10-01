@@ -1,0 +1,13 @@
+# Explicit NWM feature-to-USGS station links, applied after spatial matching.
+# Keep station IDs quoted so leading zeros are preserved.
+flow_adjustment:
+  19406836: '07381490'  # Atchafalaya River at Simmesport, LA
+  15708755: '02489500'  # Pearl River at Bogalusa, LA
+  18928090: '07375175'  # Bogue Falaya River at Boston St, Covington, LA
+  19269176: '07374000'  # Mississippi River at Baton Rouge, LA
+
+# Temperature station search uses the flow links above plus these entries.
+temperature_search_additions:
+  16665157: '02244040'  # Buffalo Bluff
+  2590217: '01463500'   # Delaware
+  6186156: '01358000'   # Hudson River

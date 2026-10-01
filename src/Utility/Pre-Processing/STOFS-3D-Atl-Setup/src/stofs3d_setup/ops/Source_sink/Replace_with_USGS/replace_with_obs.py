@@ -32,6 +32,9 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.download_usgs import \
     download_stations, usgs_var_dict, convert_to_ObsData, \
     get_usgs_stations_from_state, detect_data_gap
 from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
+    NWM_TO_USGS_FLOW_ADJUSTMENT,
+)
 from pylib import schism_grid
 
 
@@ -540,15 +543,8 @@ def source_nwm2usgs(
         nwm_shp, poi=usgs_stations_coords, poi_names=usgs_stations.tolist(),
         poi_label='gages', diag_output=f'{output_dir}/auto_nearby_gages.txt')
 
-    # manually associate some USGS stations with NWM segments,
-    # set the NWM segment to be the one associated with the vsource injection
-    manual_nwm2usgs = {
-        19406836: '07381490',  # Atchafalaya River at Simmesport, LA
-        15708755: '02489500',  # Pearl River at Bogalusa, LA
-        18928090: '07375175',  # Bogue Falaya River at Boston St, Covington, LA
-        19269176: '07374000',  # Mississippi River at Baton Rouge, LA
-    }
-    for nwm_featureID, usgs_id in manual_nwm2usgs.items():
+    # Apply the explicitly configured FeatureID-to-station links.
+    for nwm_featureID, usgs_id in NWM_TO_USGS_FLOW_ADJUSTMENT.items():
         nwm_shp.loc[nwm_shp['featureID'] == nwm_featureID, 'gages'] = usgs_id
 
     idx = nwm_shp['gages'].notnull()

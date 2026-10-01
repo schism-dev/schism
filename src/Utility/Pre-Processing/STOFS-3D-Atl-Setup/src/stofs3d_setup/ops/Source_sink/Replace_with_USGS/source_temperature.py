@@ -19,7 +19,7 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.replace_with_obs import (
     read_nwm_data,
 )
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
-    MANUAL_NWM_TO_USGS_FLOW,
+    NWM_TO_USGS_TEMPERATURE_SEARCH,
     USGS_TEMPERATURE_PARAMETER_ID,
 )
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.usgs_series import (
@@ -157,7 +157,7 @@ def _prepare_nwm_usgs_station_search(
 
     # Retain the manual feature-to-station associations used by the flow
     # replacement workflow, including current artificial-island overrides.
-    for feature_id, station_id in MANUAL_NWM_TO_USGS_FLOW.items():
+    for feature_id, station_id in NWM_TO_USGS_TEMPERATURE_SEARCH.items():
         idx = nwm_shp["featureID"] == int(feature_id)
         if np.any(idx):
             nwm_shp.loc[idx, "gages"] = str(station_id)

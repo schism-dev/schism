@@ -12,7 +12,8 @@ import pandas as pd
 
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS import source_temperature
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
-    MANUAL_NWM_TO_USGS_FLOW,
+    NWM_TO_USGS_FLOW_ADJUSTMENT,
+    NWM_TO_USGS_TEMPERATURE_SEARCH,
     USGS_FLOW_STATION_BY_NAME,
     USGS_TEMPERATURE_STATION_BY_NAME,
 )
@@ -55,7 +56,27 @@ class SourceTemperatureTests(unittest.TestCase):
             USGS_TEMPERATURE_STATION_BY_NAME["Hudson River"],
             "01359139",
         )
-        self.assertEqual(MANUAL_NWM_TO_USGS_FLOW[6186156], "01358000")
+        self.assertEqual(NWM_TO_USGS_TEMPERATURE_SEARCH[6186156], "01358000")
+        self.assertNotIn(6186156, NWM_TO_USGS_FLOW_ADJUSTMENT)
+
+    def test_manual_feature_station_links_preserve_both_scopes(self):
+        flow_links = {
+            19406836: "07381490",
+            15708755: "02489500",
+            18928090: "07375175",
+            19269176: "07374000",
+        }
+        temperature_additions = {
+            16665157: "02244040",
+            2590217: "01463500",
+            6186156: "01358000",
+        }
+
+        self.assertEqual(NWM_TO_USGS_FLOW_ADJUSTMENT, flow_links)
+        self.assertEqual(
+            NWM_TO_USGS_TEMPERATURE_SEARCH,
+            {**flow_links, **temperature_additions},
+        )
 
     def test_station_search_preserves_station_feature_pair(self):
         def add_candidate(**kwargs):
