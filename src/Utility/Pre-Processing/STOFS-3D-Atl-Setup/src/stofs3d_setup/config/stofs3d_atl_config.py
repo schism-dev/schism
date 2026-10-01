@@ -368,7 +368,7 @@ class ConfigStofs3dAtlantic(BaseModel):
             source_temperature_pooling="first_usable",
             # Keep direct Delaware/Hudson replacements opt-in for HJ replay.
             replace_selected_sources_with_usgs=False,
-            zero_configured_source_regions=True,
+            zero_configured_source_regions=False,
             selected_source_override_info=selected_source_override_info,
             zero_source_region_info=zero_source_region_info,
             artificial_island_source_sink_info=artificial_island_info,
