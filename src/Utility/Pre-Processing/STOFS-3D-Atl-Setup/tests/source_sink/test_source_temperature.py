@@ -57,7 +57,7 @@ class SourceTemperatureTests(unittest.TestCase):
             "01359139",
         )
         self.assertEqual(NWM_TO_USGS_TEMPERATURE_SEARCH[6186156], "01358000")
-        self.assertNotIn(6186156, NWM_TO_USGS_FLOW_ADJUSTMENT)
+        self.assertEqual(NWM_TO_USGS_FLOW_ADJUSTMENT[6186156], "01358000")
 
     def test_manual_feature_station_links_preserve_both_scopes(self):
         flow_links = {
@@ -65,11 +65,11 @@ class SourceTemperatureTests(unittest.TestCase):
             15708755: "02489500",
             18928090: "07375175",
             19269176: "07374000",
+            2590217: "01463500",
+            6186156: "01358000",
         }
         temperature_additions = {
             16665157: "02244040",
-            2590217: "01463500",
-            6186156: "01358000",
         }
 
         self.assertEqual(NWM_TO_USGS_FLOW_ADJUSTMENT, flow_links)

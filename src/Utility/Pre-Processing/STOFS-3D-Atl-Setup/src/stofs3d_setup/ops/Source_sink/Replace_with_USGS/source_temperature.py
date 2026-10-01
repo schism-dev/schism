@@ -155,8 +155,7 @@ def _prepare_nwm_usgs_station_search(
         ),
     )
 
-    # Retain the manual feature-to-station associations used by the flow
-    # replacement workflow, including current artificial-island overrides.
+    # Share manual NWM-to-USGS links with the flow-adjustment workflow.
     for feature_id, station_id in NWM_TO_USGS_TEMPERATURE_SEARCH.items():
         idx = nwm_shp["featureID"] == int(feature_id)
         if np.any(idx):

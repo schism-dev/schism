@@ -658,6 +658,7 @@ Complete before Phase 9:
 | 2026-10-01 | Represent adaptive USGS retrieval as source configuration rather than a Hudson code branch. | A generic primary/retry-window policy preserves the cached Hudson behavior and can be assigned to any configured source. |
 | 2026-10-01 | Place correction parsing and diagnostics with their owning stages, but retain shared SCHISM component operations at the source/sink level. | This removes mixed-responsibility modules without creating a generic `utils` bucket or changing numerical operations. |
 | 2026-10-01 | Store manual NWM FeatureID-to-USGS links in stage-local YAML with separate flow-adjustment and temperature-search scopes. | The temperature search has three additional links; preserving that distinction keeps the I102a flow workflow unchanged. |
+| 2026-10-01 | Disable selected Delaware/Hudson post-relocation overrides in the v7.4 preferred profile and apply their FeatureID links during NWM-to-USGS flow correction instead. | This retains the preferred soft association workflow after the HJ byte-identity milestone while keeping the HJ replay inputs available for reproduction. |
 
 ## Progress Log
 

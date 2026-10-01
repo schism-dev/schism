@@ -21,12 +21,12 @@ class CorrectionConfigTests(unittest.TestCase):
         self.assertIsNone(config.selected_source_override_info)
         self.assertIsNone(config.zero_source_region_info)
 
-    def test_v7p4_preserves_enabled_correction_stages(self):
+    def test_v7p4_enables_preferred_correction_stages(self):
         config = ConfigStofs3dAtlantic.v7p4()
 
         self.assertTrue(config.replace_source_temperature_with_usgs)
         self.assertEqual(config.source_temperature_pooling, "first_usable")
-        self.assertTrue(config.replace_selected_sources_with_usgs)
+        self.assertFalse(config.replace_selected_sources_with_usgs)
         self.assertTrue(config.zero_configured_source_regions)
         self.assertNotEqual(
             config.selected_source_override_info,
