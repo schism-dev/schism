@@ -15,16 +15,12 @@ from .Replace_with_USGS.replace_with_obs import source_nwm2usgs
 from .Replace_with_USGS.source_temperature import (
     replace_source_temperatures_with_usgs,
 )
-from .Replace_with_USGS.source_overrides import (
-    apply_source_flow_overrides,
-    apply_source_temperature_overrides,
-    load_source_override_points,
-)
 from .Patch_artificial_island.patch_artificial_island_source_sink import (
     apply_artificial_island_corrections,
     zero_artificial_island_sources_after_replace_USGS_before_relocation,
 )
 from .Spatial_corrections.region_zeroing import zero_configured_source_regions
+from .workflow_constants import NWM_ECGC_SHAPEFILE
 from ...utils.utils import mkcd_new_dir, STOFS3D_ATL_STATES
 from ...utils.projection import project_geodataframe
 from pylib_experimental.schism_file import source_sink, TimeHistory
@@ -130,6 +126,315 @@ def gen_relocated_source(original_source_sink_dir, relocated_source_sink_dir):
     return relocated_vsource, relocated_msource_list
 
 
+def _generate_original_source_sink(config, model_input_path, wdir):
+    """Generate NWM sources/sinks and update the resolved NWM cache path."""
+    original_source_sink_dir = f'{wdir}/original_source_sink/'
+    mkcd_new_dir(original_source_sink_dir)
+    source_grid = (
+        config.hgrid_without_feeders
+        if config.hgrid_without_feeders is not None
+        else f'{model_input_path}/hgrid.gr3'
+    )
+    os.symlink(str(source_grid), 'hgrid.gr3')
+
+    if config.existing_source_json_path is not None:
+        print('reusing existing sources.json and sinks.json ...')
+        for filename in ('sources.json', 'sinks.json'):
+            existing_file = Path(config.existing_source_json_path) / filename
+            if existing_file.exists():
+                os.system(f'cp -rf {existing_file} .')
+            else:
+                print(
+                    f'Warning: specified {existing_file} does not exist, '
+                    'generating it from scratch ...'
+                )
+
+    actual_nwm_cache_folder = gen_sourcesink_nwm(
+        hgrid_fname='./hgrid.gr3',
+        startdate=config.startdate,
+        rnday=config.rnday,
+        cache_folder=config.nwm_cache_folder,
+    )
+
+    if config.nwm_cache_folder is None:
+        config.nwm_cache_folder = actual_nwm_cache_folder
+        print(f'Setting config.nwm_cache_folder to {actual_nwm_cache_folder}')
+    elif Path(actual_nwm_cache_folder).resolve(strict=True) != Path(
+        config.nwm_cache_folder
+    ).resolve(strict=True):
+        print(
+            f'Warning: the actual nwm_cache_folder has been generated at '
+            f'{actual_nwm_cache_folder}, different from the specified '
+            f'config.nwm_cache_folder {config.nwm_cache_folder}, '
+            'make sure this is intended!'
+        )
+        config.nwm_cache_folder = actual_nwm_cache_folder
+
+
+def _describe_source_grid(config):
+    """Report whether the main grid is expected to contain feeder elements."""
+    if config.hgrid_without_feeders is not None:
+        print(
+            'Normal case: beside the main hgrid, '
+            f'an hgrid without feeders is provided: '
+            f'{config.hgrid_without_feeders}, assuming the main hgrid has '
+            'feeders!'
+        )
+        return True
+
+    print(
+        'Special case: only the main hgrid is provided. '
+        'Caution: you should not search for NWM source/sink on a grid with '
+        'feeders! I will assume the main hgrid has no feeders and carry on.'
+    )
+    return False
+
+
+def _replace_nwm_flow_with_usgs(config, model_input_path, wdir):
+    """Adjust NWM source flows using USGS observations."""
+    print('replacing NWM sources with USGS observed flow rates ...')
+    source_nwm2usgs(
+        start_time_str=config.startdate.strftime('%Y-%m-%d %H:%M:%S'),
+        states=STOFS3D_ATL_STATES,
+        f_shapefile=NWM_ECGC_SHAPEFILE,
+        original_ss_dir=f'{wdir}/original_source_sink/',
+        nwm_data_dir=config.nwm_cache_folder,
+        output_dir=f'{wdir}/USGS_adjusted_sources/',
+        usgs_cache_folder=(
+            config.usgs_cache_folder
+            if config.usgs_cache_folder is not None
+            else Path(model_input_path) / 'USGS_cache'
+        ),
+    )
+
+
+def _suppress_island_sources_before_relocation(
+    config, model_input_path, wdir, artificial_island_info
+):
+    """Apply island-specific pre-relocation flow suppression."""
+    zero_artificial_island_sources_after_replace_USGS_before_relocation(
+        source_sink_dir=f'{wdir}/original_source_sink/',
+        hgrid_file=(
+            config.hgrid_without_feeders
+            if config.hgrid_without_feeders is not None
+            else f'{model_input_path}/hgrid.gr3'
+        ),
+        patch_info_file=artificial_island_info,
+        output_dir=(
+            f'{wdir}/zeroed_sources_after_replace_USGS_before_relocation/'
+        ),
+    )
+
+
+def _read_original_source_sink(wdir):
+    """Read the generated source/sink directly, without relocation."""
+    return source_sink.from_files(f'{wdir}/original_source_sink/')
+
+
+def _relocate_source_sink(config, model_input_path, wdir, main_hgrid_has_feeder):
+    """Relocate sources and assemble the relocated base source/sink object."""
+    relocated_source_sink_dir = f'{wdir}/relocated_source_sink/'
+    mkcd_new_dir(relocated_source_sink_dir)
+    os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
+    relocate_sources2(
+        old_ss_dir=f'{wdir}/original_source_sink/',
+        feeder_info_file=config.feeder_info_file,
+        hgrid_fname=f'{model_input_path}/hgrid.gr3',
+        outdir=relocated_source_sink_dir,
+        max_search_radius=2100,
+        mandatory_sources_coor=config.mandatory_sources_coor,
+        allow_neglection=False,
+        main_hgrid_has_feeder=main_hgrid_has_feeder,
+    )
+
+    if config.reuse_source_json:
+        os.system(f'ln -sf {wdir}/original_source_sink/sinks.json .')
+        gen_sourcesink_nwm(
+            hgrid_fname=f'{model_input_path}/hgrid.gr3',
+            startdate=config.startdate,
+            rnday=config.rnday,
+            cache_folder=config.nwm_cache_folder,
+        )
+        relocated_ss = source_sink.from_files(
+            source_dir=relocated_source_sink_dir,
+        )
+        return source_sink(
+            vsource=relocated_ss.vsource,
+            vsink=None,
+            msource=relocated_ss.msource,
+        )
+
+    relocated_vsource, relocated_msource_list = gen_relocated_source(
+        original_source_sink_dir=f'{wdir}/original_source_sink/',
+        relocated_source_sink_dir=relocated_source_sink_dir,
+    )
+    base_ss = source_sink(
+        vsource=relocated_vsource,
+        vsink=None,
+        msource=relocated_msource_list,
+    )
+    base_ss.writer(relocated_source_sink_dir)
+    return base_ss
+
+
+def _resolve_usgs_cache_folder(config, model_input_path):
+    """Return the configured USGS cache or the model-input default."""
+    return (
+        config.usgs_cache_folder
+        if config.usgs_cache_folder is not None
+        else Path(model_input_path) / 'USGS_cache'
+    )
+
+
+def _replace_source_temperatures(base_ss, config, hgrid, model_input_path, wdir):
+    """Apply configured USGS temperature replacement to source elements."""
+    source_mapping_dir = (
+        f'{wdir}/relocated_source_sink/'
+        if config.relocate_source
+        else f'{wdir}/original_source_sink/'
+    )
+    base_ss, replaced_count = replace_source_temperatures_with_usgs(
+        base_ss=base_ss,
+        hgrid=hgrid,
+        source_mapping_dir=source_mapping_dir,
+        start_time=config.startdate,
+        usgs_cache_folder=_resolve_usgs_cache_folder(
+            config, model_input_path
+        ),
+        nwm_shapefile=NWM_ECGC_SHAPEFILE,
+        states=STOFS3D_ATL_STATES,
+        diagnostics_dir=Path(wdir) / 'source_temperature',
+        pooling=config.source_temperature_pooling,
+        nwm_data_dir=config.nwm_cache_folder,
+    )
+    print(f'[SOURCE TEMPERATURE] replaced {replaced_count} source(s).')
+    return base_ss
+
+
+def _zero_configured_source_regions(base_ss, config, hgrid):
+    """Apply optional final source-region zeroing from its stage config."""
+    base_ss, zeroed_count = zero_configured_source_regions(
+        base_ss=base_ss,
+        hgrid=hgrid,
+        correction_info=config.zero_source_region_info,
+    )
+    print(f'[SOURCE REGIONS] zeroed {zeroed_count} unique source(s).')
+    return base_ss
+
+
+def _apply_artificial_island_patch(
+    base_ss, config, hgrid, model_input_path, wdir, patch_info_file
+):
+    """Apply configured artificial-island source/sink corrections."""
+    patch_output_dir = f'{wdir}/patch_artificial_island_source_sink/'
+    mkcd_new_dir(patch_output_dir)
+    os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
+    return apply_artificial_island_corrections(
+        base_ss=base_ss,
+        hgrid=hgrid,
+        original_source_sink_dir=f'{wdir}/original_source_sink/',
+        patch_info_file=patch_info_file,
+        start_time=config.startdate,
+        usgs_cache_folder=_resolve_usgs_cache_folder(
+            config, model_input_path
+        ),
+        output_dir=patch_output_dir,
+    )
+
+
+def _generate_constant_sink_source_sink(config, hgrid, wdir):
+    """Generate background and pump sink contributions."""
+    constant_sink_dir = f'{wdir}/constant_sink/'
+    mkcd_new_dir(constant_sink_dir)
+
+    constant_sink_shapefile = getattr(config, 'constant_sink_shapefile', None)
+    if constant_sink_shapefile is None:
+        constant_sink_shapefile = (
+            Path(script_path)
+            / 'Constant_sinks'
+            / 'levee_pump_polys_2026_with_poly_type.shp'
+        )
+    else:
+        constant_sink_shapefile = Path(constant_sink_shapefile)
+
+    exclude_shapefile = getattr(
+        config, 'exclude_constant_sink_shapefile', None
+    )
+    if exclude_shapefile is None:
+        exclude_shapefile = (
+            Path(script_path)
+            / 'Constant_sinks'
+            / 'exclude_constant_sink_at_savannah_charleston.shp'
+        )
+    else:
+        exclude_shapefile = Path(exclude_shapefile)
+
+    for shapefile in (constant_sink_shapefile, exclude_shapefile):
+        for component in shapefile.parent.glob(f'{shapefile.stem}.*'):
+            shutil.copy2(component, '.')
+
+    return set_constant_sink(
+        wdir=constant_sink_dir,
+        shapefile_name=constant_sink_shapefile.name,
+        hgrid=hgrid,
+        exclude_constant_sink_shapefile=exclude_shapefile.name,
+    )
+
+
+def _write_source_sink_diagnostics(total_ss, hgrid, wdir):
+    """Write mean source and sink coordinates/flows for inspection."""
+    hgrid.compute_ctr()
+    source_indices = np.asarray(total_ss.source_eles) - 1
+    source_diagnostics = np.column_stack((
+        np.asarray(hgrid.xctr)[source_indices],
+        np.asarray(hgrid.yctr)[source_indices],
+        total_ss.vsource.df.values.mean(axis=0),
+    ))
+    np.savetxt(
+        f'{wdir}/vsource.xyz',
+        source_diagnostics,
+        fmt='%.6f',
+        header='lon lat vsource',
+        comments='',
+    )
+
+    sink_indices = np.asarray(total_ss.sink_eles) - 1
+    sink_diagnostics = np.column_stack((
+        np.asarray(hgrid.xctr)[sink_indices],
+        np.asarray(hgrid.yctr)[sink_indices],
+        total_ss.vsink.df.values.mean(axis=0),
+    ))
+    np.savetxt(
+        f'{wdir}/vsink.xyz',
+        sink_diagnostics,
+        fmt='%.6f',
+        header='lon lat vsink',
+        comments='',
+    )
+
+
+def _write_final_source_sink(total_ss, config, hgrid, wdir):
+    """Write assembled source/sink forcing and diagnostics."""
+    total_ss.writer(f'{wdir}/')
+
+    os.chdir(f'{wdir}')
+    source_json_dir = (
+        'relocated_source_sink'
+        if config.relocate_source
+        else 'original_source_sink'
+    )
+    os.system(f'ln -sf ./{source_json_dir}/sources.json .')
+
+    if config.source_ele_replace_dict:
+        from .Relocate.patch_feeder_source_sink_in import (
+            replace_ele_in_source_sink,
+        )
+
+        replace_ele_in_source_sink(wdir, config.source_ele_replace_dict)
+
+    _write_source_sink_diagnostics(total_ss, hgrid, wdir)
+
+
 def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
     """
     Assemble source/sink files for SCHISM model
@@ -138,407 +443,39 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
         sources.json, sinks.json
     """
 
-    if config.hgrid_without_feeders is not None:
-        print(
-            'Normal case: beside the main hgrid, '
-            f'an hgrid without feeders is provided: {config.hgrid_without_feeders}, '
-            'assuming the main hgrid has feeders!'
-        )
-        main_hgrid_has_feeder = True
-    else:
-        print(
-            'Special case: only the main hgrid is provided. '
-            'Caution: you should not search for NWM source/sink on a grid with feeders! '
-            'I will assume the main hgrid has no feeders and carry on.'
-        )
-        main_hgrid_has_feeder = False
-
-    # '''  comment out the following code in triple quotes to skip generating original source_sink files
-    # ----------------------Generate original source_sink files ----------------------
-
-    # generate source_sink files by intersecting NWM river segments
-    # with the model land boundary
-    mkcd_new_dir(f'{wdir}/original_source_sink/')
-    if config.hgrid_without_feeders is not None:
-        os.symlink(f'{config.hgrid_without_feeders}', 'hgrid.gr3')
-    else:
-        os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
-
-    # copy existing sources.json and sinks.json
-    if config.existing_source_json_path is not None:
-        print('reusing existing sources.json and sinks.json ...')
-        if os.path.exists(f'{config.existing_source_json_path}/sources.json'):
-            os.system(f'cp -rf {config.existing_source_json_path}/sources.json .')
-        else:
-            print(
-                f'Warning: specified {config.existing_source_json_path}/sources.json does not exist, '
-                'generating it from scratch ...'
-            )
-        if os.path.exists(f'{config.existing_source_json_path}/sinks.json'):
-            os.system(f'cp -rf {config.existing_source_json_path}/sinks.json .')
-        else:
-            print(
-                f'Warning: specified {config.existing_source_json_path}/sinks.json does not exist, '
-                'generating it from scratch ...'
-            )
-
-    actual_nwm_cache_folder = gen_sourcesink_nwm(
-        hgrid_fname='./hgrid.gr3',  # current directory: {model_input_path}/{sub_dir}/original_source_sink/
-        startdate=config.startdate, rnday=config.rnday,
-        cache_folder=config.nwm_cache_folder)
-
-    if config.nwm_cache_folder is None:
-        config.nwm_cache_folder = actual_nwm_cache_folder
-        print(f'Setting config.nwm_cache_folder to {actual_nwm_cache_folder}')
-    elif Path(actual_nwm_cache_folder).resolve(strict=True) != Path(config.nwm_cache_folder).resolve(strict=True):
-        print(
-            f'Warning: the actual nwm_cache_folder has been generated at {actual_nwm_cache_folder}, '
-            'different from the specified config.nwm_cache_folder {config.nwm_cache_folder}, '
-            'make sure this is intended!'
-        )
-        config.nwm_cache_folder = actual_nwm_cache_folder
-    # '''
-
-
-    # ---------------------- replace NWM sources with USGS observed flow rates ----------------------
-    # Note: this is optional, depending on the availability of USGS data
-    if config.replace_nwm_with_usgs:
-        print('replacing NWM sources with USGS observed flow rates ...')
-        # this will save the original_ss_dir to original_source_sink_before_USGS_adjustment
-        # and overwrite original_ss_dir/vsource.th with adjusted_vsource.th
-        source_nwm2usgs(
-            start_time_str=config.startdate.strftime('%Y-%m-%d %H:%M:%S'),
-            states=STOFS3D_ATL_STATES,
-            f_shapefile="/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp",
-            original_ss_dir=f'{wdir}/original_source_sink/',
-            nwm_data_dir=config.nwm_cache_folder,
-            output_dir=f'{wdir}/USGS_adjusted_sources/',
-            usgs_cache_folder=(
-                config.usgs_cache_folder
-                if config.usgs_cache_folder is not None
-                else Path(model_input_path) / 'USGS_cache'
-            ),
-        )
-
-    # --------------------- exclude the user-defined sources near artificial island -----------------
+    main_hgrid_has_feeder = _describe_source_grid(config)
     artificial_island_info = config.artificial_island_source_sink_info
 
+    _generate_original_source_sink(config, model_input_path, wdir)
+
+    if config.replace_nwm_with_usgs:
+        _replace_nwm_flow_with_usgs(config, model_input_path, wdir)
+
     if artificial_island_info is not None:
-        zero_artificial_island_sources_after_replace_USGS_before_relocation(
-            source_sink_dir=f'{wdir}/original_source_sink/',
-            hgrid_file=(
-                config.hgrid_without_feeders
-                if config.hgrid_without_feeders is not None
-                else f'{model_input_path}/hgrid.gr3'
-            ),
-            patch_info_file=artificial_island_info,
-            output_dir=(
-                f'{wdir}/'
-                'zeroed_sources_after_replace_USGS_before_relocation/'
-            ),
-        )
+        _suppress_island_sources_before_relocation(config, model_input_path, wdir, artificial_island_info)
 
-    # -----------------------------------------------------------------------------------------------
-
-    # A single NWM segment weaving in and out will create duplicate sources/sinks
-    # , so it is not necessary to remove duplicates here.
-    # The code may be reusable, so it is kept here.
-    #
-    # # find any duplicate sources
-    # with open(
-    #     f'{wdir}/original_source_sink/sources.json',
-    #     'r', encoding='utf-8'
-    # ) as f:
-    #     old_sources2fids = json.load(f)
-    # fid_list = [fid for fids in old_sources2fids.values() for fid in fids]
-    # if len(fid_list) != len(set(fid_list)):
-    #     print(f'Number of duplicated fids: {len(fid_list) - len(set(fid_list))}')
-    #     # raise ValueError('Duplicated fids in new2fid')
-
-    #     for fid in set(fid_list):
-    #         if fid_list.count(fid) > 1:
-    #             print(f'Duplicated fid: {fid}')
-
-    #     # backup the original source_sink files
-    #     os.system(f'cp -r {wdir}/original_source_sink/ '
-    #               f'{wdir}/original_source_sink_0/')
-
-    #     # remove duplicated sources in the original source_sink files
-    #     old_sources2fids = remove_duplicate_dict_values(old_sources2fids)
-    #     # remove keys with empty values
-    #     old_sources2fids = {k: v for k, v in old_sources2fids.items() if v}
-
-    #     # regenerate old sources based on updated old_sources2fids
-    #     with open(
-    #         f'{wdir}/original_source_sink/sources.json',
-    #         'w', encoding='utf-8'
-    #     ) as f:
-    #         json.dump(old_sources2fids, f, indent=4)
-    #     gen_sourcesink_nwm(
-    #         hgrid_fname='./hgrid.gr3',
-    #         startdate=config.startdate, rnday=config.rnday,
-    #         cache_folder=config.nwm_cache_folder)
-
-    # ---------------------- relocate sources to resolved river channels ----------------------
-    # Set proper no_feeder option, mandatory_sources_coor, and feeder_info_file in stofs3d_atl_config.py
-    # The result is used as the "base" source/sink in subsequent steps
     if config.relocate_source:
-        # relocate
-        mkcd_new_dir(f'{wdir}/relocated_source_sink/')
-        os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
-
-        # this will generate relocated sources.json and sinks.json based on the main hgrid,
-        # i.e., {model_input_path}/hgrid.gr3
-        relocate_sources2(
-            old_ss_dir=f'{wdir}/original_source_sink/',
-            feeder_info_file=config.feeder_info_file,
-            hgrid_fname=f'{model_input_path}/hgrid.gr3',
-            outdir=f'{wdir}/relocated_source_sink/',
-            max_search_radius=2100, mandatory_sources_coor=config.mandatory_sources_coor,
-            allow_neglection=False, main_hgrid_has_feeder=main_hgrid_has_feeder,
+        base_ss = _relocate_source_sink(
+            config=config, model_input_path=model_input_path, wdir=wdir,
+            main_hgrid_has_feeder=main_hgrid_has_feeder,
         )
-
-        # regenerate vsource.th based on relocated sources.json
-        if config.reuse_source_json:
-            # This ensures increasing element IDs in source_sink.in
-            # gen_sourcesin_nwm requires sinks.json
-            os.system(f'ln -sf {wdir}/original_source_sink/sinks.json .')
-            gen_sourcesink_nwm(  # with existing sources.json and sinks.json
-                hgrid_fname=f'{model_input_path}/hgrid.gr3',
-                startdate=config.startdate, rnday=config.rnday,
-                cache_folder=config.nwm_cache_folder
-            )
-            relocated_ss = source_sink.from_files(
-                source_dir=f'{wdir}/relocated_source_sink/',
-            )  # sinks will be discarded later, only sources will be used
-            base_ss = source_sink(
-                vsource=relocated_ss.vsource, vsink=None, msource=relocated_ss.msource
-            )
-        else:
-            # Important:
-            # This does not enforce increasing element IDs ins source_sink.in
-            # For minor updates in operation, use this option, otherwise the order in source_sink.in may be
-            # inconsistent with existing sources.json, and all sources/sinks/json files need to be regenerated.
-            #
-            # In the case the original sources have been adjusted by USGS obs,
-            # Don't call gen_sourcesink_nwm again, use gen_relocated_source instead.
-
-            # Note, if USGS adjustment is performed, the original_source_sink is backed up to
-            # {wdir}/original_source_sink_before_USGS_adjustment/, and the updated original_source_sink dir
-            # has the adjusted vsource.th linked as vsource.th
-            relocated_vsource, relocated_msource_list = gen_relocated_source(
-                original_source_sink_dir=f'{wdir}/original_source_sink/',
-                relocated_source_sink_dir=f'{wdir}/relocated_source_sink/',
-            )
-            base_ss = source_sink(
-                vsource=relocated_vsource, vsink=None, msource=relocated_msource_list)
-            base_ss.writer(f'{wdir}/relocated_source_sink/')
     else:
-        base_ss = source_sink.from_files(f'{wdir}/original_source_sink/')
+        base_ss = _read_original_source_sink(wdir)
 
+    if config.replace_source_temperature_with_usgs:
+        base_ss = _replace_source_temperatures(base_ss, config, hgrid, model_input_path, wdir)
 
-    # ---------------------- apply post-generation corrections ----------------------
-    replace_temperature = config.replace_source_temperature_with_usgs
-    replace_selected_sources = config.replace_selected_sources_with_usgs
-    zero_regions = config.zero_configured_source_regions
-    selected_source_override_info = config.selected_source_override_info
-    zero_source_region_info = config.zero_source_region_info
+    if config.zero_configured_source_regions:
+        base_ss = _zero_configured_source_regions(base_ss, config, hgrid)
 
-    if replace_selected_sources and selected_source_override_info is None:
-        raise ValueError(
-            'selected_source_override_info is required when selected-source '
-            'replacement is enabled'
-        )
-    if zero_regions and zero_source_region_info is None:
-        raise ValueError(
-            'zero_source_region_info is required when region zeroing is '
-            'enabled'
-        )
-
-    if (
-        replace_temperature
-        or replace_selected_sources
-        or artificial_island_info is not None
-    ):
-        usgs_cache_folder = (
-            config.usgs_cache_folder
-            if config.usgs_cache_folder is not None
-            else Path(model_input_path) / 'USGS_cache'
-        )
-
-    override_points = None
-
-    # 1. Selected Delaware/Hudson source-flow overrides.
-    if replace_selected_sources:
-        override_points = load_source_override_points(
-            selected_source_override_info
-        )
-        base_ss, source_flow_override_count = apply_source_flow_overrides(
-            base_ss=base_ss,
-            hgrid=hgrid,
-            points=override_points,
-            start_time=config.startdate,
-            usgs_cache_folder=usgs_cache_folder,
-        )
-        print(
-            '[SOURCE FLOW OVERRIDES] processed '
-            f'{source_flow_override_count} configured source(s).'
-        )
-
-    # 2. Automatic source-temperature correction.
-    if replace_temperature:
-        source_mapping_dir = (
-            f'{wdir}/relocated_source_sink/'
-            if config.relocate_source
-            else f'{wdir}/original_source_sink/'
-        )
-        base_ss, temperature_replaced_count = (
-            replace_source_temperatures_with_usgs(
-                base_ss=base_ss,
-                hgrid=hgrid,
-                source_mapping_dir=source_mapping_dir,
-                start_time=config.startdate,
-                usgs_cache_folder=usgs_cache_folder,
-                nwm_shapefile=(
-                    "/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp"
-                ),
-                states=STOFS3D_ATL_STATES,
-                diagnostics_dir=(
-                    Path(wdir) / 'source_temperature'
-                ),
-                pooling=config.source_temperature_pooling,
-                nwm_data_dir=config.nwm_cache_folder,
-            )
-        )
-        print(
-            '[SOURCE TEMPERATURE] replaced '
-            f'{temperature_replaced_count} source(s).'
-        )
-
-    # 3. Selected Delaware/Hudson temperature overrides.
-    if replace_selected_sources:
-        base_ss, source_temperature_override_count = (
-            apply_source_temperature_overrides(
-                base_ss=base_ss,
-                hgrid=hgrid,
-                points=override_points,
-                start_time=config.startdate,
-                usgs_cache_folder=usgs_cache_folder,
-                temperature_pooling=config.source_temperature_pooling,
-            )
-        )
-        print(
-            '[SOURCE TEMPERATURE OVERRIDES] processed '
-            f'{source_temperature_override_count} configured source(s).'
-        )
-
-    # 4. Configured source-region zeroing.
-    if zero_regions:
-        base_ss, region_zeroed_count = zero_configured_source_regions(
-            base_ss=base_ss,
-            hgrid=hgrid,
-            correction_info=zero_source_region_info,
-        )
-        print(
-            '[SOURCE REGIONS] zeroed '
-            f'{region_zeroed_count} unique source(s).'
-        )
-
-    # 5. Artificial-island source/sink corrections.
     if artificial_island_info is not None:
-        patch_output_dir = f'{wdir}/patch_artificial_island_source_sink/'
-        mkcd_new_dir(patch_output_dir)
-        os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
+        base_ss = _apply_artificial_island_patch(base_ss, config, hgrid, model_input_path, wdir, artificial_island_info)
 
-        base_ss = apply_artificial_island_corrections(
-            base_ss=base_ss,
-            hgrid=hgrid,
-            original_source_sink_dir=f'{wdir}/original_source_sink/',
-            patch_info_file=artificial_island_info,
-            start_time=config.startdate,
-            usgs_cache_folder=usgs_cache_folder,
-            output_dir=patch_output_dir,
-        )
+    background_ss = _generate_constant_sink_source_sink(config=config, hgrid=hgrid, wdir=wdir)
 
-
-    # ---------- set constant sinks (pumps and background sinks) ----------
-    mkcd_new_dir(f'{wdir}/constant_sink/')
-    constant_sink_shapefile = getattr(config, 'constant_sink_shapefile', None)
-    exclude_constant_sink_shapefile = getattr(config, 'exclude_constant_sink_shapefile', None)
-    if constant_sink_shapefile is None:
-        constant_sink_shapefile = Path(
-            f'{script_path}/Constant_sinks/levee_pump_polys_2026_with_poly_type.shp'
-        )
-    else:
-        constant_sink_shapefile = Path(constant_sink_shapefile)
-
-    if exclude_constant_sink_shapefile is None:
-        exclude_constant_sink_shapefile = Path(
-            f'{script_path}/Constant_sinks/exclude_constant_sink_at_savannah_charleston.shp'
-        )
-    else:
-        exclude_constant_sink_shapefile = Path(exclude_constant_sink_shapefile)
-
-    for shapefile_component in constant_sink_shapefile.parent.glob(
-        f'{constant_sink_shapefile.stem}.*'
-    ):
-        shutil.copy2(shapefile_component, '.')
-
-    for shapefile_component in exclude_constant_sink_shapefile.parent.glob(
-        f'{exclude_constant_sink_shapefile.stem}.*'
-    ):
-        shutil.copy2(shapefile_component, '.')
-
-
-    background_ss = set_constant_sink(
-        wdir=f'{wdir}/constant_sink/',
-        shapefile_name=constant_sink_shapefile.name,
-        hgrid=hgrid,  # lon/lat
-        exclude_constant_sink_shapefile=exclude_constant_sink_shapefile.name,
-    )
-
-    # ------------- assemble source/sink files and write to files ------------
     total_ss = base_ss + background_ss
-    total_ss.writer(f'{wdir}/')
 
-    # the final source/sink uses the relocated sources and constant sinks (no json needed)
-    os.chdir(f'{wdir}')
-    if config.relocate_source:
-        os.system('ln -sf ./relocated_source_sink/sources.json .')
-    else:
-        os.system('ln -sf ./original_source_sink/sources.json .')
-
-    # temporary fix for isolated feeder channels; Note this doesn't change sources.json or source.nc
-    if config.source_ele_replace_dict is not None and config.source_ele_replace_dict != {}:
-        from .Relocate.patch_feeder_source_sink_in import replace_ele_in_source_sink
-        replace_ele_in_source_sink(wdir, config.source_ele_replace_dict)
-
-    # -------------------------- write diagnostic outputs --------------------------
-    hgrid.compute_ctr()
-
-    # source
-    src_idx = np.asarray(total_ss.source_eles) - 1
-    src = np.column_stack((
-        np.asarray(hgrid.xctr)[src_idx],
-        np.asarray(hgrid.yctr)[src_idx],
-        total_ss.vsource.df.values.mean(axis=0)
-    ))
-    np.savetxt(
-        f"{wdir}/vsource.xyz",
-        src, fmt="%.6f", header="lon lat vsource", comments=""
-    )
-
-    # sink
-    snk_idx = np.asarray(total_ss.sink_eles) - 1
-    snk = np.column_stack((
-        np.asarray(hgrid.xctr)[snk_idx],
-        np.asarray(hgrid.yctr)[snk_idx],
-        total_ss.vsink.df.values.mean(axis=0)
-    ))
-    np.savetxt(
-        f"{wdir}/vsink.xyz",
-        snk, fmt="%.6f", header="lon lat vsink", comments=""
-    )
+    _write_final_source_sink(total_ss=total_ss, config=config, hgrid=hgrid, wdir=wdir)
 
 
 def sample2():

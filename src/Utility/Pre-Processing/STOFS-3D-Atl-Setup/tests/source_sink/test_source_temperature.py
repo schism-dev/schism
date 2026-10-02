@@ -56,8 +56,9 @@ class SourceTemperatureTests(unittest.TestCase):
             USGS_TEMPERATURE_STATION_BY_NAME["Hudson River"],
             "01359139",
         )
-        self.assertEqual(NWM_TO_USGS_TEMPERATURE_SEARCH[6186156], "01358000")
+        self.assertEqual(NWM_TO_USGS_TEMPERATURE_SEARCH[6186156], "01359139")
         self.assertEqual(NWM_TO_USGS_FLOW_ADJUSTMENT[6186156], "01358000")
+        self.assertNotIn(9643251, NWM_TO_USGS_TEMPERATURE_SEARCH)
 
     def test_manual_feature_station_links_preserve_both_scopes(self):
         flow_links = {
@@ -65,17 +66,23 @@ class SourceTemperatureTests(unittest.TestCase):
             15708755: "02489500",
             18928090: "07375175",
             19269176: "07374000",
+            9643251: "02172035",
+            16665157: "02244040",
+            16665419: "02244440",
             2590217: "01463500",
             6186156: "01358000",
         }
         temperature_additions = {
             16665157: "02244040",
+            16665419: "02244440",
+            2590217: "01463500",
+            6186156: "01359139",
         }
 
         self.assertEqual(NWM_TO_USGS_FLOW_ADJUSTMENT, flow_links)
         self.assertEqual(
             NWM_TO_USGS_TEMPERATURE_SEARCH,
-            {**flow_links, **temperature_additions},
+            temperature_additions,
         )
 
     def test_station_search_preserves_station_feature_pair(self):
@@ -113,6 +120,58 @@ class SourceTemperatureTests(unittest.TestCase):
                 )
             ],
         )
+
+    def test_manual_temperature_station_is_first_usable_candidate(self):
+        def add_candidates(**kwargs):
+            kwargs["vsource"].usgs_st.extend(
+                [
+                    SimpleNamespace(st_id="automatic", nearby_nwm_fid=202),
+                    SimpleNamespace(st_id="manual", nearby_nwm_fid=101),
+                ]
+            )
+
+        target_time = pd.date_range(
+            "2020-01-01", periods=2, freq="1h", tz="UTC"
+        )
+        with (
+            patch.dict(
+                source_temperature.NWM_TO_USGS_TEMPERATURE_SEARCH,
+                {101: "manual"},
+            ),
+            patch.object(
+                source_temperature,
+                "find_usgs_along_nwm",
+                side_effect=add_candidates,
+            ),
+        ):
+            candidates = (
+                source_temperature._find_temperature_station_candidates(
+                    source_eles=[1],
+                    source_element_to_fids={1: [101]},
+                    source_time_and_data=(
+                        np.array([0.0]),
+                        np.array([[1.0]]),
+                    ),
+                    xctr=np.array([0.0]),
+                    yctr=np.array([0.0]),
+                    nwm_shp=None,
+                )[1]
+            )
+
+        replacement, station_id, _ = (
+            source_temperature._first_usable_temperature(
+                candidates=candidates,
+                temperature_by_station={
+                    "automatic": pd.Series([5.0, 5.0], index=target_time),
+                    "manual": pd.Series([15.0, 16.0], index=target_time),
+                },
+                target_time=target_time,
+                original_values=np.array([-9999.0, -9999.0]),
+            )
+        )
+
+        self.assertEqual(station_id, "manual")
+        np.testing.assert_array_equal(replacement, [15.0, 16.0])
 
     def test_public_stage_changes_temperature_without_changing_flow(self):
         time = np.array([0.0, 3600.0])

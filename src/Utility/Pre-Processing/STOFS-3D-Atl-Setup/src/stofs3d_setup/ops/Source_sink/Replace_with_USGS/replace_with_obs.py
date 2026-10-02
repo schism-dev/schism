@@ -35,6 +35,9 @@ from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     NWM_TO_USGS_FLOW_ADJUSTMENT,
 )
+from stofs3d_setup.ops.Source_sink.workflow_constants import (
+    NWM_ECGC_SHAPEFILE,
+)
 from pylib import schism_grid
 
 
@@ -494,7 +497,7 @@ def test():
 def source_nwm2usgs(
     start_time_str="2017-12-01 00:00:00",
     states=['LA', 'MS', 'TX'],
-    f_shapefile="/sciclone/schism10/feiye/schism20/REPO/NWM/Shapefiles/ecgc/ecgc.shp",
+    f_shapefile=NWM_ECGC_SHAPEFILE,
     original_ss_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/',
     nwm_data_dir='/sciclone/schism10/whuang07/schism20/NWM_v2.1/',
     output_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/USGS_adjusted_sources/',
@@ -827,7 +830,7 @@ def sample_LA_domain():
 
     # source_nwm2usgs(
     #     start_time_str="2017-12-01 00:00:00",
-    #     f_shapefile="/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp",
+    #     f_shapefile=NWM_ECGC_SHAPEFILE,
     #     original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Source_sink/original_source_sink/',
     #     nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I13/Source_sink/original_source_sink/20171201/',
     #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Source_sink/USGS_adjusted_sources/',
@@ -841,7 +844,7 @@ def sample_stofs_v7v8():
     source_nwm2usgs(
         start_time_str="2017-12-01 00:00:00",
         states=STOFS3D_ATL_STATES,
-        f_shapefile="/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp",
+        f_shapefile=NWM_ECGC_SHAPEFILE,
         original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15n_v7/original_source_sink0/',
         nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/NWM/CONUS/netcdf/CHRTOUT/for_2018_hindcast/',
         output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15n_v7/Source_sink/USGS_adjusted_sources/',

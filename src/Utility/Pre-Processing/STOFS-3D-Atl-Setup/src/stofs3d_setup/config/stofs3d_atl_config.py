@@ -329,14 +329,6 @@ class ConfigStofs3dAtlantic(BaseModel):
     @classmethod
     def v7p4(cls):
         '''Factory method to create a configuration for STOFS3D-v7.4 3D setup'''
-        selected_source_override_info = (
-            STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
-            'Replace_with_USGS' / 'selected_source_overrides.yml'
-        )
-        zero_source_region_info = (
-            STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
-            'Spatial_corrections' / 'zero_source_regions.yml'
-        )
         artificial_island_info = (
             STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
             'Patch_artificial_island' / 'artificial_island_source_sink.yml'
@@ -347,13 +339,10 @@ class ConfigStofs3dAtlantic(BaseModel):
             nudging_zone_width=7.3,  # default nudging zone
             shapiro_zone_width=11.5,  # default shapiro zone
             shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
-            feeder_info_file=(
-                '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32/Feeder/'
-                'feeder_heads_bases.xy'
-            ),
+            feeder_info_file=None, # '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32/Feeder/feeder_heads_bases.xy',
             hgrid_without_feeders=None,  # feeders are removed in v7.4, set this to None and the main hgrid will be used.
             relocate_source=False,
-            mandatory_sources_coor=rsf.v19p2_for_sms_v32c_mandatory_sources_coor,
+            mandatory_sources_coor=None, # rsf.v19p2_for_sms_v32c_mandatory_sources_coor,
             nwm_cache_folder=None,
             replace_nwm_with_usgs=False,
             source_ele_replace_dict={},
@@ -367,11 +356,8 @@ class ConfigStofs3dAtlantic(BaseModel):
             ),
             replace_source_temperature_with_usgs=True,
             source_temperature_pooling="first_usable",
-            # Keep direct Delaware/Hudson replacements opt-in for HJ replay.
             replace_selected_sources_with_usgs=False,
             zero_configured_source_regions=False,
-            selected_source_override_info=selected_source_override_info,
-            zero_source_region_info=zero_source_region_info,
             artificial_island_source_sink_info=artificial_island_info,
             bc_flags=[
                 [5, 5, 4, 4],  # Atlantic Ocean

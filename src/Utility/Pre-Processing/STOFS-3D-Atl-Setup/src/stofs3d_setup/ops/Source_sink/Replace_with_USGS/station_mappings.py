@@ -53,7 +53,6 @@ def _load_feature_station_links(section: str) -> dict[int, str]:
 
 
 NWM_TO_USGS_FLOW_ADJUSTMENT = _load_feature_station_links("flow_adjustment")
-NWM_TO_USGS_TEMPERATURE_SEARCH = {
-    **NWM_TO_USGS_FLOW_ADJUSTMENT,
-    **_load_feature_station_links("temperature_search_additions"),
-}
+NWM_TO_USGS_TEMPERATURE_SEARCH = _load_feature_station_links(
+    "temperature_search_additions"
+)

@@ -29,6 +29,68 @@ class _Grid:
 
 
 class SourceOverrideTests(unittest.TestCase):
+    def test_optional_wrapper_applies_flow_then_temperature(self):
+        original = object()
+        flow_corrected = object()
+        temperature_corrected = object()
+        points = [{"name": "Delaware"}]
+        calls = []
+
+        def apply_flow(**kwargs):
+            calls.append("flow")
+            self.assertIs(kwargs["base_ss"], original)
+            self.assertEqual(kwargs["points"], points)
+            return flow_corrected, 1
+
+        def apply_temperature(**kwargs):
+            calls.append("temperature")
+            self.assertIs(kwargs["base_ss"], flow_corrected)
+            self.assertEqual(kwargs["points"], points)
+            return temperature_corrected, 1
+
+        with patch.object(
+            source_overrides,
+            "load_source_override_points",
+            return_value=points,
+        ), patch.object(
+            source_overrides,
+            "apply_source_flow_overrides",
+            side_effect=apply_flow,
+        ), patch.object(
+            source_overrides,
+            "apply_source_temperature_overrides",
+            side_effect=apply_temperature,
+        ):
+            result = source_overrides.apply_selected_source_overrides(
+                base_ss=original,
+                hgrid=_Grid(),
+                enabled=True,
+                correction_info="overrides.yml",
+                start_time="2020-01-01",
+                usgs_cache_folder="cache",
+            )
+
+        self.assertEqual(calls, ["flow", "temperature"])
+        self.assertEqual(result, (temperature_corrected, 1, 1))
+
+    def test_optional_wrapper_skips_disabled_overrides(self):
+        original = object()
+
+        with patch.object(
+            source_overrides, "load_source_override_points"
+        ) as load_points:
+            result = source_overrides.apply_selected_source_overrides(
+                base_ss=original,
+                hgrid=_Grid(),
+                enabled=False,
+                correction_info=None,
+                start_time="2020-01-01",
+                usgs_cache_folder=None,
+            )
+
+        load_points.assert_not_called()
+        self.assertEqual(result, (original, 0, 0))
+
     def test_flow_override_replaces_supported_records_directly(self):
         model_time = np.array([0.0, 3600.0])
         observations = pd.Series(

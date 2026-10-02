@@ -5,9 +5,15 @@ flow_adjustment:
   15708755: '02489500'  # Pearl River at Bogalusa, LA
   18928090: '07375175'  # Bogue Falaya River at Boston St, Covington, LA
   19269176: '07374000'  # Mississippi River at Baton Rouge, LA
+  9643251: '02172035'   # Turkey Creek
+  16665157: '02244040'  # Buffalo Bluff (existing HJ feature link)
+  16665419: '02244440'  # Dunns Creek
   2590217: '01463500'   # Delaware
   6186156: '01358000'   # Hudson River
 
-# Temperature station search also applies these additional links.
+# Explicit NWM feature-to-USGS links for automatic source-temperature search.
 temperature_search_additions:
   16665157: '02244040'  # Buffalo Bluff
+  16665419: '02244440'  # Dunns Creek
+  2590217: '01463500'   # Delaware
+  6186156: '01359139'   # Hudson River at Albany, NY

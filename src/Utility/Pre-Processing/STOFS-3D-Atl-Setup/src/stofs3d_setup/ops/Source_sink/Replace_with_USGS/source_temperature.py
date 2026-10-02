@@ -176,7 +176,8 @@ def _find_temperature_station_candidates(
     Find upstream USGS stations for every mapped source.
 
     Multiple NWM feature IDs assigned to one source element are searched.
-    Station IDs are de-duplicated while preserving search order.
+    Manually linked stations for those features are tried first; other station
+    IDs are de-duplicated while preserving network-search order.
     """
     if source_time_and_data is None:
         return {}
@@ -189,6 +190,12 @@ def _find_temperature_station_candidates(
         if not fids:
             source_candidates[int(source_ele)] = []
             continue
+
+        preferred_station_ids = {
+            str(NWM_TO_USGS_TEMPERATURE_SEARCH[int(fid)])
+            for fid in fids
+            if int(fid) in NWM_TO_USGS_TEMPERATURE_SEARCH
+        }
 
         found: list[TemperatureStationCandidate] = []
         found_station_ids: set[str] = set()
@@ -235,6 +242,11 @@ def _find_temperature_station_candidates(
                 )
                 found_station_ids.add(station_id)
 
+        found.sort(
+            key=lambda candidate: (
+                candidate.station_id not in preferred_station_ids
+            )
+        )
         source_candidates[int(source_ele)] = found
 
     return source_candidates

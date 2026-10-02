@@ -17,6 +17,10 @@ from stofs3d_setup.ops.Source_sink.Spatial_corrections.region_config import (
     zero_source_regions as configured_zero_source_regions,
 )
 
+DEFAULT_REGION_ZEROING_CONFIG = Path(__file__).with_name(
+    "zero_source_regions.yml"
+)
+
 
 def _zero_sources_inside_regions(
     regions: list[dict],
@@ -109,8 +113,17 @@ def zero_sources_in_regions(base_ss, hgrid, regions: list[dict]):
     return corrected_ss, zeroed_count
 
 
-def zero_configured_source_regions(base_ss, hgrid, correction_info):
-    """Load one region-zeroing configuration and apply it to source flow."""
+def zero_configured_source_regions(
+    base_ss, hgrid, correction_info=None
+):
+    """Load configured regions and zero their source flow.
+
+    When no custom configuration is supplied, use the zero-region YAML next
+    to this module.
+    """
+    if correction_info is None:
+        correction_info = DEFAULT_REGION_ZEROING_CONFIG
+
     corrections = load_source_sink_corrections(correction_info)
     config_dir = (
         Path.cwd()

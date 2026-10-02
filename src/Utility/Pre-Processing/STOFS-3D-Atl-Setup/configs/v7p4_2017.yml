@@ -2,36 +2,34 @@ profile: "v7.4_2017"   # *
 
 run:
   project_dir: "/sciclone/schism10/hjyoo/task/task10_Atlantic/stofs3d-setup_v7p4/"
-  runid: "test"  # *
-  hgrid_path: "/sciclone/schism10/hjyoo/task/task10_Atlantic/stofs3d-setup_v7p4/hgrid_input/hgrid_02f.gr3"
+  runid: "102a"
+  hgrid_path: "/sciclone/schism10/hjyoo/task/task10_Atlantic/stofs3d-setup_v7p4/hgrid_input/hgrid_RUN102a.gr3"
 
 model:
   version: "v7p4"
-  rnday: 3
+  rnday: 396
   startdate: "2016-12-01"  # *
-  relocate_source: True
-  replace_nwm_with_usgs: True
-  zero_configured_source_regions: True
-  nwm_cache_folder: '/sciclone/schism10/feiye/STOFS3D-v8/NWM/CONUS/netcdf/CHRTOUT/for_2017_hindcast/'  # Use None or delete this line if you don't have saved NWM product
-  existing_source_json_path: '/sciclone/schism10/feiye/STOFS3D-v7.4/I01/saved_source_sink_json/'  # Use None or delete this line if you don't have existing files holding the mapping between schism elements and NWM segments
-
+  replace_nwm_with_usgs: true
+  replace_source_temperature_with_usgs: true
+  nwm_cache_folder: "/sciclone/schism10/feiye/STOFS3D-v8/NWM/CONUS/netcdf/CHRTOUT/for_2017_hindcast/"  # Use null or omit if the NWM cache is unavailable
+  existing_source_json_path: null
 
 runtime:
-  scr_dir: "/sciclone/schism10/hjyoo/task/task10_Atlantic/stofs3d-setup_v7p4/"  # Use None if you don't want to save the outputs on a scratch disk.
+  scr_dir: null  # Use null if outputs should not be saved on scratch
 
 inputs:
-  bctides: false
-  vgrid: false
-  gr3: false
-  nudge_gr3: false
-  shapiro: false
-  diffmin: false
-  drag: false
+  bctides: true
+  vgrid: true
+  gr3: true
+  nudge_gr3: true
+  shapiro: true
+  diffmin: true
+  drag: true
   elev_ic: false
   flux_th: false
-  source_sink: false
+  source_sink: true
   soil: false
-  watertype: false
+  watertype: true
   "hotstart.nc": false
   "3D.th.nc": false
   "*nu.nc": false

@@ -28,27 +28,25 @@ class CorrectionConfigTests(unittest.TestCase):
         self.assertEqual(config.source_temperature_pooling, "first_usable")
         self.assertFalse(config.replace_selected_sources_with_usgs)
         self.assertFalse(config.zero_configured_source_regions)
-        self.assertNotEqual(
-            config.selected_source_override_info,
-            config.artificial_island_source_sink_info,
-        )
-        self.assertNotEqual(
-            config.zero_source_region_info,
-            config.artificial_island_source_sink_info,
-        )
-        self.assertNotEqual(
-            config.selected_source_override_info,
-            config.zero_source_region_info,
-        )
+        self.assertIsNone(config.selected_source_override_info)
+        self.assertIsNone(config.zero_source_region_info)
 
     def test_v7p4_stage_files_contain_only_owned_sections(self):
         config = ConfigStofs3dAtlantic.v7p4()
+        override_info = (
+            Path(override_config.__file__).with_name(
+                "selected_source_overrides.yml"
+            )
+        )
+        region_info = Path(region_config.__file__).with_name(
+            "zero_source_regions.yml"
+        )
 
         overrides = correction_config.load_source_sink_corrections(
-            config.selected_source_override_info
+            override_info
         )
         regions = correction_config.load_source_sink_corrections(
-            config.zero_source_region_info
+            region_info
         )
         islands = correction_config.load_source_sink_corrections(
             config.artificial_island_source_sink_info
@@ -76,7 +74,7 @@ class CorrectionConfigTests(unittest.TestCase):
         )
         region_points = region_config.zero_source_regions(
             regions,
-            config_dir=config.zero_source_region_info.parent,
+            config_dir=region_info.parent,
         )
         self.assertEqual(region_points[0]["name"], "Upstream Savannah")
         self.assertTrue(region_points[0]["region_file"].is_file())

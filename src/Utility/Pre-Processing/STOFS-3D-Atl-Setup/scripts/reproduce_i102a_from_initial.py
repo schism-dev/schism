@@ -21,13 +21,19 @@ import numpy as np
 from pylib import schism_grid
 from pylib_experimental.schism_file import source_sink
 
-from stofs3d_setup.config.stofs3d_atl_config import ConfigStofs3dAtlantic
+from stofs3d_setup.config.stofs3d_atl_config import (
+    ConfigStofs3dAtlantic,
+    STOFS3D_SETUP_PACKAGE_DIR,
+)
 from stofs3d_setup.ops.Source_sink.Patch_artificial_island.patch_artificial_island_source_sink import (
     apply_artificial_island_corrections,
     zero_artificial_island_sources_after_replace_USGS_before_relocation,
 )
 from stofs3d_setup.ops.Source_sink.Relocate.relocate_source_feeder import (
     relocate_sources2,
+)
+from stofs3d_setup.ops.Source_sink.workflow_constants import (
+    NWM_ECGC_SHAPEFILE,
 )
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.source_overrides import (
     apply_source_flow_overrides,
@@ -46,7 +52,20 @@ from stofs3d_setup.ops.Source_sink.Spatial_corrections.region_zeroing import (
 from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
 
 
-NWM_SHAPEFILE = Path("/sciclone/schism10/Hgrid_projects/NWM/ecgc/ecgc.shp")
+SOURCE_OVERRIDE_INFO = (
+    STOFS3D_SETUP_PACKAGE_DIR
+    / "ops"
+    / "Source_sink"
+    / "Replace_with_USGS"
+    / "selected_source_overrides.yml"
+)
+ZERO_SOURCE_REGION_INFO = (
+    STOFS3D_SETUP_PACKAGE_DIR
+    / "ops"
+    / "Source_sink"
+    / "Spatial_corrections"
+    / "zero_source_regions.yml"
+)
 TEXT_OUTPUTS = ("source_sink.in", "vsource.th", "msource.th", "vsink.th")
 STATIC_INITIAL_FILES = (
     "source_sink.in",
@@ -225,8 +244,8 @@ def main() -> int:
     _require_files(
         [
             Path(config.feeder_info_file),
-            Path(config.selected_source_override_info),
-            Path(config.zero_source_region_info),
+            SOURCE_OVERRIDE_INFO,
+            ZERO_SOURCE_REGION_INFO,
             Path(config.artificial_island_source_sink_info),
         ]
     )
@@ -315,7 +334,7 @@ def main() -> int:
     )
 
     hgrid = schism_grid(str(hgrid_file))
-    override_points = load_source_override_points(config.selected_source_override_info)
+    override_points = load_source_override_points(SOURCE_OVERRIDE_INFO)
     base_ss, counts["selected_source_flow_overrides"] = _timed(
         "selected_source_flow_overrides",
         lambda: apply_source_flow_overrides(
@@ -335,7 +354,7 @@ def main() -> int:
             source_mapping_dir=relocated_dir,
             start_time=config.startdate,
             usgs_cache_folder=usgs_cache,
-            nwm_shapefile=NWM_SHAPEFILE,
+            nwm_shapefile=NWM_ECGC_SHAPEFILE,
             states=STOFS3D_ATL_STATES,
             diagnostics_dir=source_sink_dir / "source_temperature",
             pooling=config.source_temperature_pooling,
@@ -360,7 +379,7 @@ def main() -> int:
         lambda: zero_configured_source_regions(
             base_ss=base_ss,
             hgrid=hgrid,
-            correction_info=config.zero_source_region_info,
+            correction_info=ZERO_SOURCE_REGION_INFO,
         ),
         timings,
     )

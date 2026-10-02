@@ -30,6 +30,30 @@ class _Grid:
 
 
 class SpatialCorrectionTests(unittest.TestCase):
+    def test_configured_region_stage_defaults_to_its_adjacent_yaml(self):
+        with patch.object(
+            region_zeroing,
+            "zero_sources_in_regions",
+            return_value=("corrected", 1),
+        ) as zero_regions:
+            result = region_zeroing.zero_configured_source_regions(
+                base_ss="base",
+                hgrid="grid",
+            )
+
+        self.assertEqual(result, ("corrected", 1))
+        default_config = region_zeroing.DEFAULT_REGION_ZEROING_CONFIG
+        self.assertEqual(
+            zero_regions.call_args.kwargs["regions"],
+            [
+                {
+                    "name": "Upstream Savannah",
+                    "region_file": default_config.parent
+                    / "upstream_of_artificial_island_at_Clyo.rgn",
+                }
+            ],
+        )
+
     def test_configured_region_stage_owns_loading_and_path_resolution(self):
         with TemporaryDirectory() as directory:
             directory = Path(directory)

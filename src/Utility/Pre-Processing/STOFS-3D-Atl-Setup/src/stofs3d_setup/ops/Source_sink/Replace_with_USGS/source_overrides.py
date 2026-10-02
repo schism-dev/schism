@@ -415,6 +415,48 @@ def apply_source_overrides(
     )
 
 
+def apply_selected_source_overrides(
+    base_ss,
+    hgrid,
+    enabled: bool,
+    correction_info,
+    start_time,
+    usgs_cache_folder,
+    temperature_pooling: str = FIRST_USABLE,
+):
+    """Apply the optional configured flow and temperature overrides.
+
+    This wrapper is available to workflows that explicitly opt into the
+    selected-source corrections. The main source/sink assembler does not
+    invoke it.
+    """
+    if not enabled:
+        return base_ss, 0, 0
+    if correction_info is None:
+        raise ValueError(
+            "correction_info is required when selected-source overrides "
+            "are enabled"
+        )
+
+    points = load_source_override_points(correction_info)
+    base_ss, flow_count = apply_source_flow_overrides(
+        base_ss=base_ss,
+        hgrid=hgrid,
+        points=points,
+        start_time=start_time,
+        usgs_cache_folder=usgs_cache_folder,
+    )
+    base_ss, temperature_count = apply_source_temperature_overrides(
+        base_ss=base_ss,
+        hgrid=hgrid,
+        points=points,
+        start_time=start_time,
+        usgs_cache_folder=usgs_cache_folder,
+        temperature_pooling=temperature_pooling,
+    )
+    return base_ss, flow_count, temperature_count
+
+
 def load_source_override_points(correction_info) -> list[dict]:
     """Load and normalize selected-source corrections for this stage."""
     corrections = load_source_sink_corrections(correction_info)
