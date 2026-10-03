@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 import json
-from typing import List, Iterable, Tuple, Optional
+from typing import List, Iterable, Tuple, Optional, Mapping, Any
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -47,6 +47,10 @@ class GenericObsData:
     def __init__(self, station_info=None, df=None):
         self.station_info = station_info or {}
         self.df = df  # expects columns: ['date','value', (optional) 'tz_cd']
+
+
+class RequiredStationDownloadError(RuntimeError):
+    """Raised when a required USGS station is missing after retries."""
 
 
 # ----- Flatten to a single DataFrame -----
@@ -576,12 +580,59 @@ def download_stations(
     datelist: pd.DatetimeIndex = pd.date_range(start='2000-01-01', end='2000-01-02'),
     stations_chunk_size: int = 10,   # download 20 sites per request
     days_per_chunk: int = 400,
+    required_station_ids: Optional[Iterable[str]] = None,
+    optional_station_ids: Optional[Iterable[str]] = None,
+    required_station_retry_policy: Optional[Mapping[str, Any]] = None,
+    required_station_max_missing_gap_days: Optional[float] = None,
+    required_station_start=None,
+    required_station_end=None,
+    warning_log_path: str | Path | None = None,
+    warning_input_files: Iterable[str] = (),
+    warning_forcing_name: str | None = None,
 ) -> List[GenericObsData]:
     """
     Download IV data for many stations efficiently (station_chunk_size sites per API call).
     Uses fetch_iv_rdb() which supports multi-site requests.
     """
     station_ids = _normalize_stations(station_ids)
+    required_station_ids = set(_normalize_stations(required_station_ids or []))
+    optional_station_ids = set(_normalize_stations(optional_station_ids or []))
+    forced_station_ids = required_station_ids | optional_station_ids
+    unknown_forced_stations = forced_station_ids - set(station_ids)
+    if unknown_forced_stations:
+        raise ValueError(
+            "Forced USGS stations must be included in station_ids: "
+            f"{sorted(unknown_forced_stations)}"
+        )
+    overlapping_station_ids = required_station_ids & optional_station_ids
+    if overlapping_station_ids:
+        raise ValueError(
+            "USGS stations cannot be both required and optional: "
+            f"{sorted(overlapping_station_ids)}"
+        )
+    if (
+        required_station_max_missing_gap_days is not None
+        and required_station_max_missing_gap_days <= 0
+    ):
+        raise ValueError(
+            "required_station_max_missing_gap_days must be positive"
+        )
+
+    required_start = pd.to_datetime(
+        datelist[0] if required_station_start is None else required_station_start,
+        utc=True,
+    )
+    required_end = pd.to_datetime(
+        datelist[-1] if required_station_end is None else required_station_end,
+        utc=True,
+    )
+    if required_end < required_start:
+        raise ValueError("required station validation end precedes start")
+    max_missing_gap = (
+        None
+        if required_station_max_missing_gap_days is None
+        else pd.Timedelta(days=required_station_max_missing_gap_days)
+    )
 
     def _gather_station_info(meta, site):
         """
@@ -612,6 +663,46 @@ def download_stations(
         df = df.dropna(subset=["date", "value"])
         return df
 
+    def _station_failures(records, station_ids_to_check) -> dict[str, str]:
+        records_by_id = {
+            str(record.station_info.get("id")): record
+            for record in records
+        }
+        failures = {}
+        for site in sorted(station_ids_to_check):
+            record = records_by_id.get(site)
+            if record is None or record.df.empty:
+                failures[site] = "no observations returned"
+                continue
+            if max_missing_gap is None:
+                continue
+
+            data = record.df.copy()
+            data.index = pd.DatetimeIndex(pd.to_datetime(data["date"], utc=True))
+            gap = detect_data_gap(
+                data,
+                start=required_start,
+                end=required_end,
+                freq=pd.Timedelta(hours=1),
+            )
+            if gap > max_missing_gap:
+                failures[site] = (
+                    f"largest missing duration {gap} exceeds "
+                    f"{max_missing_gap}"
+                )
+        return failures
+
+    def _replace_station_record(site, station_info, data):
+        nonlocal total_data
+        total_data = [
+            record
+            for record in total_data
+            if str(record.station_info.get("id")) != site
+        ]
+        total_data.append(
+            GenericObsData(station_info=station_info, df=data)
+        )
+
     if cache_fname is not None and os.path.exists(cache_fname):
         print(f'Loading cached data from {cache_fname} ...')
         if not check_manifest(
@@ -626,14 +717,30 @@ def download_stations(
             if cache_fname.endswith((".parquet", ".pq")):
                 df = load_cache_parquet(cache_fname)
                 total_data = df_to_generic_obs(df)
-                return total_data
+                cache_failures = _station_failures(
+                    total_data, forced_station_ids
+                )
+                if not cache_failures:
+                    return total_data
+                print(
+                    "Cache does not satisfy forced station checks; "
+                    f"retrying download: {cache_failures}"
+                )
             elif cache_fname.endswith(".csv"):
                 df = pd.read_csv(cache_fname, parse_dates=["date"])
                 # ensure tz-aware UTC
                 if df["date"].dt.tz is None:
                     df["date"] = pd.to_datetime(df["date"], utc=True)
                 total_data = df_to_generic_obs(df)
-                return total_data
+                cache_failures = _station_failures(
+                    total_data, forced_station_ids
+                )
+                if not cache_failures:
+                    return total_data
+                print(
+                    "Cache does not satisfy forced station checks; "
+                    f"retrying download: {cache_failures}"
+                )
 
     print(f'Downloading data for {len(station_ids)} stations ...')
 
@@ -649,7 +756,6 @@ def download_stations(
     total_data: List[GenericObsData] = []
 
     # Go through one chunk of stations at a time
-    missing_stations = set()
     for k, group in enumerate(chunks(station_ids, stations_chunk_size)):
         print(f"\nProcessing station group {k+1}: "
               f"{len(group) * (k) + 1} - {len(group) * (k+1)} of {len(station_ids)} ...")
@@ -668,34 +774,122 @@ def download_stations(
             print(f"Error in multi-station fetch for group {k+1}: {e}")
             continue
 
-    missing_stations = set(station_ids) - set([data.station_info['id'] for data in total_data])
+    downloaded_station_ids = {
+        str(data.station_info.get("id")) for data in total_data
+    }
+    forced_failures = _station_failures(total_data, forced_station_ids)
+    single_station_fallbacks = (
+        set(station_ids) - downloaded_station_ids
+    ) | set(forced_failures)
 
     n_fallbacks_success = 0
-    n_missing = len(missing_stations)
-    for k, site in enumerate(missing_stations.copy()):
-        print(f"\nStation {site} ({k+1} of {n_missing}) missing from multi-station fetch, "
-              "attempting single-station fallback ...")
+    n_fallbacks = len(single_station_fallbacks)
+    for k, site in enumerate(sorted(single_station_fallbacks)):
+        print(
+            f"\nStation {site} ({k+1} of {n_fallbacks}) missing or "
+            "failing forced-station checks; attempting single-station "
+            "fallback ..."
+        )
         try:
             df_single = fetch_iv_rdb(session, [site], param_id, start, end, days_per_chunk=10, timeout=(5, 180))
             if not df_single.empty:
                 df = _standardize_df(df_single)
-                station_info = _gather_station_info(meta, site)
-                total_data.append(GenericObsData(station_info=station_info, df=df))
+                if not df.empty:
+                    station_info = _gather_station_info(meta, site)
+                    _replace_station_record(site, station_info, df)
 
                 n_fallbacks_success += 1
-                missing_stations.remove(site)
-
                 print(f"{site} succeeded in single-station fetch.")
             else:
                 print(f"Warning: Station {site} returned no data in single-station fetch.\n")
         except Exception as e:
             print(f"Error in single-station fetch for station {site}: {e}\n")
             continue
-        print(f"successful fallbacks: ({n_fallbacks_success} out of {n_missing}).\n")
+        print(f"successful fallbacks: ({n_fallbacks_success} out of {n_fallbacks}).\n")
 
     print(f'Number of stations with available data: {len(total_data)}')
     failed_stations = set(station_ids) - set([data.station_info['id'] for data in total_data])
     print(f'\n{len(failed_stations)} failed stations: {sorted(failed_stations)}')
+
+    forced_failures = _station_failures(total_data, forced_station_ids)
+    if forced_failures and required_station_retry_policy is not None:
+        if cache_fname is None:
+            raise ValueError(
+                "cache_fname is required for the adaptive retry of forced "
+                "USGS stations"
+            )
+
+        from stofs3d_setup.ops.Source_sink.Replace_with_USGS.usgs_series import (
+            download_usgs_series,
+        )
+
+        for site, reason in sorted(forced_failures.items()):
+            print(
+                f"Retrying forced USGS station {site} after failing "
+                f"validation ({reason}) with adaptive date windows."
+            )
+            try:
+                series = download_usgs_series(
+                    station_id=site,
+                    parameter_id=str(param_id),
+                    start_time=datelist[0],
+                    end_time=datelist[-1],
+                    usgs_cache_folder=Path(cache_fname).parent,
+                    policy=required_station_retry_policy,
+                )
+            except Exception as exc:
+                print(f"Adaptive USGS retry failed for {site}: {exc}")
+                series = None
+            station_info = {"id": site, "name": None, "lon": None, "lat": None}
+            if not meta.empty and site in meta.index:
+                station_info.update({
+                    "name": meta.loc[site].get("station_nm", None),
+                    "lon": meta.loc[site].get("dec_long_va", np.nan),
+                    "lat": meta.loc[site].get("dec_lat_va", np.nan),
+                })
+            station_info.update({"var_name": param_id, "var_code": param_id, "unit": None})
+            if series is not None and not series.empty:
+                _replace_station_record(
+                    site,
+                    station_info,
+                    pd.DataFrame(
+                        {"date": series.index, "value": series.to_numpy(dtype=float)}
+                    ),
+                )
+
+    forced_failures = _station_failures(total_data, forced_station_ids)
+    required_failures = {
+        site: reason
+        for site, reason in forced_failures.items()
+        if site in required_station_ids
+    }
+    if required_failures:
+        raise RequiredStationDownloadError(
+            f"Required manually linked USGS station(s) failed validation "
+            f"for parameter {param_id} after both fallback methods: "
+            f"{required_failures}"
+        )
+
+    optional_failures = {
+        site: reason
+        for site, reason in forced_failures.items()
+        if site in optional_station_ids
+    }
+    if optional_failures:
+        from stofs3d_setup.utils.warning_log import append_input_warning
+
+        forcing_name = warning_forcing_name or f"USGS parameter {param_id}"
+        for site, reason in sorted(optional_failures.items()):
+            message = (
+                f"Forced USGS {forcing_name} replacement for station {site} "
+                f"was not applied: download/coverage validation failed after "
+                f"both fallback methods ({reason})."
+            )
+            append_input_warning(
+                warning_log_path,
+                message=message,
+                input_files=warning_input_files,
+            )
 
     # Optional cache
     if cache_fname is not None:

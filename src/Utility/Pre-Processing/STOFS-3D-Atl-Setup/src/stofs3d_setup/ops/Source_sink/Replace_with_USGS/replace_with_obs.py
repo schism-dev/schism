@@ -33,7 +33,11 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.download_usgs import \
     get_usgs_stations_from_state, detect_data_gap
 from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
+    FORCED_STATION_MAX_MISSING_GAP_DAYS,
+    FORCED_STATION_RETRY_POLICY,
     NWM_TO_USGS_FLOW_ADJUSTMENT,
+    OPTIONAL_FLOW_STATIONS,
+    REQUIRED_FLOW_STATIONS,
 )
 from stofs3d_setup.ops.Source_sink.workflow_constants import (
     NWM_ECGC_SHAPEFILE,
@@ -502,6 +506,7 @@ def source_nwm2usgs(
     nwm_data_dir='/sciclone/schism10/whuang07/schism20/NWM_v2.1/',
     output_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/USGS_adjusted_sources/',
     usgs_cache_folder=None,
+    warning_log_path=None,
 ):
     '''
     This script is to adjust the vsource.th file based on USGS data.
@@ -640,6 +645,25 @@ def source_nwm2usgs(
         station_ids=param_dict["station_ids"],
         cache_fname=param_dict["cache_fname"],
         datelist=pd.date_range(start=param_dict["padded_start_time"], end=param_dict["padded_end_time"]),
+        required_station_ids=(
+            REQUIRED_FLOW_STATIONS
+            & set(param_dict["station_ids"])
+        ),
+        optional_station_ids=(
+            OPTIONAL_FLOW_STATIONS & set(param_dict["station_ids"])
+        ),
+        required_station_retry_policy=FORCED_STATION_RETRY_POLICY,
+        required_station_max_missing_gap_days=(
+            FORCED_STATION_MAX_MISSING_GAP_DAYS
+        ),
+        required_station_start=start_time_str,
+        required_station_end=end_time_str,
+        warning_log_path=warning_log_path,
+        warning_input_files=(
+            "Source_sink/vsource.th",
+            "Source_sink/source.nc",
+        ),
+        warning_forcing_name="streamflow",
     )
     # check data gap
     for i, data in enumerate(usgs_data.copy()):
@@ -649,7 +673,9 @@ def source_nwm2usgs(
             end=pd.Timestamp(end_time_str, tz='UTC'),
             freq=pd.Timedelta('1 hour')
         )
-        if gap > pd.Timedelta('7 days'):
+        if gap > pd.Timedelta(
+            days=FORCED_STATION_MAX_MISSING_GAP_DAYS
+        ):
             print(f"warning: USGS station {i} ({data.station_info['id']}) has a data gap of {gap}, "
                   f'removing it from the list of available stations.\n')
             usgs_data.remove(data)

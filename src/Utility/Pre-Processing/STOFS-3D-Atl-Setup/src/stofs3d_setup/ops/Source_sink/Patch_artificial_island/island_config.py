@@ -41,6 +41,27 @@ def _normalize_force_points(patch_info: dict) -> list[dict]:
                 f"for entry {p.get('name', '')!r}"
             )
 
+        use_usgs_obs = bool(p.get("use_usgs_obs", False))
+        flow_station_id = p.get("flow_station_id")
+        temperature_station_id = p.get("temperature_station_id")
+        for key, station_id in (
+            ("flow_station_id", flow_station_id),
+            ("temperature_station_id", temperature_station_id),
+        ):
+            if station_id is not None and (
+                not isinstance(station_id, str) or not station_id.strip()
+            ):
+                raise ValueError(
+                    f"{key} for artificial-island entry "
+                    f"{p.get('name', '')!r} must be a quoted station ID "
+                    "or null"
+                )
+        if use_usgs_obs and not flow_station_id:
+            raise ValueError(
+                f"Artificial-island entry {p.get('name', '')!r} enables "
+                "USGS observations but has no flow_station_id"
+            )
+
         points.append(
             {
                 **p,
@@ -54,7 +75,9 @@ def _normalize_force_points(patch_info: dict) -> list[dict]:
                 "allow_negative_sink": bool(
                     p.get("allow_negative_sink", False)
                 ),
-                "use_usgs_obs": bool(p.get("use_usgs_obs", False)),
+                "use_usgs_obs": use_usgs_obs,
+                "flow_station_id": flow_station_id,
+                "temperature_station_id": temperature_station_id,
             }
         )
 

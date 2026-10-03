@@ -514,6 +514,10 @@ def apply_artificial_island_corrections(
                     temperature_station_id,
                 ) = _get_usgs_forcing(
                     name=name,
+                    flow_station_id=point.get("flow_station_id"),
+                    temperature_station_id=point.get(
+                        "temperature_station_id"
+                    ),
                     start_time=start_time,
                     model_time=model_time_for_obs,
                     usgs_cache_folder=usgs_cache_folder,

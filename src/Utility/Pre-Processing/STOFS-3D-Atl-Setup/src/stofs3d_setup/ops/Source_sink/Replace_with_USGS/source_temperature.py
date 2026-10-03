@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.download_usgs import (
+    RequiredStationDownloadError,
     download_stations,
 )
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.replace_with_obs import (
@@ -19,7 +20,11 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.replace_with_obs import (
     read_nwm_data,
 )
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
+    FORCED_STATION_MAX_MISSING_GAP_DAYS,
+    FORCED_STATION_RETRY_POLICY,
     NWM_TO_USGS_TEMPERATURE_SEARCH,
+    OPTIONAL_TEMPERATURE_STATIONS,
+    REQUIRED_TEMPERATURE_STATIONS,
     USGS_TEMPERATURE_PARAMETER_ID,
 )
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.usgs_series import (
@@ -257,6 +262,9 @@ def _download_temperature_station_map(
     start_time,
     end_time,
     usgs_cache_folder,
+    required_station_ids: list[str] | None = None,
+    optional_station_ids: list[str] | None = None,
+    warning_log_path: str | Path | None = None,
 ) -> dict[str, pd.Series]:
     """Original bulk temperature download; no custom chunking."""
     station_ids = sorted({str(station_id) for station_id in station_ids})
@@ -286,7 +294,23 @@ def _download_temperature_station_map(
                 start=padded_start.tz_localize(None),
                 end=padded_end.tz_localize(None),
             ),
+            required_station_ids=required_station_ids,
+            optional_station_ids=optional_station_ids,
+            required_station_retry_policy=FORCED_STATION_RETRY_POLICY,
+            required_station_max_missing_gap_days=(
+                FORCED_STATION_MAX_MISSING_GAP_DAYS
+            ),
+            required_station_start=start,
+            required_station_end=end,
+            warning_log_path=warning_log_path,
+            warning_input_files=(
+                "Source_sink/msource.th",
+                "Source_sink/source.nc",
+            ),
+            warning_forcing_name="temperature",
         )
+    except RequiredStationDownloadError:
+        raise
     except Exception as exc:
         print(
             "[SOURCE TEMPERATURE] warning: bulk USGS temperature "
@@ -610,6 +634,7 @@ def _prepare_temperature_replacement_inputs(
     diagnostics_dir: Path | None = None,
     pooling: str = FIRST_USABLE,
     nwm_data_dir: str | Path | None = None,
+    warning_log_path: str | Path | None = None,
 ) -> TemperatureReplacementInputs:
     """Discover stations and load time series shared by pooling methods."""
     source_time, _ = source_time_and_data
@@ -639,6 +664,14 @@ def _prepare_temperature_replacement_inputs(
         start_time=target_time[0],
         end_time=target_time[-1],
         usgs_cache_folder=usgs_cache_folder,
+        required_station_ids=sorted(
+            REQUIRED_TEMPERATURE_STATIONS
+            & set(all_station_ids)
+        ),
+        optional_station_ids=sorted(
+            OPTIONAL_TEMPERATURE_STATIONS & set(all_station_ids)
+        ),
+        warning_log_path=warning_log_path,
     )
     discharge_by_feature = (
         _read_nwm_discharge_map(
@@ -799,6 +832,7 @@ def _apply_automatic_temperature_replacements(
     diagnostics_dir: Path | None = None,
     pooling: str = FIRST_USABLE,
     nwm_data_dir: str | Path | None = None,
+    warning_log_path: str | Path | None = None,
 ):
     """Apply automatic USGS temperature corrections to eligible sources.
 
@@ -842,6 +876,7 @@ def _apply_automatic_temperature_replacements(
         diagnostics_dir=diagnostics_dir,
         pooling=pooling,
         nwm_data_dir=nwm_data_dir,
+        warning_log_path=warning_log_path,
     )
     replaced_count, total_usgs_records = _apply_temperature_replacements(
         source_eles=source_eles,
@@ -873,6 +908,7 @@ def replace_source_temperatures_with_usgs(
     diagnostics_dir: str | Path | None = None,
     pooling: str = FIRST_USABLE,
     nwm_data_dir: str | Path | None = None,
+    warning_log_path: str | Path | None = None,
 ):
     """Return a copy with eligible source temperatures replaced by USGS.
 
@@ -904,6 +940,7 @@ def replace_source_temperatures_with_usgs(
             ),
             pooling=pooling,
             nwm_data_dir=nwm_data_dir,
+            warning_log_path=warning_log_path,
         )
     )
 

@@ -47,6 +47,8 @@ force_source_sink_locations:
     max_search_radius_m: 500.0
     allow_negative_sink: false
     use_usgs_obs: true
+    flow_station_id: '02172035'
+    temperature_station_id: null
 
   - name: "Buffalo Bluff"
     source_sink_type: "source"
@@ -55,6 +57,8 @@ force_source_sink_locations:
     max_search_radius_m: 500.0
     allow_negative_sink: true
     use_usgs_obs: true
+    flow_station_id: '02244040'
+    temperature_station_id: '02244040'
 
   - name: "Dunns Creek"
     source_sink_type: "source"
@@ -63,6 +67,8 @@ force_source_sink_locations:
     max_search_radius_m: 500.0
     allow_negative_sink: true
     use_usgs_obs: true
+    flow_station_id: '02244440'
+    temperature_station_id: '02244440'
 
 # Add -1000 m3/s at the nearest element for the complete model period.
 large_constant_sink_artificial_island_locations:

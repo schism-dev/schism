@@ -1,12 +1,10 @@
-"""Explicit flow and temperature overrides for existing SCHISM sources."""
+"""Direct USGS flow and temperature hard resets for existing sources."""
 
 import numpy as np
 from pyproj import Transformer
 
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     CFS_TO_CMS,
-    USGS_FLOW_STATION_BY_NAME,
-    USGS_TEMPERATURE_STATION_BY_NAME,
 )
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.usgs_series import (
     _get_usgs_flow,
@@ -98,8 +96,8 @@ def _replace_existing_relocated_source(
             "Replace-only entries never create a new source."
         )
 
-    flow_station_id = USGS_FLOW_STATION_BY_NAME.get(name)
-    temperature_station_id = USGS_TEMPERATURE_STATION_BY_NAME.get(name)
+    flow_station_id = point.get("flow_station_id")
+    temperature_station_id = point.get("temperature_station_id")
 
     if point["replace_flow"] and not flow_station_id:
         raise ValueError(
@@ -124,6 +122,7 @@ def _replace_existing_relocated_source(
     if point["replace_flow"]:
         flow_series, flow_station_id = _get_usgs_flow(
             name=name,
+            station_id=flow_station_id,
             start_time=start_time,
             model_time=source_time,
             usgs_cache_folder=usgs_cache_folder,
@@ -132,6 +131,7 @@ def _replace_existing_relocated_source(
     if point["replace_temperature"]:
         temperature_series, temperature_station_id = _get_usgs_temperature(
             name=name,
+            station_id=temperature_station_id,
             start_time=start_time,
             model_time=source_time,
             usgs_cache_folder=usgs_cache_folder,
@@ -330,7 +330,7 @@ def _apply_source_overrides(
         if len(mixed_columns) > 0:
             mixed_elements = [source_eles[idx] for idx in mixed_columns]
             raise ValueError(
-                "discharge_weighted selected-source temperature overrides "
+                "discharge_weighted source-temperature hard resets "
                 "left columns that are not uniformly all-ambient or "
                 f"all-finite-numeric for source elements {mixed_elements}"
             )
@@ -415,7 +415,7 @@ def apply_source_overrides(
     )
 
 
-def apply_selected_source_overrides(
+def apply_hard_reset_sources_with_usgs(
     base_ss,
     hgrid,
     enabled: bool,
@@ -424,17 +424,17 @@ def apply_selected_source_overrides(
     usgs_cache_folder,
     temperature_pooling: str = FIRST_USABLE,
 ):
-    """Apply the optional configured flow and temperature overrides.
+    """Apply configured direct USGS flow and temperature hard resets.
 
     This wrapper is available to workflows that explicitly opt into the
-    selected-source corrections. The main source/sink assembler does not
+    hard-reset corrections. The main source/sink assembler does not
     invoke it.
     """
     if not enabled:
         return base_ss, 0, 0
     if correction_info is None:
         raise ValueError(
-            "correction_info is required when selected-source overrides "
+            "correction_info is required when USGS hard resets "
             "are enabled"
         )
 
@@ -458,6 +458,6 @@ def apply_selected_source_overrides(
 
 
 def load_source_override_points(correction_info) -> list[dict]:
-    """Load and normalize selected-source corrections for this stage."""
+    """Load and normalize configured source hard-reset locations."""
     corrections = load_source_sink_corrections(correction_info)
     return source_override_points(corrections)

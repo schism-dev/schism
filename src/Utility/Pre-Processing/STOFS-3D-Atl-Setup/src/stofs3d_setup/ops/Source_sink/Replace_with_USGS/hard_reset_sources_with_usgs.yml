@@ -1,12 +1,14 @@
-# Explicit USGS corrections for existing source elements.
+# Explicit USGS hard resets for existing source elements.
 #
 # These entries never create, remove, or move a source. Flow and temperature
 # are replaced only where usable observations exist; current forcing is
 # retained elsewhere.
-replace_only_source_locations:
+hard_reset_source_locations:
   - name: "Delaware"
     x: -74.9432325
     y: 40.3422775
+    flow_station_id: '01463500'
+    temperature_station_id: '01463500'
     max_search_radius_m: 500.0
     replace_flow: true
     replace_temperature: true
@@ -15,6 +17,8 @@ replace_only_source_locations:
   - name: "Hudson River"
     x: -73.693816
     y: 42.73321625
+    flow_station_id: '01358000'
+    temperature_station_id: '01359139'
     max_search_radius_m: 2500.0
     replace_flow: true
     replace_temperature: true

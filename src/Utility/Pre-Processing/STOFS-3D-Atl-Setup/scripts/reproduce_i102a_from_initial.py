@@ -57,7 +57,7 @@ SOURCE_OVERRIDE_INFO = (
     / "ops"
     / "Source_sink"
     / "Replace_with_USGS"
-    / "selected_source_overrides.yml"
+    / "hard_reset_sources_with_usgs.yml"
 )
 ZERO_SOURCE_REGION_INFO = (
     STOFS3D_SETUP_PACKAGE_DIR

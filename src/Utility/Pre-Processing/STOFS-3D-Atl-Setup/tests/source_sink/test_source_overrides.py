@@ -61,7 +61,7 @@ class SourceOverrideTests(unittest.TestCase):
             "apply_source_temperature_overrides",
             side_effect=apply_temperature,
         ):
-            result = source_overrides.apply_selected_source_overrides(
+            result = source_overrides.apply_hard_reset_sources_with_usgs(
                 base_ss=original,
                 hgrid=_Grid(),
                 enabled=True,
@@ -79,7 +79,7 @@ class SourceOverrideTests(unittest.TestCase):
         with patch.object(
             source_overrides, "load_source_override_points"
         ) as load_points:
-            result = source_overrides.apply_selected_source_overrides(
+            result = source_overrides.apply_hard_reset_sources_with_usgs(
                 base_ss=original,
                 hgrid=_Grid(),
                 enabled=False,
@@ -103,6 +103,8 @@ class SourceOverrideTests(unittest.TestCase):
             "name": "Delaware",
             "x": 0.0,
             "y": 0.0,
+            "flow_station_id": "01463500",
+            "temperature_station_id": "01463500",
             "max_search_radius_m": 500.0,
             "replace_flow": True,
             "replace_temperature": False,
@@ -150,6 +152,8 @@ class SourceOverrideTests(unittest.TestCase):
             "name": "Delaware",
             "x": 1000.0,
             "y": 0.0,
+            "flow_station_id": "01463500",
+            "temperature_station_id": "01463500",
             "max_search_radius_m": 10.0,
             "replace_flow": True,
             "replace_temperature": False,
@@ -233,6 +237,8 @@ class SourceOverrideTests(unittest.TestCase):
             "name": "Delaware",
             "x": 0.0,
             "y": 0.0,
+            "flow_station_id": "01463500",
+            "temperature_station_id": "01463500",
             "max_search_radius_m": 500.0,
             "replace_flow": True,
             "replace_temperature": True,
@@ -292,6 +298,8 @@ class SourceOverrideTests(unittest.TestCase):
             "name": "Delaware",
             "x": 0.0,
             "y": 0.0,
+            "flow_station_id": "01463500",
+            "temperature_station_id": "01463500",
             "max_search_radius_m": 500.0,
             "replace_flow": False,
             "replace_temperature": True,

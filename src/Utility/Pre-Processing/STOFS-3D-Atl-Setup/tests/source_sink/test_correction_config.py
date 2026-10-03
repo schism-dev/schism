@@ -6,6 +6,7 @@ import unittest
 
 from stofs3d_setup.ops.Source_sink import correction_config
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS import override_config
+from stofs3d_setup.ops.Source_sink.Patch_artificial_island import island_config
 from stofs3d_setup.ops.Source_sink.Spatial_corrections import region_config
 from stofs3d_setup.config.stofs3d_atl_config import ConfigStofs3dAtlantic
 
@@ -16,9 +17,9 @@ class CorrectionConfigTests(unittest.TestCase):
 
         self.assertFalse(config.replace_source_temperature_with_usgs)
         self.assertEqual(config.source_temperature_pooling, "first_usable")
-        self.assertFalse(config.replace_selected_sources_with_usgs)
+        self.assertFalse(config.hard_reset_sources_with_usgs)
         self.assertFalse(config.zero_configured_source_regions)
-        self.assertIsNone(config.selected_source_override_info)
+        self.assertIsNone(config.hard_reset_sources_with_usgs_info)
         self.assertIsNone(config.zero_source_region_info)
 
     def test_v7p4_enables_preferred_correction_stages(self):
@@ -26,16 +27,16 @@ class CorrectionConfigTests(unittest.TestCase):
 
         self.assertTrue(config.replace_source_temperature_with_usgs)
         self.assertEqual(config.source_temperature_pooling, "first_usable")
-        self.assertFalse(config.replace_selected_sources_with_usgs)
-        self.assertFalse(config.zero_configured_source_regions)
-        self.assertIsNone(config.selected_source_override_info)
+        self.assertFalse(config.hard_reset_sources_with_usgs)
+        self.assertTrue(config.zero_configured_source_regions)
+        self.assertIsNone(config.hard_reset_sources_with_usgs_info)
         self.assertIsNone(config.zero_source_region_info)
 
     def test_v7p4_stage_files_contain_only_owned_sections(self):
         config = ConfigStofs3dAtlantic.v7p4()
         override_info = (
             Path(override_config.__file__).with_name(
-                "selected_source_overrides.yml"
+                "hard_reset_sources_with_usgs.yml"
             )
         )
         region_info = Path(region_config.__file__).with_name(
@@ -52,7 +53,7 @@ class CorrectionConfigTests(unittest.TestCase):
             config.artificial_island_source_sink_info
         )
 
-        self.assertEqual(set(overrides), {"replace_only_source_locations"})
+        self.assertEqual(set(overrides), {"hard_reset_source_locations"})
         self.assertEqual(set(regions), {"zero_source_regions"})
         self.assertEqual(
             set(islands),
@@ -68,9 +69,36 @@ class CorrectionConfigTests(unittest.TestCase):
             [point["name"] for point in override_points],
             ["Delaware", "Hudson River"],
         )
+        self.assertEqual(override_points[0]["flow_station_id"], "01463500")
+        self.assertEqual(
+            override_points[0]["temperature_station_id"], "01463500"
+        )
+        self.assertEqual(override_points[1]["flow_station_id"], "01358000")
+        self.assertEqual(
+            override_points[1]["temperature_station_id"], "01359139"
+        )
         self.assertEqual(
             override_points[1]["usgs_download"]["retry_chunk_days"],
             [20, 10, 5],
+        )
+        island_points = island_config._normalize_force_points(islands)
+        island_sources = {
+            point["name"]: point
+            for point in island_points
+            if point["use_usgs_obs"]
+        }
+        self.assertEqual(
+            island_sources["Turkey"]["flow_station_id"], "02172035"
+        )
+        self.assertIsNone(
+            island_sources["Turkey"]["temperature_station_id"]
+        )
+        self.assertEqual(
+            island_sources["Buffalo Bluff"]["temperature_station_id"],
+            "02244040",
+        )
+        self.assertEqual(
+            island_sources["Dunns Creek"]["flow_station_id"], "02244440"
         )
         region_points = region_config.zero_source_regions(
             regions,
@@ -82,11 +110,13 @@ class CorrectionConfigTests(unittest.TestCase):
     def test_replace_override_defaults_are_normalized(self):
         points = override_config._normalize_replace_relocated_points(
             {
-                "replace_only_source_locations": [
+                "hard_reset_source_locations": [
                     {
                         "name": "Delaware",
                         "x": -74.9,
                         "y": 40.3,
+                        "flow_station_id": "01463500",
+                        "temperature_station_id": "01463500",
                     }
                 ]
             }

@@ -90,9 +90,9 @@ class ConfigStofs3dAtlantic(BaseModel):
     source_temperature_pooling: Literal[
         "first_usable", "discharge_weighted"
     ] = "first_usable"
-    replace_selected_sources_with_usgs: bool = False
+    hard_reset_sources_with_usgs: bool = False
     zero_configured_source_regions: bool = False
-    selected_source_override_info: Optional[Path] = None
+    hard_reset_sources_with_usgs_info: Optional[Path] = None
     zero_source_region_info: Optional[Path] = None
     source_ele_replace_dict: Dict[int, int] = None  # temporary fix for isolated feeder channels
     constant_sink_shapefile: Optional[Path] = None
@@ -356,8 +356,7 @@ class ConfigStofs3dAtlantic(BaseModel):
             ),
             replace_source_temperature_with_usgs=True,
             source_temperature_pooling="first_usable",
-            replace_selected_sources_with_usgs=False,
-            zero_configured_source_regions=False,
+            zero_configured_source_regions=True,
             artificial_island_source_sink_info=artificial_island_info,
             bc_flags=[
                 [5, 5, 4, 4],  # Atlantic Ocean

@@ -1,58 +1,99 @@
-"""Explicit USGS station mappings used by source/sink corrections."""
+"""Load USGS station mappings for soft-link source corrections."""
 
 from pathlib import Path
+from typing import Any
 
 import yaml
 
-USGS_FLOW_STATION_BY_NAME = {
-    # Forced/restored artificial-island sources
-    "Wando": None,
-    "Turkey": "02172035",
-    "Buffalo Bluff": "02244040",
-    "Dunns Creek": "02244440",
-
-    # Existing sources with explicit observation overrides
-    "Delaware": "01463500",
-    "Hudson River": "01358000",
-}
-
-USGS_TEMPERATURE_STATION_BY_NAME = {
-    "Wando": None,
-    "Turkey": None,
-    "Buffalo Bluff": "02244040",
-    "Dunns Creek": "02244440",
-    "Delaware": "01463500",
-
-    # Hudson River at Albany, NY
-    "Hudson River": "01359139",
-}
 
 USGS_FLOW_PARAMETER_ID = "00060"
 USGS_TEMPERATURE_PARAMETER_ID = "00010"
 CFS_TO_CMS = 0.028316846592
 
-def _load_feature_station_links(section: str) -> dict[int, str]:
-    """Read one scope of manual NWM-to-USGS associations."""
+
+def _load_manual_usgs_config() -> tuple[dict[str, Any], Path]:
+    """Read the YAML configuration for soft-link USGS corrections."""
     config_file = Path(__file__).with_name("manual_nwm2usgs.yml")
     with config_file.open("r", encoding="utf-8") as stream:
         config = yaml.safe_load(stream)
+    if not isinstance(config, dict):
+        raise ValueError(
+            f"USGS soft-link configuration must be a mapping: {config_file}"
+        )
+    return config, config_file
 
-    links = config[section]
+
+def _load_feature_station_links(
+    config: dict[str, Any], section: str, config_file: Path
+) -> tuple[dict[int, str], set[str], set[str]]:
+    """Load one scope of manual NWM-to-USGS feature associations."""
+    links = config.get(section)
     if not isinstance(links, dict):
         raise ValueError(f"{section} must be a mapping in {config_file}")
 
-    result = {}
-    for feature_id, station_id in links.items():
-        if not isinstance(feature_id, int) or not isinstance(station_id, str):
+    result: dict[int, str] = {}
+    required: set[str] = set()
+    optional: set[str] = set()
+    for feature_id, station_config in links.items():
+        if type(feature_id) is not int or not isinstance(station_config, dict):
             raise ValueError(
-                f"{section} requires integer FeatureIDs and quoted "
-                f"string station IDs in {config_file}"
+                f"{section} requires integer FeatureIDs and station mappings "
+                f"in {config_file}"
+            )
+        station_id = station_config.get("station_id")
+        requirement = station_config.get("download_requirement")
+        if not isinstance(station_id, str) or not station_id.strip():
+            raise ValueError(
+                f"{section}[{feature_id}].station_id must be a quoted "
+                f"string in {config_file}"
+            )
+        if requirement not in {"required", "optional"}:
+            raise ValueError(
+                f"{section}[{feature_id}].download_requirement must be "
+                f"'required' or 'optional' in {config_file}"
             )
         result[feature_id] = station_id
-    return result
+        (required if requirement == "required" else optional).add(station_id)
+    return result, required, optional
 
 
-NWM_TO_USGS_FLOW_ADJUSTMENT = _load_feature_station_links("flow_adjustment")
-NWM_TO_USGS_TEMPERATURE_SEARCH = _load_feature_station_links(
-    "temperature_search_additions"
+def _load_forced_station_retry_policy(
+    config: dict[str, Any], config_file: Path
+) -> dict[str, Any]:
+    """Read retry and gap policy for manually linked soft-link stations."""
+    policy = config.get("forced_station_retry", {})
+    if not isinstance(policy, dict):
+        raise ValueError(
+            f"forced_station_retry must be a mapping in {config_file}"
+        )
+
+    gap_days = config.get("forced_station_max_missing_gap_days")
+    if not isinstance(gap_days, (int, float)) or gap_days <= 0:
+        raise ValueError(
+            "forced_station_max_missing_gap_days must be positive in "
+            f"{config_file}"
+        )
+    return policy
+
+
+_CONFIG, _CONFIG_FILE = _load_manual_usgs_config()
+(
+    NWM_TO_USGS_FLOW_ADJUSTMENT,
+    REQUIRED_FLOW_STATIONS,
+    OPTIONAL_FLOW_STATIONS,
+) = _load_feature_station_links(
+    _CONFIG, "flow_adjustment", _CONFIG_FILE
+)
+(
+    NWM_TO_USGS_TEMPERATURE_SEARCH,
+    REQUIRED_TEMPERATURE_STATIONS,
+    OPTIONAL_TEMPERATURE_STATIONS,
+) = _load_feature_station_links(
+    _CONFIG, "temperature_search_additions", _CONFIG_FILE
+)
+FORCED_STATION_RETRY_POLICY = _load_forced_station_retry_policy(
+    _CONFIG, _CONFIG_FILE
+)
+FORCED_STATION_MAX_MISSING_GAP_DAYS = float(
+    _CONFIG["forced_station_max_missing_gap_days"]
 )

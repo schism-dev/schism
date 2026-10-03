@@ -11,11 +11,13 @@ import numpy as np
 import pandas as pd
 
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS import source_temperature
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS import override_config
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     NWM_TO_USGS_FLOW_ADJUSTMENT,
     NWM_TO_USGS_TEMPERATURE_SEARCH,
-    USGS_FLOW_STATION_BY_NAME,
-    USGS_TEMPERATURE_STATION_BY_NAME,
+)
+from stofs3d_setup.ops.Source_sink.correction_config import (
+    load_source_sink_corrections,
 )
 from stofs3d_setup.ops.Source_sink.source_sink_components import (
     _build_source_sink,
@@ -51,11 +53,21 @@ class SourceTemperatureTests(unittest.TestCase):
                 source_temperature._load_source_feature_mapping(directory)
 
     def test_explicit_hudson_station_mappings_are_parameter_specific(self):
-        self.assertEqual(USGS_FLOW_STATION_BY_NAME["Hudson River"], "01358000")
-        self.assertEqual(
-            USGS_TEMPERATURE_STATION_BY_NAME["Hudson River"],
-            "01359139",
+        hard_reset_file = Path(override_config.__file__).with_name(
+            "hard_reset_sources_with_usgs.yml"
         )
+        corrections = load_source_sink_corrections(hard_reset_file)
+        hard_reset_points = override_config.source_override_points(
+            corrections
+        )
+        hudson = next(
+            point
+            for point in hard_reset_points
+            if point["name"] == "Hudson River"
+        )
+
+        self.assertEqual(hudson["flow_station_id"], "01358000")
+        self.assertEqual(hudson["temperature_station_id"], "01359139")
         self.assertEqual(NWM_TO_USGS_TEMPERATURE_SEARCH[6186156], "01359139")
         self.assertEqual(NWM_TO_USGS_FLOW_ADJUSTMENT[6186156], "01358000")
         self.assertNotIn(9643251, NWM_TO_USGS_TEMPERATURE_SEARCH)

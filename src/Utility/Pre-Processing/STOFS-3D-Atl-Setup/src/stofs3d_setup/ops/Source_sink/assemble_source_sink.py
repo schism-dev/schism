@@ -190,7 +190,9 @@ def _describe_source_grid(config):
     return False
 
 
-def _replace_nwm_flow_with_usgs(config, model_input_path, wdir):
+def _replace_nwm_flow_with_usgs(
+    config, model_input_path, wdir, warning_log_path=None
+):
     """Adjust NWM source flows using USGS observations."""
     print('replacing NWM sources with USGS observed flow rates ...')
     source_nwm2usgs(
@@ -205,6 +207,7 @@ def _replace_nwm_flow_with_usgs(config, model_input_path, wdir):
             if config.usgs_cache_folder is not None
             else Path(model_input_path) / 'USGS_cache'
         ),
+        warning_log_path=warning_log_path,
     )
 
 
@@ -286,7 +289,10 @@ def _resolve_usgs_cache_folder(config, model_input_path):
     )
 
 
-def _replace_source_temperatures(base_ss, config, hgrid, model_input_path, wdir):
+def _replace_source_temperatures(
+    base_ss, config, hgrid, model_input_path, wdir,
+    warning_log_path=None,
+):
     """Apply configured USGS temperature replacement to source elements."""
     source_mapping_dir = (
         f'{wdir}/relocated_source_sink/'
@@ -305,6 +311,7 @@ def _replace_source_temperatures(base_ss, config, hgrid, model_input_path, wdir)
         states=STOFS3D_ATL_STATES,
         diagnostics_dir=Path(wdir) / 'source_temperature',
         pooling=config.source_temperature_pooling,
+        warning_log_path=warning_log_path,
         nwm_data_dir=config.nwm_cache_folder,
     )
     print(f'[SOURCE TEMPERATURE] replaced {replaced_count} source(s).')
@@ -435,7 +442,9 @@ def _write_final_source_sink(total_ss, config, hgrid, wdir):
     _write_source_sink_diagnostics(total_ss, hgrid, wdir)
 
 
-def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
+def assemble_source_sink(
+    config, hgrid, model_input_path=None, wdir=None, warning_log_path=None
+):
     """
     Assemble source/sink files for SCHISM model
     The assembled source/sink files include:
@@ -449,7 +458,10 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
     _generate_original_source_sink(config, model_input_path, wdir)
 
     if config.replace_nwm_with_usgs:
-        _replace_nwm_flow_with_usgs(config, model_input_path, wdir)
+        _replace_nwm_flow_with_usgs(
+            config, model_input_path, wdir,
+            warning_log_path=warning_log_path,
+        )
 
     if artificial_island_info is not None:
         _suppress_island_sources_before_relocation(config, model_input_path, wdir, artificial_island_info)
@@ -463,7 +475,10 @@ def assemble_source_sink(config, hgrid, model_input_path=None, wdir=None):
         base_ss = _read_original_source_sink(wdir)
 
     if config.replace_source_temperature_with_usgs:
-        base_ss = _replace_source_temperatures(base_ss, config, hgrid, model_input_path, wdir)
+        base_ss = _replace_source_temperatures(
+            base_ss, config, hgrid, model_input_path, wdir,
+            warning_log_path=warning_log_path,
+        )
 
     if config.zero_configured_source_regions:
         base_ss = _zero_configured_source_regions(base_ss, config, hgrid)

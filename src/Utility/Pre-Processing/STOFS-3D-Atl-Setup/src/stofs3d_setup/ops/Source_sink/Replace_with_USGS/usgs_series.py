@@ -13,9 +13,7 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.download_usgs import (
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     CFS_TO_CMS,
     USGS_FLOW_PARAMETER_ID,
-    USGS_FLOW_STATION_BY_NAME,
     USGS_TEMPERATURE_PARAMETER_ID,
-    USGS_TEMPERATURE_STATION_BY_NAME,
 )
 
 MAX_USGS_INTERPOLATION_GAP = pd.Timedelta("6 hours")
@@ -495,13 +493,13 @@ def _download_configured_usgs_series(
 
 def _get_usgs_flow(
     name: str,
+    station_id: str | None,
     start_time,
     model_time: np.ndarray,
     usgs_cache_folder,
     download_policy: UsgsDownloadPolicy | Mapping[str, Any] | None = None,
 ) -> tuple[pd.Series | None, str | None]:
-    """Return configured streamflow observations for one named source."""
-    station_id = USGS_FLOW_STATION_BY_NAME.get(name)
+    """Return streamflow observations for the station configured by caller."""
     if not station_id:
         print(
             f"[USGS SERIES] {name}: "
@@ -519,13 +517,13 @@ def _get_usgs_flow(
 
 def _get_usgs_temperature(
     name: str,
+    station_id: str | None,
     start_time,
     model_time: np.ndarray,
     usgs_cache_folder,
     download_policy: UsgsDownloadPolicy | Mapping[str, Any] | None = None,
 ) -> tuple[pd.Series | None, str | None]:
-    """Return configured temperature observations for one named source."""
-    station_id = USGS_TEMPERATURE_STATION_BY_NAME.get(name)
+    """Return temperature observations for the station configured by caller."""
     if not station_id:
         print(
             f"[USGS SERIES] {name}: "
@@ -543,6 +541,8 @@ def _get_usgs_temperature(
 
 def _get_usgs_forcing(
     name: str,
+    flow_station_id: str | None,
+    temperature_station_id: str | None,
     start_time,
     model_time: np.ndarray,
     usgs_cache_folder,
@@ -556,6 +556,7 @@ def _get_usgs_forcing(
     """Return explicitly configured USGS flow and temperature series."""
     flow_series, flow_station_id = _get_usgs_flow(
         name=name,
+        station_id=flow_station_id,
         start_time=start_time,
         model_time=model_time,
         usgs_cache_folder=usgs_cache_folder,
@@ -563,6 +564,7 @@ def _get_usgs_forcing(
     )
     temperature_series, temperature_station_id = _get_usgs_temperature(
         name=name,
+        station_id=temperature_station_id,
         start_time=start_time,
         model_time=model_time,
         usgs_cache_folder=usgs_cache_folder,
