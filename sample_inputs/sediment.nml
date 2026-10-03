@@ -284,7 +284,7 @@ irough_bdld = 1
 !------------------------------------------------------------------------------
 slope_avalanching = 1
 dry_slope_cr = 1.0
-wet_slope_cr = 0.3
+wet_slope_cr = 1.0 !0.3
 
 !- BED MASS FILTER ------------------------------------------------------------
 !- Filter bed_mass for each sediment class to prevent instabilites in spatial 
