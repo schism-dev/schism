@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from stofs3d_setup.ops.Source_sink import correction_config
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS import override_config
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS import hard_reset_config
 from stofs3d_setup.ops.Source_sink.Patch_artificial_island import island_config
 from stofs3d_setup.ops.Source_sink.Spatial_corrections import region_config
 from stofs3d_setup.config.stofs3d_atl_config import ConfigStofs3dAtlantic
@@ -35,7 +35,7 @@ class CorrectionConfigTests(unittest.TestCase):
     def test_v7p4_stage_files_contain_only_owned_sections(self):
         config = ConfigStofs3dAtlantic.v7p4()
         override_info = (
-            Path(override_config.__file__).with_name(
+            Path(hard_reset_config.__file__).with_name(
                 "hard_reset_sources_with_usgs.yml"
             )
         )
@@ -64,7 +64,7 @@ class CorrectionConfigTests(unittest.TestCase):
             },
         )
 
-        override_points = override_config.source_override_points(overrides)
+        override_points = hard_reset_config.source_override_points(overrides)
         self.assertEqual(
             [point["name"] for point in override_points],
             ["Delaware", "Hudson River"],
@@ -77,10 +77,7 @@ class CorrectionConfigTests(unittest.TestCase):
         self.assertEqual(
             override_points[1]["temperature_station_id"], "01359139"
         )
-        self.assertEqual(
-            override_points[1]["usgs_download"]["retry_chunk_days"],
-            [20, 10, 5],
-        )
+        self.assertNotIn("usgs_download", override_points[1])
         island_points = island_config._normalize_force_points(islands)
         island_sources = {
             point["name"]: point
@@ -108,7 +105,7 @@ class CorrectionConfigTests(unittest.TestCase):
         self.assertTrue(region_points[0]["region_file"].is_file())
 
     def test_replace_override_defaults_are_normalized(self):
-        points = override_config._normalize_replace_relocated_points(
+        points = hard_reset_config._normalize_replace_relocated_points(
             {
                 "hard_reset_source_locations": [
                     {

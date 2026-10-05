@@ -35,3 +35,4 @@ where = ["src"]
     "Spatial_corrections/*.yml",
     "Spatial_corrections/*.rgn",
 ]
+"stofs3d_setup.ops.USGS.ogc" = ["*.yml"]

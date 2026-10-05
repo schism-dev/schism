@@ -8,8 +8,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from schism_py_pre_post.Grid.SourceSinkIn import source_sink
-from schism_py_pre_post.Download.download_usgs_with_api import \
-    download_stations, usgs_var_dict
+from stofs3d_setup.ops.USGS.ogc.source_sink import (
+    download_stations,
+    usgs_var_dict,
+)
 
 
 def get_usgs_ts(usgs_stations, start_time_str, end_time_str):

@@ -29,9 +29,11 @@ from urllib.parse import urljoin
 import numpy as np
 import pandas as pd
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
-USGS_COLLECTION_URL = "https://api.waterdata.usgs.gov/ogcapi/v0/collections/{collection}/items"
+USGS_COLLECTION_URL = "https://api.waterdata.usgs.gov/ogcapi/v1/collections/{collection}/items"
 
 USGS_PARAMETER_CODES = {
     "temperature": "00010",
@@ -89,7 +91,23 @@ USGS_STATE_NAMES = {
 
 
 def make_session() -> requests.Session:
+    retry = Retry(
+        total=5,
+        connect=3,
+        read=3,
+        status=3,
+        backoff_factor=1.0,
+        status_forcelist=[500, 502, 503, 504],
+        allowed_methods={"GET"},
+        respect_retry_after_header=True,
+    )
+    adapter = HTTPAdapter(
+        max_retries=retry,
+        pool_connections=16,
+        pool_maxsize=16,
+    )
     session = requests.Session()
+    session.mount("https://", adapter)
     session.headers.update({
         "User-Agent": "stofs3d_setup hotstart USGS downloader",
         "Accept": "application/json, */*",
@@ -170,6 +188,12 @@ def feature_lon_lat(feature: dict[str, Any]) -> tuple[float | None, float | None
 def normalize_station_id(station_id: Any) -> str:
     station_id = str(station_id).strip()
     return station_id[5:] if station_id.upper().startswith("USGS-") else station_id
+
+
+def _monitoring_location_id(station_id: Any) -> str:
+    """Return the OGC-form monitoring-location identifier for a USGS site."""
+    station_id = normalize_station_id(station_id)
+    return f"USGS-{station_id}"
 
 
 def series_overlaps(properties: dict[str, Any], start: Any, end: Any) -> bool:
@@ -329,6 +353,7 @@ def discover_parameter_series(
                 continue
             rows.append({
                 "station_id": station_id,
+                "station_name": properties.get("monitoring_location_name"),
                 "time_series_id": feature.get("id"),
                 "state": state_code,
                 "state_name": state_name,
@@ -369,7 +394,7 @@ def download_station_parameter(
         session,
         "continuous",
         {
-            "monitoring_location_id": station_id,
+            "monitoring_location_id": _monitoring_location_id(station_id),
             "parameter_code": parameter,
             "datetime": iso_interval(start, end),
         },
@@ -379,7 +404,10 @@ def download_station_parameter(
         properties = feature.get("properties", {})
         lon, lat = feature_lon_lat(feature)
         rows.append({
-            "station_id": properties.get("monitoring_location_id", station_id),
+            "station_id": normalize_station_id(
+                properties.get("monitoring_location_id", station_id)
+            ),
+            "time_series_id": properties.get("time_series_id"),
             "station_name": properties.get("monitoring_location_name"),
             "lon": lon,
             "lat": lat,
@@ -444,12 +472,66 @@ def download_station_group_parameter(
     end: Any,
     session: requests.Session,
     max_429_retries: int = 2,
+    primary_only: bool = False,
 ) -> pd.DataFrame:
+    selected_series_ids = None
+    if primary_only:
+        metadata = iter_ogc_features(
+            session,
+            "time-series-metadata",
+            {
+                "monitoring_location_id": ",".join(
+                    _monitoring_location_id(station_id)
+                    for station_id in station_ids
+                ),
+                "parameter_code": parameter,
+            },
+            limit=10000,
+            max_429_retries=max_429_retries,
+        )
+        series_by_station: dict[str, list[dict[str, Any]]] = {}
+        for feature in metadata:
+            properties = feature.get("properties", {})
+            if str(
+                properties.get("computation_identifier", "")
+            ).lower() != "instantaneous":
+                continue
+            if not series_overlaps(properties, start, end):
+                continue
+            station_id = normalize_station_id(
+                properties.get("monitoring_location_id", "")
+            )
+            if station_id:
+                series_by_station.setdefault(station_id, []).append(
+                    {
+                        "id": feature.get("id"),
+                        "primary": properties.get("primary"),
+                    }
+                )
+
+        selected_series_ids = set()
+        for series in series_by_station.values():
+            primary_series = [
+                item
+                for item in series
+                if str(item["primary"]).lower() in {"true", "1", "primary"}
+            ]
+            selected = primary_series or sorted(
+                series,
+                key=lambda item: str(item["id"]),
+            )[:1]
+            selected_series_ids.update(
+                item["id"] for item in selected if item["id"]
+            )
+
     features = iter_ogc_features(
         session,
         "continuous",
         {
-            "monitoring_location_id": ",".join(station_ids),
+            "monitoring_location_id": ",".join(
+                _monitoring_location_id(station_id)
+                for station_id in station_ids
+            ),
             "parameter_code": parameter,
             "datetime": iso_interval(start, end),
         },
@@ -461,7 +543,10 @@ def download_station_group_parameter(
         properties = feature.get("properties", {})
         lon, lat = feature_lon_lat(feature)
         rows.append({
-            "station_id": properties.get("monitoring_location_id"),
+            "station_id": normalize_station_id(
+                properties.get("monitoring_location_id")
+            ),
+            "time_series_id": properties.get("time_series_id"),
             "station_name": properties.get("monitoring_location_name"),
             "lon": lon,
             "lat": lat,
@@ -477,7 +562,14 @@ def download_station_group_parameter(
     observations["value"] = pd.to_numeric(observations["value"], errors="coerce")
     observations["lon"] = pd.to_numeric(observations["lon"], errors="coerce")
     observations["lat"] = pd.to_numeric(observations["lat"], errors="coerce")
-    return observations.dropna(subset=["station_id", "time", "value"])
+    observations = observations.dropna(subset=["station_id", "time", "value"])
+    if selected_series_ids:
+        observations = observations[
+            observations["time_series_id"].astype(str).isin(
+                {str(series_id) for series_id in selected_series_ids}
+            )
+        ]
+    return observations
 
 
 def practical_salinity_from_conductance_25c(conductance_ms_cm: float) -> float:

@@ -57,26 +57,8 @@ def _load_feature_station_links(
     return result, required, optional
 
 
-def _load_forced_station_retry_policy(
-    config: dict[str, Any], config_file: Path
-) -> dict[str, Any]:
-    """Read retry and gap policy for manually linked soft-link stations."""
-    policy = config.get("forced_station_retry", {})
-    if not isinstance(policy, dict):
-        raise ValueError(
-            f"forced_station_retry must be a mapping in {config_file}"
-        )
-
-    gap_days = config.get("forced_station_max_missing_gap_days")
-    if not isinstance(gap_days, (int, float)) or gap_days <= 0:
-        raise ValueError(
-            "forced_station_max_missing_gap_days must be positive in "
-            f"{config_file}"
-        )
-    return policy
-
-
 _CONFIG, _CONFIG_FILE = _load_manual_usgs_config()
+TEMPERATURE_SEARCH_DIRECTIONS = ("upstream", "downstream")
 (
     NWM_TO_USGS_FLOW_ADJUSTMENT,
     REQUIRED_FLOW_STATIONS,
@@ -90,10 +72,4 @@ _CONFIG, _CONFIG_FILE = _load_manual_usgs_config()
     OPTIONAL_TEMPERATURE_STATIONS,
 ) = _load_feature_station_links(
     _CONFIG, "temperature_search_additions", _CONFIG_FILE
-)
-FORCED_STATION_RETRY_POLICY = _load_forced_station_retry_policy(
-    _CONFIG, _CONFIG_FILE
-)
-FORCED_STATION_MAX_MISSING_GAP_DAYS = float(
-    _CONFIG["forced_station_max_missing_gap_days"]
 )

@@ -7,8 +7,11 @@ from typing import Any, Mapping
 import numpy as np
 import pandas as pd
 
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS.download_usgs import (
-    download_stations,
+from stofs3d_setup.ops.USGS.ogc.source_sink import download_stations
+from stofs3d_setup.ops.USGS.iv.download_usgs import find_data_gaps
+from stofs3d_setup.ops.USGS.ogc.download_policy import (
+    USGS_DOWNLOAD_POLICY,
+    USGS_MAX_MISSING_GAP_DAYS,
 )
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     CFS_TO_CMS,
@@ -25,7 +28,7 @@ class UsgsDownloadPolicy:
 
     primary_chunk_days: int | None = None
     retry_chunk_days: tuple[int, ...] = ()
-    cache_prefix: str = "artificial_island_usgs"
+    cache_prefix: str = "usgs_adaptive"
 
     def __post_init__(self) -> None:
         chunk_days = (
@@ -51,7 +54,11 @@ class UsgsDownloadPolicy:
             )
 
 
-DEFAULT_USGS_DOWNLOAD_POLICY = UsgsDownloadPolicy()
+DEFAULT_USGS_DOWNLOAD_POLICY = UsgsDownloadPolicy(
+    primary_chunk_days=USGS_DOWNLOAD_POLICY["primary_chunk_days"],
+    retry_chunk_days=tuple(USGS_DOWNLOAD_POLICY["retry_chunk_days"]),
+    cache_prefix=USGS_DOWNLOAD_POLICY["cache_prefix"],
+)
 
 
 def _as_usgs_download_policy(
@@ -197,8 +204,8 @@ def _download_usgs_window(
     window_end: pd.Timestamp,
     cache_dir: Path,
     cache_prefix: str,
-) -> pd.Series | None:
-    """Download and parse one inclusive time window for one station."""
+) -> "UsgsWindowResult":
+    """Download one window and distinguish empty data from request failure."""
     station_id = _normalize_usgs_station_id(station_id)
 
     cache_file = cache_dir / (
@@ -217,6 +224,9 @@ def _download_usgs_window(
                 end=window_end.tz_localize(None),
                 freq="D",
             ),
+            allow_adaptive_retry=False,
+            raise_on_fetch_error=True,
+            validate_coverage=False,
         )
     except Exception as exc:
         print(
@@ -224,14 +234,14 @@ def _download_usgs_window(
             f"for station {station_id}, parameter {parameter_id}, "
             f"{window_start:%Y-%m-%d} to {window_end:%Y-%m-%d}: {exc}"
         )
-        return None
+        return UsgsWindowResult(series=None, retryable=True)
 
     matching = [
         record for record in records
         if _station_id_from_record(record) == station_id
     ]
     if not matching:
-        return None
+        return UsgsWindowResult(series=None, retryable=False)
 
     try:
         series = _extract_usgs_values(matching[0])
@@ -240,9 +250,19 @@ def _download_usgs_window(
             f"[USGS SERIES] warning: failed to parse station {station_id}, "
             f"parameter {parameter_id}: {exc}"
         )
-        return None
+        return UsgsWindowResult(series=None, retryable=True)
 
-    return None if series.empty else series
+    if series.empty:
+        return UsgsWindowResult(series=None, retryable=False)
+    return UsgsWindowResult(series=series, retryable=False)
+
+
+@dataclass(frozen=True)
+class UsgsWindowResult:
+    """Observation outcome for one window; empty and failed are distinct."""
+
+    series: pd.Series | None
+    retryable: bool
 
 
 def _download_usgs_window_adaptive(
@@ -254,8 +274,8 @@ def _download_usgs_window_adaptive(
     cache_prefix: str,
     retry_chunk_days: tuple[int, ...],
 ) -> list[pd.Series]:
-    """Retry a failed window using successively smaller configured windows."""
-    series = _download_usgs_window(
+    """Retry request failures using successively smaller configured windows."""
+    result = _download_usgs_window(
         station_id,
         parameter_id,
         window_start,
@@ -263,8 +283,10 @@ def _download_usgs_window_adaptive(
         cache_dir,
         cache_prefix,
     )
-    if series is not None:
-        return [series]
+    if result.series is not None:
+        return [result.series]
+    if not result.retryable:
+        return []
 
     span_days = (
         window_end.normalize() - window_start.normalize()
@@ -318,9 +340,7 @@ def download_usgs_series(
     end = _as_utc_timestamp(end_time) + pd.Timedelta(days=1)
 
     pieces = []
-    windows = list(
-        _iter_date_windows(start, end, policy.primary_chunk_days)
-    )
+    windows = list(_iter_date_windows(start, end, policy.primary_chunk_days))
 
     print(
         f"[USGS SERIES] download for {station_id}/{parameter_id}: "
@@ -329,17 +349,45 @@ def download_usgs_series(
     )
 
     for _, window_start, window_end in windows:
-        pieces.extend(
-            _download_usgs_window_adaptive(
-                station_id=station_id,
-                parameter_id=parameter_id,
-                window_start=window_start,
-                window_end=window_end,
-                cache_dir=cache_dir,
-                cache_prefix=policy.cache_prefix,
-                retry_chunk_days=policy.retry_chunk_days,
-            )
+        window_pieces = _download_usgs_window_adaptive(
+            station_id=station_id,
+            parameter_id=parameter_id,
+            window_start=window_start,
+            window_end=window_end,
+            cache_dir=cache_dir,
+            cache_prefix=policy.cache_prefix,
+            retry_chunk_days=policy.retry_chunk_days,
         )
+        pieces.extend(window_pieces)
+
+    merged = _merge_usgs_series(pieces)
+    if merged is None or merged.empty:
+        return None
+
+    gap_windows = find_data_gaps(
+        merged.index,
+        start=start,
+        end=end,
+        max_gap=pd.Timedelta(days=USGS_MAX_MISSING_GAP_DAYS),
+        freq=pd.Timedelta(hours=1),
+    )
+    for gap_start, gap_end in gap_windows:
+        for _, window_start, window_end in _iter_date_windows(
+            gap_start,
+            gap_end,
+            policy.primary_chunk_days,
+        ):
+            pieces.extend(
+                _download_usgs_window_adaptive(
+                    station_id=station_id,
+                    parameter_id=parameter_id,
+                    window_start=window_start,
+                    window_end=window_end,
+                    cache_dir=cache_dir,
+                    cache_prefix=policy.cache_prefix,
+                    retry_chunk_days=policy.retry_chunk_days,
+                )
+            )
 
     return _merge_usgs_series(pieces)
 

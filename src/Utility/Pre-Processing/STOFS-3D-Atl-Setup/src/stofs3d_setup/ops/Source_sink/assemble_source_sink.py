@@ -11,7 +11,7 @@ from pathlib import Path
 from .NWM.gen_sourcesink_nwm import gen_sourcesink_nwm
 from .Constant_sinks.set_constant_sink import set_constant_sink
 from .Relocate.relocate_source_feeder import relocate_sources2
-from .Replace_with_USGS.replace_with_obs import source_nwm2usgs
+from .Replace_with_USGS.source_flow import source_nwm2usgs
 from .Replace_with_USGS.source_temperature import (
     replace_source_temperatures_with_usgs,
 )

@@ -6,7 +6,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS import source_overrides
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS import hard_reset_sources
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     CFS_TO_CMS,
 )
@@ -49,19 +49,19 @@ class SourceOverrideTests(unittest.TestCase):
             return temperature_corrected, 1
 
         with patch.object(
-            source_overrides,
+            hard_reset_sources,
             "load_source_override_points",
             return_value=points,
         ), patch.object(
-            source_overrides,
+            hard_reset_sources,
             "apply_source_flow_overrides",
             side_effect=apply_flow,
         ), patch.object(
-            source_overrides,
+            hard_reset_sources,
             "apply_source_temperature_overrides",
             side_effect=apply_temperature,
         ):
-            result = source_overrides.apply_hard_reset_sources_with_usgs(
+            result = hard_reset_sources.apply_hard_reset_sources_with_usgs(
                 base_ss=original,
                 hgrid=_Grid(),
                 enabled=True,
@@ -77,9 +77,9 @@ class SourceOverrideTests(unittest.TestCase):
         original = object()
 
         with patch.object(
-            source_overrides, "load_source_override_points"
+            hard_reset_sources, "load_source_override_points"
         ) as load_points:
-            result = source_overrides.apply_hard_reset_sources_with_usgs(
+            result = hard_reset_sources.apply_hard_reset_sources_with_usgs(
                 base_ss=original,
                 hgrid=_Grid(),
                 enabled=False,
@@ -109,18 +109,14 @@ class SourceOverrideTests(unittest.TestCase):
             "replace_flow": True,
             "replace_temperature": False,
             "allow_negative_sink": False,
-            "usgs_download": {
-                "primary_chunk_days": 100,
-                "retry_chunk_days": [20, 10, 5],
-            },
         }
 
         with patch.object(
-            source_overrides,
+            hard_reset_sources,
             "_get_usgs_flow",
             return_value=(observations, "01463500"),
         ) as get_flow:
-            result = source_overrides._replace_existing_relocated_source(
+            result = hard_reset_sources._replace_existing_relocated_source(
                 point=point,
                 source_eles=[10],
                 source_time_and_data=(
@@ -137,10 +133,7 @@ class SourceOverrideTests(unittest.TestCase):
                 usgs_cache_folder=None,
             )
 
-        self.assertEqual(
-            get_flow.call_args.kwargs["download_policy"],
-            point["usgs_download"],
-        )
+        self.assertNotIn("download_policy", get_flow.call_args.kwargs)
 
         np.testing.assert_allclose(
             result[0][1][:, 0],
@@ -161,7 +154,7 @@ class SourceOverrideTests(unittest.TestCase):
         }
 
         with self.assertRaisesRegex(ValueError, "no relocated source found"):
-            source_overrides._replace_existing_relocated_source(
+            hard_reset_sources._replace_existing_relocated_source(
                 point=point,
                 source_eles=[1],
                 source_time_and_data=(
@@ -204,11 +197,11 @@ class SourceOverrideTests(unittest.TestCase):
             )
 
         with patch.object(
-            source_overrides,
+            hard_reset_sources,
             "_replace_existing_relocated_source",
             side_effect=record_override,
         ):
-            corrected, count = source_overrides.apply_source_overrides(
+            corrected, count = hard_reset_sources.apply_source_overrides(
                 base_ss=original,
                 hgrid=_Grid(),
                 points=[{"name": "first"}, {"name": "second"}],
@@ -253,13 +246,13 @@ class SourceOverrideTests(unittest.TestCase):
 
         with (
             patch.object(
-                source_overrides,
+                hard_reset_sources,
                 "_get_usgs_flow",
                 return_value=(observations, "01463500"),
             ),
-            patch.object(source_overrides, "_get_usgs_temperature") as get_temp,
+            patch.object(hard_reset_sources, "_get_usgs_temperature") as get_temp,
         ):
-            corrected, count = source_overrides.apply_source_flow_overrides(
+            corrected, count = hard_reset_sources.apply_source_flow_overrides(
                 base_ss=original,
                 hgrid=_Grid(),
                 points=[point],
@@ -311,12 +304,12 @@ class SourceOverrideTests(unittest.TestCase):
         )
 
         with patch.object(
-            source_overrides,
+            hard_reset_sources,
             "_get_usgs_temperature",
             return_value=(partial_temperature, "01463500"),
         ):
             corrected, count = (
-                source_overrides.apply_source_temperature_overrides(
+                hard_reset_sources.apply_source_temperature_overrides(
                     base_ss=original,
                     hgrid=_Grid(),
                     points=[point],

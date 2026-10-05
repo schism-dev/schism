@@ -7,27 +7,24 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS.download_usgs import (
+from stofs3d_setup.ops.USGS.ogc.source_sink import (
     RequiredStationDownloadError,
     download_stations,
 )
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS.replace_with_obs import (
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS.nwm_usgs_station_search import (
     Vsource,
-    associate_poi_with_nwm,
     find_usgs_along_nwm,
-    prepare_usgs_stations,
-    preprocess_nwm_shp,
+    prepare_nwm_usgs_station_search,
     read_nwm_data,
 )
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
-    FORCED_STATION_MAX_MISSING_GAP_DAYS,
-    FORCED_STATION_RETRY_POLICY,
     NWM_TO_USGS_TEMPERATURE_SEARCH,
     OPTIONAL_TEMPERATURE_STATIONS,
     REQUIRED_TEMPERATURE_STATIONS,
+    TEMPERATURE_SEARCH_DIRECTIONS,
     USGS_TEMPERATURE_PARAMETER_ID,
 )
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS.usgs_series import (
+from stofs3d_setup.ops.USGS.ogc.series import (
     _as_utc_timestamp,
     _extract_usgs_values,
     _interpolate_usgs_with_original_fallback,
@@ -99,74 +96,32 @@ def _prepare_nwm_usgs_station_search(
     usgs_cache_folder,
     diagnostics_dir: Path | None,
 ):
-    """
-    Build the NWM network with USGS streamflow stations attached.
-
-    This uses the same station inventory, NWM association, and upstream search
-    functions as source_nwm2usgs().
-    """
-    states = list(states or STOFS3D_ATL_STATES)
-    cache_dir = Path(usgs_cache_folder)
-    cache_dir.mkdir(parents=True, exist_ok=True)
-
-    cache_name = f'usgs_states_{"_".join(np.sort(states))}.txt'
-    station_cache = cache_dir / cache_name
-
-    if station_cache.is_file():
-        station_df = pd.read_csv(station_cache, dtype=object)
-        station_ids = station_df["id"].astype(str).to_numpy()
-        station_coords = (
-            station_df[["lon", "lat"]].to_numpy(dtype=float)
-        )
-    else:
-        diag_output = (
-            None
-            if diagnostics_dir is None
-            else str(diagnostics_dir / "all_source_usgs_stations.csv")
-        )
-        station_ids, station_coords = prepare_usgs_stations(
-            states=states,
-            diag_output=diag_output,
-        )
-        station_df = pd.DataFrame(
-            {
-                "id": np.asarray(station_ids, dtype=str),
-                "lon": station_coords[:, 0],
-                "lat": station_coords[:, 1],
-            }
-        )
-        station_df.to_csv(station_cache, index=False)
-
-    nwm_shp = preprocess_nwm_shp(str(nwm_shapefile))
-
-    association_diag = (
-        None
-        if diagnostics_dir is None
-        else str(diagnostics_dir / "all_source_auto_nearby_gages.txt")
+    """Build the shared NWM/USGS station network for temperature search."""
+    diagnostics_dir = (
+        None if diagnostics_dir is None else Path(diagnostics_dir)
     )
-    nwm_shp = associate_poi_with_nwm(
-        nwm_shp,
-        poi=np.asarray(station_coords, dtype=float),
-        poi_names=np.asarray(station_ids, dtype=str).tolist(),
-        poi_label="gages",
-        diag_output=association_diag,
-        invalid_poi_output=(
+    return prepare_nwm_usgs_station_search(
+        states=states,
+        nwm_shapefile=nwm_shapefile,
+        usgs_cache_folder=usgs_cache_folder,
+        manual_feature_station_links=NWM_TO_USGS_TEMPERATURE_SEARCH,
+        station_diagnostic_path=(
             None
             if diagnostics_dir is None
-            else str(
-                diagnostics_dir
-                / "invalid_usgs_station_coordinates.csv"
-            )
+            else diagnostics_dir / "all_source_usgs_stations.csv"
         ),
+        association_diagnostic_path=(
+            None
+            if diagnostics_dir is None
+            else diagnostics_dir / "all_source_auto_nearby_gages.txt"
+        ),
+        invalid_station_diagnostic_path=(
+            None
+            if diagnostics_dir is None
+            else diagnostics_dir / "invalid_usgs_station_coordinates.csv"
+        ),
+        save_station_cache=True,
     )
-
-    # Share manual NWM-to-USGS links with the flow-adjustment workflow.
-    for feature_id, station_id in NWM_TO_USGS_TEMPERATURE_SEARCH.items():
-        idx = nwm_shp["featureID"] == int(feature_id)
-        if np.any(idx):
-            nwm_shp.loc[idx, "gages"] = str(station_id)
-
-    return nwm_shp
 
 
 def _find_temperature_station_candidates(
@@ -176,14 +131,25 @@ def _find_temperature_station_candidates(
     xctr: np.ndarray,
     yctr: np.ndarray,
     nwm_shp,
+    search_directions: tuple[str, ...] | list[str] = (
+        TEMPERATURE_SEARCH_DIRECTIONS
+    ),
 ) -> dict[int, list[TemperatureStationCandidate]]:
     """
-    Find upstream USGS stations for every mapped source.
+    Find USGS stations in configured NWM network directions for each source.
 
     Multiple NWM feature IDs assigned to one source element are searched.
     Manually linked stations for those features are tried first; other station
-    IDs are de-duplicated while preserving network-search order.
+    IDs are de-duplicated while preserving configured direction and network
+    search order.
     """
+    invalid_directions = set(search_directions) - {"upstream", "downstream"}
+    if not search_directions or invalid_directions:
+        raise ValueError(
+            "Temperature search directions must include upstream and/or "
+            f"downstream; received {search_directions!r}"
+        )
+
     if source_time_and_data is None:
         return {}
 
@@ -226,14 +192,15 @@ def _find_temperature_station_candidates(
                 ),
             )
 
-            find_usgs_along_nwm(
-                iupstream=True,
-                starting_seg_id=int(fid),
-                vsource=vsource,
-                total_seg_length=0.0,
-                order=0,
-                nwm_shp=nwm_shp,
-            )
+            for direction in search_directions:
+                find_usgs_along_nwm(
+                    iupstream=direction == "upstream",
+                    starting_seg_id=int(fid),
+                    vsource=vsource,
+                    total_seg_length=0.0,
+                    order=0,
+                    nwm_shp=nwm_shp,
+                )
 
             for station in vsource.usgs_st:
                 station_id = str(station.st_id)
@@ -296,12 +263,8 @@ def _download_temperature_station_map(
             ),
             required_station_ids=required_station_ids,
             optional_station_ids=optional_station_ids,
-            required_station_retry_policy=FORCED_STATION_RETRY_POLICY,
-            required_station_max_missing_gap_days=(
-                FORCED_STATION_MAX_MISSING_GAP_DAYS
-            ),
-            required_station_start=start,
-            required_station_end=end,
+            validation_start=start,
+            validation_end=end,
             warning_log_path=warning_log_path,
             warning_input_files=(
                 "Source_sink/msource.th",
@@ -635,6 +598,9 @@ def _prepare_temperature_replacement_inputs(
     pooling: str = FIRST_USABLE,
     nwm_data_dir: str | Path | None = None,
     warning_log_path: str | Path | None = None,
+    search_directions: tuple[str, ...] | list[str] = (
+        TEMPERATURE_SEARCH_DIRECTIONS
+    ),
 ) -> TemperatureReplacementInputs:
     """Discover stations and load time series shared by pooling methods."""
     source_time, _ = source_time_and_data
@@ -652,6 +618,7 @@ def _prepare_temperature_replacement_inputs(
         xctr=xctr,
         yctr=yctr,
         nwm_shp=nwm_shp,
+        search_directions=search_directions,
     )
     all_station_ids = [
         candidate.station_id
@@ -833,6 +800,9 @@ def _apply_automatic_temperature_replacements(
     pooling: str = FIRST_USABLE,
     nwm_data_dir: str | Path | None = None,
     warning_log_path: str | Path | None = None,
+    search_directions: tuple[str, ...] | list[str] = (
+        TEMPERATURE_SEARCH_DIRECTIONS
+    ),
 ):
     """Apply automatic USGS temperature corrections to eligible sources.
 
@@ -877,6 +847,7 @@ def _apply_automatic_temperature_replacements(
         pooling=pooling,
         nwm_data_dir=nwm_data_dir,
         warning_log_path=warning_log_path,
+        search_directions=search_directions,
     )
     replaced_count, total_usgs_records = _apply_temperature_replacements(
         source_eles=source_eles,
@@ -909,6 +880,9 @@ def replace_source_temperatures_with_usgs(
     pooling: str = FIRST_USABLE,
     nwm_data_dir: str | Path | None = None,
     warning_log_path: str | Path | None = None,
+    search_directions: tuple[str, ...] | list[str] = (
+        TEMPERATURE_SEARCH_DIRECTIONS
+    ),
 ):
     """Return a copy with eligible source temperatures replaced by USGS.
 
@@ -941,6 +915,7 @@ def replace_source_temperatures_with_usgs(
             pooling=pooling,
             nwm_data_dir=nwm_data_dir,
             warning_log_path=warning_log_path,
+            search_directions=search_directions,
         )
     )
 

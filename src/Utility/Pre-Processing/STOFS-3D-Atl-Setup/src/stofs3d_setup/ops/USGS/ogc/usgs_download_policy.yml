@@ -1,0 +1,6 @@
+# Shared policy for all USGS flow and temperature downloads.
+download:
+  primary_chunk_days: 100
+  retry_chunk_days: [20, 10, 5]
+  cache_prefix: "usgs_ogc_adaptive"
+  max_missing_gap_days: 7

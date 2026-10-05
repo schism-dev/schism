@@ -107,7 +107,7 @@ from pylib_experimental.schism_file import source_sink
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     CFS_TO_CMS,
 )
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS.usgs_series import (
+from stofs3d_setup.ops.USGS.ogc.series import (
     _get_usgs_forcing,
     _interpolate_usgs_with_original_fallback,
     _model_datetimes,

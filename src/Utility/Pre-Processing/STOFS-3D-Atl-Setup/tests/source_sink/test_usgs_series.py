@@ -1,12 +1,13 @@
 """Characterization tests for USGS series handling used by source/sink setup."""
 
 import unittest
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS import usgs_series
+from stofs3d_setup.ops.USGS.ogc import series as usgs_series
 
 
 class UsgsSeriesTests(unittest.TestCase):
@@ -102,7 +103,10 @@ class UsgsSeriesTests(unittest.TestCase):
         ):
             del station_id, parameter_id, cache_dir, cache_prefix
             span_days = (window_end - window_start).days + 1
-            return successful_piece if span_days <= 5 else None
+            return usgs_series.UsgsWindowResult(
+                series=successful_piece if span_days <= 5 else None,
+                retryable=span_days > 5,
+            )
 
         with patch.object(
             usgs_series,
@@ -122,6 +126,59 @@ class UsgsSeriesTests(unittest.TestCase):
         self.assertEqual(len(pieces), 2)
         self.assertEqual(downloader.call_count, 3)
 
+    def test_successful_empty_window_is_not_retried(self):
+        with patch.object(
+            usgs_series,
+            "_download_usgs_window",
+            return_value=usgs_series.UsgsWindowResult(
+                series=None,
+                retryable=False,
+            ),
+        ) as downloader:
+            pieces = usgs_series._download_usgs_window_adaptive(
+                station_id="02244440",
+                parameter_id="00010",
+                window_start=pd.Timestamp("2020-01-01", tz="UTC"),
+                window_end=pd.Timestamp("2020-04-09", tz="UTC"),
+                cache_dir=None,
+                cache_prefix="test_usgs",
+                retry_chunk_days=(20, 10, 5),
+            )
+
+        self.assertEqual(pieces, [])
+        downloader.assert_called_once()
+
+    def test_observation_free_period_only_uses_primary_chunks(self):
+        empty_window = usgs_series.UsgsWindowResult(
+            series=None,
+            retryable=False,
+        )
+        policy = usgs_series.UsgsDownloadPolicy(
+            primary_chunk_days=3,
+            retry_chunk_days=(2, 1),
+            cache_prefix="test_usgs",
+        )
+
+        with TemporaryDirectory() as cache_dir:
+            with patch.object(
+                usgs_series,
+                "_download_usgs_window",
+                return_value=empty_window,
+            ) as downloader:
+                result = usgs_series.download_usgs_series(
+                    station_id="02244440",
+                    parameter_id="00010",
+                    start_time="2020-01-01",
+                    end_time="2020-01-10",
+                    usgs_cache_folder=cache_dir,
+                    policy=policy,
+                )
+
+        self.assertIsNone(result)
+        # The downloader pads the requested period by one day at both ends:
+        # 12 days / 3-day primary chunks, with no adaptive subdivisions.
+        self.assertEqual(downloader.call_count, 4)
+
     def test_download_policy_requires_decreasing_positive_windows(self):
         with self.assertRaisesRegex(ValueError, "strictly decreasing"):
             usgs_series.UsgsDownloadPolicy(
@@ -130,6 +187,16 @@ class UsgsSeriesTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(ValueError, "positive"):
             usgs_series.UsgsDownloadPolicy(retry_chunk_days=(0,))
+
+    def test_default_download_policy_is_loaded_from_shared_yaml(self):
+        self.assertEqual(
+            usgs_series.DEFAULT_USGS_DOWNLOAD_POLICY.primary_chunk_days,
+            100,
+        )
+        self.assertEqual(
+            usgs_series.DEFAULT_USGS_DOWNLOAD_POLICY.retry_chunk_days,
+            (20, 10, 5),
+        )
 
     def test_named_series_uses_configured_policy_without_name_branch(self):
         policy = {

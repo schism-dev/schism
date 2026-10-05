@@ -6,7 +6,7 @@ from pyproj import Transformer
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     CFS_TO_CMS,
 )
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS.usgs_series import (
+from stofs3d_setup.ops.USGS.ogc.series import (
     _get_usgs_flow,
     _get_usgs_temperature,
     _interpolate_usgs_with_original_fallback,
@@ -20,7 +20,7 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.source_temperature import (
     _validate_temperature_pooling,
 )
 from stofs3d_setup.ops.Source_sink.correction_config import load_source_sink_corrections
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS.override_config import (
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS.hard_reset_config import (
     source_override_points,
 )
 from stofs3d_setup.ops.Source_sink.source_sink_components import (
@@ -118,7 +118,6 @@ def _replace_existing_relocated_source(
 
     flow_series = None
     temperature_series = None
-    download_policy = point.get("usgs_download")
     if point["replace_flow"]:
         flow_series, flow_station_id = _get_usgs_flow(
             name=name,
@@ -126,7 +125,6 @@ def _replace_existing_relocated_source(
             start_time=start_time,
             model_time=source_time,
             usgs_cache_folder=usgs_cache_folder,
-            download_policy=download_policy,
         )
     if point["replace_temperature"]:
         temperature_series, temperature_station_id = _get_usgs_temperature(
@@ -135,7 +133,6 @@ def _replace_existing_relocated_source(
             start_time=start_time,
             model_time=source_time,
             usgs_cache_folder=usgs_cache_folder,
-            download_policy=download_policy,
         )
 
     if point["replace_flow"]:

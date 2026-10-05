@@ -17,11 +17,3 @@ temperature_search_additions:
   16665419: {station_id: '02244440', download_requirement: optional}  # Dunns Creek
   2590217: {station_id: '01463500', download_requirement: required}   # Delaware
   6186156: {station_id: '01359139', download_requirement: required}   # Hudson River at Albany, NY
-
-# Second fallback for manually linked stations that remain unavailable after
-# the bulk request and the existing 10-day single-station fallback.
-forced_station_retry:
-  primary_chunk_days: 100
-  retry_chunk_days: [20, 10, 5]
-  cache_prefix: "manual_nwm2usgs"
-forced_station_max_missing_gap_days: 7

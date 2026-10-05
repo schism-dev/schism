@@ -7,10 +7,12 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS import download_usgs
+from stofs3d_setup.ops.USGS.ogc import source_sink
+from stofs3d_setup.ops.USGS.ogc.download_policy import (
+    USGS_DOWNLOAD_POLICY,
+    USGS_MAX_MISSING_GAP_DAYS,
+)
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
-    FORCED_STATION_MAX_MISSING_GAP_DAYS,
-    FORCED_STATION_RETRY_POLICY,
     OPTIONAL_FLOW_STATIONS,
     OPTIONAL_TEMPERATURE_STATIONS,
     REQUIRED_FLOW_STATIONS,
@@ -18,16 +20,19 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
 )
 
 
-class ForcedUsgsStationDownloadTests(unittest.TestCase):
-    def test_forced_station_retry_policy_has_adaptive_windows(self):
+class UsgsDownloadPolicyTests(unittest.TestCase):
+    def test_shared_policy_has_adaptive_windows_and_gap_limit(self):
         self.assertEqual(
-            FORCED_STATION_RETRY_POLICY["primary_chunk_days"], 100
+            USGS_DOWNLOAD_POLICY["primary_chunk_days"], 100
         )
         self.assertEqual(
-            FORCED_STATION_RETRY_POLICY["retry_chunk_days"],
+            USGS_DOWNLOAD_POLICY["retry_chunk_days"],
             [20, 10, 5],
         )
-        self.assertEqual(FORCED_STATION_MAX_MISSING_GAP_DAYS, 7)
+        self.assertEqual(USGS_MAX_MISSING_GAP_DAYS, 7)
+
+
+class UsgsStationDownloadTests(unittest.TestCase):
 
     def _download_with_missing_primary_station(
         self,
@@ -45,35 +50,47 @@ class ForcedUsgsStationDownloadTests(unittest.TestCase):
                     ["2020-01-01T00:00Z", "2020-01-02T00:00Z"]
                 ),
             )
-        metadata = pd.DataFrame(
-            {
-                "site_no": [station_id],
-                "station_nm": ["Hudson River at Albany"],
-                "dec_long_va": [-73.75],
-                "dec_lat_va": [42.65],
-            }
-        )
         if fetch_results is None:
-            fetch_results = [pd.DataFrame(), pd.DataFrame()]
+            fetch_results = [RuntimeError("bulk request failed")]
+
+        def as_ogc_observations(frame):
+            if isinstance(frame, BaseException) or frame.empty:
+                return frame
+            if "site_no" in frame:
+                return pd.DataFrame(
+                    {
+                        "station_id": frame["site_no"],
+                        "station_name": "Hudson River at Albany",
+                        "lon": -73.75,
+                        "lat": 42.65,
+                        "time": pd.to_datetime(frame["date"], utc=True),
+                        "value": frame["value"],
+                        "unit": "ft3/s",
+                    }
+                )
+            return frame
+
+        fetch_results = [as_ogc_observations(result) for result in fetch_results]
 
         with tempfile.TemporaryDirectory() as directory:
             with (
-                patch.object(download_usgs, "make_session"),
-                patch.object(download_usgs, "usgs_site_info", return_value=metadata),
                 patch.object(
-                    download_usgs,
-                    "fetch_iv_rdb",
+                    source_sink,
+                    "make_session",
+                ),
+                patch.object(
+                    source_sink,
+                    "download_station_group_parameter",
                     side_effect=fetch_results,
                 ),
                 patch(
-                    "stofs3d_setup.ops.Source_sink.Replace_with_USGS."
-                    "usgs_series.download_usgs_series",
+                    "stofs3d_setup.ops.USGS.ogc.series."
+                    "download_usgs_series",
                     return_value=retry_result(observations),
                 ) as adaptive_retry,
-                patch.object(download_usgs, "write_manifest"),
-                patch.object(download_usgs, "save_cache_parquet"),
+                patch.object(source_sink, "save_cache_parquet"),
             ):
-                records = download_usgs.download_stations(
+                records = source_sink.download_stations(
                     param_id="00060",
                     station_ids=[station_id],
                     cache_fname=str(Path(directory) / "flow.pq"),
@@ -86,10 +103,10 @@ class ForcedUsgsStationDownloadTests(unittest.TestCase):
                     optional_station_ids=(
                         [station_id] if requirement == "optional" else []
                     ),
-                    required_station_retry_policy=FORCED_STATION_RETRY_POLICY,
-                    required_station_max_missing_gap_days=7,
-                    required_station_start="2020-01-01",
-                    required_station_end=(
+                    download_policy=USGS_DOWNLOAD_POLICY,
+                    max_missing_gap_days=USGS_MAX_MISSING_GAP_DAYS,
+                    validation_start="2020-01-01",
+                    validation_end=(
                         pd.Timestamp("2020-01-01")
                         + pd.Timedelta(days=period_days - 1)
                     ),
@@ -118,7 +135,7 @@ class ForcedUsgsStationDownloadTests(unittest.TestCase):
         self.assertEqual(adaptive_retry.call_count, 1)
         self.assertEqual(
             adaptive_retry.call_args.kwargs["policy"],
-            FORCED_STATION_RETRY_POLICY,
+            USGS_DOWNLOAD_POLICY,
         )
         pd.testing.assert_series_equal(
             pd.Series(
@@ -132,8 +149,8 @@ class ForcedUsgsStationDownloadTests(unittest.TestCase):
 
     def test_required_station_raises_after_both_fallbacks_fail(self):
         with self.assertRaisesRegex(
-            download_usgs.RequiredStationDownloadError,
-            "after both fallback methods.*01358000",
+            source_sink.RequiredStationDownloadError,
+            "after adaptive retries.*01358000",
         ):
             self._download_with_missing_primary_station(lambda series: None)
 
@@ -161,7 +178,7 @@ class ForcedUsgsStationDownloadTests(unittest.TestCase):
         records, adaptive_retry, _, _ = self._download_with_missing_primary_station(
             lambda series: complete_observations,
             period_days=10,
-            fetch_results=[gappy_data, gappy_data],
+            fetch_results=[gappy_data],
             observations=complete_observations,
         )
 
@@ -187,13 +204,13 @@ class ForcedUsgsStationDownloadTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(
-            download_usgs.RequiredStationDownloadError,
+            source_sink.RequiredStationDownloadError,
             "largest missing duration.*exceeds",
         ):
             self._download_with_missing_primary_station(
                 lambda series: gappy_observations,
                 period_days=10,
-                fetch_results=[gappy_data, gappy_data],
+                fetch_results=[gappy_data],
                 observations=gappy_observations,
             )
 
@@ -211,6 +228,63 @@ class ForcedUsgsStationDownloadTests(unittest.TestCase):
         self.assertIn("01358000", warning_log)
         self.assertIn("Source_sink/vsource.th", warning_log)
         self.assertIn("Source_sink/source.nc", warning_log)
+
+    def test_valid_empty_response_is_not_split_into_smaller_windows(self):
+        records, adaptive_retry, _, _ = (
+            self._download_with_missing_primary_station(
+                lambda series: series,
+                fetch_results=[pd.DataFrame()],
+                requirement="unforced",
+            )
+        )
+
+        self.assertEqual(records, [])
+        adaptive_retry.assert_not_called()
+
+    def test_required_station_with_empty_response_gets_adaptive_fallback(self):
+        station_id = "01358000"
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                patch.object(source_sink, "make_session"),
+                patch.object(
+                    source_sink,
+                    "download_station_group_parameter",
+                    return_value=pd.DataFrame(),
+                ),
+                patch.object(source_sink, "save_cache_parquet"),
+                patch(
+                    "stofs3d_setup.ops.USGS.ogc.series.download_usgs_series",
+                    return_value=None,
+                ) as adaptive_retry,
+            ):
+                with self.assertRaises(source_sink.RequiredStationDownloadError):
+                    source_sink.download_stations(
+                        param_id="00060",
+                        station_ids=[station_id],
+                        cache_fname=str(Path(directory) / "flow.pq"),
+                        datelist=pd.date_range("2020-01-01", periods=2),
+                        required_station_ids=[station_id],
+                        validation_start="2020-01-01",
+                        validation_end="2020-01-02",
+                    )
+
+        adaptive_retry.assert_called_once()
+
+    def test_unforced_station_uses_adaptive_policy_after_request_error(self):
+        records, adaptive_retry, observations, _ = (
+            self._download_with_missing_primary_station(
+                lambda series: series,
+                requirement="unforced",
+            )
+        )
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].station_info["id"], "01358000")
+        self.assertEqual(adaptive_retry.call_count, 1)
+        self.assertEqual(
+            adaptive_retry.call_args.kwargs["policy"],
+            USGS_DOWNLOAD_POLICY,
+        )
 
     def test_manual_soft_link_station_requirements(self):
         self.assertIn("07375175", OPTIONAL_FLOW_STATIONS)

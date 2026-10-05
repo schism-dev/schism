@@ -11,10 +11,14 @@ import numpy as np
 import pandas as pd
 
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS import source_temperature
-from stofs3d_setup.ops.Source_sink.Replace_with_USGS import override_config
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS import hard_reset_config
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS import (
+    nwm_usgs_station_search,
+)
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     NWM_TO_USGS_FLOW_ADJUSTMENT,
     NWM_TO_USGS_TEMPERATURE_SEARCH,
+    TEMPERATURE_SEARCH_DIRECTIONS,
 )
 from stofs3d_setup.ops.Source_sink.correction_config import (
     load_source_sink_corrections,
@@ -33,6 +37,45 @@ class _Grid:
 
 
 class SourceTemperatureTests(unittest.TestCase):
+    def test_shared_station_search_applies_workflow_specific_links(self):
+        network = pd.DataFrame(
+            {
+                "featureID": [101, 202],
+                "gages": [None, None],
+            }
+        )
+        with TemporaryDirectory() as cache_dir:
+            with (
+                patch.object(
+                    nwm_usgs_station_search,
+                    "prepare_usgs_stations",
+                    return_value=(
+                        np.array(["01234567"]),
+                        np.array([[-75.0, 39.0]]),
+                    ),
+                ),
+                patch.object(
+                    nwm_usgs_station_search,
+                    "preprocess_nwm_shp",
+                    return_value=network.copy(),
+                ),
+                patch.object(
+                    nwm_usgs_station_search,
+                    "associate_poi_with_nwm",
+                    side_effect=lambda frame, **kwargs: frame,
+                ),
+            ):
+                result = nwm_usgs_station_search.prepare_nwm_usgs_station_search(
+                    states=["DE"],
+                    nwm_shapefile="unused.shp",
+                    usgs_cache_folder=cache_dir,
+                    manual_feature_station_links={202: "01359139"},
+                    invalid_station_diagnostic_path=None,
+                )
+
+        self.assertEqual(result.loc[1, "gages"], "01359139")
+        self.assertIsNone(result.loc[0, "gages"])
+
     def test_source_mapping_loader_normalizes_elements_and_feature_ids(self):
         with TemporaryDirectory() as directory:
             mapping_file = Path(directory) / "sources.json"
@@ -53,11 +96,11 @@ class SourceTemperatureTests(unittest.TestCase):
                 source_temperature._load_source_feature_mapping(directory)
 
     def test_explicit_hudson_station_mappings_are_parameter_specific(self):
-        hard_reset_file = Path(override_config.__file__).with_name(
+        hard_reset_file = Path(hard_reset_config.__file__).with_name(
             "hard_reset_sources_with_usgs.yml"
         )
         corrections = load_source_sink_corrections(hard_reset_file)
-        hard_reset_points = override_config.source_override_points(
+        hard_reset_points = hard_reset_config.source_override_points(
             corrections
         )
         hudson = next(
@@ -131,6 +174,45 @@ class SourceTemperatureTests(unittest.TestCase):
                     nwm_feature_id=202,
                 )
             ],
+        )
+        self.assertEqual(
+            TEMPERATURE_SEARCH_DIRECTIONS,
+            ("upstream", "downstream"),
+        )
+
+    def test_temperature_search_can_include_downstream_without_flow_change(self):
+        searched_directions = []
+
+        def add_candidate(**kwargs):
+            searched_directions.append(kwargs["iupstream"])
+            kwargs["vsource"].usgs_st.append(
+                SimpleNamespace(
+                    st_id=("upstream" if kwargs["iupstream"] else "downstream"),
+                    nearby_nwm_fid=202 if kwargs["iupstream"] else 303,
+                )
+            )
+
+        with patch.object(
+            source_temperature,
+            "find_usgs_along_nwm",
+            side_effect=add_candidate,
+        ):
+            candidates = source_temperature._find_temperature_station_candidates(
+                source_eles=[1],
+                source_element_to_fids={1: [101]},
+                source_time_and_data=(
+                    np.array([0.0]),
+                    np.array([[1.0]]),
+                ),
+                xctr=np.array([0.0]),
+                yctr=np.array([0.0]),
+                nwm_shp=None,
+            )
+
+        self.assertEqual(searched_directions, [True, False])
+        self.assertEqual(
+            [candidate.station_id for candidate in candidates[1]],
+            ["upstream", "downstream"],
         )
 
     def test_manual_temperature_station_is_first_usable_candidate(self):
