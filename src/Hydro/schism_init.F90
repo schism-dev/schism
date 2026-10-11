@@ -1277,6 +1277,9 @@
 
 !       Dump horizontal grid
         call dump_hgrid
+!       ipgl2/isgl2 are only used in dump_hgrid; iegl2 is still used later
+        if(allocated(ipgl2)) deallocate(ipgl2)
+        if(allocated(isgl2)) deallocate(isgl2)
 
         if(myrank==0) then
           write(16,*)'done domain decomp...'
