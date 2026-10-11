@@ -95,6 +95,8 @@ def _prepare_nwm_usgs_station_search(
     nwm_shapefile,
     usgs_cache_folder,
     diagnostics_dir: Path | None,
+    start_time,
+    end_time,
 ):
     """Build the shared NWM/USGS station network for temperature search."""
     diagnostics_dir = (
@@ -104,6 +106,9 @@ def _prepare_nwm_usgs_station_search(
         states=states,
         nwm_shapefile=nwm_shapefile,
         usgs_cache_folder=usgs_cache_folder,
+        parameter=USGS_TEMPERATURE_PARAMETER_ID,
+        start=start_time,
+        end=end_time,
         manual_feature_station_links=NWM_TO_USGS_TEMPERATURE_SEARCH,
         station_diagnostic_path=(
             None
@@ -604,12 +609,15 @@ def _prepare_temperature_replacement_inputs(
 ) -> TemperatureReplacementInputs:
     """Discover stations and load time series shared by pooling methods."""
     source_time, _ = source_time_and_data
+    target_time = _model_datetimes(start_time, source_time)
     source_element_to_fids = _load_source_feature_mapping(source_mapping_dir)
     nwm_shp = _prepare_nwm_usgs_station_search(
         states=states,
         nwm_shapefile=nwm_shapefile,
         usgs_cache_folder=usgs_cache_folder,
         diagnostics_dir=diagnostics_dir,
+        start_time=target_time[0],
+        end_time=target_time[-1],
     )
     candidates_by_source = _find_temperature_station_candidates(
         source_eles=source_eles,
@@ -625,7 +633,6 @@ def _prepare_temperature_replacement_inputs(
         for candidates in candidates_by_source.values()
         for candidate in candidates
     ]
-    target_time = _model_datetimes(start_time, source_time)
     temperature_by_station = _download_temperature_station_map(
         station_ids=all_station_ids,
         start_time=target_time[0],

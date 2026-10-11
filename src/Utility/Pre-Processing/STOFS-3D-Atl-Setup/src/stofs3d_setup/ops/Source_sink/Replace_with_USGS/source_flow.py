@@ -95,18 +95,6 @@ def source_nwm2usgs(
     )
     os.makedirs(usgs_cache_folder, exist_ok=True)
 
-    nwm_shp = prepare_nwm_usgs_station_search(
-        states=states,
-        nwm_shapefile=f_shapefile,
-        usgs_cache_folder=usgs_cache_folder,
-        manual_feature_station_links=NWM_TO_USGS_FLOW_ADJUSTMENT,
-        station_diagnostic_path=f'{output_dir}/usgs_stations.csv',
-        association_diagnostic_path=f'{output_dir}/auto_nearby_gages.txt',
-    )
-
-    idx = nwm_shp['gages'].notnull()
-    print(f'{nwm_shp.loc[idx]}')
-
     # -----------------------------------------------------------------------------------
     # ------load vsource------
     # -----------------------------------------------------------------------------------
@@ -131,6 +119,20 @@ def source_nwm2usgs(
     source_eles = Prop(f'{original_ss_dir}/source_sink.in', 2).ip_group[0]
     my_th = TimeHistory(f'{original_ss_dir}/vsource.th', start_time_str=start_time_str, mask_val=None)
     end_time_str = my_th.df.iloc[-1, 0].strftime("%m/%d/%Y, %H:%M:%S")
+
+    nwm_shp = prepare_nwm_usgs_station_search(
+        states=states,
+        nwm_shapefile=f_shapefile,
+        usgs_cache_folder=usgs_cache_folder,
+        manual_feature_station_links=NWM_TO_USGS_FLOW_ADJUSTMENT,
+        station_diagnostic_path=f'{output_dir}/usgs_stations.csv',
+        association_diagnostic_path=f'{output_dir}/auto_nearby_gages.txt',
+        parameter=usgs_var_dict["streamflow"]["id"],
+        start=start_time_str,
+        end=end_time_str,
+    )
+    idx = nwm_shp['gages'].notnull()
+    print(f'{nwm_shp.loc[idx]}')
 
     my_sources = np.empty((len(source_eles)), dtype=Vsource)
     for i, source_ele in enumerate(source_eles):

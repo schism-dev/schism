@@ -27,7 +27,8 @@ from stofs3d_setup.ops.USGS.ogc.download_policy import (
 )
 from stofs3d_setup.ops.USGS.ogc.download_usgs import (
     USGS_STATE_NAMES,
-    discover_parameter_series,
+    discover_monitoring_locations,
+    discover_station_ids_with_parameter,
     download_station_group_parameter,
     make_session,
     normalize_station_id,
@@ -58,37 +59,56 @@ def get_usgs_stations_from_state(
     states: List[str] | None = None,
     data_type: str = "iv",
     parameter: Optional[str] = None,
+    start: Any = "1800-01-01T00:00:00Z",
+    end: Any = "2200-01-01T00:00:00Z",
+    locations: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """List stations with continuous parameter series from OGC metadata."""
+    """List locations with the requested instantaneous series in the period."""
     del data_type
     states = ecgc_states if states is None else states
     parameter = parameter or usgs_var_dict["streamflow"]["id"]
-    series = discover_parameter_series(
-        parameter=parameter,
-        start="1800-01-01T00:00:00Z",
-        end="2200-01-01T00:00:00Z",
-        states=states,
+    locations = (
+        discover_monitoring_locations(states=states)
+        if locations is None
+        else locations
     )
-    if series.empty:
-        return pd.DataFrame(
-            columns=[
-                "site_no", "station_nm", "state", "dec_long_va",
-                "dec_lat_va", "begin_date", "end_date",
-            ]
-        )
-
-    series = series.drop_duplicates("station_id")
+    locations = filter_station_inventory_by_parameter(
+        locations,
+        parameter=parameter,
+        start=start,
+        end=end,
+    )
     return pd.DataFrame(
         {
-            "site_no": series["station_id"].map(normalize_station_id),
-            "station_nm": series.get("station_name"),
-            "state": series["state"],
-            "dec_long_va": pd.to_numeric(series["lon"], errors="coerce"),
-            "dec_lat_va": pd.to_numeric(series["lat"], errors="coerce"),
+            "site_no": locations["station_id"].map(normalize_station_id),
+            "station_nm": locations["station_name"],
+            "state": locations["state"],
+            "dec_long_va": pd.to_numeric(locations["lon"], errors="coerce"),
+            "dec_lat_va": pd.to_numeric(locations["lat"], errors="coerce"),
             "begin_date": pd.NaT,
             "end_date": pd.NaT,
         }
     ).reset_index(drop=True)
+
+
+def filter_station_inventory_by_parameter(
+    locations: pd.DataFrame,
+    parameter: str,
+    start: Any,
+    end: Any,
+) -> pd.DataFrame:
+    """Keep inventory locations with a matching series for the run period."""
+    if locations.empty:
+        return locations.copy()
+
+    matching_ids = discover_station_ids_with_parameter(
+        locations["station_id"].astype(str).tolist(),
+        parameter=parameter,
+        start=start,
+        end=end,
+    )
+    normalized_ids = locations["station_id"].map(normalize_station_id)
+    return locations.loc[normalized_ids.isin(matching_ids)].reset_index(drop=True)
 
 
 def _as_utc(value) -> pd.Timestamp:

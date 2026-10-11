@@ -37,6 +37,29 @@ class _Grid:
 
 
 class SourceTemperatureTests(unittest.TestCase):
+    def test_temperature_station_search_screens_temperature_for_run_window(self):
+        with patch.object(
+            source_temperature,
+            "prepare_nwm_usgs_station_search",
+            return_value="screened-network",
+        ) as prepare_search:
+            result = source_temperature._prepare_nwm_usgs_station_search(
+                states=["NY"],
+                nwm_shapefile="network.shp",
+                usgs_cache_folder="cache",
+                diagnostics_dir=None,
+                start_time="2017-01-01",
+                end_time="2017-01-05",
+            )
+
+        self.assertEqual(result, "screened-network")
+        self.assertEqual(
+            prepare_search.call_args.kwargs["parameter"],
+            "00010",
+        )
+        self.assertEqual(prepare_search.call_args.kwargs["start"], "2017-01-01")
+        self.assertEqual(prepare_search.call_args.kwargs["end"], "2017-01-05")
+
     def test_shared_station_search_applies_workflow_specific_links(self):
         network = pd.DataFrame(
             {
@@ -52,6 +75,19 @@ class SourceTemperatureTests(unittest.TestCase):
                     return_value=(
                         np.array(["01234567"]),
                         np.array([[-75.0, 39.0]]),
+                    ),
+                ),
+                patch.object(
+                    nwm_usgs_station_search,
+                    "discover_monitoring_locations",
+                    return_value=pd.DataFrame(
+                        {
+                            "station_id": ["01234567"],
+                            "station_name": ["Test station"],
+                            "state": ["DE"],
+                            "lon": [-75.0],
+                            "lat": [39.0],
+                        }
                     ),
                 ),
                 patch.object(

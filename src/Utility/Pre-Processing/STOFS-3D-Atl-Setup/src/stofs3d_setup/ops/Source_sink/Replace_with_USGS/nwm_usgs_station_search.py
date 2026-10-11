@@ -18,6 +18,9 @@ from stofs3d_setup.ops.USGS.ogc.source_sink import (
     get_usgs_stations_from_state,
     usgs_var_dict,
 )
+from stofs3d_setup.ops.USGS.ogc.download_usgs import (
+    discover_monitoring_locations,
+)
 from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
 
 
@@ -157,13 +160,23 @@ def find_usgs_along_nwm(
         )
 
 
-def prepare_usgs_stations(states=None, diag_output=None):
-    """Return USGS station IDs and coordinates for the requested states."""
+def prepare_usgs_stations(
+    states=None,
+    diag_output=None,
+    parameter=None,
+    start="1800-01-01T00:00:00Z",
+    end="2200-01-01T00:00:00Z",
+    locations=None,
+):
+    """Return screened USGS station IDs and coordinates."""
     if states is None:
         raise ValueError("a list of states must be provided")
     station_info = get_usgs_stations_from_state(
         states=states,
-        parameter=usgs_var_dict["streamflow"]["id"],
+        parameter=parameter or usgs_var_dict["streamflow"]["id"],
+        start=start,
+        end=end,
+        locations=locations,
     )
     station_ids = station_info["site_no"].to_numpy()
     station_lon = station_info["dec_long_va"].to_numpy()
@@ -197,34 +210,37 @@ def prepare_nwm_usgs_station_search(
     station_diagnostic_path=None,
     association_diagnostic_path=None,
     invalid_station_diagnostic_path="invalid_usgs_station_coordinates.csv",
-    save_station_cache=False,
+    save_station_cache=True,
+    parameter=None,
+    start="1800-01-01T00:00:00Z",
+    end="2200-01-01T00:00:00Z",
 ):
-    """Prepare the NWM network and associate USGS stations with its reaches."""
+    """Screen cached station locations, then associate them with NWM reaches."""
     states = list(states or STOFS3D_ATL_STATES)
     cache_dir = Path(usgs_cache_folder)
     cache_dir.mkdir(parents=True, exist_ok=True)
-    station_cache = cache_dir / f'usgs_states_{"_".join(np.sort(states))}.txt'
+    station_cache = cache_dir / (
+        f'usgs_station_inventory_{"_".join(sorted(states))}.csv'
+    )
     if station_cache.is_file():
-        station_frame = pd.read_csv(station_cache, dtype=object)
-        station_ids = station_frame["id"].astype(str).to_numpy()
-        station_coords = station_frame[["lon", "lat"]].to_numpy(dtype=float)
+        locations = pd.read_csv(station_cache, dtype={"station_id": str})
     else:
-        station_ids, station_coords = prepare_usgs_stations(
-            states=states,
-            diag_output=(
-                None
-                if station_diagnostic_path is None
-                else str(station_diagnostic_path)
-            ),
-        )
+        locations = discover_monitoring_locations(states=states)
         if save_station_cache:
-            pd.DataFrame(
-                {
-                    "id": np.asarray(station_ids, dtype=str),
-                    "lon": station_coords[:, 0],
-                    "lat": station_coords[:, 1],
-                }
-            ).to_csv(station_cache, index=False)
+            locations.to_csv(station_cache, index=False)
+
+    station_ids, station_coords = prepare_usgs_stations(
+        states=states,
+        parameter=parameter or usgs_var_dict["streamflow"]["id"],
+        start=start,
+        end=end,
+        locations=locations,
+        diag_output=(
+            None
+            if station_diagnostic_path is None
+            else str(station_diagnostic_path)
+        ),
+    )
 
     nwm_shp = preprocess_nwm_shp(str(nwm_shapefile))
     nwm_shp = associate_poi_with_nwm(

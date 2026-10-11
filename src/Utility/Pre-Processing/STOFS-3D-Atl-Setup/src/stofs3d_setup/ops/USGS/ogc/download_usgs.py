@@ -89,6 +89,29 @@ USGS_STATE_NAMES = {
     "TX": "Texas",
 }
 
+USGS_STATE_FIPS_CODES = {
+    "ME": "23",
+    "NH": "33",
+    "MA": "25",
+    "RI": "44",
+    "CT": "09",
+    "NY": "36",
+    "NJ": "34",
+    "DE": "10",
+    "PA": "42",
+    "MD": "24",
+    "DC": "11",
+    "VA": "51",
+    "NC": "37",
+    "SC": "45",
+    "GA": "13",
+    "FL": "12",
+    "AL": "01",
+    "MI": "26",
+    "LA": "22",
+    "TX": "48",
+}
+
 
 def make_session() -> requests.Session:
     retry = Retry(
@@ -98,7 +121,7 @@ def make_session() -> requests.Session:
         status=3,
         backoff_factor=1.0,
         status_forcelist=[500, 502, 503, 504],
-        allowed_methods={"GET"},
+        allowed_methods={"GET", "POST"},
         respect_retry_after_header=True,
     )
     adapter = HTTPAdapter(
@@ -133,9 +156,19 @@ def request_json(
     url: str,
     params: dict[str, Any] | None = None,
     max_429_retries: int = 8,
+    json_body: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     for attempt in range(max_429_retries + 1):
-        response = session.get(url, params=params, timeout=60)
+        if json_body is None:
+            response = session.get(url, params=params, timeout=60)
+        else:
+            response = session.post(
+                url,
+                params=params,
+                json=json_body,
+                headers={"Content-Type": "application/query-cql-json"},
+                timeout=60,
+            )
         if response.status_code == 429 and "X-Api-Key" in session.headers:
             print("USGS API key is over rate limit; retrying anonymously", flush=True)
             session.headers.pop("X-Api-Key", None)
@@ -178,11 +211,56 @@ def iter_ogc_features(
     return features
 
 
+def iter_ogc_features_cql2(
+    session: requests.Session,
+    collection: str,
+    filter_expression: dict[str, Any],
+    limit: int = 500,
+    max_429_retries: int = 8,
+) -> list[dict[str, Any]]:
+    """Return paginated OGC features matching a CQL2 JSON filter."""
+    url = USGS_COLLECTION_URL.format(collection=collection)
+    params = {"f": "json", "limit": limit}
+    features: list[dict[str, Any]] = []
+
+    while url:
+        payload = request_json(
+            session,
+            url,
+            params=params,
+            max_429_retries=max_429_retries,
+            json_body=filter_expression,
+        )
+        features.extend(payload.get("features", []))
+        next_url = next(
+            (
+                urljoin(url, link["href"])
+                for link in payload.get("links", [])
+                if link.get("rel") == "next" and link.get("href")
+            ),
+            None,
+        )
+        url = next_url
+        params = None
+
+    return features
+
+
 def feature_lon_lat(feature: dict[str, Any]) -> tuple[float | None, float | None]:
-    coords = feature.get("geometry", {}).get("coordinates")
-    if isinstance(coords, list) and len(coords) >= 2:
-        return float(coords[0]), float(coords[1])
-    return None, None
+    geometry = feature.get("geometry")
+    if not isinstance(geometry, dict):
+        return None, None
+
+    coords = geometry.get("coordinates")
+    if not isinstance(coords, list) or len(coords) < 2:
+        return None, None
+    try:
+        lon, lat = float(coords[0]), float(coords[1])
+    except (TypeError, ValueError, OverflowError):
+        return None, None
+    if not np.isfinite([lon, lat]).all():
+        return None, None
+    return lon, lat
 
 
 def normalize_station_id(station_id: Any) -> str:
@@ -208,6 +286,18 @@ def series_overlaps(properties: dict[str, Any], start: Any, end: Any) -> bool:
     return not (
         pd.notna(series_start) and series_start > request_end
         or pd.notna(series_end) and series_end < request_start
+    )
+
+
+def _is_instantaneous_series_in_period(
+    properties: dict[str, Any],
+    start: Any,
+    end: Any,
+) -> bool:
+    return (
+        str(properties.get("computation_identifier", "")).lower()
+        == "instantaneous"
+        and series_overlaps(properties, start, end)
     )
 
 
@@ -343,9 +433,7 @@ def discover_parameter_series(
         n_before = len(rows)
         for feature in features:
             properties = feature.get("properties", {})
-            if str(properties.get("computation_identifier", "")).lower() != "instantaneous":
-                continue
-            if not series_overlaps(properties, start, end):
+            if not _is_instantaneous_series_in_period(properties, start, end):
                 continue
             lon, lat = feature_lon_lat(feature)
             station_id = properties.get("monitoring_location_id")
@@ -381,6 +469,134 @@ def discover_parameter_series(
     stations_with_primary = set(series.loc[primary, "station_id"])
     series = series[primary | ~series["station_id"].isin(stations_with_primary)]
     return series.drop_duplicates(["station_id", "parameter"]).sort_values("station_id").reset_index(drop=True)
+
+
+def discover_station_ids_with_parameter(
+    station_ids: list[str],
+    parameter: str,
+    start: Any,
+    end: Any,
+    session: requests.Session | None = None,
+    batch_size: int = 250,
+    max_429_retries: int = 8,
+) -> set[str]:
+    """Find stations with an instantaneous series overlapping the run dates."""
+    if batch_size <= 0:
+        raise ValueError("station metadata batch size must be positive")
+
+    normalized_ids = sorted({
+        normalize_station_id(site)
+        for site in station_ids
+        if site is not None and str(site).strip()
+    })
+    if not normalized_ids:
+        return set()
+
+    session = session or make_session()
+    matched_station_ids = set()
+    for start_index in range(0, len(normalized_ids), batch_size):
+        station_batch = normalized_ids[start_index:start_index + batch_size]
+        ogc_station_ids = [
+            _monitoring_location_id(station_id)
+            for station_id in station_batch
+        ]
+        filter_expression = {
+            "op": "and",
+            "args": [
+                {
+                    "op": "in",
+                    "args": [
+                        {"property": "parameter_code"},
+                        [str(parameter)],
+                    ],
+                },
+                {
+                    "op": "in",
+                    "args": [
+                        {"property": "monitoring_location_id"},
+                        ogc_station_ids,
+                    ],
+                },
+            ],
+        }
+        features = iter_ogc_features_cql2(
+            session,
+            "time-series-metadata",
+            filter_expression,
+            limit=10000,
+            max_429_retries=max_429_retries,
+        )
+        for feature in features:
+            properties = feature.get("properties", {})
+            if not _is_instantaneous_series_in_period(properties, start, end):
+                continue
+            station_id = properties.get("monitoring_location_id")
+            if station_id:
+                matched_station_ids.add(normalize_station_id(station_id))
+
+    return matched_station_ids
+
+
+def discover_monitoring_locations(
+    states: list[str] | None = None,
+    session: requests.Session | None = None,
+    max_429_retries: int = 8,
+) -> pd.DataFrame:
+    """Return USGS station locations for the requested states."""
+    session = session or make_session()
+    states = DEFAULT_STATES if states is None else states
+    rows = []
+
+    for state in states:
+        state_code = state.upper()
+        state_fips = USGS_STATE_FIPS_CODES.get(state_code)
+        if state_fips is None:
+            raise ValueError(
+                f"No USGS FIPS state code is configured for {state_code}"
+            )
+        print(
+            f"USGS inventory: discovering {state_code} stations "
+            f"(state_code={state_fips})",
+            flush=True,
+        )
+        features = iter_ogc_features(
+            session,
+            "monitoring-locations",
+            {"state_code": state_fips},
+            limit=10000,
+            max_429_retries=max_429_retries,
+        )
+        for feature in features:
+            properties = feature.get("properties", {})
+            agency_code = properties.get("agency_code")
+            if agency_code and agency_code.upper() != "USGS":
+                continue
+
+            station_id = (
+                properties.get("monitoring_location_number")
+                or properties.get("monitoring_location_id")
+                or feature.get("id")
+            )
+            lon, lat = feature_lon_lat(feature)
+            if not station_id or lon is None or lat is None:
+                continue
+            rows.append({
+                "station_id": normalize_station_id(station_id),
+                "station_name": properties.get("monitoring_location_name"),
+                "state": state_code,
+                "lon": lon,
+                "lat": lat,
+            })
+
+    columns = ["station_id", "station_name", "state", "lon", "lat"]
+    if not rows:
+        return pd.DataFrame(columns=columns)
+    return (
+        pd.DataFrame(rows, columns=columns)
+        .drop_duplicates("station_id")
+        .sort_values("station_id")
+        .reset_index(drop=True)
+    )
 
 
 def download_station_parameter(
