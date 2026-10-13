@@ -5,9 +5,11 @@ close("all")
 #------------------------------------------------------------------------------
 #inputs
 #------------------------------------------------------------------------------
+ibatch=0  #0: serial;  1: mp;  2: mpi4py
 runs=['RUN17e','RUN17k']
 StartTs=[datenum(1991,1,1),datenum(1991,1,1),]
-xm=[datenum(1991,1,1),datenum(2000,1,1)]   #time range for plotting
+#xm=[datenum(1991,1,1),datenum(2000,1,1)]   #time range for plotting
+xm=None  #time range for plotting
 
 #variables
 mvars=['temp', 'salt',    'chla','DO','TN','TP','NO3',  'NH4', 'PO4', 'DOC','POC','PON','POP','RPOC','LPOC','RPON','LPON','RPOP','LPOP','PB1', 'PB2', 'PB3', 'DON','DOP'] #model variables
@@ -34,8 +36,6 @@ tvars=['run','region','layer','station','var','R','ME','MAE','RMSD']; sdir='_'.j
 #------------------------------------------------------------------------------
 #ibatch,  0: serial;  1: mp;  2: mpi4py
 #------------------------------------------------------------------------------
-ibatch= 0
-
 if ibatch==0:
    nproc=1; myrank=0; backend='QtAgg'
 elif ibatch==1:
@@ -59,6 +59,7 @@ for run,StartT,fname in zip(runs,StartTs,fnames):
     M.c2chl=[0.75, 0.06, 0.06]; M.n2c=[0.167, 0.167, 0.167]; M.p2c=[0.0125, 0.0125, 0.0125] #default values
     for i in ['c2chl','n2c','p2c']: M.attr(i,array(M.icm.attr(i) if M.hasattr('icm') else M.param.attr(i) if M.hasattr('param') else M.attr(i))); 
     models.append(M); svars.append(svar); mtimes.append(mtime); mzs.append(mz); mstations.append(mstation)
+if xm is None: y1=int(min([num2date(i[0]).year for i in mtimes])); y2=num2date(mtimes[-1][-1]).year; xm=[datenum(y1,1,1),datenum(y2+1,1,1)]
 
 def get_icm_var(im,mvar):
     M=models[im]; mdata=None; 
@@ -137,10 +138,14 @@ if iflags[0]==1:
        savefig(sname,dpi=300); close()
        return S
 
-   #plot all figures
+   #--------------------------------------------------------------
+   #plot all figures; plot_ts(mvar,ovar,region,stations)
+   #--------------------------------------------------------------
    ps=[]; [[ps.append([*i,*k]) for k in zip(regions,pstations)] for i in zip(mvars,ovars)]; S=zdata(tvars) #init. statistics capsule
    if nproc==1:
-      for m in ps: s=plot_ts(*m); [S.attr(k).extend(s.attr(k))  for k in tvars]
+      for m in ps:
+          #if m[2]!='channel': continue
+          s=plot_ts(*m); [S.attr(k).extend(s.attr(k))  for k in tvars]
    elif ibatch==1:
       pp0=mp.Pool(processes=nproc)
       for n in range(int(len(ps)/nproc)+1):
