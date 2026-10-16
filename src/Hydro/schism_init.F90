@@ -1277,6 +1277,9 @@
 
 !       Dump horizontal grid
         call dump_hgrid
+!       ipgl2/isgl2 are only used in dump_hgrid; iegl2 is still used later
+        if(allocated(ipgl2)) deallocate(ipgl2)
+        if(allocated(isgl2)) deallocate(isgl2)
 
         if(myrank==0) then
           write(16,*)'done domain decomp...'
@@ -6463,6 +6466,9 @@
 !     end hot start section
       endif !ihot/=0
 
+!     nwild2 (ns_global) is not used after the hot start section
+      deallocate(nwild2)
+
 ! MP from KM
 #if defined USE_WWM || defined USE_WW3
       ! Computation of the bed slope at nodes
@@ -7463,7 +7469,7 @@
 #endif
 
 !     Deallocate temp. arrays to release memory
-      deallocate(nwild,nwild2,swild,swild2,swild3,swild4,swild10,buf3,buf4)
+      deallocate(nwild,swild,swild2,swild3,swild4,swild10,buf3,buf4)
       if(allocated(tp_name)) deallocate(tp_name)
 
 #ifdef USE_FIB
