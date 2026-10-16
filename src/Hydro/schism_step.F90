@@ -432,15 +432,6 @@ real (rkind) :: aux                               ! ustar
         ramp=1.d0
       endif
 
-!$OMP parallel default(shared) private(i,j,ncyc,arg)
-
-!...  Compute new bed deformation
-!$OMP do
-      do i=1,npa
-        bdef2(i)=bdef(i)/real(ibdef,rkind)*real(min0(it,ibdef),rkind)
-      enddo !i
-!$OMP end do
-
 !...  SAL from spherical harmonic option
       if(iloadtide==4) then
 #ifdef USE_SPK
@@ -459,6 +450,15 @@ real (rkind) :: aux                               ! ustar
         call selfattraction
 #endif /*USE_SPK*/
       endif !iloadtide=4
+
+!$OMP parallel default(shared) private(i,j,ncyc,arg)
+
+!...  Compute new bed deformation
+!$OMP do
+      do i=1,npa
+        bdef2(i)=bdef(i)/real(ibdef,rkind)*real(min0(it,ibdef),rkind)
+      enddo !i
+!$OMP end do
 
 !...  Earth tidal potential and loading tide at nodes: pre-compute to save time
 !... 
