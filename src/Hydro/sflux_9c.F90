@@ -2042,7 +2042,7 @@
 ! create list of all elements for this grid as in .gr3 format
           call list_elems (info%elem_nodes, info%node_num, &
      &                     info%nx, info%ny, info%num_elems)
-          deallocate (info%node_num)
+          deallocate (info%node_num) !done with this array
 
 ! calculate the weightings from data grid to model nodes
           call get_weight (info%lon, info%lat, xlon, ylat, &
@@ -2051,7 +2051,7 @@
      &                     info%num_nodes, &
      &                     num_nodes_out, info%in_elem_for_out_node, &
      &                     info%weight)
-          deallocate (info%lon, info%lat)
+          deallocate (info%lon, info%lat) !done with these arrays
 
         endif !info%exist
 
