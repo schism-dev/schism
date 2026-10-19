@@ -213,25 +213,25 @@
 
 !     Init time history in/outputs
 !     Station output
-      if(iout_sta/=0.and.myrank==0) then
-        do i=1,nvar_sta+1 !extra output for zcor
-          rewind(250+i)    
-          do it=1,it_now !iths_main
-            if(mod(it,nspool_sta)/=0) cycle
-
-            if(i<=nvar_sta) then 
-              if(iof_sta(i)==1) then !.and.mod(it,nspool_sta)==0) then
-                read(250+i,*)
-                if(iout_sta==2.and.i>4) read(250+i,*)
-              endif 
-            else !zcor: always outputs if iout_sta=2
-              if(iout_sta==2) then
-                read(250+i,*); read(250+i,*)
-              endif
-            endif
-          enddo !it
-        enddo !i
-      endif !myrank
+!      if(iout_sta/=0.and.myrank==0) then
+!        do i=1,nvar_sta+1 !extra output for zcor
+!          rewind(250+i)    
+!          do it=1,it_now !iths_main
+!            if(mod(it,nspool_sta)/=0) cycle
+!
+!            if(i<=nvar_sta) then 
+!              if(iof_sta(i)==1) then !.and.mod(it,nspool_sta)==0) then
+!                read(250+i,*)
+!                if(iout_sta==2.and.i>4) read(250+i,*)
+!              endif 
+!            else !zcor: always outputs if iout_sta=2
+!              if(iout_sta==2) then
+!                read(250+i,*); read(250+i,*)
+!              endif
+!            endif
+!          enddo !it
+!        enddo !i
+!      endif !myrank
 
 !     Rewind flux.out
       if(iflux/=0.and.myrank==0) then

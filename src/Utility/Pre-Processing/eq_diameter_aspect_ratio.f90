@@ -1,4 +1,4 @@
-!     Compute equivalent diameter/radius of a tri-quad grid, and dx/dz (aspect ratio; dx is min edge length @ node)
+!     Compute equivalent diameter/radius of a tri-quad grid, and dx/h (aspect ratio; dx is min edge length @ node)
 !     Input: hgrid.gr3 (projection or lon/lat; works with global mesh); threshold below
 !     Output: fort.12 (*.prop format, eq. radius) and asrat.gr3 (aspect ratio for h>5m; 9999 otherwise. 
 !             A.R.<1 indicates problem. 2nd depth is max slope at node. Use awk to find all problematic nodes)
@@ -187,7 +187,7 @@
         else
           ar=rad_node(i)/dp(i)
         endif
-        write(13,*)i,real(x(i)),real(y(i)),real(ar ),real(slp_max(i))
+        write(13,*)i,real(x(i)),real(y(i)),real(ar),real(slp_max(i))
 
         !Potentialy problematic nodes
 !        if(ar<1.d0) then

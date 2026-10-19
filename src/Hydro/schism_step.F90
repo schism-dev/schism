@@ -10221,9 +10221,9 @@ real (rkind) :: aux                               ! ustar
 !#endif
 
 !...  Station outputs
-      if(iout_sta/=0) then
+      if(iout_sta/=0.and.mod(it,nspool_sta)==0) then
         do j=1,nvar_sta !excluding zcor
-          if(iof_sta(j)==0.or.mod(it,nspool_sta)/=0) cycle
+!          if(iof_sta(j)==0.or.mod(it,nspool_sta)/=0) cycle
 
           idry_sta(:)=0 !init
           do i=1,nout_sta
@@ -10266,9 +10266,9 @@ real (rkind) :: aux                               ! ustar
                 sta_out(i,j)=sum(arco_sta(i,1:i34(ie))*swild2(1,1:i34(ie)))
               else !3D var.
                 if(idry_e(ie)==1) then !dry
-                  sta_out(i,j)=-1.d7 !-999.d0
-                  sta_out3d(:,i,j)=-1.d7 !-999.d0
-                  zta_out3d(:,i)=-1.d7 !same for all j
+                  sta_out(i,j)=NF90_FILL_FLOAT !-1.d7 !-999.d0
+                  sta_out3d(:,i,j)=NF90_FILL_FLOAT !-1.d7 !-999.d0
+                  zta_out3d(:,i)=NF90_FILL_FLOAT !-1.d7 !same for all j
                 else !wet
                   do m=1,i34(ie) !wet nodes
                     nd=elnode(m,ie)
@@ -10301,8 +10301,8 @@ real (rkind) :: aux                               ! ustar
                   itmp=minval(kbp(elnode(1:i34(ie),ie)))
                   do k=1,nvrt
                     if(k<itmp) then
-                      zta_out3d(k,i)=-1.d7
-                      sta_out3d(k,i,j)=-1.d7
+                      zta_out3d(k,i)=NF90_FILL_FLOAT !-1.d7
+                      sta_out3d(k,i,j)=NF90_FILL_FLOAT !-1.d7
                     else !at least 1 node has valid value
                       do m=1,i34(ie)
                         nd=elnode(m,ie)
@@ -10339,17 +10339,20 @@ real (rkind) :: aux                               ! ustar
         call mpi_reduce(zta_out3d,zta_out3d_gb,nvrt*nout_sta,rtype,MPI_SUM,0,comm,ierr)
 
         if(myrank==0) then
-!          write(290,*)nwild2(1:nout_sta)
-!          ltmp=.false. !init zcor output
+          icount2=it/nspool_sta
+          swild(1)=time
+          j=nf90_put_var(ncid_sta,id_sta(4),real(swild(1:1)),(/icount2/),(/1/))
+          j=nf90_put_var(ncid_sta,id_sta(5),idry_sta,(/1,icount2/),(/nout_sta,1/))
+
           do i=1,nvar_sta !excl zcor
-            if(iof_sta(i)==0.or.mod(it,nspool_sta)/=0) cycle
+            if(iof_sta(i)==0) cycle !.or.mod(it,nspool_sta)/=0) cycle
 
             do j=1,nout_sta
               if(nwild2(j)==0) then !outside domain
-                sta_out_gb(j,i)=1.d7 !-9999.d0
+                sta_out_gb(j,i)=NF90_FILL_FLOAT !1.d7 !-9999.d0
                 if(i>4) then !3D only
-                  sta_out3d_gb(:,j,i)=1.d7 !-9999.d0
-                  zta_out3d_gb(:,j)=1.d7 !-9999.d0
+                  sta_out3d_gb(:,j,i)=NF90_FILL_FLOAT !1.d7 !-9999.d0
+                  zta_out3d_gb(:,j)=NF90_FILL_FLOAT !1.d7 !-9999.d0
                 endif
               else
                 sta_out_gb(j,i)=sta_out_gb(j,i)/dble(nwild2(j))
@@ -10359,27 +10362,33 @@ real (rkind) :: aux                               ! ustar
                 endif
               endif
             enddo !j
-            write(250+i,'(e24.16,6000(1x,e15.6e3))')time,sta_out_gb(:,i)
-            if(iout_sta==2.and.i>4) then
-              write(250+i,'(e24.16,300000(1x,e15.6e3))')time,sta_out3d_gb(:,:,i) !,zta_out3d_gb(:,:,i)
-!              !Add zcor output: do it only once
-!              if(.not.ltmp) then
-!                ltmp=.true.
-!                write(250+nvar_sta+1,'(300000(1x,i5))')idry_sta(:)
-!                write(250+nvar_sta+1,'(e24.16,300000(1x,e15.6e3))')time,zta_out3d_gb(:,:)
-!              endif !
-            endif !iout_sta
+
+            j=nf90_put_var(ncid_sta,id_sta(6+i),real(sta_out_gb(:,i)),(/1,icount2/),(/nout_sta,1/))
+
+!            write(250+i,'(e24.16,6000(1x,e15.6e3))')time,sta_out_gb(:,i)
+!            if(iout_sta==2.and.i>4) then
+!              write(250+i,'(e24.16,300000(1x,e15.6e3))')time,sta_out3d_gb(:,:,i) !,zta_out3d_gb(:,:,i)
+!            endif !iout_sta
           enddo !i=1,nvar_sta
 
           !Always output zcor if iout_sta=2
-          if(iout_sta==2.and.mod(it,nspool_sta)==0) then
-            write(250+nvar_sta+1,'(300000(1x,i5))')idry_sta(:)
-            write(250+nvar_sta+1,'(e24.16,300000(1x,e15.6e3))')time,zta_out3d_gb(:,:)
+          if(iout_sta==2) then !.and.mod(it,nspool_sta)==0) then
+            j=nf90_put_var(ncid_sta,id_sta(6),real(zta_out3d_gb),(/1,1,icount2/),(/nvrt,nout_sta,1/))
+            do i=5,nvar_sta
+              if(iof_sta(i)/=0) then
+                j=nf90_put_var(ncid_sta,id_sta(ntracers+13+i-4),real(sta_out3d_gb(:,:,i)),(/1,1,icount2/),(/nvrt,nout_sta,1/))
+              endif !iof_sta
+            enddo !i
+
+!            write(250+nvar_sta+1,'(300000(1x,i5))')idry_sta(:)
+!            write(250+nvar_sta+1,'(e24.16,300000(1x,e15.6e3))')time,zta_out3d_gb(:,:)
           endif !iout_sta
+          !Flush out (for hotstart)
+          j=nf90_sync(ncid_sta)
 
           write(16,*)'done station outputs...'
         endif !myrank==0
-      endif !iout_sta/=0
+      endif !iout_sta/=0.and.mod(it,nspool_sta)==0
 
 #ifdef USE_HA
 !...

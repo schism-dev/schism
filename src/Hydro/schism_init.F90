@@ -4305,7 +4305,7 @@
      &arco_sta(nout_sta,4),sta_out(nout_sta,nvar_sta),sta_out_gb(nout_sta,nvar_sta), &
      &sta_out3d(nvrt,nout_sta,nvar_sta),sta_out3d_gb(nvrt,nout_sta,nvar_sta), &
      &xsta_bmi(nout_sta),ysta_bmi(nout_sta),zsta_bmi(nout_sta), &
-     &zta_out3d(nvrt,nout_sta),zta_out3d_gb(nvrt,nout_sta),stat=istat)
+     &zta_out3d(nvrt,nout_sta),zta_out3d_gb(nvrt,nout_sta),id_sta(2*ntracers+20),stat=istat)
           if(istat/=0) call parallel_abort('MAIN: sta. allocation failure')
           iep_flag=0
           sta_out=0.0_rkind
@@ -4318,6 +4318,129 @@
             read(32,*)j,xsta(i),ysta(i),zstal(i) !z not used for 2D variables; xsta, ysta in lat/lon if ics=2
           enddo !i
           close(32)
+
+          !Open nc output under rank 0 and dump station location
+          !Var names for restart; gfortran requires same length
+          ar_name(1:15)=(/'stationLocationX','stationLocationY','stationLocationZ', &
+                        &'time_in_sec     ','stationDryFlags ','zcoorinates     ', &
+                        &'elevation       ','airPressure     ','windx           ', &
+                        &'windy           ','temperature     ','salinity        ', &
+                        &'horizontalVelX  ','horizontalVelY  ','verticalVel     '/)
+          icount=15 !ID so far
+          do i=3,ntracers
+            write(fdb,'(i6)')i
+            fdb=adjustl(fdb)
+            lfdb=len_trim(fdb)
+            ar_name(icount+i-2)='tracer_'//fdb(1:lfdb)
+          enddo !i
+          icount=icount+ntracers-2
+          ar_name(icount+1:icount+5)=(/'temp3D          ','salt3D          ', &
+                                      &'uvel3D          ','vvel3D          ', &
+                                      &'wvel3D          '/)
+          icount=icount+5 !so far
+          do i=3,ntracers
+            write(fdb,'(i6)')i
+            fdb=adjustl(fdb)
+            lfdb=len_trim(fdb)
+            ar_name(icount+i-2)='tracer3D_'//fdb(1:lfdb)
+          enddo !i
+          icount=icount+ntracers-2
+          if(icount>2*ntracers+20.or.icount>100) call parallel_abort('INIT: id_sta over')
+          do i=1,icount
+            ar_name(i)=adjustl(ar_name(i))
+          enddo !i
+
+          if(ihot==2) then
+            j=nf90_open(out_dir(1:len_out_dir)//'staout.nc',nf90_write,ncid_sta)
+            do i=1,icount
+              j=nf90_inq_varid(ncid_sta,trim(ar_name(i)),id_sta(i))
+            enddo !i
+          else
+            j=nf90_create(out_dir(1:len_out_dir)//'staout.nc',OR(NF90_NETCDF4,NF90_CLOBBER),ncid_sta)
+            j=nf90_def_dim(ncid_sta,'nStations',nout_sta,nsta_dim)
+            j=nf90_def_dim(ncid_sta,'nVert',nvrt,nvrt2_dim)
+            j=nf90_def_dim(ncid_sta,'time', NF90_UNLIMITED,time2_dim)
+         
+            nwild(1)=nsta_dim
+            j=nf90_def_var(ncid_sta,trim(ar_name(1)),NF90_FLOAT,nwild(1),id_sta(1))
+            j=nf90_put_att(ncid_sta,id_sta(1),'name','X coorinates at each station')
+            j=nf90_put_att(ncid_sta,id_sta(1),'unit','consistent with hgrid.gr3')
+            j=nf90_def_var(ncid_sta,trim(ar_name(2)),NF90_FLOAT,nwild(1),id_sta(2))
+            j=nf90_put_att(ncid_sta,id_sta(2),'name','Y coorinates at each station')
+            j=nf90_put_att(ncid_sta,id_sta(2),'unit','consistent with hgrid.gr3')
+            j=nf90_def_var(ncid_sta,trim(ar_name(3)),NF90_FLOAT,nwild(1),id_sta(3))
+            j=nf90_put_att(ncid_sta,id_sta(3),'name','Z coorinates at each station in meters')
+
+            nwild(1)=time2_dim
+            j=nf90_def_var(ncid_sta,trim(ar_name(4)),NF90_FLOAT,nwild(1:1),id_sta(4))
+            j=nf90_put_att(ncid_sta,nwild(4),'time','time in seconds')
+
+            !Dry flags
+            nwild(1)=nsta_dim; nwild(2)=time2_dim
+            j=nf90_def_var(ncid_sta,trim(ar_name(5)),NF90_INT,nwild(1:2),id_sta(5))
+            j=nf90_put_att(ncid_sta,id_sta(5),'name','Non-zero if dry at station')
+
+            nwild(1)=nvrt2_dim; nwild(2)=nsta_dim; nwild(3)=time2_dim
+            j=nf90_def_var(ncid_sta,trim(ar_name(6)),NF90_FLOAT,nwild(1:3),id_sta(6))
+            j=nf90_put_att(ncid_sta,id_sta(6),'name','Z coorinates for station profiles in m')
+
+            nwild(1)=nsta_dim; nwild(2)=time2_dim
+            j=nf90_def_var(ncid_sta,trim(ar_name(7)),NF90_FLOAT,nwild(1:2),id_sta(7))
+            j=nf90_put_att(ncid_sta,id_sta(7),'name','surface elevation in meters')
+            j=nf90_def_var(ncid_sta,trim(ar_name(8)),NF90_FLOAT,nwild(1:2),id_sta(8))
+            j=nf90_put_att(ncid_sta,id_sta(8),'name','air pressure at MSL in Pa')
+            j=nf90_def_var(ncid_sta,trim(ar_name(9)),NF90_FLOAT,nwild(1:2),id_sta(9))
+            j=nf90_put_att(ncid_sta,id_sta(9),'name','eastward wind speed at 10m above MSL in m/s')
+            j=nf90_def_var(ncid_sta,trim(ar_name(10)),NF90_FLOAT,nwild(1:2),id_sta(10))
+            j=nf90_put_att(ncid_sta,id_sta(10),'name','northward wind speed at 10m above MSL in m/s')
+            j=nf90_def_var(ncid_sta,trim(ar_name(11)),NF90_FLOAT,nwild(1:2),id_sta(11))
+            j=nf90_put_att(ncid_sta,id_sta(11),'name','water temperature in C at station location')
+            j=nf90_def_var(ncid_sta,trim(ar_name(12)),NF90_FLOAT,nwild(1:2),id_sta(12))
+            j=nf90_put_att(ncid_sta,id_sta(12),'name','water salinity at station location')
+            j=nf90_def_var(ncid_sta,trim(ar_name(13)),NF90_FLOAT,nwild(1:2),id_sta(13))
+            j=nf90_put_att(ncid_sta,id_sta(13),'name','water eastward velocity at station location in m/s')
+            j=nf90_def_var(ncid_sta,trim(ar_name(14)),NF90_FLOAT,nwild(1:2),id_sta(14))
+            j=nf90_put_att(ncid_sta,id_sta(14),'name','water northward velocity at station location in m/s')
+            j=nf90_def_var(ncid_sta,trim(ar_name(15)),NF90_FLOAT,nwild(1:2),id_sta(15))
+            j=nf90_put_att(ncid_sta,id_sta(15),'name','water upward velocity at station location in m/s')
+
+            !Other tracers
+            icount=15 !ID so far (reset)
+            do i=3,ntracers
+              j=nf90_def_var(ncid_sta,trim(ar_name(icount+i-2)),NF90_FLOAT,nwild(1:2),id_sta(icount+i-2))
+            enddo !i
+            icount=icount+ntracers-2
+
+            !3D
+            nwild(1)=nvrt2_dim; nwild(2)=nsta_dim; nwild(3)=time2_dim
+            j=nf90_def_var(ncid_sta,trim(ar_name(icount+1)),NF90_FLOAT,nwild(1:3),id_sta(icount+1))
+            j=nf90_put_att(ncid_sta,id_sta(icount+1),'name','profile of water temperature in C at station location')
+            j=nf90_def_var(ncid_sta,trim(ar_name(icount+2)),NF90_FLOAT,nwild(1:3),id_sta(icount+2))
+            j=nf90_put_att(ncid_sta,id_sta(icount+2),'name','profile of water salinity at station location')
+            j=nf90_def_var(ncid_sta,trim(ar_name(icount+3)),NF90_FLOAT,nwild(1:3),id_sta(icount+3))
+            j=nf90_put_att(ncid_sta,id_sta(icount+3),'name','profile of eastward velocity at station location in m/s')
+            j=nf90_def_var(ncid_sta,trim(ar_name(icount+4)),NF90_FLOAT,nwild(1:3),id_sta(icount+4))
+            j=nf90_put_att(ncid_sta,id_sta(icount+4),'name','profile of northward velocity at station location in m/s')
+            j=nf90_def_var(ncid_sta,trim(ar_name(icount+5)),NF90_FLOAT,nwild(1:3),id_sta(icount+5))
+            j=nf90_put_att(ncid_sta,id_sta(icount+5),'name','profile of upward velocity at station location in m/s')
+
+            icount=icount+5 !so far
+            do i=3,ntracers
+              j=nf90_def_var(ncid_sta,trim(ar_name(icount+i-2)),NF90_FLOAT,nwild(1:3),id_sta(icount+i-2))
+            enddo !i
+            icount=icount+ntracers-2
+
+            do i=6,icount
+              j=nf90_def_var_deflate(ncid_sta,id_sta(i),0,1,4)
+            enddo !i
+            j=nf90_enddef(ncid_sta)
+          endif !ihot
+
+          !Output static info
+          j=nf90_put_var(ncid_sta,id_sta(1),real(xsta),(/1/),(/nout_sta/))
+          j=nf90_put_var(ncid_sta,id_sta(2),real(ysta),(/1/),(/nout_sta/))
+          j=nf90_put_var(ncid_sta,id_sta(3),real(zstal),(/1/),(/nout_sta/))
+           
         endif !myrank
         call mpi_bcast(xsta,nout_sta,rtype,0,comm,istat)
         call mpi_bcast(ysta,nout_sta,rtype,0,comm,istat)
@@ -4398,20 +4521,20 @@
         endif
 
 !       Open output file from rank 0
-        if(myrank==0) then
-          do i=1,nvar_sta+1 !add an extra output zcor at the end
-            write(ifile_char,'(i03)')i
-            ifile_char=adjustl(ifile_char)  !place blanks at end
-            ifile_len=len_trim(ifile_char)
-            if(ihot==2) then
-              open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='old')
-            else
-              open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='replace')
-            endif
-          enddo !i
-          write(16,*)'done preparing station outputs'
-          !call flush(16) ! flush "mirror.out"
-        endif
+!        if(myrank==0) then
+!          do i=1,nvar_sta+1 !add an extra output zcor at the end
+!            write(ifile_char,'(i03)')i
+!            ifile_char=adjustl(ifile_char)  !place blanks at end
+!            ifile_len=len_trim(ifile_char)
+!            if(ihot==2) then
+!              open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='old')
+!            else
+!              open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='replace')
+!            endif
+!          enddo !i
+!          write(16,*)'done preparing station outputs'
+!          !call flush(16) ! flush "mirror.out"
+!        endif
       endif !iout_sta
 
 #ifdef USE_HA
