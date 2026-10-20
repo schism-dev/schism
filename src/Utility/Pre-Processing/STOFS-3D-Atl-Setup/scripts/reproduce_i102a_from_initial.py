@@ -27,7 +27,7 @@ from stofs3d_setup.config.stofs3d_atl_config import (
 )
 from stofs3d_setup.ops.Source_sink.Patch_artificial_island.patch_artificial_island_source_sink import (
     apply_artificial_island_corrections,
-    zero_artificial_island_sources_after_replace_USGS_before_relocation,
+    suppress_artificial_island_sources,
 )
 from stofs3d_setup.ops.Source_sink.Relocate.relocate_source_feeder import (
     relocate_sources2,
@@ -159,7 +159,7 @@ def _stage_initial_results(
     original_dir: Path,
     hgrid: Path,
 ) -> None:
-    """Keep static files shared, but isolate the flow that zeroing rewrites."""
+    """Stage the USGS-adjusted input without changing the cached results."""
     original_dir.mkdir()
     (original_dir / "hgrid.gr3").symlink_to(hgrid)
     initial_original = initial_results / "original_source_sink"
@@ -275,24 +275,36 @@ def main() -> int:
     counts: dict[str, int] = {}
     comparisons: dict[str, dict[str, bool]] = {}
     started = time.monotonic()
-    prezero_dir = (
-        source_sink_dir / "zeroed_sources_after_replace_USGS_before_relocation"
-    )
-    _timed(
-        "pre_relocation_zeroing",
-        lambda: zero_artificial_island_sources_after_replace_USGS_before_relocation(
-            source_sink_dir=original_dir,
-            hgrid_file=hgrid_file,
+    prezero_dir = source_sink_dir / "artificial_island_source_suppression"
+    source_hgrid = schism_grid(str(hgrid_file))
+
+    def suppress_island_sources():
+        suppressed_ss = suppress_artificial_island_sources(
+            base_ss=source_sink.from_files(str(original_dir)),
+            hgrid=source_hgrid,
             patch_info_file=config.artificial_island_source_sink_info,
             output_dir=prezero_dir,
-        ),
-        timings,
+        )
+        suppressed_ss.writer(str(prezero_dir))
+        for name in ("sources.json", "sinks.json", "hgrid.gr3"):
+            (prezero_dir / name).symlink_to((original_dir / name).resolve())
+        return suppressed_ss
+
+    island_reference_ss = _timed(
+        "island_source_suppression", suppress_island_sources, timings
     )
-    comparisons["pre_relocation_zeroing"] = _compare_files(
-        prezero_dir,
-        reference_ss / prezero_dir.name,
-        ("vsource_zeroed.th",),
+    reference_zeroed = (
+        reference_ss / "zeroed_sources_after_replace_USGS_before_relocation"
+        / "vsource_zeroed.th"
     )
+    comparisons["island_source_suppression"] = {
+        "vsource": bool(np.allclose(
+            np.loadtxt(prezero_dir / "vsource.th"),
+            np.loadtxt(reference_zeroed),
+            rtol=0.0,
+            atol=1.0e-6,
+        ))
+    }
 
     relocated_dir = source_sink_dir / "relocated_source_sink"
     relocated_dir.mkdir()
@@ -300,7 +312,7 @@ def main() -> int:
     _timed(
         "relocation_mapping",
         lambda: relocate_sources2(
-            old_ss_dir=str(original_dir),
+            old_ss_dir=str(prezero_dir),
             outdir=str(relocated_dir),
             main_hgrid_has_feeder=False,
             feeder_info_file=str(config.feeder_info_file),
@@ -319,7 +331,7 @@ def main() -> int:
 
     def generate_relocated_forcing():
         vsource, msource = gen_relocated_source(
-            original_source_sink_dir=str(original_dir),
+            original_source_sink_dir=str(prezero_dir),
             relocated_source_sink_dir=str(relocated_dir),
         )
         relocated_ss = source_sink(vsource=vsource, vsink=None, msource=msource)
@@ -391,7 +403,8 @@ def main() -> int:
         lambda: apply_artificial_island_corrections(
             base_ss=base_ss,
             hgrid=hgrid,
-            original_source_sink_dir=original_dir,
+            reference_ss=island_reference_ss,
+            reference_hgrid=source_hgrid,
             patch_info_file=config.artificial_island_source_sink_info,
             start_time=config.startdate,
             usgs_cache_folder=usgs_cache,

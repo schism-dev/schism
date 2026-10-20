@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Post-process an already assembled SCHISM ``source_sink`` object for
+Post-process a SCHISM ``source_sink`` object for
 artificial-island rivers.
 
 This module intentionally does not call or modify:
@@ -10,13 +10,13 @@ This module intentionally does not call or modify:
     relocate_sources2()
     set_constant_sink()
 
-The main function operates directly on ``base_ss`` after source relocation
-and the standard USGS replacement procedure:
+The main function uses the current forcing and a separate reference snapshot:
 
     base_ss = apply_artificial_island_corrections(
         base_ss=base_ss,
         hgrid=hgrid,
-        original_source_sink_dir=original_source_sink_dir,
+        reference_ss=reference_ss,
+        reference_hgrid=reference_hgrid,
         patch_info_file=config.artificial_island_source_sink_info,
         start_time=config.startdate,
         usgs_cache_folder=usgs_cache_folder,
@@ -29,9 +29,9 @@ Supported YAML patch types
 1. ``force_source_sink_locations``
 
    Create a source or sink at the main-grid element nearest the specified
-   location. A nearby original forcing column is used when available.
+   location. A nearby reference forcing column is used when available.
    For source entries, USGS flow and temperature observations may optionally
-   replace the original forcing.
+   replace the reference forcing.
 
    Parameters
    ----------
@@ -44,8 +44,8 @@ Supported YAML patch types
        Longitude and latitude of the target location.
    max_search_radius_m : float
        Distance used to determine whether an original source or sink is a
-       nearby match. If no original forcing lies within this radius, the
-       nearest available original forcing may still be used as a fallback.
+       nearby match. If no reference forcing lies within this radius, the
+       nearest available reference forcing may still be used as a fallback.
    allow_negative_sink : bool
        For source entries, move negative flow values to ``vsink`` at the
        same element and clip the corresponding ``vsource`` values to zero.
@@ -86,7 +86,7 @@ Supported YAML patch types
 
 Processing order
 ----------------
-1. Copy the relocated source/sink forcing from ``base_ss``.
+1. Copy the current source/sink forcing from ``base_ss``.
 2. Add -1000 m3/s constant sinks for entries under
    ``large_constant_sink_artificial_island_locations``.
 3. Restore or create entries under ``force_source_sink_locations``.
@@ -102,7 +102,6 @@ import numpy as np
 import pandas as pd
 from pyproj import Transformer
 
-from pylib import schism_grid as read_schism_grid
 from pylib_experimental.schism_file import source_sink
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     CFS_TO_CMS,
@@ -292,10 +291,58 @@ def _add_large_constant_sinks(
     )
 
 
+def _set_or_append_source_column(
+    source_eles,
+    source_time_and_data,
+    msource_data_list,
+    target_ele,
+    source_time,
+    flow,
+    tracer_columns,
+):
+    """Restore forcing at an existing source, or create a new source."""
+    if target_ele not in source_eles:
+        return _append_source_column(
+            source_eles=source_eles,
+            source_time_and_data=source_time_and_data,
+            msource_data_list=msource_data_list,
+            target_ele=target_ele,
+            source_time=source_time,
+            flow=flow,
+            tracer_columns=tracer_columns,
+        )
+
+    source_idx = source_eles.index(target_ele)
+    current_time, source_data = source_time_and_data
+    _check_matching_time(current_time, source_time, f"source {target_ele}")
+    flow = np.asarray(flow, dtype=float).reshape(-1)
+    if len(flow) != len(current_time):
+        raise ValueError(f"Source {target_ele} flow length does not match model time")
+    if len(msource_data_list) != len(tracer_columns):
+        raise ValueError("Reference tracer count does not match existing source")
+
+    source_data[:, source_idx] = flow
+    for tracer_idx, ((tracer_time, tracer_data), values) in enumerate(
+        zip(msource_data_list, tracer_columns)
+    ):
+        _check_matching_time(
+            tracer_time, source_time, f"source {target_ele} tracer {tracer_idx + 1}"
+        )
+        values = np.asarray(values, dtype=float).reshape(-1)
+        if len(values) != len(tracer_time):
+            raise ValueError(
+                f"Source {target_ele} tracer {tracer_idx + 1} length does not match model time"
+            )
+        tracer_data[:, source_idx] = values
+
+    return source_eles, source_time_and_data, msource_data_list
+
+
 def apply_artificial_island_corrections(
     base_ss: source_sink,
     hgrid,
-    original_source_sink_dir,
+    reference_ss: source_sink,
+    reference_hgrid,
     patch_info_file: str | Path | dict,
     start_time=None,
     usgs_cache_folder=None,
@@ -304,34 +351,21 @@ def apply_artificial_island_corrections(
     """
     Restore only YAML-listed artificial-island source/sink forcing.
 
-    The forcing columns are copied from ``original_source_sink_dir`` and
-    appended to the already relocated ``base_ss``. Existing relocated source
-    or sink columns are never moved.
+    Selected forcing columns are copied from ``reference_ss`` to ``base_ss``.
+    Existing target columns are replaced; otherwise columns are appended.
+    Neither input is modified, and relocation is not required.
 
     """
     if base_ss is None:
         raise ValueError("base_ss must not be None")
+    if reference_ss is None or reference_hgrid is None:
+        raise ValueError("reference_ss and reference_hgrid are required")
 
     if start_time is None:
         raise ValueError("start_time is required for artificial-island patching")
     usgs_cache_folder = Path(
         usgs_cache_folder or Path(output_dir or Path.cwd()) / "USGS_cache"
     )
-
-    original_source_sink_dir = Path(original_source_sink_dir)
-
-    if not original_source_sink_dir.is_dir():
-        raise FileNotFoundError(
-            "Original source/sink directory does not exist: "
-            f"{original_source_sink_dir}"
-        )
-
-    original_hgrid_file = original_source_sink_dir / "hgrid.gr3"
-    if not original_hgrid_file.is_file():
-        raise FileNotFoundError(
-            "Original source/sink grid does not exist: "
-            f"{original_hgrid_file}"
-        )
 
     patch_info = _load_patch_info(patch_info_file)
     unsupported_sections = [
@@ -359,39 +393,30 @@ def apply_artificial_island_corrections(
         print("[ARTIFICIAL ISLAND PATCH] no YAML entries; returning base_ss.")
         return deepcopy(base_ss)
 
-    print(
-        "[ARTIFICIAL ISLAND PATCH] reading original forcing from "
-        f"{original_source_sink_dir}"
-    )
-    original_ss = source_sink.from_files(
-        source_dir=str(original_source_sink_dir),
-    )
-    original_hgrid = read_schism_grid(str(original_hgrid_file))
-
     source_eles, source_time_and_data, msource_data_list = (
         _copy_source_components(base_ss)
     )
     sink_eles, sink_time_and_data = _copy_sink_components(base_ss)
 
     original_source_eles, original_source_time_and_data, original_msource = (
-        _copy_source_components(original_ss)
+        _copy_source_components(reference_ss)
     )
     original_sink_eles, original_sink_time_and_data = (
-        _copy_sink_components(original_ss)
+        _copy_sink_components(reference_ss)
     )
 
     xctr, yctr = _compute_grid_centers(hgrid)
-    original_xctr, original_yctr = _compute_grid_centers(original_hgrid)
+    original_xctr, original_yctr = _compute_grid_centers(reference_hgrid)
     transformer = _make_transformer()
 
     print(
         "[ARTIFICIAL ISLAND PATCH] "
-        f"starting relocated base: {len(source_eles)} source(s), "
+        f"starting base: {len(source_eles)} source(s), "
         f"{len(sink_eles)} sink(s)."
     )
     print(
         "[ARTIFICIAL ISLAND PATCH] "
-        f"available original forcing: {len(original_source_eles)} source(s), "
+        f"available reference forcing: {len(original_source_eles)} source(s), "
         f"{len(original_sink_eles)} sink(s)."
     )
 
@@ -427,7 +452,7 @@ def apply_artificial_island_corrections(
         )
 
     # ------------------------------------------------------------------
-    # Restore only YAML-listed source/sink columns from original forcing.
+    # Restore only YAML-listed source/sink columns from reference forcing.
     # ------------------------------------------------------------------
     for point in force_points:
         name = point["name"]
@@ -468,7 +493,7 @@ def apply_artificial_island_corrections(
                 and original_distance_m <= radius_m
             )
 
-            # Use the original nearest source as the msource template even when
+            # Use the nearest reference source as the msource template even when
             # it lies outside max_search_radius_m. The flow may still be
             # replaced entirely by the explicitly mapped USGS observation.
             if original_available:
@@ -527,7 +552,7 @@ def apply_artificial_island_corrections(
                 if not original_available:
                     raise ValueError(
                         f"[ARTIFICIAL ISLAND PATCH] {name}: USGS flow is "
-                        "available, but no original source forcing exists "
+                        "available, but no reference source forcing exists "
                         "to fill missing USGS periods and provide msource."
                     )
 
@@ -577,7 +602,7 @@ def apply_artificial_island_corrections(
                     f"[ARTIFICIAL ISLAND PATCH] {name}: USGS flow station "
                     f"{flow_station_id} supplied vsource for "
                     f"{int(use_usgs_flow.sum())}/{len(use_usgs_flow)} "
-                    "records; original NWM supplied "
+                    "records; reference forcing supplied "
                     f"{int((~use_usgs_flow).sum())} records."
                 )
 
@@ -587,13 +612,13 @@ def apply_artificial_island_corrections(
                         f"USGS temperature station {temperature_station_id} "
                         f"supplied temperature msource for "
                         f"{int(use_usgs_temperature.sum())}/"
-                        f"{len(use_usgs_temperature)} records; original "
+                        f"{len(use_usgs_temperature)} records; reference "
                         "msource supplied "
                         f"{int((~use_usgs_temperature).sum())} records."
                     )
 
                 source_origin_message = (
-                    f"USGS flow station {flow_station_id} blended with original "
+                    f"USGS flow station {flow_station_id} blended with reference "
                     f"source element {original_ele} "
                     f"(distance={original_distance_m:.1f} m)"
                 )
@@ -605,32 +630,32 @@ def apply_artificial_island_corrections(
 
                 if original_within_radius:
                     source_origin_message = (
-                        f"original source element {original_ele} "
+                        f"reference source element {original_ele} "
                         f"(distance={original_distance_m:.1f} m)"
                     )
                 else:
                     source_origin_message = (
-                        f"nearest original source element {original_ele} "
+                        f"nearest reference source element {original_ele} "
                         f"outside radius (distance={original_distance_m:.1f} m); "
                         "restored because USGS observation was unavailable"
                     )
                     print(
                         f"[ARTIFICIAL ISLAND PATCH] warning: {name}: "
-                        f"no original source within {radius_m:.1f} m. "
+                        f"no reference source within {radius_m:.1f} m. "
                         f"Creating source at main-grid element {target_ele} "
-                        f"using nearest original forcing {original_ele}."
+                        f"using nearest reference forcing {original_ele}."
                     )
             else:
                 raise ValueError(
                     f"[ARTIFICIAL ISLAND PATCH] {name}: neither USGS flow "
-                    "nor an original source forcing column is available."
+                    "nor a reference source forcing column is available."
                 )
 
             (
                 source_eles,
                 source_time_and_data,
                 msource_data_list,
-            ) = _append_source_column(
+            ) = _set_or_append_source_column(
                 source_eles=source_eles,
                 source_time_and_data=source_time_and_data,
                 msource_data_list=msource_data_list,
@@ -641,7 +666,7 @@ def apply_artificial_island_corrections(
             )
 
             source_time, source_data = source_time_and_data
-            source_idx = len(source_eles) - 1
+            source_idx = source_eles.index(target_ele)
 
             if point["allow_negative_sink"]:
                 (
@@ -673,7 +698,7 @@ def apply_artificial_island_corrections(
 
             restored_source_count += 1
             print(
-                f"[ARTIFICIAL ISLAND PATCH] {name}: created source at "
+                f"[ARTIFICIAL ISLAND PATCH] {name}: set source at "
                 f"main-grid element {target_ele}; target-center distance="
                 f"{target_distance_m:.1f} m; forcing={source_origin_message}."
             )
@@ -682,7 +707,7 @@ def apply_artificial_island_corrections(
             if original_sink_time_and_data is None:
                 raise ValueError(
                     f"[ARTIFICIAL ISLAND PATCH] {name}: "
-                    "original source/sink forcing contains no vsink"
+                    "reference source/sink forcing contains no vsink"
                 )
 
             original_ele, original_distance_m = _nearest_element(
@@ -696,24 +721,17 @@ def apply_artificial_island_corrections(
 
             if original_ele is None:
                 raise ValueError(
-                    f"[ARTIFICIAL ISLAND PATCH] {name}: original forcing "
+                    f"[ARTIFICIAL ISLAND PATCH] {name}: reference forcing "
                     "contains no sink column that can be copied."
                 )
 
             if original_distance_m > radius_m:
                 print(
                     f"[ARTIFICIAL ISLAND PATCH] warning: {name}: no "
-                    f"original sink within {radius_m:.1f} m. Creating "
+                    f"reference sink within {radius_m:.1f} m. Creating "
                     f"sink at main-grid element {target_ele} using nearest "
-                    f"original sink {original_ele} at "
+                    f"reference sink {original_ele} at "
                     f"{original_distance_m:.1f} m."
-                )
-
-            if target_ele in sink_eles:
-                raise ValueError(
-                    f"[ARTIFICIAL ISLAND PATCH] {name}: target element "
-                    f"{target_ele} already contains a sink. Refusing to "
-                    "create duplicate sink forcing."
                 )
 
             original_idx = original_sink_eles.index(original_ele)
@@ -730,16 +748,20 @@ def apply_artificial_island_corrections(
                     original_time,
                     f"sink {name}",
                 )
-                sink_data = np.column_stack((sink_data, restored_sink))
+                if target_ele in sink_eles:
+                    sink_data[:, sink_eles.index(target_ele)] = restored_sink
+                else:
+                    sink_data = np.column_stack((sink_data, restored_sink))
 
-            sink_eles.append(int(target_ele))
+            if target_ele not in sink_eles:
+                sink_eles.append(int(target_ele))
             sink_time_and_data = (sink_time, sink_data)
             restored_sink_count += 1
 
             print(
-                f"[ARTIFICIAL ISLAND PATCH] {name}: restored original "
+                f"[ARTIFICIAL ISLAND PATCH] {name}: restored reference "
                 f"sink element {original_ele} -> main-grid element "
-                f"{target_ele}; original distance="
+                f"{target_ele}; reference distance="
                 f"{original_distance_m:.1f} m, target-center distance="
                 f"{target_distance_m:.1f} m."
             )
@@ -784,36 +806,21 @@ def apply_artificial_island_corrections(
     return patched_ss
 
 
-def zero_artificial_island_sources_after_replace_USGS_before_relocation(
-    source_sink_dir: str | Path,
-    hgrid_file: str | Path,
+def suppress_artificial_island_sources(
+    base_ss: source_sink,
+    hgrid,
     patch_info_file: str | Path | dict,
     output_dir: str | Path | None = None,
-) -> None:
+) -> source_sink:
     """
-    Set vsource columns to zero for pre-relocation source elements located
-    within 50 m of YAML-listed artificial-island locations.
+    Return forcing with source flow zeroed near YAML-listed island locations.
 
-    This function is intended to run after source_nwm2usgs() and before
-    relocate_sources2().
-
-    Only source_sink_dir/vsource.th is modified. Source elements, msource,
-    vsink, source_sink.in, sources.json, and sinks.json remain unchanged.
+    The input object is not modified. Source elements, tracers, and sinks
+    remain unchanged in the returned object.
     """
     search_radius_m = 500.0
-
-    source_sink_dir = Path(source_sink_dir)
-    hgrid_file = Path(hgrid_file)
-
-    if not source_sink_dir.is_dir():
-        raise FileNotFoundError(
-            f"Source/sink directory does not exist: {source_sink_dir}"
-        )
-
-    if not hgrid_file.is_file():
-        raise FileNotFoundError(
-            f"Pre-relocation hgrid does not exist: {hgrid_file}"
-        )
+    if base_ss is None:
+        raise ValueError("base_ss must not be None")
 
     patch_info = _load_patch_info(patch_info_file)
 
@@ -826,10 +833,9 @@ def zero_artificial_island_sources_after_replace_USGS_before_relocation(
 
     if not raw_points:
         print(
-            "[PRE-RELOCATION SOURCE ZERO] no artificial-island "
-            "source locations were specified; vsource.th is unchanged."
+            "[ISLAND SOURCE SUPPRESSION] no source locations specified."
         )
-        return
+        return base_ss
 
     points: list[dict] = []
 
@@ -850,27 +856,19 @@ def zero_artificial_island_sources_after_replace_USGS_before_relocation(
             }
         )
 
-    # Read the exact grid used to generate the pre-relocation source elements.
-    hgrid = read_schism_grid(str(hgrid_file))
-
-    original_ss = source_sink.from_files(
-        source_dir=str(source_sink_dir),
-    )
-
     source_eles = [
         int(ele)
-        for ele in np.asarray(original_ss.source_eles).reshape(-1)
+        for ele in np.asarray(base_ss.source_eles).reshape(-1)
     ]
 
-    if original_ss.vsource is None or not source_eles:
+    if base_ss.vsource is None or not source_eles:
         print(
-            "[PRE-RELOCATION SOURCE ZERO] no source forcing exists; "
+            "[ISLAND SOURCE SUPPRESSION] no source forcing exists; "
             "nothing was changed."
         )
-        return
+        return base_ss
 
-    source_time = _time_array(original_ss.vsource)
-    source_data = _data_array(original_ss.vsource).copy()
+    source_data = _data_array(base_ss.vsource).copy()
 
     if source_data.shape[1] != len(source_eles):
         raise ValueError(
@@ -920,7 +918,7 @@ def zero_artificial_island_sources_after_replace_USGS_before_relocation(
             )
 
             print(
-                "[PRE-RELOCATION SOURCE ZERO] "
+                "[ISLAND SOURCE SUPPRESSION] "
                 f"{point['name']}: no source found within "
                 f"{search_radius_m:.1f} m; nearest={nearest_text}."
             )
@@ -985,21 +983,17 @@ def zero_artificial_island_sources_after_replace_USGS_before_relocation(
             )
 
         print(
-            "[PRE-RELOCATION SOURCE ZERO] "
+            "[ISLAND SOURCE SUPPRESSION] "
             f"{point['name']}: set {len(found_elements)} source(s) "
             f"to zero within {search_radius_m:.1f} m: "
             f"{sorted(found_elements)}"
         )
 
-    # Overwrite only vsource.th.
-    np.savetxt(
-        source_sink_dir / "vsource.th",
-        np.c_[source_time, source_data],
-        fmt="%.6f",
-    )
+    suppressed_ss = deepcopy(base_ss)
+    suppressed_ss.vsource.df.iloc[:, :] = source_data
 
     print(
-        "[PRE-RELOCATION SOURCE ZERO] completed: "
+        "[ISLAND SOURCE SUPPRESSION] completed: "
         f"{len(zeroed_elements)} unique source element(s) set to zero."
     )
 
@@ -1021,17 +1015,13 @@ def zero_artificial_island_sources_after_replace_USGS_before_relocation(
             ],
         ).to_csv(
             output_dir
-            / "zeroed_sources_after_replace_USGS_before_relocation.csv",
+            / "suppressed_artificial_island_sources.csv",
             index=False,
         )
 
-        np.savetxt(
-            output_dir / "vsource_zeroed.th",
-            np.c_[source_time, source_data],
-            fmt="%.6f",
-        )
+    return suppressed_ss
 
 __all__ = [
     "apply_artificial_island_corrections",
-    "zero_artificial_island_sources_after_replace_USGS_before_relocation",
+    "suppress_artificial_island_sources",
 ]

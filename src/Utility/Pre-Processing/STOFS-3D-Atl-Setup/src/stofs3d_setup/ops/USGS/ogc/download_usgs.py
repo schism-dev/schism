@@ -34,6 +34,8 @@ from urllib3.util.retry import Retry
 
 
 USGS_COLLECTION_URL = "https://api.waterdata.usgs.gov/ogcapi/v1/collections/{collection}/items"
+EARTH_RADIUS_KM = 6371.0088
+MIN_WATER_TEMPERATURE_C = -2.0
 
 USGS_PARAMETER_CODES = {
     "temperature": "00010",
@@ -61,6 +63,7 @@ USGS_ECGC_STATE_BBOXES = {
     "AL": (-88.6, 30.1, -84.9, 35.1),
     "MI": (-90.5, 41.7, -82.1, 48.4),
     "LA": (-94.1, 28.8, -88.8, 33.1),
+    "MS": (-91.7, 30.1, -88.0, 35.1),
     "TX": (-106.7, 25.8, -93.5, 36.6),
 }
 
@@ -86,6 +89,7 @@ USGS_STATE_NAMES = {
     "AL": "Alabama",
     "MI": "Michigan",
     "LA": "Louisiana",
+    "MS": "Mississippi",
     "TX": "Texas",
 }
 
@@ -109,6 +113,7 @@ USGS_STATE_FIPS_CODES = {
     "AL": "01",
     "MI": "26",
     "LA": "22",
+    "MS": "28",
     "TX": "48",
 }
 
@@ -122,7 +127,8 @@ def make_session() -> requests.Session:
         backoff_factor=1.0,
         status_forcelist=[500, 502, 503, 504],
         allowed_methods={"GET", "POST"},
-        respect_retry_after_header=True,
+        # Let request_json handle 429 with a wait appropriate to the API limit.
+        respect_retry_after_header=False,
     )
     adapter = HTTPAdapter(
         max_retries=retry,
@@ -169,17 +175,19 @@ def request_json(
                 headers={"Content-Type": "application/query-cql-json"},
                 timeout=60,
             )
-        if response.status_code == 429 and "X-Api-Key" in session.headers:
-            print("USGS API key is over rate limit; retrying anonymously", flush=True)
-            session.headers.pop("X-Api-Key", None)
-            continue
         if response.status_code != 429:
             response.raise_for_status()
             return response.json()
         if attempt == max_429_retries:
             response.raise_for_status()
 
-        wait_seconds = min(120.0, 10.0 * 2**attempt)
+        retry_after = Retry().get_retry_after(response)
+        if retry_after is not None:
+            wait_seconds = retry_after
+        elif "X-Api-Key" in session.headers:
+            wait_seconds = 3600.0
+        else:
+            wait_seconds = min(3600.0, 60.0 * 2**attempt)
         print(f"USGS rate limit hit; sleeping {wait_seconds:g} seconds", flush=True)
         time.sleep(wait_seconds)
 
@@ -326,9 +334,12 @@ def _read_hgrid(hgrid_path: str | os.PathLike[str] | None) -> Any | None:
 
 
 def _expanded_hgrid_bbox(hgrid: Any, buffer_km: float) -> tuple[float, float, float, float]:
-    lat_mid = 0.5 * (float(hgrid.y.min()) + float(hgrid.y.max()))
+    max_abs_lat = min(
+        max(abs(float(hgrid.y.min())), abs(float(hgrid.y.max()))),
+        89.0,
+    )
     lat_pad = buffer_km / 111.0
-    lon_pad = buffer_km / max(111.0 * cos(radians(lat_mid)), 1.0)
+    lon_pad = buffer_km / max(111.0 * cos(radians(max_abs_lat)), 1.0)
     return (
         float(hgrid.x.min()) - lon_pad,
         float(hgrid.x.max()) + lon_pad,
@@ -350,9 +361,14 @@ def _boundary_points(hgrid: Any) -> np.ndarray:
     return np.c_[hgrid.x[boundary_node_ids], hgrid.y[boundary_node_ids]]
 
 
-def _xy_km(points: np.ndarray, reference_lat: float) -> np.ndarray:
-    km_per_lon_degree = max(111.0 * cos(radians(reference_lat)), 1.0)
-    return np.c_[points[:, 0] * km_per_lon_degree, points[:, 1] * 111.0]
+def _unit_sphere_xyz(points: np.ndarray) -> np.ndarray:
+    longitude = np.deg2rad(points[:, 0])
+    latitude = np.deg2rad(points[:, 1])
+    return np.column_stack((
+        np.cos(latitude) * np.cos(longitude),
+        np.cos(latitude) * np.sin(longitude),
+        np.sin(latitude),
+    ))
 
 
 def _within_boundary_buffer(points: np.ndarray, hgrid: Any, buffer_km: float) -> np.ndarray:
@@ -368,10 +384,10 @@ def _within_boundary_buffer(points: np.ndarray, hgrid: Any, buffer_km: float) ->
         )
         return np.zeros(len(points), dtype=bool)
 
-    reference_lat = float(np.nanmean(points[:, 1]))
-    boundary_tree = cKDTree(_xy_km(_boundary_points(hgrid), reference_lat))
-    distance_km, _ = boundary_tree.query(_xy_km(points, reference_lat), k=1)
-    return distance_km <= buffer_km
+    boundary_tree = cKDTree(_unit_sphere_xyz(_boundary_points(hgrid)))
+    chord_distance, _ = boundary_tree.query(_unit_sphere_xyz(points), k=1)
+    chord_limit = 2.0 * np.sin(buffer_km / (2.0 * EARTH_RADIUS_KM))
+    return chord_distance <= chord_limit
 
 
 def filter_series_by_hgrid(
@@ -537,6 +553,31 @@ def discover_station_ids_with_parameter(
     return matched_station_ids
 
 
+def discover_station_ids_with_parameter_in_bbox(
+    bbox: tuple[float, float, float, float],
+    parameter: str,
+    start: Any,
+    end: Any,
+    session: requests.Session | None = None,
+) -> set[str]:
+    """Screen a region by parameter without querying every inventory station."""
+    session = session or make_session()
+    features = iter_ogc_features(
+        session,
+        "time-series-metadata",
+        {"parameter_code": parameter, "bbox": ",".join(map(str, bbox))},
+        limit=10000,
+    )
+    return {
+        normalize_station_id(station_id)
+        for feature in features
+        if _is_instantaneous_series_in_period(
+            feature.get("properties", {}), start, end
+        )
+        if (station_id := feature.get("properties", {}).get("monitoring_location_id"))
+    }
+
+
 def discover_monitoring_locations(
     states: list[str] | None = None,
     session: requests.Session | None = None,
@@ -599,6 +640,25 @@ def discover_monitoring_locations(
     )
 
 
+def _observation_is_unavailable(properties: dict[str, Any]) -> bool:
+    """USGS can publish numeric placeholders with an UNAVAIL qualifier."""
+    qualifiers = properties.get("qualifier") or []
+    if isinstance(qualifiers, str):
+        qualifiers = [qualifiers]
+    return any(str(value).strip().upper() == "UNAVAIL" for value in qualifiers)
+
+
+def _filter_observation_values(
+    observations: pd.DataFrame, parameter: str
+) -> pd.DataFrame:
+    observations = observations.dropna(subset=["time", "value"])
+    if str(parameter) == USGS_PARAMETER_CODES["temperature"]:
+        observations = observations.loc[
+            observations["value"] >= MIN_WATER_TEMPERATURE_C
+        ]
+    return observations
+
+
 def download_station_parameter(
     station_id: str,
     parameter: str,
@@ -618,6 +678,8 @@ def download_station_parameter(
     rows = []
     for feature in features:
         properties = feature.get("properties", {})
+        if _observation_is_unavailable(properties):
+            continue
         lon, lat = feature_lon_lat(feature)
         rows.append({
             "station_id": normalize_station_id(
@@ -638,7 +700,7 @@ def download_station_parameter(
     observations["value"] = pd.to_numeric(observations["value"], errors="coerce")
     observations["lon"] = pd.to_numeric(observations["lon"], errors="coerce")
     observations["lat"] = pd.to_numeric(observations["lat"], errors="coerce")
-    return observations.dropna(subset=["time", "value"])
+    return _filter_observation_values(observations, parameter)
 
 
 def download_state_parameter(
@@ -660,6 +722,8 @@ def download_state_parameter(
     rows = []
     for feature in features:
         properties = feature.get("properties", {})
+        if _observation_is_unavailable(properties):
+            continue
         lon, lat = feature_lon_lat(feature)
         rows.append({
             "station_id": properties.get("monitoring_location_id"),
@@ -678,7 +742,8 @@ def download_state_parameter(
     observations["value"] = pd.to_numeric(observations["value"], errors="coerce")
     observations["lon"] = pd.to_numeric(observations["lon"], errors="coerce")
     observations["lat"] = pd.to_numeric(observations["lat"], errors="coerce")
-    return observations.dropna(subset=["station_id", "time", "value"])
+    observations = observations.dropna(subset=["station_id"])
+    return _filter_observation_values(observations, parameter)
 
 
 def download_station_group_parameter(
@@ -757,6 +822,8 @@ def download_station_group_parameter(
     rows = []
     for feature in features:
         properties = feature.get("properties", {})
+        if _observation_is_unavailable(properties):
+            continue
         lon, lat = feature_lon_lat(feature)
         rows.append({
             "station_id": normalize_station_id(
@@ -778,7 +845,8 @@ def download_station_group_parameter(
     observations["value"] = pd.to_numeric(observations["value"], errors="coerce")
     observations["lon"] = pd.to_numeric(observations["lon"], errors="coerce")
     observations["lat"] = pd.to_numeric(observations["lat"], errors="coerce")
-    observations = observations.dropna(subset=["station_id", "time", "value"])
+    observations = observations.dropna(subset=["station_id"])
+    observations = _filter_observation_values(observations, parameter)
     if selected_series_ids:
         observations = observations[
             observations["time_series_id"].astype(str).isin(

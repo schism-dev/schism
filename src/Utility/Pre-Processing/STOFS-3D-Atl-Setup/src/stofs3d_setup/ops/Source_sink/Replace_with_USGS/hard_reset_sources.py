@@ -13,7 +13,6 @@ from stofs3d_setup.ops.USGS.ogc.series import (
     _model_datetimes,
 )
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.source_temperature import (
-    DISCHARGE_WEIGHTED,
     FIRST_USABLE,
     _blend_complete_temperature_or_preserve,
     _mixed_temperature_columns,
@@ -61,10 +60,8 @@ def _replace_existing_relocated_source(
 
     The source element and source-column count are unchanged. Flow and
     temperature may come from different explicitly configured USGS stations.
-    In ``first_usable`` mode, unsupported periods retain the existing
-    relocated forcing. In ``discharge_weighted`` mode, a temperature
-    override is atomic: it is applied only if every model time receives a
-    finite numeric temperature.
+    A temperature override is atomic in either pooling mode: it is applied
+    only if every model time receives a finite numeric temperature.
     """
     name = point["name"]
     radius_m = point["max_search_radius_m"]
@@ -202,28 +199,15 @@ def _replace_existing_relocated_source(
             )
 
             original_temperature = tracer_data[:, source_idx].copy()
-            if temperature_pooling == DISCHARGE_WEIGHTED:
-                (
-                    replaced_temperature,
-                    use_usgs_temperature,
-                    temperature_applied,
-                ) = _blend_complete_temperature_or_preserve(
-                    series=temperature_series,
-                    target_time=target_datetime,
-                    original_values=original_temperature,
-                )
-            else:
-                replaced_temperature, use_usgs_temperature = (
-                    _interpolate_usgs_with_original_fallback(
-                        series=temperature_series,
-                        target_time=target_datetime,
-                        original_values=original_temperature,
-                        scale=1.0,
-                    )
-                )
-                temperature_applied = bool(
-                    np.any(use_usgs_temperature)
-                )
+            (
+                replaced_temperature,
+                use_usgs_temperature,
+                temperature_applied,
+            ) = _blend_complete_temperature_or_preserve(
+                series=temperature_series,
+                target_time=target_datetime,
+                original_values=original_temperature,
+            )
 
             tracer_data[:, source_idx] = replaced_temperature
             msource_data_list[0] = (tracer_time, tracer_data)
@@ -320,15 +304,15 @@ def _apply_source_overrides(
             )
         )
 
-    if temperature_pooling == DISCHARGE_WEIGHTED and msource_values:
+    if msource_values:
         mixed_columns = np.flatnonzero(
             _mixed_temperature_columns(msource_values[0][1])
         )
         if len(mixed_columns) > 0:
             mixed_elements = [source_eles[idx] for idx in mixed_columns]
             raise ValueError(
-                "discharge_weighted source-temperature hard resets "
-                "left columns that are not uniformly all-ambient or "
+                "Source-temperature hard resets left columns that are not "
+                "uniformly all-ambient or "
                 f"all-finite-numeric for source elements {mixed_elements}"
             )
 

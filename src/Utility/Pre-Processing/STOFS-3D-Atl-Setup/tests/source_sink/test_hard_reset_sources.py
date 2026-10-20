@@ -275,7 +275,7 @@ class SourceOverrideTests(unittest.TestCase):
             original.msource[1].df.values,
         )
 
-    def test_weighted_mode_rejects_partial_selected_temperature_override(self):
+    def test_temperature_override_rejects_partial_series_in_both_modes(self):
         time = np.array([0.0, 3600.0, 7200.0])
         original = _build_source_sink(
             source_eles=[1],
@@ -303,31 +303,31 @@ class SourceOverrideTests(unittest.TestCase):
             index=pd.to_datetime(["2020-01-01T00:00Z"]),
         )
 
-        with patch.object(
-            hard_reset_sources,
-            "_get_usgs_temperature",
-            return_value=(partial_temperature, "01463500"),
-        ):
-            corrected, count = (
-                hard_reset_sources.apply_source_temperature_overrides(
-                    base_ss=original,
-                    hgrid=_Grid(),
-                    points=[point],
-                    start_time=pd.Timestamp("2020-01-01T00:00Z"),
-                    usgs_cache_folder=None,
-                    temperature_pooling="discharge_weighted",
+        for mode in ("first_usable", "discharge_weighted"):
+            with self.subTest(mode=mode), patch.object(
+                hard_reset_sources,
+                "_get_usgs_temperature",
+                return_value=(partial_temperature, "01463500"),
+            ):
+                corrected, count = (
+                    hard_reset_sources.apply_source_temperature_overrides(
+                        base_ss=original,
+                        hgrid=_Grid(),
+                        points=[point],
+                        start_time=pd.Timestamp("2020-01-01T00:00Z"),
+                        usgs_cache_folder=None,
+                        temperature_pooling=mode,
+                    )
                 )
-            )
-
-        self.assertEqual(count, 1)
-        np.testing.assert_array_equal(
-            corrected.msource[0].df.values,
-            original.msource[0].df.values,
-        )
-        np.testing.assert_array_equal(
-            corrected.vsource.df.values,
-            original.vsource.df.values,
-        )
+                self.assertEqual(count, 1)
+                np.testing.assert_array_equal(
+                    corrected.msource[0].df.values,
+                    original.msource[0].df.values,
+                )
+                np.testing.assert_array_equal(
+                    corrected.vsource.df.values,
+                    original.vsource.df.values,
+                )
 
 
 if __name__ == "__main__":

@@ -11,6 +11,10 @@ from stofs3d_setup.ops.USGS.ogc.source_sink import (
     RequiredStationDownloadError,
     download_stations,
 )
+from stofs3d_setup.ops.USGS.ogc.download_policy import (
+    USGS_MAX_MISSING_GAP_DAYS,
+)
+from stofs3d_setup.ops.USGS.ogc.download_usgs import MIN_WATER_TEMPERATURE_C
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.nwm_usgs_station_search import (
     Vsource,
     find_usgs_along_nwm,
@@ -47,6 +51,9 @@ FIRST_USABLE = "first_usable"
 DISCHARGE_WEIGHTED = "discharge_weighted"
 TEMPERATURE_POOLING_MODES = {FIRST_USABLE, DISCHARGE_WEIGHTED}
 AMBIENT_TEMPERATURE_SENTINEL = -9999.0
+MAX_TEMPERATURE_MISSING_GAP = pd.Timedelta(
+    days=USGS_MAX_MISSING_GAP_DAYS
+)
 
 
 @dataclass(frozen=True)
@@ -97,6 +104,7 @@ def _prepare_nwm_usgs_station_search(
     diagnostics_dir: Path | None,
     start_time,
     end_time,
+    hgrid,
 ):
     """Build the shared NWM/USGS station network for temperature search."""
     diagnostics_dir = (
@@ -109,6 +117,7 @@ def _prepare_nwm_usgs_station_search(
         parameter=USGS_TEMPERATURE_PARAMETER_ID,
         start=start_time,
         end=end_time,
+        hgrid=hgrid,
         manual_feature_station_links=NWM_TO_USGS_TEMPERATURE_SEARCH,
         station_diagnostic_path=(
             None
@@ -350,27 +359,18 @@ def _blend_complete_temperature_or_preserve(
             "that is not uniformly all-ambient or all-finite-numeric"
         )
 
-    blended, use_usgs = _interpolate_usgs_with_original_fallback(
-        series=series,
-        target_time=target_time,
-        original_values=original_values,
-        scale=1.0,
+    blended = (
+        None
+        if series is None
+        else _complete_temperature_series(series, target_time)
     )
-    ambient = _is_ambient_temperature(blended)
-    has_numeric = np.any(~ambient)
-    complete_numeric = (
-        np.any(use_usgs)
-        and has_numeric
-        and not np.any(ambient)
-        and np.all(np.isfinite(blended))
-    )
-    if not complete_numeric:
+    if blended is None:
         return (
             original_values.copy(),
             np.zeros(len(original_values), dtype=bool),
             False,
         )
-    return blended, use_usgs, True
+    return blended, np.ones(len(original_values), dtype=bool), True
 
 
 def _read_nwm_discharge_map(
@@ -440,33 +440,27 @@ def _temperature_on_model_grid(
     series: pd.Series,
     target_time: pd.DatetimeIndex,
 ) -> np.ndarray:
-    """Interpolate observations to model times without a numeric fallback."""
-    values, _ = _interpolate_usgs_with_original_fallback(
-        series=series,
-        target_time=target_time,
-        original_values=np.full(len(target_time), np.nan, dtype=float),
-        scale=1.0,
+    """Return a complete station series or unsupported model times."""
+    values = _complete_temperature_series(series, target_time)
+    return (
+        values
+        if values is not None
+        else np.full(len(target_time), np.nan, dtype=float)
     )
-    return values
 
 
 def _fill_short_composite_gaps(
     values: np.ndarray,
     target_time: pd.DatetimeIndex,
 ) -> np.ndarray:
-    """Fill only the standard short gaps in a weighted composite series."""
+    """Fill at most seven missing days in a weighted composite series."""
     values = np.asarray(values, dtype=float).reshape(-1)
     valid = np.isfinite(values)
     if not np.any(valid):
         return values
     series = pd.Series(values[valid], index=target_time[valid])
-    filled, _ = _interpolate_usgs_with_original_fallback(
-        series=series,
-        target_time=target_time,
-        original_values=np.full(len(target_time), np.nan, dtype=float),
-        scale=1.0,
-    )
-    return filled
+    filled = _complete_temperature_series(series, target_time)
+    return values if filled is None else filled
 
 
 def _discharge_weighted_temperature(
@@ -606,6 +600,7 @@ def _prepare_temperature_replacement_inputs(
     search_directions: tuple[str, ...] | list[str] = (
         TEMPERATURE_SEARCH_DIRECTIONS
     ),
+    hgrid=None,
 ) -> TemperatureReplacementInputs:
     """Discover stations and load time series shared by pooling methods."""
     source_time, _ = source_time_and_data
@@ -618,6 +613,7 @@ def _prepare_temperature_replacement_inputs(
         diagnostics_dir=diagnostics_dir,
         start_time=target_time[0],
         end_time=target_time[-1],
+        hgrid=hgrid,
     )
     candidates_by_source = _find_temperature_station_candidates(
         source_eles=source_eles,
@@ -674,24 +670,64 @@ def _first_usable_temperature(
     candidates: list[TemperatureStationCandidate],
     temperature_by_station: dict[str, pd.Series],
     target_time: pd.DatetimeIndex,
-    original_values: np.ndarray,
 ) -> tuple[np.ndarray | None, str | None, int]:
-    """Return the first candidate with usable observations."""
+    """Return the first candidate covering every model time."""
     for candidate in candidates:
         series = temperature_by_station.get(candidate.station_id)
         if series is None:
             continue
 
-        replacement, use_usgs = _interpolate_usgs_with_original_fallback(
-            series=series,
-            target_time=target_time,
-            original_values=original_values,
-            scale=1.0,
-        )
-        if np.any(use_usgs):
-            return replacement, candidate.station_id, int(use_usgs.sum())
+        replacement = _complete_temperature_series(series, target_time)
+        if replacement is not None:
+            return replacement, candidate.station_id, len(replacement)
 
     return None, None, 0
+
+
+def _complete_temperature_series(
+    series: pd.Series,
+    target_time: pd.DatetimeIndex,
+) -> np.ndarray | None:
+    """Fill gaps of at most seven missing days, or reject the whole series."""
+    observations = series.replace([np.inf, -np.inf], np.nan).dropna()
+    observations = observations[observations >= MIN_WATER_TEMPERATURE_C]
+    observations = observations[~observations.index.duplicated(keep="first")]
+    observations = observations.sort_index()
+    if len(observations) < 2:
+        return None
+
+    if observations.index.tz is None:
+        observations.index = observations.index.tz_localize("UTC")
+    else:
+        observations.index = observations.index.tz_convert("UTC")
+    model_time = pd.DatetimeIndex(target_time)
+    if model_time.tz is None:
+        model_time = model_time.tz_localize("UTC")
+    else:
+        model_time = model_time.tz_convert("UTC")
+
+    values, _ = _interpolate_usgs_with_original_fallback(
+        series=observations,
+        target_time=model_time,
+        original_values=np.full(len(model_time), np.nan),
+        max_interp_gap=(
+            MAX_TEMPERATURE_MISSING_GAP + pd.Timedelta(hours=1)
+        ),
+    )
+
+    leading = model_time < observations.index[0]
+    if leading.any():
+        if observations.index[0] - model_time[0] > MAX_TEMPERATURE_MISSING_GAP:
+            return None
+        values[leading] = float(observations.iloc[0])
+
+    trailing = model_time > observations.index[-1]
+    if trailing.any():
+        if model_time[-1] - observations.index[-1] > MAX_TEMPERATURE_MISSING_GAP:
+            return None
+        values[trailing] = float(observations.iloc[-1])
+
+    return values if np.all(np.isfinite(values)) else None
 
 
 def _apply_temperature_replacements(
@@ -716,7 +752,6 @@ def _apply_temperature_replacements(
                     candidates=candidates,
                     temperature_by_station=inputs.temperature_by_station,
                     target_time=inputs.target_time,
-                    original_values=temperature_data[:, source_idx].copy(),
                 )
             )
             if used_station is not None:
@@ -771,17 +806,16 @@ def _apply_temperature_replacements(
             f"{len(candidates)} candidate station(s)."
         )
 
-    if pooling == DISCHARGE_WEIGHTED:
-        mixed_columns = np.flatnonzero(
-            _mixed_temperature_columns(temperature_data)
+    mixed_columns = np.flatnonzero(_mixed_temperature_columns(temperature_data))
+    if len(mixed_columns) > 0:
+        mixed_elements = [source_eles[idx] for idx in mixed_columns]
+        raise ValueError(
+            "Temperature replacement produced columns that are not uniformly "
+            "all-ambient or all-finite-numeric for source elements "
+            f"{mixed_elements}"
         )
-        if len(mixed_columns) > 0:
-            mixed_elements = [source_eles[idx] for idx in mixed_columns]
-            raise ValueError(
-                "discharge_weighted temperature produced columns that are "
-                "not uniformly all-ambient or all-finite-numeric for source "
-                f"elements {mixed_elements}"
-            )
+
+    if pooling == DISCHARGE_WEIGHTED:
         if diagnostics_dir is not None:
             pd.DataFrame(weighted_diagnostic_rows).to_csv(
                 diagnostics_dir
@@ -810,10 +844,11 @@ def _apply_automatic_temperature_replacements(
     search_directions: tuple[str, ...] | list[str] = (
         TEMPERATURE_SEARCH_DIRECTIONS
     ),
+    hgrid=None,
 ):
     """Apply automatic USGS temperature corrections to eligible sources.
 
-    ``first_usable`` preserves the legacy partial-record fallback behavior.
+    ``first_usable`` uses the first station with complete temperature coverage.
     ``discharge_weighted`` changes a source only when a complete numeric
     temperature series can be formed. Flow is not changed by either mode.
     """
@@ -855,6 +890,7 @@ def _apply_automatic_temperature_replacements(
         nwm_data_dir=nwm_data_dir,
         warning_log_path=warning_log_path,
         search_directions=search_directions,
+        hgrid=hgrid,
     )
     replaced_count, total_usgs_records = _apply_temperature_replacements(
         source_eles=source_eles,
@@ -923,6 +959,7 @@ def replace_source_temperatures_with_usgs(
             nwm_data_dir=nwm_data_dir,
             warning_log_path=warning_log_path,
             search_directions=search_directions,
+            hgrid=hgrid,
         )
     )
 

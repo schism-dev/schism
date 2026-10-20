@@ -130,6 +130,7 @@ def source_nwm2usgs(
         parameter=usgs_var_dict["streamflow"]["id"],
         start=start_time_str,
         end=end_time_str,
+        hgrid=hg,
     )
     idx = nwm_shp['gages'].notnull()
     print(f'{nwm_shp.loc[idx]}')

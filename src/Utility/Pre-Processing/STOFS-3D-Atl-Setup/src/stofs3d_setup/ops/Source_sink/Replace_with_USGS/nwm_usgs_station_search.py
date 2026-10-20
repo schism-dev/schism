@@ -20,6 +20,7 @@ from stofs3d_setup.ops.USGS.ogc.source_sink import (
 )
 from stofs3d_setup.ops.USGS.ogc.download_usgs import (
     discover_monitoring_locations,
+    filter_series_by_hgrid,
 )
 from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
 
@@ -214,8 +215,10 @@ def prepare_nwm_usgs_station_search(
     parameter=None,
     start="1800-01-01T00:00:00Z",
     end="2200-01-01T00:00:00Z",
+    hgrid=None,
+    domain_buffer_km=100.0,
 ):
-    """Screen cached station locations, then associate them with NWM reaches."""
+    """Screen domain stations by parameter, then associate them with NWM reaches."""
     states = list(states or STOFS3D_ATL_STATES)
     cache_dir = Path(usgs_cache_folder)
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -228,6 +231,10 @@ def prepare_nwm_usgs_station_search(
         locations = discover_monitoring_locations(states=states)
         if save_station_cache:
             locations.to_csv(station_cache, index=False)
+
+    locations = filter_series_by_hgrid(
+        locations, hgrid, domain_buffer_km=domain_buffer_km
+    )
 
     station_ids, station_coords = prepare_usgs_stations(
         states=states,

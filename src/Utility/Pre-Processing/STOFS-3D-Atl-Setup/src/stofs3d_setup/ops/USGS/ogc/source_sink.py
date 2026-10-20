@@ -26,9 +26,10 @@ from stofs3d_setup.ops.USGS.ogc.download_policy import (
     USGS_MAX_MISSING_GAP_DAYS,
 )
 from stofs3d_setup.ops.USGS.ogc.download_usgs import (
+    MIN_WATER_TEMPERATURE_C,
     USGS_STATE_NAMES,
     discover_monitoring_locations,
-    discover_station_ids_with_parameter,
+    discover_station_ids_with_parameter_in_bbox,
     download_station_group_parameter,
     make_session,
     normalize_station_id,
@@ -44,6 +45,7 @@ usgs_var_dict = {
 }
 
 ecgc_states = list(USGS_STATE_NAMES)
+CACHE_QUALITY_VERSION = 1
 
 
 def _normalize_station_ids(station_ids: Iterable[str] | None) -> list[str]:
@@ -101,12 +103,21 @@ def filter_station_inventory_by_parameter(
     if locations.empty:
         return locations.copy()
 
-    matching_ids = discover_station_ids_with_parameter(
-        locations["station_id"].astype(str).tolist(),
-        parameter=parameter,
-        start=start,
-        end=end,
-    )
+    matching_ids = set()
+    for state, state_locations in locations.groupby("state"):
+        bbox = (
+            float(state_locations["lon"].min()),
+            float(state_locations["lat"].min()),
+            float(state_locations["lon"].max()),
+            float(state_locations["lat"].max()),
+        )
+        print(f"USGS parameter {parameter}: screening {state} by bounding box", flush=True)
+        matching_ids.update(discover_station_ids_with_parameter_in_bbox(
+            bbox=bbox,
+            parameter=parameter,
+            start=start,
+            end=end,
+        ))
     normalized_ids = locations["station_id"].map(normalize_station_id)
     return locations.loc[normalized_ids.isin(matching_ids)].reset_index(drop=True)
 
@@ -139,27 +150,40 @@ def _manifest_path(cache_path: str | Path) -> Path:
     return Path(f"{cache_path}.manifest.json")
 
 
-def _cache_manifest_matches(
+def _cached_station_ids_for_period(
     cache_path: str | Path,
-    station_ids: list[str],
     parameter: str,
     start,
     end,
-) -> bool:
+) -> set[str] | None:
     manifest_path = _manifest_path(cache_path)
     if not manifest_path.is_file():
-        return False
+        return None
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return False
-    return (
+        return None
+    compatible_format = (
         manifest.get("api") == "usgs-waterdata-ogc-v1"
-        and manifest.get("parameter") == str(parameter)
-        and manifest.get("stations") == station_ids
-        and manifest.get("start") == _as_utc(start).isoformat()
-        and manifest.get("end") == _as_utc(end).isoformat()
+        or manifest.get("version") == 1
     )
+    stations = manifest.get("stations")
+    try:
+        same_period = (
+            _as_utc(manifest["start"]) == _as_utc(start)
+            and _as_utc(manifest["end"]) == _as_utc(end)
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not (
+        compatible_format
+        and manifest.get("quality_version") == CACHE_QUALITY_VERSION
+        and manifest.get("parameter") == str(parameter)
+        and same_period
+        and isinstance(stations, list)
+    ):
+        return None
+    return set(_normalize_station_ids(stations))
 
 
 def _write_cache_manifest(
@@ -171,6 +195,7 @@ def _write_cache_manifest(
 ) -> None:
     manifest = {
         "api": "usgs-waterdata-ogc-v1",
+        "quality_version": CACHE_QUALITY_VERSION,
         "parameter": str(parameter),
         "stations": station_ids,
         "start": _as_utc(start).isoformat(),
@@ -191,6 +216,22 @@ def _read_cache(cache_path: str | Path) -> list[GenericObsData]:
         frame["date"] = pd.to_datetime(frame["date"], utc=True)
         return df_to_generic_obs(frame)
     raise ValueError(f"Unsupported USGS cache format: {cache_path}")
+
+
+def _filter_temperature_records(
+    records: list[GenericObsData], parameter: str
+) -> list[GenericObsData]:
+    """Keep the physical temperature floor at the cache boundary too."""
+    if str(parameter) != "00010":
+        return records
+    filtered = []
+    for record in records:
+        values = pd.to_numeric(record.df["value"], errors="coerce")
+        filtered.append(GenericObsData(
+            station_info=record.station_info,
+            df=record.df.loc[values >= MIN_WATER_TEMPERATURE_C].copy(),
+        ))
+    return filtered
 
 
 def _write_cache(records: list[GenericObsData], cache_path: str | Path) -> None:
@@ -338,31 +379,57 @@ def download_stations(
     if request_end < request_start:
         raise ValueError("USGS validation end precedes start")
 
+    reusable_records: list[GenericObsData] = []
+    stations_to_fetch = station_ids
     if cache_fname is not None and os.path.isfile(cache_fname):
-        if _cache_manifest_matches(
-            cache_fname,
-            station_ids,
-            param_id,
-            fetch_start,
-            fetch_end,
-        ):
-            cached = _read_cache(cache_fname)
+        cached_station_ids = _cached_station_ids_for_period(
+            cache_fname, param_id, fetch_start, fetch_end
+        )
+        if cached_station_ids is not None:
+            requested = set(station_ids)
+            cached = [
+                record for record in _filter_temperature_records(
+                    _read_cache(cache_fname), param_id
+                )
+                if normalize_station_id(record.station_info["id"]) in requested
+            ]
+            cached_record_ids = {
+                normalize_station_id(record.station_info["id"])
+                for record in cached
+            }
             failures = _record_failures(
                 cached,
-                forced | {normalize_station_id(x.station_info["id"]) for x in cached},
+                forced | cached_record_ids,
                 request_start,
                 request_end,
                 max_gap,
             )
-            if not failures:
+            if cached_station_ids == requested and not failures:
                 return cached
-            print(f"OGC cache did not pass coverage validation: {failures}")
+            reusable_records = [
+                record for record in cached
+                if normalize_station_id(record.station_info["id"])
+                not in failures
+            ]
+            reusable_ids = {
+                normalize_station_id(record.station_info["id"])
+                for record in reusable_records
+            }
+            stations_to_fetch = [
+                station_id for station_id in station_ids
+                if station_id not in reusable_ids
+            ]
+            print(
+                f"OGC cache: reusing {len(reusable_records)} station(s); "
+                f"fetching {len(stations_to_fetch)} station(s)",
+                flush=True,
+            )
 
     session = make_session()
     observation_frames: dict[str, list[pd.DataFrame]] = {}
     failed_request_station_ids: set[str] = set()
-    for station_offset in range(0, len(station_ids), stations_chunk_size):
-        station_group = station_ids[
+    for station_offset in range(0, len(stations_to_fetch), stations_chunk_size):
+        station_group = stations_to_fetch[
             station_offset:station_offset + stations_chunk_size
         ]
         for window_start, window_end in _iter_download_windows(
@@ -398,7 +465,7 @@ def download_stations(
                     station_data
                 )
 
-    records = _records_from_observations(
+    records = reusable_records + _records_from_observations(
         pd.concat(
             [frame for pieces in observation_frames.values() for frame in pieces],
             ignore_index=True,
@@ -407,6 +474,7 @@ def download_stations(
         else pd.DataFrame(),
         param_id,
     )
+    records = _filter_temperature_records(records, param_id)
 
     if allow_adaptive_retry and station_ids:
         from stofs3d_setup.ops.USGS.ogc.series import download_usgs_series
@@ -506,6 +574,7 @@ def download_stations(
             )
             records_by_id[station_id] = records[-1]
 
+    records = _filter_temperature_records(records, param_id)
     checked_station_ids = forced | {
         normalize_station_id(record.station_info["id"])
         for record in records
