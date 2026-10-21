@@ -6698,7 +6698,7 @@
 !     Add module outputs of 2D node below (scalars&vectors)
 #ifdef USE_WWM
       !2D node scalar
-      itmp=0 !counter
+      itmp=0 !counter for iof_wwm
       do i=1,28
         if(i==7.or.i==8) cycle !skip vectors first
 

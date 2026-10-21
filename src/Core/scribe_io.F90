@@ -503,7 +503,7 @@
       !Add modules
 #ifdef USE_WWM
       !Vectors
-      do j=35,36
+      do j=36,37
         if(iof_wwm(j)/=0) call scribe_recv_write(it,1,2,itotal,icount_out_name)
 !          do m=1,2 !components
 !            itotal=itotal+1
@@ -752,7 +752,7 @@
 
       !Add modules
 #ifdef USE_WWM
-      if(iof_wwm(33)/=0) call scribe_recv_write(it,3,1,itotal,icount_out_name)
+      if(iof_wwm(34)/=0) call scribe_recv_write(it,3,1,itotal,icount_out_name)
 !        itotal=itotal+1
 !        icount_out_name=icount_out_name+1
 !        irank=nproc_schism-itotal
@@ -771,7 +771,7 @@
 !      endif !iof_wwm
 
       !Vector
-      if(iof_wwm(34)/=0) call scribe_recv_write(it,3,2,itotal,icount_out_name)
+      if(iof_wwm(35)/=0) call scribe_recv_write(it,3,2,itotal,icount_out_name)
 !        do m=1,2 !vector components
 !          itotal=itotal+1
 !          icount_out_name=icount_out_name+1 !index into out_name
