@@ -58,7 +58,7 @@ Retaining only the advection term, Eq. $\ref{eq03}$ then becomes:
 
 \begin{equation}
 \label{eq05}
-C_i^{m+1} = C_i \left( 1 - \frac{\Delta t'}{V_i} \sum_{j\in S^+} \left| Q_j \right| \right) + \frac{\Delta t'}{V_i}\sum_{j\in S^+} \left| Q_j \right| C_j
+C_i^{m+1} = C_i \left( 1 - \frac{\Delta t'}{V_i} \sum_{j\in S^-} \left| Q_j \right| \right) + \frac{\Delta t'}{V_i}\sum_{j\in S^-} \left| Q_j \right| C_j
 \end{equation}
 
 We have utilized the volume conservation:
@@ -68,7 +68,7 @@ We have utilized the volume conservation:
 \sum_{j\in S^+} \left| Q_j \right| = \sum_{j\in S^-} \left| Q_j \right|
 \end{equation}
 
-Therefore the Courant condition is:
+Therefore the Courant condition is (using Eq. $\ref{eq06}$):
 
 \begin{equation}
 \label{eq07}
