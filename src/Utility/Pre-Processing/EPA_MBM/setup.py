@@ -324,7 +324,7 @@ fname='watertype.gr3'
 if p.flag[fname]!=0:
    print('writing '+fname)
    vi=M.f2(gd.xy,value=M.watertype.clip(1,8) if p.flag[fname]==1 else M.watertype.clip(1,7))
-   gd.save(fname,value=round(vi).astype('int'),outfmt='{:d}')
+   gd.save(fname,value=vi.round().astype('int'),outfmt='{:d}')
 
 fname='diffmin.gr3'
 if p.flag[fname]==1:
@@ -881,6 +881,7 @@ if p.flag[fname]==1 and ('p7' in p.source):
           return P
 
       #get boundary elem: (be, bn, bxy) are boundary elem, side_node,side_xy
+      if not hasattr(gd,'isdel'): gd.compute_side(1)
       fp=pindex(gd.isdel[:,1]==-1); be=gd.isdel[fp,0]; bn=gd.isidenode[fp]; bxy0=gd.xy[bn].mean(axis=1)
       bxy=vstack([r_[gd.xy[bn[i]],ones([1,2])*nan] for i in arange(len(be))])
 
