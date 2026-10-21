@@ -3047,14 +3047,14 @@ C_j, j \in S^-
 <p>Retaining only the advection term, Eq. <span class="arithmatex">\(\ref{eq03}\)</span> then becomes:</p>
 <div class="arithmatex">\[\begin{equation}
 \label{eq05}
-C_i^{m+1} = C_i \left( 1 - \frac{\Delta t'}{V_i} \sum_{j\in S^+} \left| Q_j \right| \right) + \frac{\Delta t'}{V_i}\sum_{j\in S^+} \left| Q_j \right| C_j
+C_i^{m+1} = C_i \left( 1 - \frac{\Delta t'}{V_i} \sum_{j\in S^-} \left| Q_j \right| \right) + \frac{\Delta t'}{V_i}\sum_{j\in S^-} \left| Q_j \right| C_j
 \end{equation}\]</div>
 <p>We have utilized the volume conservation:</p>
 <div class="arithmatex">\[\begin{equation}
 \label{eq06}
 \sum_{j\in S^+} \left| Q_j \right| = \sum_{j\in S^-} \left| Q_j \right|
 \end{equation}\]</div>
-<p>Therefore the Courant condition is:</p>
+<p>Therefore the Courant condition is (using Eq. <span class="arithmatex">\(\ref{eq06}\)</span>):</p>
 <div class="arithmatex">\[\begin{equation}
 \label{eq07}
 1 - \frac{\Delta t'}{V_i} \sum_{j\in S^+} \left| Q_j \right| \geq 0
