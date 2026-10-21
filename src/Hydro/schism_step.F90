@@ -10006,7 +10006,7 @@ real (rkind) :: aux                               ! ustar
         !Modules
 #ifdef USE_WWM
       !Vectors
-      do i=35,36
+      do i=36,37
         if(iof_wwm(i)/=0) call savensend3D_scribe(icount,1,2,nvrt,np,stokes_hvel(1,:,1:np),stokes_hvel(2,:,1:np))
       enddo !i
 #endif /*USE_WWM*/
@@ -10109,9 +10109,9 @@ real (rkind) :: aux                               ! ustar
      
         !Modules
 #ifdef USE_WWM
-        if(iof_wwm(33)/=0) call savensend3D_scribe(icount,3,1,nvrt,ns,stokes_wvel_side(:,1:ns))
+        if(iof_wwm(34)/=0) call savensend3D_scribe(icount,3,1,nvrt,ns,stokes_wvel_side(:,1:ns))
         !Vector
-        if(iof_wwm(34)/=0) call savensend3D_scribe(icount,3,2,nvrt,ns,wwave_force(1,:,1:ns),wwave_force(2,:,1:ns))
+        if(iof_wwm(35)/=0) call savensend3D_scribe(icount,3,2,nvrt,ns,wwave_force(1,:,1:ns),wwave_force(2,:,1:ns))
 #endif /*USE_WWM*/
 
 #ifdef USE_ANALYSIS
