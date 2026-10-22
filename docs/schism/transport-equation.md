@@ -144,7 +144,7 @@ We split the solution of Eq. $\ref{eq13}$ into 3 sub-steps:
 
 \begin{equation}
 \label{eq15}
-C_i^{m+1} = C_i^n + \frac{\Delta t_m}{V_i} \sum_{j\in S_H^-} \left| Q_j \right| (C_j^m - C_i^m) - \frac{\Delta t_m}{V_i} \sum_{j\in S_H} Q_j \hat\psi_j^m, (m = 1, \cdots, M)
+C_i^{m+1} = C_i^m + \frac{\Delta t_m}{V_i} \sum_{j\in S_H^-} \left| Q_j \right| (C_j^m - C_i^m) - \frac{\Delta t_m}{V_i} \sum_{j\in S_H} Q_j \hat\psi_j^m, (m = 1, \cdots, M)
 \end{equation}
 
 \begin{equation}
