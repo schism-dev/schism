@@ -768,9 +768,10 @@
 
           ! Save the part of bedload fluxes caused by wave acceleration
           ! before the flux limitation linked to active layer
-          if(any(FX_r==0).or.any(FY_r==0)) CALL parallel_abort('SED3D: FX_r=0')
-          r_accu(:) = Qaccu(:)/FX_r(:)
-          r_accv(:) = Qaccv(:)/FY_r(:)
+          !if(any(FX_r==0).or.any(FY_r==0)) CALL parallel_abort('SED3D: FX_r=0')
+          r_accu=0.d0; r_accv=0.d0
+          where(FX_r(:)/=0.d0) r_accu(:) = Qaccu(:)/FX_r(:)
+          where(FY_r(:)/=0.d0) r_accv(:) = Qaccv(:)/FY_r(:)
         END IF
 #endif
 
