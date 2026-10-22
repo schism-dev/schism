@@ -1,11 +1,12 @@
-"""Source/sink adapters for downloading USGS continuous observations via OGC."""
+"""Adapt USGS OGC station observations for source/sink workflows."""
 
 from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
-from typing import Any, Iterable, List, Mapping, Optional
+from typing import Any, Callable, Iterable, List, Mapping, Optional
 
 import numpy as np
 import pandas as pd
@@ -31,6 +32,7 @@ from stofs3d_setup.ops.USGS.ogc.download_usgs import (
     discover_monitoring_locations,
     discover_station_ids_with_parameter_in_bbox,
     download_station_group_parameter,
+    log_bulk_diagnostic,
     make_session,
     normalize_station_id,
 )
@@ -46,6 +48,14 @@ usgs_var_dict = {
 
 ecgc_states = list(USGS_STATE_NAMES)
 CACHE_QUALITY_VERSION = 1
+WindowResultCallback = Callable[
+    [list[str], str, Any, Any, pd.DataFrame | None, Exception | None], None
+]
+WindowStartCallback = Callable[[list[str], str, Any, Any], None]
+
+
+class ObservationPersistenceError(RuntimeError):
+    """Raised when a successful OGC response cannot be safely persisted."""
 
 
 def _normalize_station_ids(station_ids: Iterable[str] | None) -> list[str]:
@@ -340,8 +350,15 @@ def download_stations(
     allow_adaptive_retry: bool = True,
     raise_on_fetch_error: bool = False,
     validate_coverage: bool = True,
+    observation_window_callback: WindowResultCallback | None = None,
+    observation_window_start_callback: WindowStartCallback | None = None,
 ) -> List[GenericObsData]:
-    """Download station observations from the OGC continuous collection."""
+    """Download station observations from the OGC continuous collection.
+
+    The start callback marks a station/window pending immediately before its
+    request; the result callback receives each completed or failed window,
+    including successful empty responses.
+    """
     station_ids = _normalize_station_ids(station_ids)
     required = set(_normalize_station_ids(required_station_ids))
     optional = set(_normalize_station_ids(optional_station_ids))
@@ -437,6 +454,23 @@ def download_stations(
             fetch_end,
             chunk_days,
         ):
+            started = time.monotonic()
+            log_bulk_diagnostic(
+                "window_start",
+                group_start=station_offset + 1,
+                group_size=len(station_group),
+                stations=",".join(station_group),
+                parameter=param_id,
+                start=window_start.isoformat(),
+                end=window_end.isoformat(),
+            )
+            if observation_window_start_callback is not None:
+                observation_window_start_callback(
+                    station_group,
+                    param_id,
+                    window_start,
+                    window_end,
+                )
             try:
                 observations = download_station_group_parameter(
                     station_ids=station_group,
@@ -445,8 +479,24 @@ def download_stations(
                     end=window_end,
                     session=session,
                     primary_only=True,
+                    page_size=policy.get("page_size", 1000),
                 )
             except Exception as exc:
+                if observation_window_callback is not None:
+                    observation_window_callback(
+                        station_group,
+                        param_id,
+                        window_start,
+                        window_end,
+                        None,
+                        exc,
+                    )
+                log_bulk_diagnostic(
+                    "window_error",
+                    group_start=station_offset + 1,
+                    error=type(exc).__name__,
+                    elapsed_s=f"{time.monotonic() - started:.1f}",
+                )
                 if raise_on_fetch_error:
                     raise
                 print(
@@ -455,6 +505,21 @@ def download_stations(
                 )
                 failed_request_station_ids.update(station_group)
                 continue
+            if observation_window_callback is not None:
+                observation_window_callback(
+                    station_group,
+                    param_id,
+                    window_start,
+                    window_end,
+                    observations,
+                    None,
+                )
+            log_bulk_diagnostic(
+                "window_complete",
+                group_start=station_offset + 1,
+                records=len(observations),
+                elapsed_s=f"{time.monotonic() - started:.1f}",
+            )
             if observations.empty:
                 continue
             for station_id, station_data in observations.groupby(
@@ -525,8 +590,16 @@ def download_stations(
                         end_time=window_end,
                         usgs_cache_folder=Path(cache_fname).parent,
                         policy=policy,
+                        observation_window_callback=(
+                            observation_window_callback
+                        ),
+                        observation_window_start_callback=(
+                            observation_window_start_callback
+                        ),
                     )
                 except Exception as exc:
+                    if isinstance(exc, ObservationPersistenceError):
+                        raise
                     print(f"Adaptive OGC retry failed for {station_id}: {exc}")
                     continue
                 if series is not None and not series.empty:

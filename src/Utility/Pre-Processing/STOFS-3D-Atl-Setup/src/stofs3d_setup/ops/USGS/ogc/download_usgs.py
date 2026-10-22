@@ -20,8 +20,9 @@ from __future__ import annotations
 import os
 import time
 import hashlib
+import resource
 from math import cos, radians
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
@@ -36,6 +37,19 @@ from urllib3.util.retry import Retry
 USGS_COLLECTION_URL = "https://api.waterdata.usgs.gov/ogcapi/v1/collections/{collection}/items"
 EARTH_RADIUS_KM = 6371.0088
 MIN_WATER_TEMPERATURE_C = -2.0
+
+
+def log_bulk_diagnostic(event: str, **details: Any) -> None:
+    """Emit opt-in request progress without URLs, headers, or API keys."""
+    if os.environ.get("STOFS_USGS_BULK_DIAGNOSTICS") != "1":
+        return
+    fields = " ".join(f"{name}={value}" for name, value in details.items())
+    peak_rss_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+    print(
+        f"[USGS BULK DIAG] {datetime.now(timezone.utc).isoformat()} "
+        f"{event} {fields} peak_rss_mb={peak_rss_mb:.1f}",
+        flush=True,
+    )
 
 USGS_PARAMETER_CODES = {
     "temperature": "00010",
@@ -165,16 +179,32 @@ def request_json(
     json_body: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     for attempt in range(max_429_retries + 1):
-        if json_body is None:
-            response = session.get(url, params=params, timeout=60)
-        else:
-            response = session.post(
-                url,
-                params=params,
-                json=json_body,
-                headers={"Content-Type": "application/query-cql-json"},
-                timeout=60,
+        started = time.monotonic()
+        try:
+            if json_body is None:
+                response = session.get(url, params=params, timeout=60)
+            else:
+                response = session.post(
+                    url,
+                    params=params,
+                    json=json_body,
+                    headers={"Content-Type": "application/query-cql-json"},
+                    timeout=60,
+                )
+        except requests.RequestException as exc:
+            log_bulk_diagnostic(
+                "request_error",
+                attempt=attempt + 1,
+                error=type(exc).__name__,
+                elapsed_s=f"{time.monotonic() - started:.1f}",
             )
+            raise
+        log_bulk_diagnostic(
+            "response",
+            attempt=attempt + 1,
+            status=response.status_code,
+            elapsed_s=f"{time.monotonic() - started:.1f}",
+        )
         if response.status_code != 429:
             response.raise_for_status()
             return response.json()
@@ -188,6 +218,9 @@ def request_json(
             wait_seconds = 3600.0
         else:
             wait_seconds = min(3600.0, 60.0 * 2**attempt)
+        log_bulk_diagnostic(
+            "rate_limit_wait", seconds=f"{wait_seconds:g}"
+        )
         print(f"USGS rate limit hit; sleeping {wait_seconds:g} seconds", flush=True)
         time.sleep(wait_seconds)
 
@@ -204,10 +237,22 @@ def iter_ogc_features(
     url = USGS_COLLECTION_URL.format(collection=collection)
     params = {"f": "json", "limit": limit, **params}
     features: list[dict[str, Any]] = []
+    page_number = 0
 
     while url:
+        started = time.monotonic()
         payload = request_json(session, url, params=params, max_429_retries=max_429_retries)
-        features.extend(payload.get("features", []))
+        page_features = payload.get("features", [])
+        features.extend(page_features)
+        page_number += 1
+        log_bulk_diagnostic(
+            "page",
+            collection=collection,
+            page=page_number,
+            records=len(page_features),
+            cumulative_records=len(features),
+            elapsed_s=f"{time.monotonic() - started:.1f}",
+        )
         next_url = None
         for link in payload.get("links", []):
             if link.get("rel") == "next" and link.get("href"):
@@ -692,6 +737,7 @@ def download_station_parameter(
             "time": properties.get("time"),
             "value": properties.get("value"),
             "unit": properties.get("unit_of_measure"),
+            "qualifier": properties.get("qualifier"),
         })
     observations = pd.DataFrame(rows)
     if observations.empty:
@@ -733,6 +779,7 @@ def download_state_parameter(
             "time": properties.get("time"),
             "value": properties.get("value"),
             "unit": properties.get("unit_of_measure"),
+            "qualifier": properties.get("qualifier"),
         })
     observations = pd.DataFrame(rows)
     if observations.empty:
@@ -754,6 +801,7 @@ def download_station_group_parameter(
     session: requests.Session,
     max_429_retries: int = 2,
     primary_only: bool = False,
+    page_size: int = 1000,
 ) -> pd.DataFrame:
     selected_series_ids = None
     if primary_only:
@@ -767,7 +815,7 @@ def download_station_group_parameter(
                 ),
                 "parameter_code": parameter,
             },
-            limit=10000,
+            limit=page_size,
             max_429_retries=max_429_retries,
         )
         series_by_station: dict[str, list[dict[str, Any]]] = {}
@@ -816,7 +864,7 @@ def download_station_group_parameter(
             "parameter_code": parameter,
             "datetime": iso_interval(start, end),
         },
-        limit=10000,
+        limit=page_size,
         max_429_retries=max_429_retries,
     )
     rows = []
@@ -836,6 +884,7 @@ def download_station_group_parameter(
             "time": properties.get("time"),
             "value": properties.get("value"),
             "unit": properties.get("unit_of_measure"),
+            "qualifier": properties.get("qualifier"),
         })
     observations = pd.DataFrame(rows)
     if observations.empty:

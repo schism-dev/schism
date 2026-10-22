@@ -8,21 +8,28 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from schism_py_pre_post.Grid.SourceSinkIn import source_sink
-from stofs3d_setup.ops.USGS.ogc.source_sink import (
-    download_stations,
-    usgs_var_dict,
+from stofs3d_setup.ops.USGS.ogc.observation_adapter import usgs_var_dict
+from stofs3d_setup.ops.USGS.ogc.store import (
+    DEFAULT_USGS_CACHE_FOLDER,
+    get_usgs_observations,
 )
 
 
-def get_usgs_ts(usgs_stations, start_time_str, end_time_str):
+def get_usgs_ts(
+    usgs_stations,
+    start_time_str,
+    end_time_str,
+    database_dir=DEFAULT_USGS_CACHE_FOLDER,
+):
     """
     Get the USGS time series of the stations.
     """
     padded_start_time = pd.to_datetime(start_time_str) - pd.Timedelta('1 day')
     padded_end_time = pd.to_datetime(end_time_str) + pd.Timedelta('1 day')
-    usgs_data = download_stations(
+    usgs_data = get_usgs_observations(
         param_id=usgs_var_dict['streamflow']['id'],
         station_ids=usgs_stations,
+        database_dir=database_dir,
         datelist=pd.date_range(start=padded_start_time, end=padded_end_time),
     )
     return usgs_data

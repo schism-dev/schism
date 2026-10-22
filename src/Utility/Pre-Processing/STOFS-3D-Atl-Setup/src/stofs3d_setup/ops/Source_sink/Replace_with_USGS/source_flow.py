@@ -20,9 +20,13 @@ import matplotlib.pyplot as plt
 
 from schism_py_pre_post.Grid.Prop import Prop
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
-from stofs3d_setup.ops.USGS.ogc.source_sink import \
-    download_stations, usgs_var_dict, convert_to_ObsData, \
+from stofs3d_setup.ops.USGS.ogc.observation_adapter import \
+    usgs_var_dict, convert_to_ObsData, \
     detect_data_gap
+from stofs3d_setup.ops.USGS.ogc.store import (
+    DEFAULT_USGS_CACHE_FOLDER,
+    get_usgs_observations,
+)
 from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     NWM_TO_USGS_FLOW_ADJUSTMENT,
@@ -66,10 +70,10 @@ def source_nwm2usgs(
     f_shapefile=NWM_ECGC_SHAPEFILE,
     original_ss_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/',
     nwm_data_dir='/sciclone/schism10/whuang07/schism20/NWM_v2.1/',
-    output_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/USGS_adjusted_sources/',
+    output_dir='/sciclone/schism10/feiye/Requests/RUN02a_JZ/src/NWM/replace_with_usgs_flow/',
     usgs_cache_folder=None,
     warning_log_path=None,
-):
+) -> tuple[np.ndarray, np.ndarray]:
     '''
     This script is to adjust the vsource.th file based on USGS data.
     The adjustment is done by comparing the NWM data near the vsource and the USGS data near the vsource.
@@ -82,16 +86,16 @@ def source_nwm2usgs(
     NWM v1's shapefile is used to associate USGS stations with NWM segments. Later versions of NWM has this information in RouteLink_DA_pts_CONUS of the hydrofabric.
     This is acceptable because the segment IDs are the same between NWM v1 and later versions.
     And for the STOFS3D-ATL domain, the NWM segments seem to be the same through different NWM versions as of v3
-    The output is adjusted vsource.th written to output_dir.
-    It will also link the adjusted vsource.th to original_ss_dir/vsource.th and save the original_ss_dir to
-    original_source_sink_before_USGS_adjustment
+    The adjusted vsource time and values are written to output_dir and
+    returned. The original source/sink directory is read-only input to this
+    operation and is never modified.
     '''
 
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(f'{output_dir}/Diag/', exist_ok=True)
     os.makedirs(f'{output_dir}/Pngs/', exist_ok=True)
     usgs_cache_folder = Path(
-        usgs_cache_folder or Path(output_dir).resolve().parents[1] / 'USGS_cache'
+        usgs_cache_folder or DEFAULT_USGS_CACHE_FOLDER
     )
     os.makedirs(usgs_cache_folder, exist_ok=True)
 
@@ -182,20 +186,17 @@ def source_nwm2usgs(
     param_dict = {
         "param_id": usgs_var_dict['streamflow']['id'],
         "station_ids": sorted(usgs_stations),
-        "cache_fname": (
-            f'{usgs_cache_folder}/usgs_stofs3d_atl_{usgs_var_dict["streamflow"]["id"]}_'
-            f'{padded_start_time.strftime("%Y%m%d")}_{padded_end_time.strftime("%Y%m%d")}.pq'
-        ),
+        "database_dir": str(usgs_cache_folder),
         "padded_start_time": padded_start_time.strftime("%Y-%m-%d %H:%M:%S"),
         "padded_end_time": padded_end_time.strftime("%Y-%m-%d %H:%M:%S"),
     }
     param_save = f'{output_dir}/Diag/usgs_download_params1.json'
     with open(param_save, 'w', encoding='utf-8') as f:
         json.dump(param_dict, f, indent=4)
-    usgs_data = download_stations(
+    usgs_data = get_usgs_observations(
         param_id=param_dict["param_id"],
         station_ids=param_dict["station_ids"],
-        cache_fname=param_dict["cache_fname"],
+        database_dir=param_dict["database_dir"],
         datelist=pd.date_range(start=param_dict["padded_start_time"], end=param_dict["padded_end_time"]),
         required_station_ids=(
             REQUIRED_FLOW_STATIONS
@@ -362,14 +363,7 @@ def source_nwm2usgs(
 
     my_th.df_propagate()
     my_th.writer(f'{output_dir}/adjusted_vsource.th')
-
-    # link adjusted vsource.th to original source_sink dir and backup original vsource.th
-    pwd = os.getcwd()
-    os.system(f'cp -a {original_ss_dir} {Path(output_dir).parent}/original_source_sink_before_USGS_adjustment/')
-    os.chdir(original_ss_dir)
-    os.system('rm vsource.th')
-    os.system(f'ln -s ../{Path(output_dir).name}/adjusted_vsource.th vsource.th')
-    os.chdir(pwd)
+    return my_th.time.copy(), my_th.data.copy()
 
 
 
@@ -385,7 +379,7 @@ def sample_LA_domain():
         f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
         original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I19/Source_sink/original_source_sink/',
         nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/original_source_sink/20240305/',
-        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I19/Source_sink/USGS_adjusted_sources/',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I19/Source_sink/replace_with_usgs_flow/',
     )
 
     # source_nwm2usgs(
@@ -393,15 +387,15 @@ def sample_LA_domain():
     #     f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
     #     original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09g/Source_sink/original_source_sink/',
     #     nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09g/Source_sink/original_source_sink/20210801/',
-    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09j/Source_sink/USGS_adjusted_sources/',
+    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I09j/Source_sink/replace_with_usgs_flow/',
     # )
 
     # source_nwm2usgs(
     #     start_time_str="2017-12-01 00:00:00",
     #     f_shapefile="/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v20p2s2_RiverMapper/shapefiles/LA_nwm_v1p2.shp",
-    #     original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I14/Source_sink/USGS_adjusted_sources/original/',
+    #     original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I14/Source_sink/original_source_sink/',
     #     nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I13/Source_sink/original_source_sink/20171201/',
-    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I14/Source_sink/USGS_adjusted_sources/',
+    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I14/Source_sink/replace_with_usgs_flow/',
     # )
 
     # source_nwm2usgs(
@@ -409,7 +403,7 @@ def sample_LA_domain():
     #     f_shapefile=NWM_ECGC_SHAPEFILE,
     #     original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Source_sink/original_source_sink/',
     #     nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/I13/Source_sink/original_source_sink/20171201/',
-    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Source_sink/USGS_adjusted_sources/',
+    #     output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15_v7/Source_sink/replace_with_usgs_flow/',
     # )
 
 
@@ -423,7 +417,7 @@ def sample_stofs_v7v8():
         f_shapefile=NWM_ECGC_SHAPEFILE,
         original_ss_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15n_v7/original_source_sink0/',
         nwm_data_dir='/sciclone/schism10/feiye/STOFS3D-v8/NWM/CONUS/netcdf/CHRTOUT/for_2018_hindcast/',
-        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15n_v7/Source_sink/USGS_adjusted_sources/',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/I15n_v7/Source_sink/replace_with_usgs_flow/',
     )
 
 

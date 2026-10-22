@@ -7,7 +7,10 @@ from typing import Any, Mapping
 import numpy as np
 import pandas as pd
 
-from stofs3d_setup.ops.USGS.ogc.source_sink import download_stations
+from stofs3d_setup.ops.USGS.ogc.observation_adapter import (
+    ObservationPersistenceError,
+    download_stations,
+)
 from stofs3d_setup.ops.USGS.iv.download_usgs import find_data_gaps
 from stofs3d_setup.ops.USGS.ogc.download_policy import (
     USGS_DOWNLOAD_POLICY,
@@ -29,6 +32,7 @@ class UsgsDownloadPolicy:
     primary_chunk_days: int | None = None
     retry_chunk_days: tuple[int, ...] = ()
     cache_prefix: str = "usgs_adaptive"
+    page_size: int = 1000
 
     def __post_init__(self) -> None:
         chunk_days = (
@@ -52,12 +56,15 @@ class UsgsDownloadPolicy:
             raise ValueError(
                 "USGS download cache_prefix must not contain a path"
             )
+        if type(self.page_size) is not int or self.page_size <= 0:
+            raise ValueError("USGS OGC page_size must be a positive integer")
 
 
 DEFAULT_USGS_DOWNLOAD_POLICY = UsgsDownloadPolicy(
     primary_chunk_days=USGS_DOWNLOAD_POLICY["primary_chunk_days"],
     retry_chunk_days=tuple(USGS_DOWNLOAD_POLICY["retry_chunk_days"]),
     cache_prefix=USGS_DOWNLOAD_POLICY["cache_prefix"],
+    page_size=USGS_DOWNLOAD_POLICY.get("page_size", 1000),
 )
 
 
@@ -74,6 +81,7 @@ def _as_usgs_download_policy(
         "primary_chunk_days",
         "retry_chunk_days",
         "cache_prefix",
+        "page_size",
     }
     unknown_keys = set(policy) - supported_keys
     if unknown_keys:
@@ -88,6 +96,9 @@ def _as_usgs_download_policy(
         cache_prefix=policy.get(
             "cache_prefix",
             DEFAULT_USGS_DOWNLOAD_POLICY.cache_prefix,
+        ),
+        page_size=policy.get(
+            "page_size", DEFAULT_USGS_DOWNLOAD_POLICY.page_size
         ),
     )
 
@@ -204,6 +215,8 @@ def _download_usgs_window(
     window_end: pd.Timestamp,
     cache_dir: Path,
     cache_prefix: str,
+    observation_window_callback=None,
+    observation_window_start_callback=None,
 ) -> "UsgsWindowResult":
     """Download one window and distinguish empty data from request failure."""
     station_id = _normalize_usgs_station_id(station_id)
@@ -227,8 +240,14 @@ def _download_usgs_window(
             allow_adaptive_retry=False,
             raise_on_fetch_error=True,
             validate_coverage=False,
+            observation_window_callback=observation_window_callback,
+            observation_window_start_callback=(
+                observation_window_start_callback
+            ),
         )
     except Exception as exc:
+        if isinstance(exc, ObservationPersistenceError):
+            raise
         print(
             f"[USGS SERIES] warning: request failed "
             f"for station {station_id}, parameter {parameter_id}, "
@@ -273,16 +292,35 @@ def _download_usgs_window_adaptive(
     cache_dir: Path,
     cache_prefix: str,
     retry_chunk_days: tuple[int, ...],
+    observation_window_callback=None,
+    observation_window_start_callback=None,
 ) -> list[pd.Series]:
     """Retry request failures using successively smaller configured windows."""
-    result = _download_usgs_window(
-        station_id,
-        parameter_id,
-        window_start,
-        window_end,
-        cache_dir,
-        cache_prefix,
-    )
+    if (
+        observation_window_callback is None
+        and observation_window_start_callback is None
+    ):
+        result = _download_usgs_window(
+            station_id,
+            parameter_id,
+            window_start,
+            window_end,
+            cache_dir,
+            cache_prefix,
+        )
+    else:
+        result = _download_usgs_window(
+            station_id,
+            parameter_id,
+            window_start,
+            window_end,
+            cache_dir,
+            cache_prefix,
+            observation_window_callback=observation_window_callback,
+            observation_window_start_callback=(
+                observation_window_start_callback
+            ),
+        )
     if result.series is not None:
         return [result.series]
     if not result.retryable:
@@ -318,6 +356,10 @@ def _download_usgs_window_adaptive(
                 cache_dir=cache_dir,
                 cache_prefix=cache_prefix,
                 retry_chunk_days=tuple(remaining_chunk_days),
+                observation_window_callback=observation_window_callback,
+                observation_window_start_callback=(
+                    observation_window_start_callback
+                ),
             )
         )
     return pieces
@@ -330,6 +372,8 @@ def download_usgs_series(
     end_time,
     usgs_cache_folder,
     policy: UsgsDownloadPolicy | Mapping[str, Any] | None = None,
+    observation_window_callback=None,
+    observation_window_start_callback=None,
 ) -> pd.Series | None:
     """Download one station using an optional adaptive chunk policy."""
     policy = _as_usgs_download_policy(policy)
@@ -357,6 +401,10 @@ def download_usgs_series(
             cache_dir=cache_dir,
             cache_prefix=policy.cache_prefix,
             retry_chunk_days=policy.retry_chunk_days,
+            observation_window_callback=observation_window_callback,
+            observation_window_start_callback=(
+                observation_window_start_callback
+            ),
         )
         pieces.extend(window_pieces)
 
@@ -386,6 +434,10 @@ def download_usgs_series(
                     cache_dir=cache_dir,
                     cache_prefix=policy.cache_prefix,
                     retry_chunk_days=policy.retry_chunk_days,
+                    observation_window_callback=observation_window_callback,
+                    observation_window_start_callback=(
+                        observation_window_start_callback
+                    ),
                 )
             )
 
@@ -522,20 +574,42 @@ def _download_configured_usgs_series(
     usgs_cache_folder,
     download_policy: UsgsDownloadPolicy | Mapping[str, Any] | None = None,
 ) -> tuple[pd.Series | None, str | None]:
-    """Download one configured station series."""
+    """Read or fetch one configured station series through the shared store."""
     if not station_id:
         return None, None
 
     station_id = _normalize_usgs_station_id(station_id)
     target_time = _model_datetimes(start_time, model_time)
-    series = download_usgs_series(
-        station_id=station_id,
-        parameter_id=parameter_id,
-        start_time=target_time[0],
-        end_time=target_time[-1],
-        usgs_cache_folder=usgs_cache_folder,
-        policy=download_policy,
+    from stofs3d_setup.ops.USGS.ogc.store import (
+        DEFAULT_USGS_CACHE_FOLDER,
+        get_usgs_observations,
     )
+
+    policy = _as_usgs_download_policy(download_policy)
+    store_policy = {
+        "primary_chunk_days": policy.primary_chunk_days,
+        "retry_chunk_days": list(policy.retry_chunk_days),
+        "cache_prefix": policy.cache_prefix,
+        "page_size": policy.page_size,
+    }
+    data_start = target_time[0].normalize() - pd.Timedelta(days=1)
+    data_end = target_time[-1].normalize() + pd.Timedelta(days=1)
+    records = get_usgs_observations(
+        param_id=str(parameter_id),
+        station_ids=[station_id],
+        database_dir=usgs_cache_folder or DEFAULT_USGS_CACHE_FOLDER,
+        datelist=pd.date_range(data_start, data_end, freq="D"),
+        download_policy=store_policy,
+        validation_start=target_time[0],
+        validation_end=target_time[-1],
+    )
+    matching = [
+        record for record in records
+        if _station_id_from_record(record) == station_id
+    ]
+    if not matching:
+        return None, station_id
+    series = _extract_usgs_values(matching[0])
     return series, station_id
 
 

@@ -7,9 +7,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from stofs3d_setup.ops.USGS.ogc.source_sink import (
+from stofs3d_setup.ops.USGS.ogc.observation_adapter import (
     RequiredStationDownloadError,
-    download_stations,
+)
+from stofs3d_setup.ops.USGS.ogc.store import (
+    DEFAULT_USGS_CACHE_FOLDER,
+    get_usgs_observations,
 )
 from stofs3d_setup.ops.USGS.ogc.download_policy import (
     USGS_MAX_MISSING_GAP_DAYS,
@@ -252,7 +255,7 @@ def _download_temperature_station_map(
     if not station_ids:
         return {}
 
-    cache_dir = Path(usgs_cache_folder)
+    cache_dir = Path(usgs_cache_folder or DEFAULT_USGS_CACHE_FOLDER)
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     start = _as_utc_timestamp(start_time)
@@ -260,17 +263,11 @@ def _download_temperature_station_map(
     padded_start = start - pd.Timedelta(days=1)
     padded_end = end + pd.Timedelta(days=1)
 
-    cache_file = cache_dir / (
-        "all_source_usgs_temperature_00010_"
-        f"{padded_start.strftime('%Y%m%d')}_"
-        f"{padded_end.strftime('%Y%m%d')}.pq"
-    )
-
     try:
-        records = download_stations(
+        records = get_usgs_observations(
             param_id=USGS_TEMPERATURE_PARAMETER_ID,
             station_ids=station_ids,
-            cache_fname=str(cache_file),
+            database_dir=cache_dir,
             datelist=pd.date_range(
                 start=padded_start.tz_localize(None),
                 end=padded_end.tz_localize(None),

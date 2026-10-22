@@ -103,6 +103,7 @@ import pandas as pd
 from pyproj import Transformer
 
 from pylib_experimental.schism_file import source_sink
+from stofs3d_setup.ops.USGS.ogc.store import DEFAULT_USGS_CACHE_FOLDER
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     CFS_TO_CMS,
 )
@@ -364,7 +365,7 @@ def apply_artificial_island_corrections(
     if start_time is None:
         raise ValueError("start_time is required for artificial-island patching")
     usgs_cache_folder = Path(
-        usgs_cache_folder or Path(output_dir or Path.cwd()) / "USGS_cache"
+        usgs_cache_folder or DEFAULT_USGS_CACHE_FOLDER
     )
 
     patch_info = _load_patch_info(patch_info_file)

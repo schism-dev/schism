@@ -14,7 +14,7 @@ import xarray as xr
 from scipy.spatial import cKDTree
 from schism_py_pre_post.Utilities.util import b_in_a
 
-from stofs3d_setup.ops.USGS.ogc.source_sink import (
+from stofs3d_setup.ops.USGS.ogc.observation_adapter import (
     get_usgs_stations_from_state,
     usgs_var_dict,
 )

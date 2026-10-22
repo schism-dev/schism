@@ -22,6 +22,7 @@ def _load_usgs_download_policy() -> tuple[dict[str, Any], float]:
     retry_days = policy.get("retry_chunk_days")
     cache_prefix = policy.get("cache_prefix")
     max_gap_days = policy.get("max_missing_gap_days")
+    page_size = policy.get("page_size", 1000)
 
     if type(primary_days) is not int or primary_days <= 0:
         raise ValueError(
@@ -46,6 +47,10 @@ def _load_usgs_download_policy() -> tuple[dict[str, Any], float]:
         raise ValueError(
             f"download.cache_prefix must be a non-empty string in "
             f"{config_file}"
+        )
+    if type(page_size) is not int or page_size <= 0:
+        raise ValueError(
+            f"download.page_size must be a positive integer in {config_file}"
         )
     if Path(cache_prefix).name != cache_prefix:
         raise ValueError(

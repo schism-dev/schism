@@ -22,9 +22,15 @@ from .Patch_artificial_island.patch_artificial_island_source_sink import (
 )
 from .Spatial_corrections.region_zeroing import zero_configured_source_regions
 from .workflow_constants import NWM_ECGC_SHAPEFILE
+from ..USGS.ogc.store import DEFAULT_USGS_CACHE_FOLDER
 from .validate_source_sink import (
     validate_source_sink_directory,
     validate_source_sink_stage,
+)
+from .source_sink_components import (
+    _build_source_sink,
+    _copy_sink_components,
+    _copy_source_components,
 )
 from ...utils.utils import mkcd_new_dir, STOFS3D_ATL_STATES
 from ...utils.projection import project_geodataframe
@@ -140,6 +146,15 @@ def _gen_relocated_source_from_inputs(
 def _generate_original_source_sink(config, model_input_path, wdir):
     """Generate, validate, and return NWM forcing."""
     original_source_sink_dir = f'{wdir}/original_source_sink/'
+    original_source_sink_path = Path(original_source_sink_dir)
+    if original_source_sink_path.exists() or original_source_sink_path.is_symlink():
+        raise FileExistsError(
+            f'Initial NWM checkpoint already exists: '
+            f'{original_source_sink_path}. Formal assembly does not resume '
+            'from existing checkpoints; use a fresh run directory or load '
+            'the checkpoint explicitly in a test workflow.'
+        )
+
     mkcd_new_dir(original_source_sink_dir)
     source_grid = (
         config.hgrid_without_feeders
@@ -208,28 +223,62 @@ def _describe_source_grid(config):
 
 
 def _replace_nwm_flow_with_usgs(
-    config, model_input_path, wdir, warning_log_path=None
+    input_ss, config, model_input_path, wdir, warning_log_path=None
 ):
-    """Adjust NWM flow and return the validated forcing."""
+    """Return USGS-adjusted forcing and save a complete stage checkpoint."""
     print('replacing NWM sources with USGS observed flow rates ...')
-    source_nwm2usgs(
+    flow_stage_dir = Path(wdir) / 'replace_with_usgs_flow'
+    adjusted_time, adjusted_flow = source_nwm2usgs(
         start_time_str=config.startdate.strftime('%Y-%m-%d %H:%M:%S'),
         states=STOFS3D_ATL_STATES,
         f_shapefile=NWM_ECGC_SHAPEFILE,
         original_ss_dir=f'{wdir}/original_source_sink/',
         nwm_data_dir=config.nwm_cache_folder,
-        output_dir=f'{wdir}/USGS_adjusted_sources/',
-        usgs_cache_folder=(
-            config.usgs_cache_folder
-            if config.usgs_cache_folder is not None
-            else Path(model_input_path) / 'USGS_cache'
+        output_dir=str(flow_stage_dir),
+        usgs_cache_folder=_resolve_usgs_cache_folder(
+            config, model_input_path
         ),
         warning_log_path=warning_log_path,
     )
-    usgs_flow_ss = validate_source_sink_directory(
-        Path(wdir) / 'original_source_sink', 'USGS flow replacement'
+
+    source_eles, source_values, tracer_values = _copy_source_components(
+        input_ss
     )
-    return usgs_flow_ss
+    if source_values is None:
+        raise ValueError('Cannot replace USGS flow: input has no source forcing')
+    source_time, original_flow = source_values
+    adjusted_time = np.asarray(adjusted_time, dtype=float).reshape(-1)
+    source_time = np.asarray(source_time, dtype=float).reshape(-1)
+    if adjusted_time.shape != source_time.shape or not np.allclose(
+        adjusted_time, source_time, rtol=0.0, atol=1.0e-6
+    ):
+        raise ValueError(
+            'USGS-adjusted flow time does not match input source forcing'
+        )
+    adjusted_flow = np.asarray(adjusted_flow, dtype=float)
+    if adjusted_flow.shape != original_flow.shape:
+        raise ValueError(
+            'USGS-adjusted flow shape does not match input source forcing: '
+            f'{adjusted_flow.shape} != {original_flow.shape}'
+        )
+
+    sink_eles, sink_values = _copy_sink_components(input_ss)
+    adjusted_ss = _build_source_sink(
+        source_eles=source_eles,
+        source_time_and_data=(source_time, adjusted_flow),
+        msource_data_list=tracer_values,
+        sink_eles=sink_eles,
+        sink_time_and_data=sink_values,
+    )
+    validate_source_sink_stage(adjusted_ss, 'USGS flow replacement')
+    _write_source_sink_checkpoint(
+        adjusted_ss,
+        output_dir=flow_stage_dir,
+        mapping_dir=wdir,
+    )
+    return validate_source_sink_directory(
+        flow_stage_dir, 'USGS flow replacement'
+    )
 
 
 def _write_source_sink_checkpoint(ss, output_dir, mapping_dir):
@@ -239,10 +288,7 @@ def _write_source_sink_checkpoint(ss, output_dir, mapping_dir):
     output_dir.mkdir(parents=True, exist_ok=True)
     ss.writer(str(output_dir))
 
-    mapping_names = ["sources.json"]
-    if ss.vsink is not None:
-        mapping_names.append("sinks.json")
-    for name in mapping_names:
+    for name in ("sources.json", "sinks.json"):
         mapping_file = mapping_dir / name
         if mapping_file.is_file():
             shutil.copy2(mapping_file, output_dir / name)
@@ -276,7 +322,7 @@ def _suppress_island_sources(input_ss, wdir, artificial_island_info):
     _write_source_sink_checkpoint(
         island_suppressed_ss,
         output_dir=output_dir,
-        mapping_dir=original_dir,
+        mapping_dir=wdir,
     )
     checkpoint_grid = output_dir / 'hgrid.gr3'
     if not checkpoint_grid.exists():
@@ -286,8 +332,21 @@ def _suppress_island_sources(input_ss, wdir, artificial_island_info):
 
 def _read_original_source_sink(wdir):
     """Read and validate an existing source/sink stage."""
+    original_dir = Path(wdir) / 'original_source_sink'
+    original_hgrid = original_dir / 'hgrid.gr3'
+    if not original_hgrid.exists():
+        raise FileNotFoundError(
+            f'{original_hgrid} is missing from the original NWM checkpoint'
+        )
+    original_vsource = original_dir / 'vsource.th'
+    if original_vsource.is_symlink():
+        raise ValueError(
+            f'{original_vsource} must be an original file, not a symlink; '
+            'the original NWM checkpoint may have been modified by an older '
+            'USGS replacement workflow'
+        )
     original_ss = validate_source_sink_directory(
-        Path(wdir) / 'original_source_sink', 'original source/sink'
+        original_dir, 'original source/sink'
     )
     return original_ss
 
@@ -356,11 +415,11 @@ def _relocate_source_sink(
 
 
 def _resolve_usgs_cache_folder(config, model_input_path):
-    """Return the configured USGS cache or the model-input default."""
+    """Return the configured store or the shared persistent default."""
     return (
         config.usgs_cache_folder
         if config.usgs_cache_folder is not None
-        else Path(model_input_path) / 'USGS_cache'
+        else DEFAULT_USGS_CACHE_FOLDER
     )
 
 
@@ -369,22 +428,17 @@ def _replace_source_temperatures(
     warning_log_path=None,
 ):
     """Apply configured USGS temperature replacement to source elements."""
-    source_mapping_dir = (
-        f'{wdir}/relocated_source_sink/'
-        if config.relocate_source
-        else f'{wdir}/original_source_sink/'
-    )
     temperature_corrected_ss, replaced_count = replace_source_temperatures_with_usgs(
         base_ss=input_ss,
         hgrid=hgrid,
-        source_mapping_dir=source_mapping_dir,
+        source_mapping_dir=wdir,
         start_time=config.startdate,
         usgs_cache_folder=_resolve_usgs_cache_folder(
             config, model_input_path
         ),
         nwm_shapefile=NWM_ECGC_SHAPEFILE,
         states=STOFS3D_ATL_STATES,
-        diagnostics_dir=Path(wdir) / 'source_temperature',
+        diagnostics_dir=Path(wdir) / 'replace_with_usgs_T',
         pooling=config.source_temperature_pooling,
         warning_log_path=warning_log_path,
         nwm_data_dir=config.nwm_cache_folder,
@@ -393,12 +447,15 @@ def _replace_source_temperatures(
     validate_source_sink_stage(
         temperature_corrected_ss, 'USGS temperature replacement'
     )
+    temperature_stage_dir = Path(wdir) / 'replace_with_usgs_T'
     _write_source_sink_checkpoint(
         temperature_corrected_ss,
-        output_dir=Path(wdir) / 'source_temperature',
-        mapping_dir=source_mapping_dir,
+        output_dir=temperature_stage_dir,
+        mapping_dir=wdir,
     )
-    return temperature_corrected_ss
+    return validate_source_sink_directory(
+        temperature_stage_dir, 'USGS temperature replacement'
+    )
 
 
 def _zero_configured_source_regions(input_ss, config, hgrid, wdir):
@@ -410,15 +467,10 @@ def _zero_configured_source_regions(input_ss, config, hgrid, wdir):
     )
     print(f'[SOURCE REGIONS] zeroed {zeroed_count} unique source(s).')
     validate_source_sink_stage(region_zeroed_ss, 'region zeroing')
-    source_mapping_dir = (
-        Path(wdir) / 'relocated_source_sink'
-        if config.relocate_source
-        else Path(wdir) / 'original_source_sink'
-    )
     _write_source_sink_checkpoint(
         region_zeroed_ss,
         output_dir=Path(wdir) / 'zeroed_source_regions',
-        mapping_dir=source_mapping_dir,
+        mapping_dir=wdir,
     )
     return region_zeroed_ss
 
@@ -562,7 +614,7 @@ def assemble_source_sink(
 
     if config.replace_nwm_with_usgs:
         base_ss = _replace_nwm_flow_with_usgs(
-            config, model_input_path, wdir,
+            base_ss, config, model_input_path, wdir,
             warning_log_path=warning_log_path,
         )
 

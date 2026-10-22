@@ -2,5 +2,6 @@
 download:
   primary_chunk_days: 100
   retry_chunk_days: [20, 10, 5]
+  page_size: 1000  # Maximum OGC features per HTTP response page.
   cache_prefix: "usgs_ogc_adaptive"
   max_missing_gap_days: 7
