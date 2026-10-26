@@ -1093,7 +1093,9 @@ real (rkind) :: aux                               ! ustar
       !> Salinity flux is incoded as eq fresh water flux [kg/s/m/m]
       !>-------------------------------------------------
         
-        fluxprc(i) = (1-aice(i))*fluxprc_ocn(i) + aice(i)*(fresh_wa_flux(i)+salinity_flux(i)) !*real(0.5)
+        !fresh_wa_flux (cap) = Fioi_meltw - salinity_flux is already the net freshwater flux;
+        !adding salinity_flux back cancelled the CICE salt flux (Fioi_salt)
+        fluxprc(i) = (1-aice(i))*fluxprc_ocn(i) + aice(i)*fresh_wa_flux(i)
       
       !>-------------------------------------------------
       !> Scaling the evaporation flux to account for ice
