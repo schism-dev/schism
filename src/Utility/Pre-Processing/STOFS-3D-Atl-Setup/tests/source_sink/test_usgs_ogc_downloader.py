@@ -1,6 +1,9 @@
 """Tests for the shared USGS OGC request layer."""
 
+from contextlib import redirect_stdout
+from io import StringIO
 import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -11,10 +14,70 @@ import pandas as pd
 import numpy as np
 
 from stofs3d_setup.ops.USGS.ogc import download_usgs
-from stofs3d_setup.ops.USGS.ogc import source_sink
+from stofs3d_setup.ops.USGS.ogc import observation_adapter as source_sink
 
 
 class UsgsOgcDownloaderTests(unittest.TestCase):
+    def test_observation_callback_records_successful_empty_request_windows(self):
+        dates = pd.date_range("2017-01-01", "2017-01-02")
+        callback = Mock()
+        pending_callback = Mock()
+        with (
+            patch.object(source_sink, "make_session", return_value=object()),
+            patch.object(
+                source_sink,
+                "download_station_group_parameter",
+                return_value=pd.DataFrame(),
+            ) as download,
+        ):
+            records = source_sink.download_stations(
+                param_id="00060",
+                station_ids=["01358000"],
+                datelist=dates,
+                allow_adaptive_retry=False,
+                validate_coverage=False,
+                observation_window_callback=callback,
+                observation_window_start_callback=pending_callback,
+            )
+
+        self.assertEqual(records, [])
+        callback.assert_called_once()
+        self.assertEqual(callback.call_args.args[:2], (["01358000"], "00060"))
+        self.assertTrue(callback.call_args.args[4].empty)
+        self.assertIsNone(callback.call_args.args[5])
+        pending_callback.assert_called_once()
+        self.assertEqual(download.call_args.kwargs["page_size"], 1000)
+
+    def test_opt_in_bulk_diagnostics_report_pages_without_urls(self):
+        pages = [
+            {
+                "features": [{"id": "first"}],
+                "links": [{
+                    "rel": "next",
+                    "href": "https://example.test/items?token=secret",
+                }],
+            },
+            {"features": [{"id": "second"}], "links": []},
+        ]
+        output = StringIO()
+        with (
+            patch.dict(os.environ, {"STOFS_USGS_BULK_DIAGNOSTICS": "1"}),
+            patch.object(download_usgs, "request_json", side_effect=pages),
+            redirect_stdout(output),
+        ):
+            features = download_usgs.iter_ogc_features(
+                session=object(),
+                collection="continuous",
+                params={"parameter_code": "00010"},
+                limit=10,
+            )
+
+        self.assertEqual([feature["id"] for feature in features], ["first", "second"])
+        self.assertIn("page=1", output.getvalue())
+        self.assertIn("page=2", output.getvalue())
+        self.assertIn("cumulative_records=2", output.getvalue())
+        self.assertNotIn("token=secret", output.getvalue())
+
     def test_boundary_buffer_is_independent_of_station_batch(self):
         hgrid = SimpleNamespace(
             x=np.array([0.0, 0.0]),

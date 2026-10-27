@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from stofs3d_setup.ops.USGS.ogc import series as usgs_series
+from stofs3d_setup.ops.USGS.iv.download_usgs import GenericObsData
 
 
 class UsgsSeriesTests(unittest.TestCase):
@@ -204,15 +205,17 @@ class UsgsSeriesTests(unittest.TestCase):
             "retry_chunk_days": [20, 10, 5],
             "cache_prefix": "custom_usgs",
         }
-        downloaded = pd.Series(
-            [1.0],
-            index=pd.to_datetime(["2020-01-01T00:00Z"]),
+        downloaded = GenericObsData(
+            station_info={"id": "01358000"},
+            df=pd.DataFrame({
+                "date": pd.to_datetime(["2020-01-01T00:00Z"]),
+                "value": [1.0],
+            }),
         )
 
-        with patch.object(
-            usgs_series,
-            "download_usgs_series",
-            return_value=downloaded,
+        with patch(
+            "stofs3d_setup.ops.USGS.ogc.store.get_usgs_observations",
+            return_value=[downloaded],
         ) as downloader:
             result, station_id = usgs_series._download_configured_usgs_series(
                 station_id="1358000",
@@ -223,9 +226,20 @@ class UsgsSeriesTests(unittest.TestCase):
                 download_policy=policy,
             )
 
-        self.assertIs(result, downloaded)
+        pd.testing.assert_series_equal(
+            result,
+            pd.Series(
+                [1.0],
+                index=pd.DatetimeIndex(
+                    pd.to_datetime(["2020-01-01T00:00Z"]), name="date"
+                ),
+            ),
+        )
         self.assertEqual(station_id, "01358000")
-        self.assertEqual(downloader.call_args.kwargs["policy"], policy)
+        self.assertEqual(
+            downloader.call_args.kwargs["download_policy"],
+            {**policy, "page_size": 1000},
+        )
 
     def test_download_policy_rejects_unknown_configuration(self):
         with self.assertRaisesRegex(ValueError, "unsupported_setting"):

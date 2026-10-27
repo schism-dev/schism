@@ -9,6 +9,7 @@ from stofs3d_setup.ops.Source_sink.Replace_with_USGS import hard_reset_config
 from stofs3d_setup.ops.Source_sink.Patch_artificial_island import island_config
 from stofs3d_setup.ops.Source_sink.Spatial_corrections import region_config
 from stofs3d_setup.config.stofs3d_atl_config import ConfigStofs3dAtlantic
+from stofs3d_setup.config.schema import Settings
 
 
 class CorrectionConfigTests(unittest.TestCase):
@@ -21,6 +22,29 @@ class CorrectionConfigTests(unittest.TestCase):
         self.assertFalse(config.zero_configured_source_regions)
         self.assertIsNone(config.hard_reset_sources_with_usgs_info)
         self.assertIsNone(config.zero_source_region_info)
+
+    def test_v7p2_run_enables_downstream_usgs_hard_resets(self):
+        config_path = (
+            Path(__file__).resolve().parents[2]
+            / "configs"
+            / "v7p2_2018_2D.yml"
+        )
+        settings = Settings.from_yaml(config_path)
+        runtime_config = ConfigStofs3dAtlantic.v7p2().model_copy(
+            update=settings.model.model_dump(exclude_unset=True)
+        )
+
+        self.assertTrue(runtime_config.hard_reset_sources_with_usgs)
+        self.assertEqual(
+            Path(runtime_config.hard_reset_sources_with_usgs_info).name,
+            "hard_reset_sources_with_usgs.yml",
+        )
+        self.assertTrue(
+            Path(runtime_config.hard_reset_sources_with_usgs_info).is_file()
+        )
+        self.assertFalse(
+            ConfigStofs3dAtlantic.v7p2().hard_reset_sources_with_usgs
+        )
 
     def test_v7p4_enables_preferred_correction_stages(self):
         config = ConfigStofs3dAtlantic.v7p4()

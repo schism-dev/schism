@@ -16,6 +16,9 @@ from .Replace_with_USGS.source_flow import source_nwm2usgs
 from .Replace_with_USGS.source_temperature import (
     replace_source_temperatures_with_usgs,
 )
+from .Replace_with_USGS.hard_reset_sources import (
+    apply_hard_reset_sources_with_usgs,
+)
 from .Patch_artificial_island.patch_artificial_island_source_sink import (
     apply_artificial_island_corrections,
     suppress_artificial_island_sources,
@@ -458,6 +461,41 @@ def _replace_source_temperatures(
     )
 
 
+def _hard_reset_sources_with_usgs(
+    input_ss, config, hgrid, model_input_path, wdir
+):
+    """Apply configured USGS hard resets along downstream NWM routes."""
+    corrected_ss, flow_count, temperature_count = (
+        apply_hard_reset_sources_with_usgs(
+            base_ss=input_ss,
+            hgrid=hgrid,
+            enabled=True,
+            correction_info=config.hard_reset_sources_with_usgs_info,
+            start_time=config.startdate,
+            usgs_cache_folder=_resolve_usgs_cache_folder(
+                config, model_input_path
+            ),
+            temperature_pooling=config.source_temperature_pooling,
+            source_mapping_dir=wdir,
+            nwm_shapefile=NWM_ECGC_SHAPEFILE,
+        )
+    )
+    print(
+        f'[SOURCE OVERRIDE] hard reset replaced {flow_count} flow and '
+        f'{temperature_count} temperature source(s).'
+    )
+    validate_source_sink_stage(corrected_ss, 'USGS source hard reset')
+    output_dir = Path(wdir) / 'hard_reset_sources_with_usgs'
+    _write_source_sink_checkpoint(
+        corrected_ss,
+        output_dir=output_dir,
+        mapping_dir=wdir,
+    )
+    return validate_source_sink_directory(
+        output_dir, 'USGS source hard reset'
+    )
+
+
 def _zero_configured_source_regions(input_ss, config, hgrid, wdir):
     """Apply optional final source-region zeroing from its stage config."""
     region_zeroed_ss, zeroed_count = zero_configured_source_regions(
@@ -632,6 +670,11 @@ def assemble_source_sink(
         base_ss = _replace_source_temperatures(
             base_ss, config, hgrid, model_input_path, wdir,
             warning_log_path=warning_log_path,
+        )
+
+    if getattr(config, 'hard_reset_sources_with_usgs', False):
+        base_ss = _hard_reset_sources_with_usgs(
+            base_ss, config, hgrid, model_input_path, wdir
         )
 
     if config.zero_configured_source_regions:

@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from stofs3d_setup.ops.USGS.ogc import source_sink
+from stofs3d_setup.ops.USGS.ogc import observation_adapter as source_sink
 from stofs3d_setup.ops.USGS.ogc.download_policy import (
     USGS_DOWNLOAD_POLICY,
     USGS_MAX_MISSING_GAP_DAYS,

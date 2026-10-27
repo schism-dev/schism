@@ -1,10 +1,14 @@
 """Characterization tests for explicit USGS source overrides."""
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
+import geopandas as gpd
+from shapely.geometry import LineString
 
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS import hard_reset_sources
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
@@ -23,6 +27,14 @@ class _IdentityTransformer:
 class _Grid:
     xctr = np.array([0.0])
     yctr = np.array([0.0])
+
+    def compute_ctr(self):
+        pass
+
+
+class _RouteGrid:
+    xctr = np.array([-74.0])
+    yctr = np.array([40.0])
 
     def compute_ctr(self):
         pass
@@ -169,6 +181,118 @@ class SourceOverrideTests(unittest.TestCase):
                 transformer=_IdentityTransformer(),
                 start_time=pd.Timestamp("2020-01-01T00:00Z"),
                 usgs_cache_folder=None,
+            )
+
+    def test_hard_reset_follows_station_route_to_first_grid_source(self):
+        network = gpd.GeoDataFrame(
+            {"to": [6186164, 6189262, 6189262]},
+            geometry=[
+                LineString([(-74.02, 40.0), (-74.01, 40.0)]),
+                LineString([(-74.01, 40.0), (-74.0, 40.0)]),
+                LineString([(-74.0, 40.0), (-73.99, 40.0)]),
+            ],
+            index=[6186156, 6186164, 6189262],
+            crs="EPSG:4326",
+        )
+        base_ss = type("SourceSink", (), {"source_eles": [1]})()
+
+        with TemporaryDirectory() as directory:
+            source_map = Path(directory) / "sources.json"
+            source_map.write_text('{"1": [6189262]}', encoding="utf-8")
+            with patch.object(
+                hard_reset_sources,
+                "preprocess_nwm_shp",
+                return_value=network,
+            ):
+                resolved = (
+                    hard_reset_sources.resolve_hard_reset_source_targets(
+                        base_ss=base_ss,
+                        hgrid=_RouteGrid(),
+                        points=[
+                            {
+                                "name": "Hudson River",
+                                "x": -73.7,
+                                "y": 42.7,
+                                "flow_station_id": "01358000",
+                                "temperature_station_id": "01359139",
+                                "max_search_radius_m": 2500.0,
+                                "replace_flow": True,
+                                "replace_temperature": True,
+                            }
+                        ],
+                        source_mapping_dir=directory,
+                    )
+                )
+
+        self.assertEqual(resolved[0]["_target_element_id"], 1)
+        self.assertEqual(resolved[0]["_target_nwm_feature_id"], 6189262)
+        self.assertLessEqual(resolved[0]["_target_distance_m"], 2500.0)
+
+    def test_unmapped_station_is_associated_from_usgs_location(self):
+        station_id = "00000001"
+        network = gpd.GeoDataFrame(
+            {"to": [9001]},
+            geometry=[LineString([(-74.01, 40.0), (-73.99, 40.0)])],
+            index=[9001],
+            crs="EPSG:4326",
+        )
+        locations = pd.DataFrame(
+            [{"station_id": station_id, "lon": -74.0, "lat": 40.0}]
+        )
+
+        with (
+            patch.object(
+                hard_reset_sources,
+                "NWM_TO_USGS_FLOW_ADJUSTMENT",
+                {},
+            ),
+            patch.object(
+                hard_reset_sources,
+                "NWM_TO_USGS_TEMPERATURE_SEARCH",
+                {},
+            ),
+            patch.object(
+                hard_reset_sources,
+                "discover_monitoring_locations",
+                return_value=locations,
+            ),
+        ):
+            result = hard_reset_sources._station_feature_id(
+                {
+                    "replace_flow": True,
+                    "flow_station_id": station_id,
+                },
+                network,
+            )
+
+        self.assertEqual(result, (station_id, 9001))
+
+    def test_downstream_source_match_keeps_radius_against_flowline(self):
+        network = gpd.GeoDataFrame(
+            {"to": [6189262, 6189262]},
+            geometry=[
+                LineString([(-74.02, 40.0), (-74.01, 40.0)]),
+                LineString([(-74.01, 40.0), (-74.0, 40.0)]),
+            ],
+            index=[6186156, 6189262],
+            crs="EPSG:4326",
+        )
+        xctr = np.array([-74.0])
+        yctr = np.array([40.1])
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "first downstream grid source .* outside the 2500.0 m search radius",
+        ):
+            hard_reset_sources._search_downstream_source(
+                start_feature_id=6186156,
+                nwm_network=network,
+                source_feature_mapping={6189262: [1]},
+                source_element_ids={1},
+                xctr=xctr,
+                yctr=yctr,
+                transformer=hard_reset_sources._make_transformer(),
+                max_search_radius_m=2500.0,
             )
 
     def test_public_stage_processes_points_in_order(self):

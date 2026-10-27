@@ -1,10 +1,30 @@
 """Direct USGS flow and temperature hard resets for existing sources."""
 
+import json
+from pathlib import Path
+
 import numpy as np
+import pandas as pd
 from pyproj import Transformer
+from shapely.geometry import Point
+from shapely.ops import transform as transform_geometry
 
 from stofs3d_setup.ops.Source_sink.Replace_with_USGS.station_mappings import (
     CFS_TO_CMS,
+    NWM_TO_USGS_FLOW_ADJUSTMENT,
+    NWM_TO_USGS_TEMPERATURE_SEARCH,
+)
+from stofs3d_setup.ops.Source_sink.Replace_with_USGS.nwm_usgs_station_search import (
+    associate_poi_with_nwm,
+    preprocess_nwm_shp,
+)
+from stofs3d_setup.ops.USGS.ogc.download_usgs import (
+    discover_monitoring_locations,
+    normalize_station_id,
+)
+from stofs3d_setup.utils.utils import STOFS3D_ATL_STATES
+from stofs3d_setup.ops.Source_sink.workflow_constants import (
+    NWM_ECGC_SHAPEFILE,
 )
 from stofs3d_setup.ops.USGS.ogc.series import (
     _get_usgs_flow,
@@ -34,6 +54,260 @@ from stofs3d_setup.ops.Source_sink.spatial_selection import (
     _make_transformer,
     _nearest_element,
 )
+
+
+def _load_source_feature_mapping(source_mapping_dir) -> dict[int, list[int]]:
+    """Load current source-element to NWM-feature mappings."""
+    mapping_file = Path(source_mapping_dir) / "sources.json"
+    if not mapping_file.is_file():
+        raise FileNotFoundError(
+            f"sources.json is required for downstream USGS hard resets: "
+            f"{mapping_file}"
+        )
+
+    with mapping_file.open("r", encoding="utf-8") as source_file:
+        raw_mapping = json.load(source_file)
+
+    mapping = {}
+    for element_id, feature_ids in raw_mapping.items():
+        if not isinstance(feature_ids, list):
+            feature_ids = [feature_ids]
+        mapping[int(element_id)] = [
+            int(feature_id) for feature_id in feature_ids
+        ]
+    return mapping
+
+
+def _station_feature_id(point: dict, nwm_network) -> tuple[str, int]:
+    """Associate the configured USGS station with its NWM segment."""
+    if point.get("replace_flow", True):
+        station_id = point.get("flow_station_id")
+        station_links = NWM_TO_USGS_FLOW_ADJUSTMENT
+    else:
+        station_id = point.get("temperature_station_id")
+        station_links = NWM_TO_USGS_TEMPERATURE_SEARCH
+
+    if not station_id:
+        station_id = point.get("temperature_station_id")
+        station_links = NWM_TO_USGS_TEMPERATURE_SEARCH
+    if not station_id:
+        raise ValueError(
+            f"[SOURCE OVERRIDE] {point['name']}: no station is configured "
+            "to locate its NWM route"
+        )
+
+    station_id = normalize_station_id(station_id)
+    manual_features = [
+        int(feature_id)
+        for feature_id, linked_station_id in station_links.items()
+        if normalize_station_id(linked_station_id) == station_id
+    ]
+    if len(manual_features) > 1:
+        raise ValueError(
+            f"[SOURCE OVERRIDE] station {station_id} maps to multiple NWM "
+            f"features: {manual_features}"
+        )
+    if manual_features:
+        feature_id = manual_features[0]
+        if feature_id not in nwm_network.index:
+            raise ValueError(
+                f"[SOURCE OVERRIDE] station {station_id} maps to NWM feature "
+                f"{feature_id}, which is absent from the NWM network"
+            )
+        return station_id, feature_id
+
+    locations = discover_monitoring_locations(states=STOFS3D_ATL_STATES)
+    station_ids = locations["station_id"].map(normalize_station_id)
+    matches = locations.loc[station_ids == station_id]
+    if matches.empty:
+        raise ValueError(
+            f"[SOURCE OVERRIDE] USGS station {station_id} has no location "
+            "in the Atlantic station inventory"
+        )
+
+    station = matches.iloc[0]
+    station_network = associate_poi_with_nwm(
+        nwm_network,
+        poi=np.asarray(
+            [[float(station["lon"]), float(station["lat"])]],
+        ),
+        poi_names=[station_id],
+        poi_label="hard_reset_station",
+        invalid_poi_output=None,
+    )
+    matched_features = station_network.index[
+        station_network["hard_reset_station"] == station_id
+    ].to_list()
+    if len(matched_features) != 1:
+        raise ValueError(
+            f"[SOURCE OVERRIDE] USGS station {station_id} could not be "
+            "associated with exactly one NWM segment"
+        )
+    return station_id, int(matched_features[0])
+
+
+def _search_downstream_source(
+    start_feature_id: int,
+    nwm_network,
+    source_feature_mapping: dict[int, list[int]],
+    source_element_ids: set[int],
+    xctr: np.ndarray,
+    yctr: np.ndarray,
+    transformer: Transformer,
+    max_search_radius_m: float,
+) -> tuple[int, int, int, float]:
+    """Follow NWM downstream to the first mapped in-grid source element."""
+    network_transformer = Transformer.from_crs(
+        nwm_network.crs or "EPSG:4326",
+        "EPSG:3857",
+        always_xy=True,
+    )
+    visited = set()
+    current_feature_id = int(start_feature_id)
+    while current_feature_id in nwm_network.index:
+        if current_feature_id in visited:
+            raise ValueError(
+                "[SOURCE OVERRIDE] NWM downstream route contains a cycle "
+                f"at feature {current_feature_id}"
+            )
+        visited.add(current_feature_id)
+
+        mapped_elements = [
+            element_id
+            for element_id in source_feature_mapping.get(
+                current_feature_id, []
+            )
+            if element_id in source_element_ids
+            and 0 < element_id <= len(xctr)
+        ]
+        if mapped_elements:
+            flowline = transform_geometry(
+                network_transformer.transform,
+                nwm_network.loc[current_feature_id, "geometry"],
+            )
+            source_x, source_y = transformer.transform(
+                xctr[np.asarray(mapped_elements, dtype=int) - 1],
+                yctr[np.asarray(mapped_elements, dtype=int) - 1],
+            )
+            distances = [
+                float(flowline.distance(Point(float(x), float(y))))
+                for x, y in zip(source_x, source_y)
+            ]
+            nearest_index = int(np.argmin(distances))
+            distance_m = distances[nearest_index]
+            if distance_m > max_search_radius_m:
+                raise ValueError(
+                    "[SOURCE OVERRIDE] first downstream grid source on "
+                    f"feature {current_feature_id} is "
+                    f"{distance_m:.1f} m from its NWM flowline, outside the "
+                    f"{max_search_radius_m:.1f} m search radius"
+                )
+            return (
+                mapped_elements[nearest_index],
+                current_feature_id,
+                len(visited),
+                distance_m,
+            )
+
+        downstream = nwm_network.loc[current_feature_id, "to"]
+        if pd.isna(downstream):
+            break
+        next_feature_id = int(downstream)
+        if next_feature_id == current_feature_id:
+            break
+        current_feature_id = next_feature_id
+
+    raise ValueError(
+        "[SOURCE OVERRIDE] no downstream source was found from NWM feature "
+        f"{start_feature_id} after visiting {len(visited)} segment(s)"
+    )
+
+
+def resolve_hard_reset_source_targets(
+    base_ss,
+    hgrid,
+    points: list[dict],
+    source_mapping_dir,
+    nwm_shapefile=NWM_ECGC_SHAPEFILE,
+) -> list[dict]:
+    """Resolve hard resets to the first matching source downstream of USGS."""
+    if not points:
+        return points
+
+    nwm_network = preprocess_nwm_shp(str(nwm_shapefile))
+    source_mapping = _load_source_feature_mapping(source_mapping_dir)
+    source_element_ids = {
+        int(element_id) for element_id in base_ss.source_eles
+    }
+    feature_to_elements: dict[int, list[int]] = {}
+    for element_id, feature_ids in source_mapping.items():
+        for feature_id in feature_ids:
+            feature_to_elements.setdefault(feature_id, []).append(element_id)
+
+    xctr, yctr = _compute_grid_centers(hgrid)
+    transformer = _make_transformer()
+    resolved_points = []
+    for point in points:
+        station_id, station_feature_id = _station_feature_id(
+            point, nwm_network
+        )
+        (
+            target_element_id,
+            boundary_feature_id,
+            route_length,
+            distance_m,
+        ) = _search_downstream_source(
+            start_feature_id=station_feature_id,
+            nwm_network=nwm_network,
+            source_feature_mapping=feature_to_elements,
+            source_element_ids=source_element_ids,
+            xctr=xctr,
+            yctr=yctr,
+            transformer=transformer,
+            max_search_radius_m=point["max_search_radius_m"],
+        )
+        print(
+            f"[SOURCE OVERRIDE] {point['name']}: station {station_id} "
+            f"is on NWM feature {station_feature_id}; downstream grid "
+            f"source is element {target_element_id} on feature "
+            f"{boundary_feature_id} after {route_length} segment(s), "
+            f"{distance_m:.1f} m from its flowline."
+        )
+        resolved_points.append(
+            {
+                **point,
+                "_station_id": station_id,
+                "_station_nwm_feature_id": station_feature_id,
+                "_target_element_id": target_element_id,
+                "_target_distance_m": distance_m,
+                "_target_nwm_feature_id": boundary_feature_id,
+                "_route_segment_count": route_length,
+            }
+        )
+
+    route_manifest = [
+        {
+            "name": point["name"],
+            "station_id": point["_station_id"],
+            "station_nwm_feature_id": point[
+                "_station_nwm_feature_id"
+            ],
+            "search_direction": "downstream",
+            "target_nwm_feature_id": point["_target_nwm_feature_id"],
+            "target_source_element_id": point["_target_element_id"],
+            "route_segment_count": point["_route_segment_count"],
+            "source_to_flowline_distance_m": point[
+                "_target_distance_m"
+            ],
+            "max_search_radius_m": point["max_search_radius_m"],
+        }
+        for point in resolved_points
+    ]
+    (Path(source_mapping_dir) / "hard_reset_source_routes.json").write_text(
+        json.dumps(route_manifest, indent=2),
+        encoding="utf-8",
+    )
+    return resolved_points
 
 
 def _replace_existing_relocated_source(
@@ -72,26 +346,41 @@ def _replace_existing_relocated_source(
             f"[SOURCE OVERRIDE] {name}: relocated base has no source"
         )
 
-    target_ele, distance_m = _nearest_element(
-        x=point["x"],
-        y=point["y"],
-        candidate_element_ids=source_eles,
-        xctr=xctr,
-        yctr=yctr,
-        transformer=transformer,
-    )
-
-    if target_ele is None or distance_m > radius_m:
-        nearest_text = (
-            "none"
-            if target_ele is None
-            else f"element {target_ele} at {distance_m:.1f} m"
+    target_ele = point.get("_target_element_id")
+    if target_ele is None:
+        target_ele, distance_m = _nearest_element(
+            x=point["x"],
+            y=point["y"],
+            candidate_element_ids=source_eles,
+            xctr=xctr,
+            yctr=yctr,
+            transformer=transformer,
         )
-        raise ValueError(
-            f"[SOURCE OVERRIDE] {name}: no relocated source found "
-            f"within {radius_m:.1f} m; nearest={nearest_text}. "
-            "Replace-only entries never create a new source."
-        )
+        if target_ele is None or distance_m > radius_m:
+            nearest_text = (
+                "none"
+                if target_ele is None
+                else f"element {target_ele} at {distance_m:.1f} m"
+            )
+            raise ValueError(
+                f"[SOURCE OVERRIDE] {name}: no relocated source found "
+                f"within {radius_m:.1f} m; nearest={nearest_text}. "
+                "Replace-only entries never create a new source."
+            )
+    else:
+        target_ele = int(target_ele)
+        if target_ele not in source_eles:
+            raise ValueError(
+                f"[SOURCE OVERRIDE] {name}: downstream NWM target element "
+                f"{target_ele} is not an existing relocated source"
+            )
+        distance_m = float(point["_target_distance_m"])
+        if distance_m > radius_m:
+            raise ValueError(
+                f"[SOURCE OVERRIDE] {name}: downstream source element "
+                f"{target_ele} is {distance_m:.1f} m from the NWM flowline, "
+                f"outside the {radius_m:.1f} m search radius"
+            )
 
     flow_station_id = point.get("flow_station_id")
     temperature_station_id = point.get("temperature_station_id")
@@ -258,9 +547,15 @@ def _replace_existing_relocated_source(
                 "allow_negative_sink enabled; no negative records."
             )
 
+    target_description = (
+        f"NWM feature {point['_target_nwm_feature_id']}"
+        if "_target_nwm_feature_id" in point
+        else "configured point"
+    )
     print(
         f"[SOURCE OVERRIDE] {name}: replace-only operation matched "
-        f"relocated source element {target_ele} at {distance_m:.1f} m."
+        f"relocated source element {target_ele} via {target_description}; "
+        f"distance={distance_m:.1f} m."
     )
 
     return (
@@ -283,7 +578,14 @@ def _apply_source_overrides(
         base_ss
     )
     sink_eles, sink_values = _copy_sink_components(base_ss)
-    xctr, yctr = _compute_grid_centers(hgrid)
+    targets_resolved = all(
+        point.get("_target_element_id") is not None for point in points
+    )
+    if targets_resolved:
+        xctr = np.empty(0)
+        yctr = np.empty(0)
+    else:
+        xctr, yctr = _compute_grid_centers(hgrid)
     transformer = _make_transformer()
 
     for point in points:
@@ -404,12 +706,14 @@ def apply_hard_reset_sources_with_usgs(
     start_time,
     usgs_cache_folder,
     temperature_pooling: str = FIRST_USABLE,
+    source_mapping_dir=None,
+    nwm_shapefile=NWM_ECGC_SHAPEFILE,
 ):
     """Apply configured direct USGS flow and temperature hard resets.
 
     This wrapper is available to workflows that explicitly opt into the
-    hard-reset corrections. The main source/sink assembler does not
-    invoke it.
+    hard-reset corrections. When source mappings are available, each station
+    is matched to its first in-grid source along the downstream NWM route.
     """
     if not enabled:
         return base_ss, 0, 0
@@ -420,6 +724,14 @@ def apply_hard_reset_sources_with_usgs(
         )
 
     points = load_source_override_points(correction_info)
+    if source_mapping_dir is not None:
+        points = resolve_hard_reset_source_targets(
+            base_ss=base_ss,
+            hgrid=hgrid,
+            points=points,
+            source_mapping_dir=source_mapping_dir,
+            nwm_shapefile=nwm_shapefile,
+        )
     base_ss, flow_count = apply_source_flow_overrides(
         base_ss=base_ss,
         hgrid=hgrid,

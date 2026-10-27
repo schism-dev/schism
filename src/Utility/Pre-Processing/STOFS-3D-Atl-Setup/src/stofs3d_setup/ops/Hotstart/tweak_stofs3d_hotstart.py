@@ -6,7 +6,8 @@ import geopandas as gpd
 
 # pip install git+https://github.com/feiye-vims/schism_py_pre_post.git
 from schism_py_pre_post.Shared_modules.hotstart_proc import Hotstart
-from schism_py_pre_post.Shared_modules.gen_subregion_ic2 import gen_subregion_ic_stofs3d
+# Use the setup-local version to exclude masked HYCOM cells from shoreline lookup.
+from .gen_subregion_ic2 import gen_subregion_ic_stofs3d
 
 # pip install git+https://github.com/wzhengui/pylibs.git
 from pylib import schism_grid

@@ -2,7 +2,8 @@
 #
 # These entries never create, remove, or move a source. Flow and temperature
 # are replaced only where usable observations exist; current forcing is
-# retained elsewhere.
+# retained elsewhere. Search follows the station's NWM route downstream; the
+# radius checks the selected in-grid source element against its NWM flowline.
 hard_reset_source_locations:
   - name: "Delaware"
     x: -74.9432325

@@ -6,4 +6,10 @@
 
 4) run "python tweak*.py" to introduce observation in the watershed and initialize watershed/urban elevation to 0.1 meters below ground.
 
+The hotstart workflow uses the setup-local `gen_subregion_ic2.py` shoreline
+interpolator. It selects the nearest unmasked HYCOM surface cell before
+computing distances, avoiding invalid square-root operations on masked cells.
+The shoreline and subregion data files are still copied from the installed
+`schism_py_pre_post` package.
+
   4.1) Note that aviso has been incorporated into eta2 in hotstart; need aviso.nc as an additional input
