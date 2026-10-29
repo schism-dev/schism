@@ -437,7 +437,7 @@ real (rkind) :: aux                               ! ustar
 !...  Compute new bed deformation
 !$OMP do
       do i=1,npa
-        bdef2(i)=bdef(i)/real(ibdef,rkind)*real(min0(it,ibdef),rkind)
+        bdef2(i)=bdef(i)/real(ibdef,rkind)*real(max(0,min(it-ibdef_start,ibdef)),rkind)
       enddo !i
 !$OMP end do
 
@@ -6051,7 +6051,7 @@ real (rkind) :: aux                               ! ustar
           qel(i)=qel(i)+(1-thetai)*dt*area(ie)*dot1+thetai*dt*area(ie)*dot2
 
           !Additional terms 
-          if(imm==2) then !pre-compute vnorm on elem ie
+          if(imm==2.and.it>ibdef_start) then !pre-compute vnorm on elem ie
             call update_bdef(time,xctr(ie),yctr(ie),dep,swild)
             ubed=swild(1); vbed=swild(2); wbed=swild(3)
             dpdx=0.d0; dpdy=0.d0
@@ -6060,6 +6060,8 @@ real (rkind) :: aux                               ! ustar
               dpdy=dpdy+dp(elnode(m,ie))*dldxy(m,2,ie)
             enddo !m   
             vnorm=(ubed*dpdx+vbed*dpdy+wbed)/sqrt(dpdx*dpdx+dpdy*dpdy+1)
+          else if(imm==2) then
+            vnorm=0.d0
           endif !imm==2
 
           if(i34(ie)==3) then
@@ -6841,7 +6843,7 @@ real (rkind) :: aux                               ! ustar
 !-------------------------------------------------------------------------------------
         endif !2/3D
 
-        if(imm==2) then !no slip
+        if(imm==2.and.it>ibdef_start) then !no slip
           call update_bdef(time,xcj(j),ycj(j),dep,swild)
           su2(kbs(j),j)=swild(1)
           sv2(kbs(j),j)=swild(2)
@@ -7260,7 +7262,7 @@ real (rkind) :: aux                               ! ustar
 !       Bottom b.c.
         dhdx=dot_product(dp(elnode(1:i34(i),i)),dldxy(1:i34(i),1,i)) !eframe
         dhdy=dot_product(dp(elnode(1:i34(i),i)),dldxy(1:i34(i),2,i))
-        if(imm==2) then
+        if(imm==2.and.it>ibdef_start) then
           call update_bdef(time,xctr(i),yctr(i),dep,swild)
           ubed=swild(1); vbed=swild(2); wbed=swild(3)
           bflux0=ubed*sne(1,kbe(i))+vbed*sne(2,kbe(i))+wbed*sne(3,kbe(i)) !normal bed vel.
@@ -7331,7 +7333,7 @@ real (rkind) :: aux                               ! ustar
 !         Impose bottom no-flux b.c.
           if(l==kbe(i)) then
             bflux=(av_bdef2-av_bdef1)/dt
-            if(imm==2) bflux=bflux0
+            if(imm==2.and.it>ibdef_start) bflux=bflux0
 #if defined USE_WWM || defined USE_WW3
             bflux2=bflux
 #endif
@@ -8332,8 +8334,12 @@ real (rkind) :: aux                               ! ustar
         if(imm==1) then
           dp(i)=dp00(i)-bdef1(i)
         else if(imm==2) then
-          call update_bdef(time,xnd(i),ynd(i),dep,swild)
-          dp(i)=dep !min(1.,7-(xnd(i)+time))
+          if(it>ibdef_start) then
+            call update_bdef(time,xnd(i),ynd(i),dep,swild)
+            dp(i)=dep !min(1.,7-(xnd(i)+time))
+          else
+            dp(i)=dp00(i)
+          endif
         endif
         if(ivcor==2) hmod(i)=min(dp(i),h_s)
       enddo !i

@@ -237,7 +237,8 @@
 ! in the code (not working for ics=2 yet).
 !-----------------------------------------------------------------------
   imm = 0
-  ibdef = 10 !needed if imm=1; # of steps used in deformation
+  ibdef = 10 !needed if imm/=0; # of steps used in deformation
+  ibdef_start = 0 !needed if imm/=0; time step index when deformation begins (default: 0)
 
 !-----------------------------------------------------------------------
 ! Reference latitude for beta-plane approximation when ncor=1 (not used if ics=2)
