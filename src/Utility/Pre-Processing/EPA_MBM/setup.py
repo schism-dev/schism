@@ -105,7 +105,7 @@ for fname in p.flag:
     if fname.endswith('_nu.nc'): sns.append(sn[:-6]+'_nudge.gr3'); fns.append(fname[:3]+'_nudge.gr3') #nudge.gr3
     [os.symlink(relpath(s),f) for s, f in zip(sns,fns) if (p.base is not None) and p.flag[fname]==0 and fexist(s) and not fexist(f)]
     if p.flag[fname]==1 and fexist(fname): os.remove(fname) if os.path.isfile(fname) else os.system('rm -rf {}'.format(fname)) #remove file
-if p.base is not None: [copy2(i,os.path.basename(i)) for i in glob(p.base+'/run.schism')+glob(p.base+'/pschism_*')]
+if p.base is not None: [copy2(i,os.path.basename(i)) for i in r_[glob(p.base+'/run.schism'),glob(p.base+'/pschism_*')]]
 
 #add hydro output for ICM offline mode; add istation.in
 if p.flag['ICM'] in [10,20]: fn='hydro_out'; [os.remove(fn) if fexist(fn) else '']; os.symlink(p.hydro_out,fn)
