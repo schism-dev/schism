@@ -46,3 +46,12 @@ Besides the following info, you may also search archived messages from the SCHIS
 ???faq "fatal.error indicates “Could not find suitable element in input”"
     This is likely because your `sflux*.nc` is not prepared properly: either the grid in `.nc` does not cover `hgrid.ll`, or the structured grid in `.nc` has a mixture of clockwise and counter-clockwise orientations.
 
+???faq "How to interpret elevation outputs from SCHISM?"
+    Raw elevation outputs from SCHISM should be filtered in general to account for wetting and drying. 
+    As shown in , SCHISM's wetting and drying scheme is based on element (no partial element drying), and wet/dry flags at nodes/sides are derived from those at element. The drag flags can be found in outputs (e.g., "dryFlag*" in scribe IO). Since the elevation is defined at nodes, users should use "dryFlagNode" at a time record. If it is 1, then the elevation values should be ignored (as they are just placeholders for the next wet instance): values of 1000m or -1000m mean nothing in this case.
+    Occasionally you may observe wet nodes having very large elevations. This may be due to the rare case of rainfall falling on high ground, with no wet element around. So in addition to checking the wet/dry 
+   flag at a node, users should also check the wet/dry flags of its surrounding elements. 
+   If surrounding  elements are all dry, then the node should be reclassified as dry, regardless of its wet/dry flag. However, the large elevation values may be valid in other circumstances; e.g., if the local depth is -1000m (a mountain) and the elevation is 1000.1m, the total depth is only 10cm. If there is a wet element around this node, the elevation value is actually valid.
+   In summary, follow these steps to interpret raw elevation outputs from SCHISM:
+ *Check 'dryFlagNode'; if it is 1, then the node is dry at this time record and ignore the elevation
+ *If dryFlagNode is 0 (wet), check the surrounding elements of this node. If all elements are dry at this time, then the node should be marked as dry at this time, and ignore the elevation value.
