@@ -202,6 +202,8 @@ If iloadtide=2 or 3, use a simple scaling for gravity approach (in this option,
 If `iloadtide=2`, a simple scaling specified by `loadtide_coef` is used to reduce 
 the gravity. If `iloadtide=3`, the scaling is dependent on the local depth _a la_ Stepanov & Hughes (2004),
  with a maximum value of `loadtide_coef`.
+If `iloadtide=4`, SAL is calculated using spherical harmonics on a global regular 1-degree
+longitude-latitude grid (360 x 181 points, including both poles).
 
 ### imm=0, ibdef=10 (int)
 Bed deformation option. Default: `0` (no bed deformation); `1`: with bed deformation (needs `ibdef` (# of steps during which deformation occurs), and `bdef.gr3`); 2: 3D bottom deformation (need to interact with code).
