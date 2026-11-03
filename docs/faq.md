@@ -47,7 +47,7 @@ Besides the following info, you may also search archived messages from the SCHIS
     This is likely because your `sflux*.nc` is not prepared properly: either the grid in `.nc` does not cover `hgrid.ll`, or the structured grid in `.nc` has a mixture of clockwise and counter-clockwise orientations.
 
 <details>
-<summary>faq "How to interpret elevation outputs from SCHISM?"</summary>
+<summary>"How to interpret elevation outputs from SCHISM?"</summary>
 
     Raw elevation outputs from SCHISM should be filtered in general to account for wetting and drying.  SCHISM's wetting and drying scheme is based on element (no partial element drying), and wet/dry flags at nodes/sides are derived from those at element. The dry flags can be found in outputs (e.g., "dryFlag*" in scribe IO). Since the elevation is defined at nodes, users should use "dryFlagNode" of the time record. If it is 1 (i.e. dry), then the elevation values should be ignored (as they are just placeholders for the next wet instance): values of 1000m or -1000m mean nothing in this case.
 <p>
