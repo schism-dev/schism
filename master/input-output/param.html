@@ -1946,10 +1946,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#imm0-ibdef10-ibdef_start0-int" class="md-nav__link">
+  <a href="#imm0-nbdef10-ibdef_start0-int" class="md-nav__link">
     <span class="md-ellipsis">
       
-        imm=0, ibdef=10, ibdef_start=0 (int)
+        imm=0, nbdef=10, ibdef_start=0 (int)
       
     </span>
   </a>
@@ -3775,8 +3775,8 @@ and phases (degrees behind GMT). In this option, SAL is
 If <code>iloadtide=2</code>, a simple scaling specified by <code>loadtide_coef</code> is used to reduce 
 the gravity. If <code>iloadtide=3</code>, the scaling is dependent on the local depth <em>a la</em> Stepanov &amp; Hughes (2004),
  with a maximum value of <code>loadtide_coef</code>.</p>
-<h3 id="imm0-ibdef10-ibdef_start0-int">imm=0, ibdef=10, ibdef_start=0 (int)<a class="headerlink" href="#imm0-ibdef10-ibdef_start0-int" title="Permanent link">&para;</a></h3>
-<p>Bed deformation option. Default: <code>0</code> (no bed deformation); <code>1</code>: with bed deformation (needs <code>ibdef</code> (# of steps during which deformation occurs), <code>ibdef_start</code> (step at which deformation begins; default 0), and <code>bdef.gr3</code>); 2: 3D bottom deformation (need to interact with code).</p>
+<h3 id="imm0-nbdef10-ibdef_start0-int">imm=0, nbdef=10, ibdef_start=0 (int)<a class="headerlink" href="#imm0-nbdef10-ibdef_start0-int" title="Permanent link">&para;</a></h3>
+<p>Bed deformation option. Default: <code>0</code> (no bed deformation); <code>1</code>: with bed deformation (needs <code>nbdef</code> (# of steps during which deformation occurs, starting from <code>ibdef_start</code>), <code>ibdef_start</code> (step at which deformation begins; default 0), and <code>bdef.gr3</code>); 2: 3D bottom deformation (need to interact with code).</p>
 <h3 id="indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double">indvel=0 (int), ihorcon=0 (int), hvis_coef0=0.025 (double), ishapiro=1, niter_shap=1 (int), shapiro0=0.5 (double)<a class="headerlink" href="#indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double" title="Permanent link">&para;</a></h3>
 <p>These parameters (and <code>inter_mom</code> below) control the numerical dissipation in momentum solver; see SCHISM paper (Zhang et al. 2016) for details.</p>
 <p><code>indvel</code> determines the method of converting side velocity to node velocity. If <code>indvel=0</code>, the node velocity is allowed to be discontinuous across elements and additional viscosity/filter is needed to filter out grid-scale noises (spurious 'modes'). If <code>indvel=1</code>, an inverse-distance interpolation procedure is used instead and the node velocity is continuous across elements; this method requires no additional viscosity/filter unless kriging ELM is used (<code>inter_mom &gt;0</code>). In general, <code>indvel=0</code> leads to smaller numerical dissipation and better accuracy, but does generally require a velocity B.C.</p>
