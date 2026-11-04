@@ -483,6 +483,10 @@ def _apply_artificial_island_patch(
         Path(wdir) / 'artificial_island_source_suppression',
         'artificial-island source suppression',
     )
+    reference_ss_nwm = validate_source_sink_directory(
+        Path(wdir) / 'original_source_sink',
+        'original source/sink',
+    )
     patch_output_dir = f'{wdir}/patch_artificial_island_source_sink/'
     mkcd_new_dir(patch_output_dir)
     os.symlink(f'{model_input_path}/hgrid.gr3', 'hgrid.gr3')
@@ -495,6 +499,7 @@ def _apply_artificial_island_patch(
         base_ss=input_ss,
         hgrid=hgrid,
         reference_ss=reference_ss,
+        reference_ss_nwm=reference_ss_nwm,
         reference_hgrid=read_schism_grid(str(source_grid_file)),
         patch_info_file=patch_info_file,
         start_time=config.startdate,
@@ -626,6 +631,12 @@ def assemble_source_sink(
             input_ss=base_ss, config=config,
             model_input_path=model_input_path, wdir=wdir,
             main_hgrid_has_feeder=main_hgrid_has_feeder,
+        )
+    else:
+        base_ss = source_sink(
+            vsource=base_ss.vsource,
+            vsink=None,
+            msource=base_ss.msource,
         )
 
     if config.replace_source_temperature_with_usgs:

@@ -343,6 +343,7 @@ def apply_artificial_island_corrections(
     base_ss: source_sink,
     hgrid,
     reference_ss: source_sink,
+    reference_ss_nwm: source_sink,
     reference_hgrid,
     patch_info_file: str | Path | dict,
     start_time=None,
@@ -359,8 +360,15 @@ def apply_artificial_island_corrections(
     """
     if base_ss is None:
         raise ValueError("base_ss must not be None")
-    if reference_ss is None or reference_hgrid is None:
-        raise ValueError("reference_ss and reference_hgrid are required")
+
+    if (
+        reference_ss is None
+        or reference_ss_nwm is None
+        or reference_hgrid is None
+    ):
+        raise ValueError(
+            "reference_ss, reference_ss_nwm, and reference_hgrid are required"
+        )
 
     if start_time is None:
         raise ValueError("start_time is required for artificial-island patching")
@@ -369,6 +377,14 @@ def apply_artificial_island_corrections(
     )
 
     patch_info = _load_patch_info(patch_info_file)
+
+    suppressed_source_names = {
+        str(_as_dict(item).get("name", ""))
+        for item in patch_info.get(
+            "remove_source_locations_in_artificial_island", []
+        )
+    }
+
     unsupported_sections = [
         section
         for section in (
@@ -404,6 +420,13 @@ def apply_artificial_island_corrections(
     )
     original_sink_eles, original_sink_time_and_data = (
         _copy_sink_components(reference_ss)
+    )
+
+    original_nwm_source_eles, original_nwm_source_time_and_data, original_nwm_msource = (
+        _copy_source_components(reference_ss_nwm)
+    )
+    original_nwm_sink_eles, original_nwm_sink_time_and_data = (
+        _copy_sink_components(reference_ss_nwm)
     )
 
     xctr, yctr = _compute_grid_centers(hgrid)
@@ -499,8 +522,24 @@ def apply_artificial_island_corrections(
             # replaced entirely by the explicitly mapped USGS observation.
             if original_available:
                 original_idx = original_source_eles.index(original_ele)
-                original_time, original_data = original_source_time_and_data
-                template_flow = original_data[:, original_idx].copy()
+
+                if name in suppressed_source_names:
+                    # This source was intentionally zeroed before relocation,
+                    # so restore its flow from the original NWM forcing.
+                    nwm_idx = original_nwm_source_eles.index(original_ele)
+                    original_time, original_data = (
+                        original_nwm_source_time_and_data
+                    )
+
+                    template_flow = original_data[:, nwm_idx].copy()
+                else:
+                    # Keep the normal reference flow, including any upstream
+                    # workflow corrections such as USGS flow replacement.
+                    original_time, original_data = (
+                        original_source_time_and_data
+                    )
+                    template_flow = original_data[:, original_idx].copy()
+
                 template_tracers = [
                     tracer_data[:, original_idx].copy()
                     for _, tracer_data in original_msource

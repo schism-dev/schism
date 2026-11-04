@@ -12,13 +12,13 @@ remove_source_locations_in_artificial_island:
     x: -81.683455
     y: 29.58590625
 
+  - name: "Wando"
+    x: -79.699653667
+    y: 32.9802923333
+
   - name: "Turkey"
     x: -79.82117533
     y: 33.12041400
-
-  - name: "Buffalo Bluff"
-    x: -81.683455
-    y: 29.58590625
 
   - name: "Clyo"
     x: -81.2687900
@@ -27,6 +27,10 @@ remove_source_locations_in_artificial_island:
   - name: "Moultrie"
     x: -79.9726690
     y: 33.2072897
+
+  - name: "Pinopolis Lock Dam"
+    x: -79.99051
+    y: 33.24199
 
 # Create artificial-island sources or sinks at the nearest main-grid element.
 # Nearby original forcing supplies the template; entries with use_usgs_obs
@@ -69,6 +73,14 @@ force_source_sink_locations:
     use_usgs_obs: true
     flow_station_id: '02244440'
     temperature_station_id: '02244440'
+
+  - name: "Pinopolis Lock Dam"
+    source_sink_type: "source"
+    x: -79.99051
+    y: 33.24199
+    max_search_radius_m: 500.0
+    allow_negative_sink: false
+    use_usgs_obs: false
 
 # Add -1000 m3/s at the nearest element for the complete model period.
 large_constant_sink_artificial_island_locations:
