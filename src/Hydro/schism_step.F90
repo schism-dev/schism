@@ -1213,10 +1213,11 @@ real (rkind) :: aux                               ! ustar
         if(lhas_ice(i)) then
           tau(:,i)=tau_oi(:,i)*rampwind !m^2/s/s
           !Update fluxes
-!#ifndef   IMPOSE_NET_FLUX
           fluxprc(i)=fresh_wa_flux(i)*rho0 !kg/s/m/m
+          fluxevp(i)=0.d0 !net evap-precp already in fluxprc
           sflux(i)=net_heat_flux(i) !W/m/m
-!#endif
+          !From Sergey D.: accounting for penetrative solar complicates single-class ice model
+          srad(i)=0.d0
  
           tmp=abs(tau_oi(1,i))+abs(tau_oi(2,i))
           if(tmp>tmp_max) tmp_max=tmp
