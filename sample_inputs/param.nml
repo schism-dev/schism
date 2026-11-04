@@ -234,11 +234,11 @@
 !-----------------------------------------------------------------------
 ! Bed deformation option (0: off; 1: vertical deformation only; 2: 3D bed deformation). 
 ! If imm=1, bdef.gr3 is needed; if imm=2, user needs to update depth info etc
-! in the code (not working for ics=2 yet).
+! in the code
 !-----------------------------------------------------------------------
   imm = 0
-  ibdef = 10 !needed if imm/=0; # of steps used in deformation
-  ibdef_start = 0 !needed if imm/=0; time step index when deformation begins (default: 0)
+  ibdef_start = 0 !needed if imm=1; time step index when deformation begins
+  nbdef = 10 !needed if imm=1; # of steps used in deformation (starting from ibdef_start)
 
 !-----------------------------------------------------------------------
 ! Reference latitude for beta-plane approximation when ncor=1 (not used if ics=2)

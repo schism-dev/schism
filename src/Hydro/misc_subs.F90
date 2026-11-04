@@ -879,17 +879,13 @@
 
 !$OMP do
       do i=1,npa
-        bdef1(i)=bdef(i)/real(ibdef,rkind)*max(0,min(it_now-ibdef_start,ibdef))
+        bdef1(i)=bdef(i)/real(nbdef,rkind)*max(0,min(it_now-ibdef_start,nbdef))
         if(imm==1) then
           !Add conditional to avoid conflict with sediment morph model
           dp(i)=dp00(i)-bdef1(i)
         else if(imm==2) then
-          if(it_now>ibdef_start) then
-            call update_bdef(time,xnd(i),ynd(i),dep,swild)
-            dp(i)=dep 
-          else
-            dp(i)=dp00(i)
-          endif
+          call update_bdef(time,xnd(i),ynd(i),dep,swild)
+          dp(i)=dep 
         endif
         if(ivcor==2) hmod(i)=min(dp(i),h_s)
       enddo !i

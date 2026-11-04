@@ -190,7 +190,7 @@
      &nspool,ihfskip,msc2,mdc2,dt,rnday,nbins_veg_vert,nmarsh_types
 
       namelist /OPT/ gen_wsett,flag_fib,ics,rearth_pole,rearth_eq,indvel, &
-     &imm,ibdef,ibdef_start,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
+     &imm,nbdef,ibdef_start,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
      &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,drampbc, &
      &dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min, &
      &hmin_man,ncor,rlatitude,coricoef,nws,wtiminc,iwind_form, &
@@ -465,7 +465,7 @@
       !Init defaults
       indvel=0; iupwind_mom=0; ihorcon=0; hvis_coef0=0.025_rkind; ishapiro=1; shapiro0=0.5_rkind; niter_shap=1
       gen_wsett=real(0.d0,rkind); flag_fib=1; ics=1; rearth_pole=6378206.4_rkind; rearth_eq=6378206.4_rkind; 
-      imm=0; ibdef=10; ibdef_start=0; ihot=0; ihydraulics=0; izonal5=0; slam0=-124._rkind; sfea0=45._rkind; 
+      imm=0; nbdef=10; ibdef_start=0; ihot=0; ihydraulics=0; izonal5=0; slam0=-124._rkind; sfea0=45._rkind; 
       ihdif=0; thetai=0.6_rkind; drampbc=0.d0
       dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
@@ -580,23 +580,16 @@
 !'    imm: 0: without bed deformation; 1: with bed deformation (e.g., tsunami);
 !     2: 3D bed deformation model (needs user coding)
 !     For imm=2, user needs to manually update bottom vel. etc in update_bdef()
-!     (not working yet for ics=2)
-!      call get_param('param.in','imm',1,imm,tmp,stringvalue)
 !     For moving bed, the output is from original bottom to nvrt
       if(imm<0.or.imm>2) then
         write(errmsg,*)'Unknown imm',imm
         call parallel_abort(errmsg)
       endif
-      if(imm==2.and.ics==2) call parallel_abort('imm=ics=2')
+!      if(imm==2.and.ics==2) call parallel_abort('imm=ics=2')
       if(imm/=0) then
-        if(ibdef<=0) call parallel_abort('INIT: ibdef<=0')
+        if(nbdef<=0) call parallel_abort('INIT: nbdef<=0')
         if(ibdef_start<0) call parallel_abort('INIT: ibdef_start<0')
       endif
-
-!      ibdef=1 !init # of time steps for deformation (deformation rate=0 when it>ibdef)
-!      if(imm==1) then !read in deformation at all nodes
-!        call get_param('param.in','ibdef',1,ibdef,tmp,stringvalue)
-!      endif
 
 !     hotstart option
 !      call get_param('param.in','ihot',1,ihot,tmp,stringvalue)
@@ -3222,12 +3215,7 @@
         stop
       endif
 
-!     imm: 0: without bed deformation; 1: with bed deformation (e.g., tsunami);
-!     2: 3D bed deformation model (needs user coding)
-!     For imm=2, user needs to manually update bottom vel. etc in update_bdef()
-!     (not working yet for ics=2)
-
-!     Initialize variables used in tsunami model (but bdef[1,2] and ibdef are available for all models)
+!     Initialize variables used in tsunami model (but bdef[1,2] and nbdef are available for all models)
       bdef=0.d0 !total deformation
       if(imm==1) then !read in deformation at all nodes
         if(myrank==0) then
