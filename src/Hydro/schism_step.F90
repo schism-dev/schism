@@ -304,6 +304,8 @@ real (rkind) :: aux                               ! ustar
       if(if_source/=0) then
         allocate(msource(ntracers,nea),stat=istat)
         if(istat/=0) call parallel_abort('STEP: allocation failure (2)')
+        msource(1,:)=-9999.d0 !init
+        msource(2,:)=0.d0 !init
       endif !if_source
 
 #ifdef USE_NAPZD
@@ -1820,6 +1822,7 @@ real (rkind) :: aux                               ! ustar
 !     air T may be used also.
 !     Other tracers: 0 (otherwise additional nutrients from rain will fall onto
 !     water) 
+#ifndef UFS_NWM
       vsource=0 !init; dimension [m^3/s]; includes sinks as well
       if(if_source/=0) then
         !init all first; dimension same as concentration (psu etc)
@@ -1978,6 +1981,7 @@ real (rkind) :: aux                               ! ustar
           enddo !i
         endif !nsinks>0
       endif !if_source/=0
+#endif /*not UFS_NWM*/
 
 !...  Volume sources from evap and precip
       if(isconsv/=0) then

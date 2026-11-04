@@ -1148,7 +1148,7 @@
 
 !     Volume and mass sources/sinks option (-1:nc; 1:ASCII)
       if(iabs(if_source)>1) call parallel_abort('INIT: wrong if_source')
-#ifdef USE_BMI
+#if defined USE_BMI || defined UFS_NWM
       if(if_source==0) call parallel_abort('INIT: USE_BMI cannot go with if_source=0')
 #endif
 
@@ -3014,6 +3014,7 @@
         call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source
 #else /*USE_BMI*/
+#ifndef UFS_NWM
 !     Read in source/sink info 
       if(if_source==1) then !ASCII
         if(myrank==0) then
@@ -3075,8 +3076,12 @@
         endif !myrank
         call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source
+
+#endif /*not UFS_NWM*/
 #endif /*USE_BMI*/
 
+
+#ifndef UFS_NWM
       if(if_source==-1) then !nc
 #ifdef SH_MEM_COMM
         if(myrank_node==0) then
@@ -3174,6 +3179,7 @@
         call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
         call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source=-1
+#endif /*not UFS_NWM*/
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
 !  Initialize model for cold and hot start

@@ -30,6 +30,10 @@
  USE_PREC_EVAP = yes
  EXEC := $(EXEC)_EVAP
 
+#NWM data cap under UFS
+# UFS_NWM = yes
+# EXEC := $(EXEC)_UFS_NWM
+
 # nws=5,6 option using WRF wind (simpler_wind.F90)
 # This option is not officially supported; use at your own risk
 # USE_SIMPLE_WIND = yes

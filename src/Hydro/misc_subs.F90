@@ -740,7 +740,7 @@
       endif !myrank==0
 
 !...  Source/sinks: read by rank 0 first
-#ifdef USE_BMI
+#if defined USE_BMI || defined UFS_NWM
         ! SCHISM BMI will bypass the .th or .nc
         ! source/sinks forcing file dependency and instead
         ! will fill the ath3, th_dt3, and th_time3 variables
@@ -843,7 +843,7 @@
         endif !nsinks>0
       endif !if_source=-1
 
-#endif /*USE_BMI*/
+#endif /*USE_BMI */
 
 !     Bcast
       if(if_source/=0) then
