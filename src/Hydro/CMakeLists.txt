@@ -43,6 +43,7 @@ add_library(hydro schism_init.F90
                   ${hydro_extra_src}
                   )
 
+add_subdirectory(${PROJECT_SOURCE_DIR}/HydrologicExchange ${CMAKE_CURRENT_BINARY_DIR}/HydrologicExchange)
 
 list( APPEND locallibs hydro)
 
@@ -50,8 +51,8 @@ list( APPEND locallibs hydro)
 # 1. hydro was added to schismmodlibs at PARENT_SCOPE so the local copy doesn't include hydro
 # 2. hydro is added last except for core, so that all the modules that were used got here.
 message(STATUS "Mod libraries: ${schismmodlibs}")
-add_dependencies(hydro core ${schismmodlibs})
-target_link_libraries(hydro core ${schismmodlibs} ${NetCDFLIBS} MPI::MPI_Fortran)
+add_dependencies(hydro core ${schismmodlibs} hydrologic_exchange)
+target_link_libraries(hydro core ${schismmodlibs} hydrologic_exchange ${NetCDFLIBS} MPI::MPI_Fortran)
 
 if(NOT NO_PARMETIS)
   target_link_libraries(hydro parmetis)
