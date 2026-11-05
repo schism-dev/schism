@@ -12,8 +12,8 @@ StartTs=[datenum(1991,1,1),datenum(1991,1,1),]
 xm=None  #time range for plotting
 
 #variables
-mvars=['temp', 'salt',    'chla','DO','TN','TP','NO3',  'NH4', 'PO4', 'DOC','POC','PON','POP','RPOC','LPOC','RPON','LPON','RPOP','LPOP','PB1', 'PB2', 'PB3', 'DON','DOP'] #model variables
-ovars=['WTEMP','SALINITY','CHLA','DO','TN','TP','NO23F','NH4F','PO4F','DOC','PC', 'PN', 'PP', 'PC',  'PC',  'PN',   'PN', 'PP',  'PP',  'CHLA','CHLA','CHLA','DON','DOP'] #observation
+mvars=['temp', 'salt',    'chla','DO','TN','TP','NO3',  'NH4', 'PO4', 'DOC','POC','PON','POP','RPOC','LPOC','RPON','LPON','RPOP','LPOP','PB1', 'PB2', 'PB3', 'DON','DOP','PIP'] #model variables
+ovars=['WTEMP','SALINITY','CHLA','DO','TN','TP','NO23F','NH4F','PO4F','DOC','PC', 'PN', 'PP', 'PC',  'PC',  'PN',   'PN', 'PP',  'PP',  'CHLA','CHLA','CHLA','DON','DOP','PIP'] #observation
 
 #stations
 regions=['channel','shoal','WT','ET','patuxent','potomac','rappahannock','york','james',] #main stations
