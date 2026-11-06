@@ -20,8 +20,9 @@ from __future__ import annotations
 import os
 import time
 import hashlib
+import resource
 from math import cos, radians
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
@@ -29,9 +30,26 @@ from urllib.parse import urljoin
 import numpy as np
 import pandas as pd
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
-USGS_COLLECTION_URL = "https://api.waterdata.usgs.gov/ogcapi/v0/collections/{collection}/items"
+USGS_COLLECTION_URL = "https://api.waterdata.usgs.gov/ogcapi/v1/collections/{collection}/items"
+EARTH_RADIUS_KM = 6371.0088
+MIN_WATER_TEMPERATURE_C = -2.0
+
+
+def log_bulk_diagnostic(event: str, **details: Any) -> None:
+    """Emit opt-in request progress without URLs, headers, or API keys."""
+    if os.environ.get("STOFS_USGS_BULK_DIAGNOSTICS") != "1":
+        return
+    fields = " ".join(f"{name}={value}" for name, value in details.items())
+    peak_rss_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+    print(
+        f"[USGS BULK DIAG] {datetime.now(timezone.utc).isoformat()} "
+        f"{event} {fields} peak_rss_mb={peak_rss_mb:.1f}",
+        flush=True,
+    )
 
 USGS_PARAMETER_CODES = {
     "temperature": "00010",
@@ -59,6 +77,7 @@ USGS_ECGC_STATE_BBOXES = {
     "AL": (-88.6, 30.1, -84.9, 35.1),
     "MI": (-90.5, 41.7, -82.1, 48.4),
     "LA": (-94.1, 28.8, -88.8, 33.1),
+    "MS": (-91.7, 30.1, -88.0, 35.1),
     "TX": (-106.7, 25.8, -93.5, 36.6),
 }
 
@@ -84,12 +103,54 @@ USGS_STATE_NAMES = {
     "AL": "Alabama",
     "MI": "Michigan",
     "LA": "Louisiana",
+    "MS": "Mississippi",
     "TX": "Texas",
+}
+
+USGS_STATE_FIPS_CODES = {
+    "ME": "23",
+    "NH": "33",
+    "MA": "25",
+    "RI": "44",
+    "CT": "09",
+    "NY": "36",
+    "NJ": "34",
+    "DE": "10",
+    "PA": "42",
+    "MD": "24",
+    "DC": "11",
+    "VA": "51",
+    "NC": "37",
+    "SC": "45",
+    "GA": "13",
+    "FL": "12",
+    "AL": "01",
+    "MI": "26",
+    "LA": "22",
+    "MS": "28",
+    "TX": "48",
 }
 
 
 def make_session() -> requests.Session:
+    retry = Retry(
+        total=5,
+        connect=3,
+        read=3,
+        status=3,
+        backoff_factor=1.0,
+        status_forcelist=[500, 502, 503, 504],
+        allowed_methods={"GET", "POST"},
+        # Let request_json handle 429 with a wait appropriate to the API limit.
+        respect_retry_after_header=False,
+    )
+    adapter = HTTPAdapter(
+        max_retries=retry,
+        pool_connections=16,
+        pool_maxsize=16,
+    )
     session = requests.Session()
+    session.mount("https://", adapter)
     session.headers.update({
         "User-Agent": "stofs3d_setup hotstart USGS downloader",
         "Accept": "application/json, */*",
@@ -115,20 +176,51 @@ def request_json(
     url: str,
     params: dict[str, Any] | None = None,
     max_429_retries: int = 8,
+    json_body: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     for attempt in range(max_429_retries + 1):
-        response = session.get(url, params=params, timeout=60)
-        if response.status_code == 429 and "X-Api-Key" in session.headers:
-            print("USGS API key is over rate limit; retrying anonymously", flush=True)
-            session.headers.pop("X-Api-Key", None)
-            continue
+        started = time.monotonic()
+        try:
+            if json_body is None:
+                response = session.get(url, params=params, timeout=60)
+            else:
+                response = session.post(
+                    url,
+                    params=params,
+                    json=json_body,
+                    headers={"Content-Type": "application/query-cql-json"},
+                    timeout=60,
+                )
+        except requests.RequestException as exc:
+            log_bulk_diagnostic(
+                "request_error",
+                attempt=attempt + 1,
+                error=type(exc).__name__,
+                elapsed_s=f"{time.monotonic() - started:.1f}",
+            )
+            raise
+        log_bulk_diagnostic(
+            "response",
+            attempt=attempt + 1,
+            status=response.status_code,
+            elapsed_s=f"{time.monotonic() - started:.1f}",
+        )
         if response.status_code != 429:
             response.raise_for_status()
             return response.json()
         if attempt == max_429_retries:
             response.raise_for_status()
 
-        wait_seconds = min(120.0, 10.0 * 2**attempt)
+        retry_after = Retry().get_retry_after(response)
+        if retry_after is not None:
+            wait_seconds = retry_after
+        elif "X-Api-Key" in session.headers:
+            wait_seconds = 3600.0
+        else:
+            wait_seconds = min(3600.0, 60.0 * 2**attempt)
+        log_bulk_diagnostic(
+            "rate_limit_wait", seconds=f"{wait_seconds:g}"
+        )
         print(f"USGS rate limit hit; sleeping {wait_seconds:g} seconds", flush=True)
         time.sleep(wait_seconds)
 
@@ -145,10 +237,22 @@ def iter_ogc_features(
     url = USGS_COLLECTION_URL.format(collection=collection)
     params = {"f": "json", "limit": limit, **params}
     features: list[dict[str, Any]] = []
+    page_number = 0
 
     while url:
+        started = time.monotonic()
         payload = request_json(session, url, params=params, max_429_retries=max_429_retries)
-        features.extend(payload.get("features", []))
+        page_features = payload.get("features", [])
+        features.extend(page_features)
+        page_number += 1
+        log_bulk_diagnostic(
+            "page",
+            collection=collection,
+            page=page_number,
+            records=len(page_features),
+            cumulative_records=len(features),
+            elapsed_s=f"{time.monotonic() - started:.1f}",
+        )
         next_url = None
         for link in payload.get("links", []):
             if link.get("rel") == "next" and link.get("href"):
@@ -160,16 +264,67 @@ def iter_ogc_features(
     return features
 
 
+def iter_ogc_features_cql2(
+    session: requests.Session,
+    collection: str,
+    filter_expression: dict[str, Any],
+    limit: int = 500,
+    max_429_retries: int = 8,
+) -> list[dict[str, Any]]:
+    """Return paginated OGC features matching a CQL2 JSON filter."""
+    url = USGS_COLLECTION_URL.format(collection=collection)
+    params = {"f": "json", "limit": limit}
+    features: list[dict[str, Any]] = []
+
+    while url:
+        payload = request_json(
+            session,
+            url,
+            params=params,
+            max_429_retries=max_429_retries,
+            json_body=filter_expression,
+        )
+        features.extend(payload.get("features", []))
+        next_url = next(
+            (
+                urljoin(url, link["href"])
+                for link in payload.get("links", [])
+                if link.get("rel") == "next" and link.get("href")
+            ),
+            None,
+        )
+        url = next_url
+        params = None
+
+    return features
+
+
 def feature_lon_lat(feature: dict[str, Any]) -> tuple[float | None, float | None]:
-    coords = feature.get("geometry", {}).get("coordinates")
-    if isinstance(coords, list) and len(coords) >= 2:
-        return float(coords[0]), float(coords[1])
-    return None, None
+    geometry = feature.get("geometry")
+    if not isinstance(geometry, dict):
+        return None, None
+
+    coords = geometry.get("coordinates")
+    if not isinstance(coords, list) or len(coords) < 2:
+        return None, None
+    try:
+        lon, lat = float(coords[0]), float(coords[1])
+    except (TypeError, ValueError, OverflowError):
+        return None, None
+    if not np.isfinite([lon, lat]).all():
+        return None, None
+    return lon, lat
 
 
 def normalize_station_id(station_id: Any) -> str:
     station_id = str(station_id).strip()
     return station_id[5:] if station_id.upper().startswith("USGS-") else station_id
+
+
+def _monitoring_location_id(station_id: Any) -> str:
+    """Return the OGC-form monitoring-location identifier for a USGS site."""
+    station_id = normalize_station_id(station_id)
+    return f"USGS-{station_id}"
 
 
 def series_overlaps(properties: dict[str, Any], start: Any, end: Any) -> bool:
@@ -184,6 +339,18 @@ def series_overlaps(properties: dict[str, Any], start: Any, end: Any) -> bool:
     return not (
         pd.notna(series_start) and series_start > request_end
         or pd.notna(series_end) and series_end < request_start
+    )
+
+
+def _is_instantaneous_series_in_period(
+    properties: dict[str, Any],
+    start: Any,
+    end: Any,
+) -> bool:
+    return (
+        str(properties.get("computation_identifier", "")).lower()
+        == "instantaneous"
+        and series_overlaps(properties, start, end)
     )
 
 
@@ -212,9 +379,12 @@ def _read_hgrid(hgrid_path: str | os.PathLike[str] | None) -> Any | None:
 
 
 def _expanded_hgrid_bbox(hgrid: Any, buffer_km: float) -> tuple[float, float, float, float]:
-    lat_mid = 0.5 * (float(hgrid.y.min()) + float(hgrid.y.max()))
+    max_abs_lat = min(
+        max(abs(float(hgrid.y.min())), abs(float(hgrid.y.max()))),
+        89.0,
+    )
     lat_pad = buffer_km / 111.0
-    lon_pad = buffer_km / max(111.0 * cos(radians(lat_mid)), 1.0)
+    lon_pad = buffer_km / max(111.0 * cos(radians(max_abs_lat)), 1.0)
     return (
         float(hgrid.x.min()) - lon_pad,
         float(hgrid.x.max()) + lon_pad,
@@ -236,9 +406,14 @@ def _boundary_points(hgrid: Any) -> np.ndarray:
     return np.c_[hgrid.x[boundary_node_ids], hgrid.y[boundary_node_ids]]
 
 
-def _xy_km(points: np.ndarray, reference_lat: float) -> np.ndarray:
-    km_per_lon_degree = max(111.0 * cos(radians(reference_lat)), 1.0)
-    return np.c_[points[:, 0] * km_per_lon_degree, points[:, 1] * 111.0]
+def _unit_sphere_xyz(points: np.ndarray) -> np.ndarray:
+    longitude = np.deg2rad(points[:, 0])
+    latitude = np.deg2rad(points[:, 1])
+    return np.column_stack((
+        np.cos(latitude) * np.cos(longitude),
+        np.cos(latitude) * np.sin(longitude),
+        np.sin(latitude),
+    ))
 
 
 def _within_boundary_buffer(points: np.ndarray, hgrid: Any, buffer_km: float) -> np.ndarray:
@@ -254,10 +429,10 @@ def _within_boundary_buffer(points: np.ndarray, hgrid: Any, buffer_km: float) ->
         )
         return np.zeros(len(points), dtype=bool)
 
-    reference_lat = float(np.nanmean(points[:, 1]))
-    boundary_tree = cKDTree(_xy_km(_boundary_points(hgrid), reference_lat))
-    distance_km, _ = boundary_tree.query(_xy_km(points, reference_lat), k=1)
-    return distance_km <= buffer_km
+    boundary_tree = cKDTree(_unit_sphere_xyz(_boundary_points(hgrid)))
+    chord_distance, _ = boundary_tree.query(_unit_sphere_xyz(points), k=1)
+    chord_limit = 2.0 * np.sin(buffer_km / (2.0 * EARTH_RADIUS_KM))
+    return chord_distance <= chord_limit
 
 
 def filter_series_by_hgrid(
@@ -319,9 +494,7 @@ def discover_parameter_series(
         n_before = len(rows)
         for feature in features:
             properties = feature.get("properties", {})
-            if str(properties.get("computation_identifier", "")).lower() != "instantaneous":
-                continue
-            if not series_overlaps(properties, start, end):
+            if not _is_instantaneous_series_in_period(properties, start, end):
                 continue
             lon, lat = feature_lon_lat(feature)
             station_id = properties.get("monitoring_location_id")
@@ -329,6 +502,7 @@ def discover_parameter_series(
                 continue
             rows.append({
                 "station_id": station_id,
+                "station_name": properties.get("monitoring_location_name"),
                 "time_series_id": feature.get("id"),
                 "state": state_code,
                 "state_name": state_name,
@@ -358,6 +532,178 @@ def discover_parameter_series(
     return series.drop_duplicates(["station_id", "parameter"]).sort_values("station_id").reset_index(drop=True)
 
 
+def discover_station_ids_with_parameter(
+    station_ids: list[str],
+    parameter: str,
+    start: Any,
+    end: Any,
+    session: requests.Session | None = None,
+    batch_size: int = 250,
+    max_429_retries: int = 8,
+) -> set[str]:
+    """Find stations with an instantaneous series overlapping the run dates."""
+    if batch_size <= 0:
+        raise ValueError("station metadata batch size must be positive")
+
+    normalized_ids = sorted({
+        normalize_station_id(site)
+        for site in station_ids
+        if site is not None and str(site).strip()
+    })
+    if not normalized_ids:
+        return set()
+
+    session = session or make_session()
+    matched_station_ids = set()
+    for start_index in range(0, len(normalized_ids), batch_size):
+        station_batch = normalized_ids[start_index:start_index + batch_size]
+        ogc_station_ids = [
+            _monitoring_location_id(station_id)
+            for station_id in station_batch
+        ]
+        filter_expression = {
+            "op": "and",
+            "args": [
+                {
+                    "op": "in",
+                    "args": [
+                        {"property": "parameter_code"},
+                        [str(parameter)],
+                    ],
+                },
+                {
+                    "op": "in",
+                    "args": [
+                        {"property": "monitoring_location_id"},
+                        ogc_station_ids,
+                    ],
+                },
+            ],
+        }
+        features = iter_ogc_features_cql2(
+            session,
+            "time-series-metadata",
+            filter_expression,
+            limit=10000,
+            max_429_retries=max_429_retries,
+        )
+        for feature in features:
+            properties = feature.get("properties", {})
+            if not _is_instantaneous_series_in_period(properties, start, end):
+                continue
+            station_id = properties.get("monitoring_location_id")
+            if station_id:
+                matched_station_ids.add(normalize_station_id(station_id))
+
+    return matched_station_ids
+
+
+def discover_station_ids_with_parameter_in_bbox(
+    bbox: tuple[float, float, float, float],
+    parameter: str,
+    start: Any,
+    end: Any,
+    session: requests.Session | None = None,
+) -> set[str]:
+    """Screen a region by parameter without querying every inventory station."""
+    session = session or make_session()
+    features = iter_ogc_features(
+        session,
+        "time-series-metadata",
+        {"parameter_code": parameter, "bbox": ",".join(map(str, bbox))},
+        limit=10000,
+    )
+    return {
+        normalize_station_id(station_id)
+        for feature in features
+        if _is_instantaneous_series_in_period(
+            feature.get("properties", {}), start, end
+        )
+        if (station_id := feature.get("properties", {}).get("monitoring_location_id"))
+    }
+
+
+def discover_monitoring_locations(
+    states: list[str] | None = None,
+    session: requests.Session | None = None,
+    max_429_retries: int = 8,
+) -> pd.DataFrame:
+    """Return USGS station locations for the requested states."""
+    session = session or make_session()
+    states = DEFAULT_STATES if states is None else states
+    rows = []
+
+    for state in states:
+        state_code = state.upper()
+        state_fips = USGS_STATE_FIPS_CODES.get(state_code)
+        if state_fips is None:
+            raise ValueError(
+                f"No USGS FIPS state code is configured for {state_code}"
+            )
+        print(
+            f"USGS inventory: discovering {state_code} stations "
+            f"(state_code={state_fips})",
+            flush=True,
+        )
+        features = iter_ogc_features(
+            session,
+            "monitoring-locations",
+            {"state_code": state_fips},
+            limit=10000,
+            max_429_retries=max_429_retries,
+        )
+        for feature in features:
+            properties = feature.get("properties", {})
+            agency_code = properties.get("agency_code")
+            if agency_code and agency_code.upper() != "USGS":
+                continue
+
+            station_id = (
+                properties.get("monitoring_location_number")
+                or properties.get("monitoring_location_id")
+                or feature.get("id")
+            )
+            lon, lat = feature_lon_lat(feature)
+            if not station_id or lon is None or lat is None:
+                continue
+            rows.append({
+                "station_id": normalize_station_id(station_id),
+                "station_name": properties.get("monitoring_location_name"),
+                "state": state_code,
+                "lon": lon,
+                "lat": lat,
+            })
+
+    columns = ["station_id", "station_name", "state", "lon", "lat"]
+    if not rows:
+        return pd.DataFrame(columns=columns)
+    return (
+        pd.DataFrame(rows, columns=columns)
+        .drop_duplicates("station_id")
+        .sort_values("station_id")
+        .reset_index(drop=True)
+    )
+
+
+def _observation_is_unavailable(properties: dict[str, Any]) -> bool:
+    """USGS can publish numeric placeholders with an UNAVAIL qualifier."""
+    qualifiers = properties.get("qualifier") or []
+    if isinstance(qualifiers, str):
+        qualifiers = [qualifiers]
+    return any(str(value).strip().upper() == "UNAVAIL" for value in qualifiers)
+
+
+def _filter_observation_values(
+    observations: pd.DataFrame, parameter: str
+) -> pd.DataFrame:
+    observations = observations.dropna(subset=["time", "value"])
+    if str(parameter) == USGS_PARAMETER_CODES["temperature"]:
+        observations = observations.loc[
+            observations["value"] >= MIN_WATER_TEMPERATURE_C
+        ]
+    return observations
+
+
 def download_station_parameter(
     station_id: str,
     parameter: str,
@@ -369,7 +715,7 @@ def download_station_parameter(
         session,
         "continuous",
         {
-            "monitoring_location_id": station_id,
+            "monitoring_location_id": _monitoring_location_id(station_id),
             "parameter_code": parameter,
             "datetime": iso_interval(start, end),
         },
@@ -377,15 +723,21 @@ def download_station_parameter(
     rows = []
     for feature in features:
         properties = feature.get("properties", {})
+        if _observation_is_unavailable(properties):
+            continue
         lon, lat = feature_lon_lat(feature)
         rows.append({
-            "station_id": properties.get("monitoring_location_id", station_id),
+            "station_id": normalize_station_id(
+                properties.get("monitoring_location_id", station_id)
+            ),
+            "time_series_id": properties.get("time_series_id"),
             "station_name": properties.get("monitoring_location_name"),
             "lon": lon,
             "lat": lat,
             "time": properties.get("time"),
             "value": properties.get("value"),
             "unit": properties.get("unit_of_measure"),
+            "qualifier": properties.get("qualifier"),
         })
     observations = pd.DataFrame(rows)
     if observations.empty:
@@ -394,7 +746,7 @@ def download_station_parameter(
     observations["value"] = pd.to_numeric(observations["value"], errors="coerce")
     observations["lon"] = pd.to_numeric(observations["lon"], errors="coerce")
     observations["lat"] = pd.to_numeric(observations["lat"], errors="coerce")
-    return observations.dropna(subset=["time", "value"])
+    return _filter_observation_values(observations, parameter)
 
 
 def download_state_parameter(
@@ -416,6 +768,8 @@ def download_state_parameter(
     rows = []
     for feature in features:
         properties = feature.get("properties", {})
+        if _observation_is_unavailable(properties):
+            continue
         lon, lat = feature_lon_lat(feature)
         rows.append({
             "station_id": properties.get("monitoring_location_id"),
@@ -425,6 +779,7 @@ def download_state_parameter(
             "time": properties.get("time"),
             "value": properties.get("value"),
             "unit": properties.get("unit_of_measure"),
+            "qualifier": properties.get("qualifier"),
         })
     observations = pd.DataFrame(rows)
     if observations.empty:
@@ -434,7 +789,8 @@ def download_state_parameter(
     observations["value"] = pd.to_numeric(observations["value"], errors="coerce")
     observations["lon"] = pd.to_numeric(observations["lon"], errors="coerce")
     observations["lat"] = pd.to_numeric(observations["lat"], errors="coerce")
-    return observations.dropna(subset=["station_id", "time", "value"])
+    observations = observations.dropna(subset=["station_id"])
+    return _filter_observation_values(observations, parameter)
 
 
 def download_station_group_parameter(
@@ -444,30 +800,91 @@ def download_station_group_parameter(
     end: Any,
     session: requests.Session,
     max_429_retries: int = 2,
+    primary_only: bool = False,
+    page_size: int = 1000,
 ) -> pd.DataFrame:
+    selected_series_ids = None
+    if primary_only:
+        metadata = iter_ogc_features(
+            session,
+            "time-series-metadata",
+            {
+                "monitoring_location_id": ",".join(
+                    _monitoring_location_id(station_id)
+                    for station_id in station_ids
+                ),
+                "parameter_code": parameter,
+            },
+            limit=page_size,
+            max_429_retries=max_429_retries,
+        )
+        series_by_station: dict[str, list[dict[str, Any]]] = {}
+        for feature in metadata:
+            properties = feature.get("properties", {})
+            if str(
+                properties.get("computation_identifier", "")
+            ).lower() != "instantaneous":
+                continue
+            if not series_overlaps(properties, start, end):
+                continue
+            station_id = normalize_station_id(
+                properties.get("monitoring_location_id", "")
+            )
+            if station_id:
+                series_by_station.setdefault(station_id, []).append(
+                    {
+                        "id": feature.get("id"),
+                        "primary": properties.get("primary"),
+                    }
+                )
+
+        selected_series_ids = set()
+        for series in series_by_station.values():
+            primary_series = [
+                item
+                for item in series
+                if str(item["primary"]).lower() in {"true", "1", "primary"}
+            ]
+            selected = primary_series or sorted(
+                series,
+                key=lambda item: str(item["id"]),
+            )[:1]
+            selected_series_ids.update(
+                item["id"] for item in selected if item["id"]
+            )
+
     features = iter_ogc_features(
         session,
         "continuous",
         {
-            "monitoring_location_id": ",".join(station_ids),
+            "monitoring_location_id": ",".join(
+                _monitoring_location_id(station_id)
+                for station_id in station_ids
+            ),
             "parameter_code": parameter,
             "datetime": iso_interval(start, end),
         },
-        limit=10000,
+        limit=page_size,
         max_429_retries=max_429_retries,
     )
     rows = []
     for feature in features:
         properties = feature.get("properties", {})
+        if _observation_is_unavailable(properties):
+            continue
         lon, lat = feature_lon_lat(feature)
         rows.append({
-            "station_id": properties.get("monitoring_location_id"),
+            "station_id": normalize_station_id(
+                properties.get("monitoring_location_id")
+            ),
+            "time_series_id": properties.get("time_series_id"),
             "station_name": properties.get("monitoring_location_name"),
             "lon": lon,
             "lat": lat,
             "time": properties.get("time"),
             "value": properties.get("value"),
             "unit": properties.get("unit_of_measure"),
+            "qualifier": properties.get("qualifier"),
         })
     observations = pd.DataFrame(rows)
     if observations.empty:
@@ -477,7 +894,15 @@ def download_station_group_parameter(
     observations["value"] = pd.to_numeric(observations["value"], errors="coerce")
     observations["lon"] = pd.to_numeric(observations["lon"], errors="coerce")
     observations["lat"] = pd.to_numeric(observations["lat"], errors="coerce")
-    return observations.dropna(subset=["station_id", "time", "value"])
+    observations = observations.dropna(subset=["station_id"])
+    observations = _filter_observation_values(observations, parameter)
+    if selected_series_ids:
+        observations = observations[
+            observations["time_series_id"].astype(str).isin(
+                {str(series_id) for series_id in selected_series_ids}
+            )
+        ]
+    return observations
 
 
 def practical_salinity_from_conductance_25c(conductance_ms_cm: float) -> float:

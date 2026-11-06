@@ -11,7 +11,7 @@ from schism_py_pre_post.Shared_modules.gen_subregion_ic2 import gen_subregion_ic
 # pip install git+https://github.com/wzhengui/pylibs.git
 from pylib import schism_grid
 from .download_cbp_hotstart import get_cbp_obs_for_stofs3d
-from .download_usgs_hotstart import get_usgs_obs_for_stofs3d
+from stofs3d_setup.ops.USGS.ogc.download_usgs import get_usgs_obs_for_stofs3d
 from .replace_eta2_aviso import interp_to_points_2d, transform_ll_to_cpp
 from stofs3d_setup.utils.projection import project_geodataframe
 
