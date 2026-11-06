@@ -100,6 +100,7 @@ module schism_glbl
                   &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm,iof_icm_ba,&
                   &iof_icm_clam,nbins_veg_vert,niter_hdif,nmarsh_types,istemp,chunk_size_vrt
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
+  integer,save :: ihydro_exchange=0 !0: off; 1: prescribed NWM soil diagnostics only
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_cos,iof_fib, &
      &iof_sed2d,iof_ice,iof_mice,iof_ana,iof_marsh,iof_dvd,iadjust_mass_consv,lev_tr_source2(:)

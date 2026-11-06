@@ -97,6 +97,10 @@
   start_hour = 0 !double
   utc_start = 0 !double
 
+! HydroExchange: 0=off; 1=NWM soil calculation and diagnostics, without vsource application.
+! When enabled, also supply hydro_exchange.nml, its NWM file list, and soil_active.prop.
+  ihydro_exchange = 0
+
 !-----------------------------------------------------------------------
 ! Coordinate option: 1: Cartesian; 2: lon/lat (hgrid.gr3=hgrid.ll in this case,
 ! and orientation of element is outward of earth)

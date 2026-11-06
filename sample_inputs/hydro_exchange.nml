@@ -1,0 +1,12 @@
+! Prescribed NWM replay, using native layers 1 and 2 (0.4 m capacity).
+! Paths are absolute or relative to the SCHISM input directory.
+&HYDRO_EXCHANGE_INPUT
+  soil_file = 'soilproperties_CONUS_FullRouting.nc'
+  wrf_file = 'wrfinput_CONUS.nc'
+  file_list = 'hydro_exchange_files.in'
+  mask_file = 'soil_active.prop'
+/
+! file_list: first line is record count; following lines are ordered LDASOUT paths.
+! Include a predecessor before the run start to recover accumulated tendencies.
+! mask_file: one global element ID and flag (0 or 1) per element, standard .prop format.
+! Use ics=2. NWM QRAIN supplies rain; SCHISM start date/hour and utc_start define time.

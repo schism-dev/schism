@@ -29,6 +29,8 @@
       use schism_io
       use netcdf
       use misc_modules
+      use hydrologic_exchange_run
+      use hydrologic_exchange, only: step_hydrologic_exchange,read_hydrologic_exchange_hotstart
 
 #ifdef SH_MEM_COMM
       use iso_c_binding, only: c_ptr, c_f_pointer
@@ -215,7 +217,7 @@
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,istemp,relax_2_airt, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_cw, &
      &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
-     &drown_marsh,create_marsh_min,create_marsh_max,age_marsh_min
+     &drown_marsh,create_marsh_min,create_marsh_max,age_marsh_min,ihydro_exchange
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm, &
@@ -466,6 +468,7 @@
       indvel=0; iupwind_mom=0; ihorcon=0; hvis_coef0=0.025_rkind; ishapiro=1; shapiro0=0.5_rkind; niter_shap=1
       gen_wsett=real(0.d0,rkind); flag_fib=1; ics=1; rearth_pole=6378206.4_rkind; rearth_eq=6378206.4_rkind; 
       imm=0; ibdef=10; ihot=0; ihydraulics=0; izonal5=0; slam0=-124._rkind; sfea0=45._rkind; 
+      ihydro_exchange=0
       ihdif=0; thetai=0.6_rkind; drampbc=0.d0
       dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
@@ -536,6 +539,7 @@
       chunk_size_vrt=-1 !default: whole-volume chunk (>0: # of layers per chunk)
 
       read(15,nml=OPT)
+      if(ihydro_exchange<0.or.ihydro_exchange>1) call parallel_abort('INIT: ihydro_exchange must be 0 or 1')
       read(15,nml=SCHOUT)
       close(15)
 
@@ -6927,6 +6931,14 @@
       endif
 
 !     Add module outputs of 2D elem below (scalars&vectors)
+      if(ihydro_exchange==1) then
+        do i=1,5
+          ncount_2delem=ncount_2delem+1
+          counter_out_name=counter_out_name+1
+          out_name(counter_out_name)=hydro_output_names(i)
+          iout_23d(counter_out_name)=4
+        enddo
+      endif
 #ifdef USE_SED
       do i=1,6
         if(iof_sed(i)==1) then
@@ -7567,6 +7579,18 @@
 
       !Finish other init
       call other_hot_init(time)
+
+      ! Calculation-only soil replay; hydrodynamic forcing is unchanged in PR2.
+      if(ihydro_exchange==1) then
+        call initialize_hydro_exchange_run
+        call step_hydrologic_exchange(hydro_exchange,time)
+        if(ihot==2) then
+          j=nf90_open(in_dir(1:len_in_dir)//'hotstart.nc',NF90_NOWRITE,ncid2)
+          if(j/=NF90_NOERR) call parallel_abort('INIT: HydroExchange hotstart')
+          call read_hydrologic_exchange_hotstart(hydro_exchange,ncid2,time,ielg(1:ne))
+          j=nf90_close(ncid2)
+        endif
+      endif
 
       if(myrank==0) then
         write(16,*)'time stepping begins...',iths_main+1,ntime

@@ -16,6 +16,8 @@
       use schism_glbl
       use schism_msgp
       use schism_io
+      use hydrologic_exchange_run, only: hydro_exchange
+      use hydrologic_exchange, only: finalize_hydrologic_exchange
       USE hydraulic_structures
 #ifdef USE_HA
       USE harm
@@ -39,6 +41,7 @@
       real(rkind) :: wtmp2
 
 !...  Output max. diffusion number reached
+      if(ihydro_exchange==1) call finalize_hydrologic_exchange(hydro_exchange)
       if(difnum_max_l2>0.5_rkind) write(12,*)'MAIN: max. diffusion # exceeds 0.5:',difnum_max_l2
 !'
 

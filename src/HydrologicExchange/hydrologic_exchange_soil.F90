@@ -45,7 +45,7 @@ contains
 
   subroutine compute_soil_fluxes(dt, qrain, snowmelt_rate, et_rate, q_perc, &
       soil_m_top, soil_w_top, dksat_top, imperv, state, p_liq, infiltration, &
-      surface_runoff, freeze_gate, i_rate_cap, i_storage_cap_eff, i_cap)
+      surface_runoff, freeze_gate, i_rate_cap, i_storage_cap_eff, i_cap, pervious_fraction)
     real(rkind), intent(in) :: dt
     real(rkind), intent(in) :: qrain(:), snowmelt_rate(:), et_rate(:), q_perc(:)
     real(rkind), intent(in) :: soil_m_top(:), soil_w_top(:), dksat_top(:), imperv(:)
@@ -53,7 +53,8 @@ contains
     real(rkind), intent(out) :: p_liq(:), infiltration(:), surface_runoff(:)
     real(rkind), intent(out) :: freeze_gate(:), i_rate_cap(:)
     real(rkind), intent(out) :: i_storage_cap_eff(:), i_cap(:)
-    real(rkind) :: freeze_fraction(size(qrain))
+    real(rkind), optional, intent(in) :: pervious_fraction(:)
+    real(rkind) :: freeze_fraction(size(qrain)), scale(size(qrain))
 
     p_liq = max(qrain + snowmelt_rate - et_rate, 0._rkind)
     freeze_fraction = max((soil_m_top - soil_w_top) / &
@@ -61,8 +62,11 @@ contains
     freeze_gate = max(1._rkind - freeze_fraction, 0._rkind) ** freeze_alpha
 
     i_rate_cap = dksat_top
-    i_storage_cap_eff = (state%available_capacity / dt + q_perc) * &
-      (1._rkind - imperv) * freeze_gate
+    ! A provider may supply 1-IMPERV evaluated at its native input precision.
+    scale = 1._rkind - imperv
+    if(present(pervious_fraction)) scale = pervious_fraction
+    scale = scale * freeze_gate
+    i_storage_cap_eff = (state%available_capacity / dt + q_perc) * scale
     i_cap = min(i_rate_cap, i_storage_cap_eff)
     infiltration = min(p_liq, i_cap)
     surface_runoff = p_liq - infiltration

@@ -1750,6 +1750,21 @@
         case ('sedTemperature')
           long_name = 'Sediment temperature'
           units = 'degree_C'
+        case ('hydroSurfaceRunoff')
+          long_name = 'HydroExchange surface runoff; calculation only'
+          units = 'm s-1'
+        case ('hydroDrainage')
+          long_name = 'HydroExchange prescribed NWM drainage; calculation only'
+          units = 'm s-1'
+        case ('hydroSoilCapacity')
+          long_name = 'HydroExchange available soil capacity'
+          units = 'm'
+        case ('hydroInfiltration')
+          long_name = 'HydroExchange infiltration; calculation only'
+          units = 'm s-1'
+        case ('hydroSoilActive')
+          long_name = 'HydroExchange soil-active element mask'
+          units = '1'
         case ('windSpeedX')
           standard_name = 'eastward_wind'
           units = 'm s-1'

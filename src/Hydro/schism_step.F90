@@ -24,6 +24,8 @@
       use schism_io
       use netcdf
       use misc_modules
+      use hydrologic_exchange_run
+      use hydrologic_exchange, only: step_hydrologic_exchange,write_hydrologic_exchange_hotstart
 
 #ifdef USE_PAHM
       use PaHM_Global, only: modelType
@@ -386,6 +388,7 @@ real (rkind) :: aux                               ! ustar
 
 !     Broadcast to global module
       time_stamp=time; it_main=it
+      if(ihydro_exchange==1) call step_hydrologic_exchange(hydro_exchange,time)
 
 #ifdef USE_MICE
       call clock_newyear                        ! check if it is a new year
@@ -9151,6 +9154,15 @@ real (rkind) :: aux                               ! ustar
         if(iof_hydro(33)==1) call writeout_nc(id_out_var(36),'transport_min_dt_elem',4,1,ne,dtbe)
         noutput=33 !total # of outputs so far (dim of id_out_var)
 
+        if(ihydro_exchange==1) then
+          call writeout_nc(hydro_output_ids(1),hydro_output_names(1),4,1,ne,hydro_exchange%q_surf)
+          call writeout_nc(hydro_output_ids(2),hydro_output_names(2),4,1,ne,hydro_exchange%q_perc)
+          call writeout_nc(hydro_output_ids(3),hydro_output_names(3),4,1,ne,hydro_exchange%capacity)
+          call writeout_nc(hydro_output_ids(4),hydro_output_names(4),4,1,ne,hydro_exchange%infiltration)
+          call writeout_nc(hydro_output_ids(5),hydro_output_names(5),4,1,ne, &
+            real(merge(1,0,hydro_exchange%soil_active),rkind))
+        endif
+
         !'Modules
         !'4' in noutput+i+4 due to the first 4 reserved outputs (since zcor is
         !removed from that list, '3' is sufficient but '4' leaves 1 ID vacant)
@@ -9853,6 +9865,14 @@ real (rkind) :: aux                               ! ustar
         if(icount>ncount_2delem) call parallel_abort('STEP: icount>nscribes(2.1)')
 
         !Modules output
+        if(ihydro_exchange==1) then
+          varout_2delem(icount+1,:)=hydro_exchange%q_surf
+          varout_2delem(icount+2,:)=hydro_exchange%q_perc
+          varout_2delem(icount+3,:)=hydro_exchange%capacity
+          varout_2delem(icount+4,:)=hydro_exchange%infiltration
+          varout_2delem(icount+5,:)=merge(1,0,hydro_exchange%soil_active)
+          icount=icount+5
+        endif
 #ifdef USE_SED
       do i=1,6
         if(iof_sed(i)==1) then
@@ -10776,6 +10796,7 @@ real (rkind) :: aux                               ! ustar
 #ifdef USE_HA
 #endif /*USE_HA*/
 
+        if(ihydro_exchange==1) call write_hydrologic_exchange_hotstart(hydro_exchange,ncid_hot,elem_dim)
         j=nf90_close(ncid_hot)
 
         if(myrank==0) write(16,*) 'hot start written',it,time,ifile,nvars_hot

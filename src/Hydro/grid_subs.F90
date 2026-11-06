@@ -1780,26 +1780,7 @@ subroutine aquire_hgrid(full_aquire)
       xel(1:i34(ie),ie)=xnd(elnode(1:i34(ie),ie))
       yel(1:i34(ie),ie)=ynd(elnode(1:i34(ie),ie))
     else !lat/lon
-      call compute_ll(xctr(ie),yctr(ie),zctr(ie),ar1,ar2)
-      !Debug
-!      egb2=ar2*180.d0/pi
-!      write(12,*)'Elem ll=',ielg(ie),ar1*180.d0/pi,ar2*180.d0/pi
-
-      !local ll frame
-      !1: zonal axis; 2: meridional axis; 3: outward radial
-      eframe(1,1,ie)=-sin(ar1)
-      eframe(2,1,ie)=cos(ar1)
-      eframe(3,1,ie)=0._rkind
-      eframe(1,2,ie)=-cos(ar1)*sin(ar2)
-      eframe(2,2,ie)=-sin(ar1)*sin(ar2)
-      eframe(3,2,ie)=rearth_pole/rearth_eq*cos(ar2)
-      ar4=sqrt(eframe(1,2,ie)**2.d0+eframe(2,2,ie)**2+eframe(3,2,ie)**2)
-      if(ar4==0.d0) call parallel_abort('GRID: ar4=0')
-      eframe(1:3,2,ie)=eframe(1:3,2,ie)/ar4
-
-      call cross_product(eframe(1,1,ie),eframe(2,1,ie),eframe(3,1,ie), &
-     &                   eframe(1,2,ie),eframe(2,2,ie),eframe(3,2,ie), &
-     &                   eframe(1,3,ie),eframe(2,3,ie),eframe(3,3,ie))
+      call compute_element_frame(xctr(ie),yctr(ie),zctr(ie),eframe(:,:,ie))
 
       egb1=eframe(1,3,ie)*xctr(ie)+eframe(2,3,ie)*yctr(ie)+eframe(3,3,ie)*zctr(ie) !dot product
       ar2=sqrt(xctr(ie)**2+yctr(ie)**2+zctr(ie)**2)
@@ -2466,6 +2447,31 @@ end subroutine aquire_hgrid
 
 !===============================================================================
 !===============================================================================
+
+!===============================================================================
+! Native geographic element frame, shared by mesh initialization and utilities.
+subroutine compute_element_frame(xc,yc,zc,frame)
+  use schism_glbl, only : rkind,rearth_pole,rearth_eq
+  use schism_msgp, only : parallel_abort
+  implicit none
+  real(rkind),intent(in) :: xc,yc,zc
+  real(rkind),intent(out) :: frame(3,3)
+  real(rkind) :: rlon,rlat,length
+
+  call compute_ll(xc,yc,zc,rlon,rlat)
+  ! 1: zonal; 2: meridional; 3: outward radial.
+  frame(1,1)=-sin(rlon)
+  frame(2,1)=cos(rlon)
+  frame(3,1)=0._rkind
+  frame(1,2)=-cos(rlon)*sin(rlat)
+  frame(2,2)=-sin(rlon)*sin(rlat)
+  frame(3,2)=rearth_pole/rearth_eq*cos(rlat)
+  length=sqrt(frame(1,2)**2.d0+frame(2,2)**2+frame(3,2)**2)
+  if(length==0.d0) call parallel_abort('GRID: ar4=0')
+  frame(1:3,2)=frame(1:3,2)/length
+  call cross_product(frame(1,1),frame(2,1),frame(3,1), &
+    frame(1,2),frame(2,2),frame(3,2),frame(1,3),frame(2,3),frame(3,3))
+end subroutine compute_element_frame
 
 !dir$ attributes forceinline :: signa
 function signa(x1,x2,x3,y1,y2,y3)
