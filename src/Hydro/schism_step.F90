@@ -253,10 +253,6 @@ real (rkind) :: aux                               ! ustar
       real(rkind) :: wflux_correct, surface_flux_ratio
 
 
-!#ifdef USE_WWM
-!      CHARACTER(LEN=3) :: RADFLAG
-!#endif /*USE_WWM*/
-
 #ifdef USE_FABM
       real(rkind) :: tau_bottom_nodes(npa)
 #endif
@@ -2501,7 +2497,10 @@ real (rkind) :: aux                               ! ustar
 !                Cdp(i)=Cdp(i)*exp(dzb_decay*(1.d0-bthick_ori/bthick))
 !              endif
               !WBL
-#if defined USE_WWM || defined UFS_WW3
+
+              !Remove WW3 until vars are ready
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM 
 #ifdef USE_WWM
               ubm = out_wwm(i,22)  !orbital vel. [m/s]
               aorb = out_wwm(i,23) !orbital amp=U_orb/ <angular freq> [m]
@@ -2513,6 +2512,7 @@ real (rkind) :: aux                               ! ustar
               endif
 #endif /*USE_WWM*/
 
+!Not activated yet
 #ifdef UFS_WW3
               ubm=sqrt(wave_orbu(i)**2.d0+wave_orbv(i)**2.d0) !orbital vel. [m/s]
               aorb=ubm*wave_tm1(i)/2.d0/pi !orbital amp [m]
@@ -2871,11 +2871,10 @@ real (rkind) :: aux                               ! ustar
           !u_taub=(-(1.d0/cw)*wave_sbftot(j)/rho0 +
           !(1.d0/cw)*sqrt(taub_wc(j))**3)**(1./3.) !opt2
           !u_taub=((1.d0/cw)*sqrt(taub_wc(j))**3)**(1./3.) !opt3
-#elif  UFS_WW3
-!Error:
-          u_taus=0.5d0*16.6d0**(2.d0/3.d0)*turbinj*sqrt(sqrt(wave_ocean_flux_x(j)**2.d0+ &
-     &wave_ocean_flux_y(j)**2.d0)) !m/s
-          u_taub=sqrt(taub_wc(j))
+!#elif  UFS_WW3
+!          u_taus=0.5d0*16.6d0**(2.d0/3.d0)*turbinj*sqrt(sqrt(wave_ocean_flux_x(j)**2.d0+ &
+!     &wave_ocean_flux_y(j)**2.d0)) !m/s
+!          u_taub=sqrt(taub_wc(j))
 #else
           u_taus=sqrt(sqrt(tau(1,j)**2.d0+tau(2,j)**2.d0))
 !          u_taub=sqrt(Cdp(j)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0))
@@ -2932,20 +2931,21 @@ real (rkind) :: aux                               ! ustar
 !          h1d(0)=h1d(1)
           toth=eta2(j)+dp(j)
 !         surface and bottom roughness length (m)
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#ifdef USE_WWM 
           ! alphaw set in param.nml
           if (alphaw .gt. 0.d0) then
-#ifdef USE_WWM
+!#ifdef USE_WWM
             z0s=alphaw * out_wwm(j,1)  ! e.g. Moghimi et al. (OM, 2013)
-#else
-            z0s=alphaw * wave_hs(j)  ! e.g. Moghimi et al. (OM, 2013)
-#endif
+!#else
+!            z0s=alphaw * wave_hs(j)  ! e.g. Moghimi et al. (OM, 2013)
+!#endif
           else
             z0s=abs(alphaw)
           endif
 #else
           z0s=min(0.1d0,toth/10.d0)
-#endif
+#endif /*USE_WWM*/
           if(Cdp(j)==0.d0) then
             !GOTM seems to dislike 0 friction
             z0b=1.d-10 !0.d0
@@ -3130,10 +3130,10 @@ real (rkind) :: aux                               ! ustar
 
 #endif
 
-#ifdef UFS_WW3
-        q2fs=q2fs+0.5d0*16.6d0**(2.d0/3.d0)*turbinj*sqrt(wave_ocean_flux_x(j)**2.d0+ &
-     &wave_ocean_flux_y(j)**2.d0)
-#endif
+!#ifdef UFS_WW3
+!        q2fs=q2fs+0.5d0*16.6d0**(2.d0/3.d0)*turbinj*sqrt(wave_ocean_flux_x(j)**2.d0+ &
+!     &wave_ocean_flux_y(j)**2.d0)
+!#endif
 
         q2bot = 0.5d0*16.6d0**(2.d0/3.d0)*Cdp(j)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0)
         ! Limiters
@@ -3149,8 +3149,8 @@ real (rkind) :: aux                               ! ustar
 #ifdef USE_WWM
         ! 0.6Hs, following Terray et al. (1996), and used by Bennis et al. (2014) and Moghimi et al. (2016)
         zsurf = 0.6d0*out_wwm(j,1) 
-#elif  UFS_WW3
-        zsurf = 0.6d0*wave_hs(j) 
+!#elif  UFS_WW3
+!        zsurf = 0.6d0*wave_hs(j) 
 #else
         zsurf = dzz(nvrt)
 #endif
@@ -3474,12 +3474,13 @@ real (rkind) :: aux                               ! ustar
 
 !        xlfs=max(xlmin2(j),xlsc0(j)*dzz(nvrt)*0.4_rkind) 
 !modif AD :: modification of mixing layer as Delpey et al.
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
 #ifdef USE_WWM
+!#ifdef USE_WWM
         tmp0=out_wwm(j,1) !Hs
-#else
-        tmp0=wave_hs(j) !Hs
-#endif
+!#else
+!        tmp0=wave_hs(j) !Hs
+!#endif
         zsurf=0.2d0*tmp0
 #else
         zsurf=dzz(nvrt)
@@ -6108,7 +6109,8 @@ real (rkind) :: aux                               ! ustar
             enddo !l
           endif !i34       
 
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#ifdef USE_WWM
 !Error: Stokes drift should be also inside vegetation terms?
           if(RADFLAG.eq.'VOR'.and.idry_e(ie)==0) then
             sum1=0.d0; sum2=0.d0 !in eframe
@@ -6126,7 +6128,7 @@ real (rkind) :: aux                               ! ustar
             dot3=(dldxy(id,1,ie)*sum1+dldxy(id,2,ie)*sum2)/dble(i34(ie))
             qel(i)=qel(i)+dt*dot3*area(ie)
           endif
-#endif
+#endif /*USE_WWM*/
 
 !...      I_7: Impose Point Source volume
           qel(i)=qel(i)+dt/real(i34(ie),rkind)*vsource(ie)           
@@ -6221,7 +6223,8 @@ real (rkind) :: aux                               ! ustar
               Unbar=bigu(1,isd)*snx(isd)+bigu(2,isd)*sny(isd)
               tmp0=(1-thetai)*dt*distj(isd)*Unbar/2.d0
               !Overwrite tmp0 for vortex formulation
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#ifdef USE_WWM
               if(RADFLAG.eq.'VOR') then
                 sum1=0.d0 !integral; x-comp.
                 sum2=0.d0 !integral
@@ -6236,10 +6239,10 @@ real (rkind) :: aux                               ! ustar
                 Unbar=sum1*snx(isd)+sum2*sny(isd)
                 tmp0=thetai*dt*distj(isd)*Unbar/2.d0
               endif !RADFLAG
-#endif/*USE_WWM*/
+#endif /*USE_WWM*/
 
               qel(i)=qel(i)-tmp0 !(1-thetai)*dt*distj(isd)*Unbar/2
-            endif !I_5
+            endif !I_5: isbs
           enddo !l=1,2 sides
         endif !isbnd: bnd node i
 
@@ -6929,7 +6932,8 @@ real (rkind) :: aux                               ! ustar
             if(islip==0) then !free slip
               vnorm=0.d0 !for most cases
               !Normal component from vortex formulation
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM 
               if(RADFLAG.eq.'VOR') then
                 vnorm=stokes_hvel_side(1,k,j)*snx(j)+stokes_hvel_side(2,k,j)*sny(j)+ &
      &roller_stokes_hvel_side(1,k,j)*snx(j)+roller_stokes_hvel_side(2,k,j)*sny(j)
@@ -7161,7 +7165,8 @@ real (rkind) :: aux                               ! ustar
 !     Add Stokes drift to horizontal vel for wvel and transport; will restore
 !     after transport. Temporarily save original Eulerian vel s[uv]2 as bcc for
 !     F.V. calculation below
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM 
       if(RADFLAG.eq.'VOR') then
         bcc(1,:,1:nsa)=su2
         bcc(2,:,1:nsa)=sv2
@@ -7181,7 +7186,8 @@ real (rkind) :: aux                               ! ustar
 
 !$OMP workshare
       we=0.d0 !for dry and below bottom levels; in eframe if ics=2
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM 
       dr_dxy=0.d0 !Eulerian wvel
 #endif
       flux_adv_vface=-1.d34 !used in transport; init. as flags
@@ -7243,7 +7249,8 @@ real (rkind) :: aux                               ! ustar
           if(ics==1) then
             ubar=ubar+su2(kbs(isd),isd)*i34inv 
             vbar=vbar+sv2(kbs(isd),isd)*i34inv
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM 
             ubar2=ubar2+bcc(1,kbs(isd),isd)*i34inv
             vbar2=vbar2+bcc(2,kbs(isd),isd)*i34inv
 #endif
@@ -7251,7 +7258,8 @@ real (rkind) :: aux                               ! ustar
             call project_hvec(su2(kbs(isd),isd),sv2(kbs(isd),isd),sframe2(:,:,isd),eframe(:,:,i),vn1,vn2)
             ubar=ubar+vn1*i34inv
             vbar=vbar+vn2*i34inv
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM 
             call project_hvec(bcc(1,kbs(isd),isd),bcc(2,kbs(isd),isd),sframe2(:,:,isd),eframe(:,:,i),vn1,vn2)
             ubar2=ubar2+vn1*i34inv
             vbar2=vbar2+vn2*i34inv
@@ -7268,13 +7276,15 @@ real (rkind) :: aux                               ! ustar
           ubed=swild(1); vbed=swild(2); wbed=swild(3)
           bflux0=ubed*sne(1,kbe(i))+vbed*sne(2,kbe(i))+wbed*sne(3,kbe(i)) !normal bed vel.
           we(kbe(i),i)=wbed
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM 
           dr_dxy(1,kbe(i),i)=wbed
 #endif
         else
           !Error: /=0 for 2D (but OK b/cos fluxes are 0 below for transport)
           we(kbe(i),i)=(av_bdef2-av_bdef1)/dt-dhdx*ubar-dhdy*vbar
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM 
           dr_dxy(1,kbe(i),i)=(av_bdef2-av_bdef1)/dt-dhdx*ubar2-dhdy*vbar2
 #endif
         endif
@@ -7295,7 +7305,8 @@ real (rkind) :: aux                               ! ustar
             vnor1=su2(l,jsj)*snx(jsj)+sv2(l,jsj)*sny(jsj)
             vnor2=su2(l+1,jsj)*snx(jsj)+sv2(l+1,jsj)*sny(jsj)
             sum1=sum1+ssign(j,i)*(zs(max(l+1,kbs(jsj)),jsj)-zs(max(l,kbs(jsj)),jsj))*distj(jsj)*(vnor1+vnor2)/2.d0
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM 
             vnor1=bcc(1,l,jsj)*snx(jsj)+bcc(2,l,jsj)*sny(jsj)
             vnor2=bcc(1,l+1,jsj)*snx(jsj)+bcc(2,l+1,jsj)*sny(jsj)
             sum2=sum2+ssign(j,i)*(zs(max(l+1,kbs(jsj)),jsj)-zs(max(l,kbs(jsj)),jsj))*distj(jsj)*(vnor1+vnor2)/2.d0
@@ -7307,7 +7318,8 @@ real (rkind) :: aux                               ! ustar
               ubar1=ubar1+su2(l+1,jsj)*i34inv 
               vbar=vbar+sv2(l,jsj)*i34inv 
               vbar1=vbar1+sv2(l+1,jsj)*i34inv 
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM
               ubar2=ubar2+bcc(1,l,jsj)*i34inv 
               ubar3=ubar3+bcc(1,l+1,jsj)*i34inv 
               vbar2=vbar2+bcc(2,l,jsj)*i34inv 
@@ -7320,7 +7332,8 @@ real (rkind) :: aux                               ! ustar
               vbar=vbar+vn2*i34inv
               ubar1=ubar1+tt1*i34inv
               vbar1=vbar1+ss1*i34inv
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM
               call project_hvec(bcc(1,l,jsj),bcc(2,l,jsj),sframe2(:,:,jsj),eframe(:,:,i),vn1,vn2)
               call project_hvec(bcc(1,l+1,jsj),bcc(2,l+1,jsj),sframe2(:,:,jsj),eframe(:,:,i),tt1,ss1)
               ubar2=ubar2+vn1*i34inv
@@ -7335,7 +7348,8 @@ real (rkind) :: aux                               ! ustar
           if(l==kbe(i)) then
             bflux=(av_bdef2-av_bdef1)/dt
             if(imm==2) bflux=bflux0
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM
             bflux2=bflux
 #endif
           else
@@ -7344,14 +7358,16 @@ real (rkind) :: aux                               ! ustar
             !large w-vel, but flux balance is not affected (nor is
             !transport)
             bflux=ubar*sne(1,l)+vbar*sne(2,l)+we(l,i)*sne(3,l)
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM 
             bflux2=ubar2*sne(1,l)+vbar2*sne(2,l)+dr_dxy(1,l,i)*sne(3,l)
 #endif
           endif
 
           we(l+1,i)=(-sum1-(ubar1*sne(1,l+1)+vbar1*sne(2,l+1))*area_e(l+1) + &
      &bflux*area_e(l))/sne(3,l+1)/area_e(l+1)
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM 
           dr_dxy(1,l+1,i)=(-sum2-(ubar3*sne(1,l+1)+vbar3*sne(2,l+1))*area_e(l+1) + &
      &bflux2*area_e(l))/sne(3,l+1)/area_e(l+1)
 #endif
@@ -8292,7 +8308,8 @@ real (rkind) :: aux                               ! ustar
       if(myrank==0) write(16,*)'done solving transport equation'
 
 !     Restore 3D Eulerian vel
-#if defined USE_WWM || defined UFS_WW3
+!#if defined USE_WWM || defined UFS_WW3
+#if defined USE_WWM 
       if(RADFLAG.eq.'VOR') then
         su2=su2-stokes_hvel_side(1,:,:)
         sv2=sv2-stokes_hvel_side(2,:,:)
@@ -9495,7 +9512,7 @@ real (rkind) :: aux                               ! ustar
            ! Northward wave radiation stress
            call writeout_nc(id_out_ww3(3),'rsyy',1,1,npa,rsyy)
         end if
-#endif
+#endif /*UFS_WW3*/
 
 #ifdef USE_MARSH
         if(iof_marsh(1)==1) call writeout_nc(id_out_var(noutput+5), &
