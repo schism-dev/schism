@@ -183,7 +183,7 @@
 
 !-----------------------------------------------------------------------
 ! Wave coupling option. If USE_WWM, this will be overruled by WWM's .nml.
-! If USE_WW3, this flag decides the coupling option (LON, VOR)
+! If UFS_WW3, this flag decides the coupling option (LON, VOR)
 !-----------------------------------------------------------------------
   RADFLAG = 'LON'
 
@@ -547,7 +547,7 @@
   small_elad = 1.e-4  !small (inactive at the moment)
 
 !-----------------------------------------------------------------------
-! Atmos. option. Use nws=2 and USE_ATMOS for coupling with atmospheric model.
+! Atmos. option. Use nws=2 and UFS_ATMOS for coupling with atmospheric model.
 ! If nws=0, no atmos. forcing is applied. If nws=1, atmos.
 ! variables are read in from wind.th. If nws=2, atmos. variables are
 ! read in from sflux_ files.
@@ -558,7 +558,7 @@
 !
 ! Stress calculation:
 ! If nws=2, ihconsv=1 and iwind_form=0, the stress is calculated from heat exchange
-! routine; in this case USE_ATMOS cannot be on.
+! routine; in this case UFS_ATMOS cannot be on.
 ! Otherwise if iwind_form=-1, the stress is calculated from Pond & Pichard formulation;
 ! if iwind_form=1, Hwang (2018) formulation (Cd tapers off at high wind).
 ! If WWM is enabled and icou_elfe_wwm>0 and iwind_form=-2 or -3, stress is overwritten by WWM:

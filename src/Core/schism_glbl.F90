@@ -517,7 +517,7 @@ module schism_glbl
   real(rkind),save,allocatable :: srad_o(:)
   real(rkind),save,allocatable :: saltide(:)
 
-#ifdef USE_CICE
+#ifdef UFS_CICE
   !(npa). salinity flux due to ice melting/growth [psu/s].:
   real(rkind),save,allocatable :: salinity_flux(:)
   real(rkind),save,allocatable :: sflux_o(:)
@@ -546,7 +546,7 @@ module schism_glbl
   real(rkind), allocatable, save, target :: fluxevp_ocn(:) 
   real(rkind), allocatable, save, target :: sflux_ocn(:)   
   real(rkind), allocatable, save, target :: srad_ocn(:)    
-#endif /*USE_CICE*/
+#endif /*UFS_CICE*/
 
   logical,save,allocatable :: lhas_ice(:)
   logical,save :: lice_free_gb

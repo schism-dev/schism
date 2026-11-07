@@ -88,6 +88,9 @@ subroutine ice_thermodynamics
   &shum2(i),preslev,precrate,ug,ustar,T_oc,S_oc,h_ml0,dt_ice,iplg(i), &
   &fresh_wa_flux(i),net_heat_flux(i))
 
+    !Change unit of fresh_wa_flux to kg/s/m/m (to be consistent with other ice models)
+    fresh_wa_flux(i)=fresh_wa_flux(i)*rho0
+
 !    write(99,*)'After therm_ice:',t_oi(i),fresh_wa_flux(i),net_heat_flux(i),ice_tr(1:3,i)
 
 !    m_ice(i)=h

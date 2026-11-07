@@ -9,6 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
+- ``: (1) changed unit of fresh_wa_flux in USE_ICE to kg/s/m/m to be consistent with other ice models; (2) USE_WW3, USE_ATMOS, USE_CICE =>UFS_WW3, UFS_ATMOS, UFS_CICE (also updated SCHISM cap)
 - `449df95b` (4 Nov 2026): removed and renamed ibdef as nbdef; added ibdef_start;
 - `a3e58bff` (19 Oct 2026): code now directly output staout.nc;
 - `8653f1c3` (28 May 2026): added optional I/O parameter 'chunk_size_vrt' to control chunk size for 3D scribe outputs;

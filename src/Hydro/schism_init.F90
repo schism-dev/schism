@@ -727,7 +727,7 @@
 !        call get_param('param.in','coriolis',2,itmp,coricoef,stringvalue)
       endif
 
-!     Wind (use nws=4 and USE_ATMOS for coupling directly to atmos model)
+!     Wind (use nws=4 and UFS_ATMOS for coupling directly to atmos model)
       if(nws<-1.or.nws>6.or.nws==3) then
         write(errmsg,*)'Unknown nws',nws
         call parallel_abort(errmsg)
@@ -781,9 +781,8 @@
       if(ihconsv/=0.and.myrank==0) write(16,*)'Turb. Fluxes: Zeng et al.(98)'
 #endif
 
-#ifdef USE_ATMOS
-      if(nws/=4) call parallel_abort('INIT: USE_ATMOS must use nws=4')
-!      if(iwind_form==0) call parallel_abort('INIT: USE_ATMOS must not have iwind_form==0')
+#ifdef UFS_ATMOS
+      if(nws/=4) call parallel_abort('INIT: UFS_ATMOS must use nws=4')
 #endif
 
       if(ihconsv/=0) then
@@ -1542,7 +1541,7 @@
      &call parallel_abort('INIT: mass correction needs itr_met=3 or 4')
 
 !     Wave model arrays
-#if defined USE_WWM || defined USE_WW3
+#if defined USE_WWM || defined UFS_WW3
       if(iorder==0) then
         allocate(out_wwm(npa,35),out_wwm_windpar(npa,10),   &
                & out_wwm_rol(npa,35),taub_wc(npa), &
@@ -1661,7 +1660,7 @@
 #endif /*USE_WWM*/
 
 !Additional WW3 arrays
-#ifdef  USE_WW3
+#ifdef  UFS_WW3
       if(iorder==0) then
         allocate(wave_hs(npa),wave_dir(npa),wave_tm1(npa),wave_wnm(npa),wave_pres(npa),wave_stokes_x(npa), &
      &wave_stokes_y(npa),wave_ocean_flux_x(npa),wave_ocean_flux_y(npa), &
@@ -1672,7 +1671,7 @@
         wave_stokes_x=0.d0; wave_stokes_y=0.d0; wave_ocean_flux_x=0.d0; wave_ocean_flux_y=0.d0
         wave_flux_friction_x=0.d0; wave_flux_friction_y=0.d0; wave_orbu=0.d0; wave_orbv=0.d0
       endif !iorder=0
-#endif /*USE_WW3*/
+#endif /*UFS_WW3*/
 
 #ifdef USE_TIMOR
 !     Allocate TIMOR arrays
@@ -1716,7 +1715,7 @@
          allocate(sink0(npa),fraction0(npa),kk10(npa),kk20(npa))
 #endif
 
-#ifdef USE_CICE
+#ifdef UFS_CICE
         allocate(aice(npa),tau_oi(2,npa),fresh_wa_flux(npa),salinity_flux(npa),net_heat_flux(npa), &
                srad_o(npa),srad_th_ice(npa),srad_ocn(npa),sflux_ocn(npa),fluxprc_ocn(npa),fluxevp_ocn(npa),stat=istat)
         if(istat/=0) call parallel_abort('INIT: ice frac allocation failure')
@@ -2265,7 +2264,7 @@
 #endif      
 
 !... Read lat/lon for spectral spatial interpolation in WWM or WW3
-#if defined USE_WWM || defined USE_WW3
+#if defined USE_WWM || defined UFS_WW3
       if(myrank==0) then
         inquire(file=in_dir(1:len_in_dir)//'hgrid.ll',exist=lexist)
         if(lexist) then
@@ -3569,12 +3568,6 @@
           enddo !i
         endif
       endif !nws/=0
-
-!     Alloc. the large array for nws=4-6 option (may consider changing to unformatted binary read)
-!      if(nws==4) then
-!        allocate(rwild(np_global,3),stat=istat)
-!        if(istat/=0) call parallel_abort('MAIN: failed to alloc. (71)')
-!      endif !nws=4
 
 !     Heat and salt conservation flags
       if(ihconsv/=0) then
@@ -6591,7 +6584,7 @@
       deallocate(nwild2)
 
 ! MP from KM
-#if defined USE_WWM || defined USE_WW3
+#if defined USE_WWM || defined UFS_WW3
       ! Computation of the bed slope at nodes
       allocate(tanbeta_x(npa),tanbeta_y(npa),stat=istat)
       call compute_bed_slope !iof(198) = 1

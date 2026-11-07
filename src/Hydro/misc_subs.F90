@@ -298,14 +298,14 @@
         wtime1=ninv*wtiminc
         wtime2=(ninv+1)*wtiminc
 
-#ifdef USE_ATMOS
-!         Init
+#ifdef UFS_ATMOS
+!         Init (some are init'ed in _init)
           windx1=0._rkind; windy1=0._rkind; windx2=0._rkind; windy2=0._rkind
           pr1=real(1.e5,rkind); pr2=real(1.e5,rkind)
           airt1=20._rkind; airt2=20._rkind
           shum1=0._rkind; shum2=0._rkind
 
-#else /*not USE_ATMOS*/
+#else /*not UFS_ATMOS*/
         !Read 1st record
         if(myrank==0) then
           j=nf90_open(in_dir(1:len_in_dir)//'atmos.nc',NF90_NOWRITE,ncid_atmos)
@@ -407,7 +407,7 @@
             shum2(nd)=rwild(5,i)
           endif
         enddo !i
-#endif /*USE_ATMOS*/
+#endif /*UFS_ATMOS*/
       endif !nws=4
 
       if(nws==2) then
@@ -981,9 +981,9 @@
 
 !...  Initialize heat budget model - this needs to be called after nodalvel as
 !     (uu2,vv2) are needed
-!     For USE_ATMOS, sflux etc are init'ed as 0 in _init
+!     For UFS_ATMOS, sflux etc are init'ed as 0 in _init
       if(ihconsv/=0.and.(nws==2.or.nws==4)) then
-        if(nws==4) then !include USE_ATMOS
+        if(nws==4) then !include UFS_ATMOS
           !surf_fluxes2 assumes all vars in sflu*.nc are available now
           call surf_fluxes2 (wtime1,windx1,windy1,pr1,airt1,shum1, &
      &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
@@ -9274,7 +9274,7 @@
   
       end function signa2
 
-!     This routine is called from ESMF directly to be used for USE_WW3
+!     This routine is called from ESMF directly to be used for UFS_WW3
 !     Compute wave force using Longuet-Higgins Stewart formulation
       subroutine compute_wave_force_lon(RSXX0,RSXY0,RSYY0)
       use schism_glbl, only : rkind,nsa,np,npa,nvrt,rho0,idry,idry_s,dp,dps,hmin_radstress, &

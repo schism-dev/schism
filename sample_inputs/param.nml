@@ -180,7 +180,7 @@
 
 !-----------------------------------------------------------------------
 ! Wave coupling option. If USE_WWM, this will be overruled by WWM's .nml.
-! If USE_WW3, this flag decides the coupling option (LON, VOR)
+! If UFS_WW3, this flag decides the coupling option (LON, VOR)
 !-----------------------------------------------------------------------
   RADFLAG = 'LON'
 
@@ -509,7 +509,7 @@
   small_elad = 1.e-4  !small (inactive at the moment)
 
 !-----------------------------------------------------------------------
-! Atmos. option. Use nws=4 and USE_ATMOS for coupling with atmospheric model.
+! Atmos. option. Use nws=4 and UFS_ATMOS for coupling with atmospheric model.
 ! If nws=0, no atmos. forcing is applied. If nws=1, atmos.
 ! variables are read in from wind.th. If nws=2, atmos. variables are
 ! read in from sflux_ files.
