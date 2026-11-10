@@ -748,10 +748,6 @@
         if(model_type_pahm/=1.and.model_type_pahm/=10) call parallel_abort('INIT: check model_type_pahm')
       endif
 
-!      if(nws==3) then
-        !Error:overwrite wtiminc by coupling step
-!      endif !nws==3
-
 !      iwind_form=0 !init.
       if(nws/=0) then
         if(iwind_form<-3.or.iwind_form>1) then
@@ -2320,7 +2316,6 @@
       endif       
 #endif
 
-!Error: large I/O
 !...  Classify interior/exterior bnd node and calculate edge angles (for WWM only)
 !...  WARNING: if WWM is used, the _land_ b.c. part of hgrid.gr3 must have flags for (exterior) land (0) and
 !...           island (1) bnds, and no open bnd is allowed on islands
@@ -5249,7 +5244,7 @@
       CALL read_sed_input
 !     Allocation of sediment arrays
       CALL sed_alloc
-!Error: the following is redundant with read_sed_input
+
       if(itur==5) iwsett(irange_tr(1,5):irange_tr(2,5))=1 !171217
 #endif /*USE_SED*/
 
@@ -5562,17 +5557,9 @@
 
           case(0)
             !Model sets own i.c.
-!Error: wrong if both ECO and FABM on
 #ifdef USE_ECO
             if(mm==6) call bio_init !init. tr_nd
 #endif
-!#ifdef USE_FABM
-!            if(mm==11) call fabm_schism_init_concentrations()
-!#else
-!            write(errmsg,*)'INIT: type 0 i.c.:',mm
-!            call parallel_abort(errmsg)
-!#endif
-!#endif
 
 #ifdef USE_DVD
             if(mm==12) then

@@ -999,7 +999,6 @@
                 if(ie<0) then !outside 1-tier aug. domain
                   ie=iabs(ie) !global elem.
 
-!Error: add PRODUCTION CPP for the following 2 checks?
 #ifdef DEBUG
                   if(iegl2(1,ie)/=myrank) then
                     write(errmsg,*)'TVD: element outside:',ie
@@ -1420,7 +1419,6 @@
 !                call parallel_abort(errmsg)
 !              endif
 
-!Error: PRODUCTION
 #ifdef DEBUG
               if(1.d0-dtb_by_bigv*psumtr(jj)<0.d0) then
                 write(errmsg,*)'Courant # condition violated:',ielg(i),k,1-dtb_by_bigv*psumtr(jj),jj,dtb,bigv
@@ -1906,7 +1904,6 @@
           ! Limit wsett to avoid char line out of boundary 
           do k=kbe(i),nvrt 
             tmp=0.9*(ze(nvrt,i)-ze(kbe(i),i))/dt !>0; safety factor added
-!Error: to assert
             if(tmp<=0) call parallel_abort('Transport:tmp<=0')
             swild(k)=max(-tmp,min(tmp,wsett(m,k,i)))
           enddo !k

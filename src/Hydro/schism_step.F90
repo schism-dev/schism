@@ -1983,7 +1983,6 @@ real (rkind) :: aux                               ! ustar
         do i=1,nea
           evap=sum(fluxevp(elnode(1:i34(i),i)))/real(i34(i),rkind)
           precip=sum(fluxprc(elnode(1:i34(i),i)))/real(i34(i),rkind)
-          !Error: put evap into vsink 
           vsource(i)=vsource(i)+(precip-evap)/rho0*area(i) !m^3/s
         enddo !i
       endif !isconsv/=0
@@ -3021,7 +3020,6 @@ real (rkind) :: aux                               ! ustar
         if(prho(1,j)<-98.d0) call parallel_abort('STEP: Impossible dry 2')
 
 !       Wet node (and >1 layer); compute layer thickness etc.
-!       Error: use ufg?
         zt=znl(kbp(j),j)+veg_h(j) !top of SAV
         do k=kbp(j)+1,nvrt
           dzz(k)=znl(k,j)-znl(k-1,j)
@@ -3123,7 +3121,7 @@ real (rkind) :: aux                               ! ustar
 
 !	b.c. (computed using values from previous time except wind)
         ! At the surface
-        q2fs  = 0.5d0*16.6d0**(2.d0/3.d0)*sqrt(tau(1,j)**2.d0+tau(2,j)**2.d0) !Eq. (10) of Zhang & Baptista (2008)
+        q2fs  = 0.5d0*16.6d0**(2.d0/3.d0)*sqrt(tau(1,j)**2.d0+tau(2,j)**2.d0)
 #ifdef USE_WWM
         ! Adding wave breaking-induced turbulence (T. Guérin) as a partial sink of momentum; Unit [m2.s-2].
         ! By default, it is fixed at 15% (Feddersen, 2012), but can be adjusted in param.in depending on the wave breaking type.
@@ -3141,10 +3139,8 @@ real (rkind) :: aux                               ! ustar
         q2fs  = max(q2fs,q2min)
         q2bot = max(q2bot,q2min)
 
-        ! Bottom mixing length (T. Guérin)
-        xlbot=max(xlmin2(j),min(2.5_rkind,xlsc0*dzz(kbp(j)+1))*0.4_rkind) !"2.5" to prevent over-mixing
-!Error: z0b_save may not be init'ed
-!        xlbot = max(xlmin2(j),min(2.5_rkind,xlsc0*z0b_save(j))*0.4_rkind)
+        ! Bottom mixing length (T. Guérin); "2.5" to prevent over-mixing
+        xlbot=max(xlmin2(j),min(2.5_rkind,xlsc0*dzz(kbp(j)+1))*0.4_rkind)
 
         ! Surface mixing length (T. Guérin)
 #ifdef USE_WWM
@@ -3388,7 +3384,6 @@ real (rkind) :: aux                               ! ustar
         if(prho(1,j)<-98) call parallel_abort('STEP: Impossible dry 2')
 
 !       Wet node (and >1 layer); compute layer thickness etc.
-!       Error: use ufg?
         do k=kbp(j)+1,nvrt
           dzz(k)=znl(k,j)-znl(k-1,j)
           dudz=(uu2(k,j)-uu2(k-1,j))/dzz(k)
@@ -6118,8 +6113,6 @@ real (rkind) :: aux                               ! ustar
             do m=1,i34(ie) !wet sides
               isd=elside(m,ie)
               do k=kbs(isd),nvrt-1
-!                sum1=sum1+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(1,k+1,isd)+stokes_hvel_side(1,k,isd))/2.d0 !/3.d0
-!                sum2=sum2+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(2,k+1,isd)+stokes_hvel_side(2,k,isd))/2.d0 !/3.d0
                 sum1=sum1+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(1,k+1,isd)+stokes_hvel_side(1,k,isd)+ &
      &roller_stokes_hvel_side(1,k+1,isd)+roller_stokes_hvel_side(1,k,isd))/2.d0 
                 sum2=sum2+(zs(k+1,isd)-zs(k,isd))*(stokes_hvel_side(2,k+1,isd)+stokes_hvel_side(2,k,isd)+ &
@@ -6624,7 +6617,6 @@ real (rkind) :: aux                               ! ustar
       swild98(1,:,:)=su2(:,:)
       swild98(2,:,:)=sv2(:,:)
       ! Storing the barotropic gradient for outputting purpose		  
-      !Error: grav
       bpgr(:,1) = -grav*(1-thetai)*deta1_dx(:)-grav*thetai*deta2_dx(:)
       bpgr(:,2) = -grav*(1-thetai)*deta1_dy(:)-grav*thetai*deta2_dy(:)
 !$OMP end workshare

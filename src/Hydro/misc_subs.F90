@@ -9433,7 +9433,7 @@
         REAL(rkind) :: Uint, Vint, Urint, Vrint
         REAL(rkind) :: USTOKES_loc(NVRT), VSTOKES_loc(NVRT), UrSTOKES_loc(NVRT), VrSTOKES_loc(NVRT)
         real(rkind) :: tmp0, tmp1, tmp2, ztmp, ubar, vbar, dhdx, dhdy
-        real(rkind) :: stokes_wvel_elem(nvrt,nea), ws_tmp1(nvrt,nsa),ws_tmp2(nvrt,nsa)
+        real(rkind) :: stokes_wvel_elem_bot(nea), ws_tmp1(nvrt,nsa),ws_tmp2(nvrt,nsa)
         real(rkind) :: dr_dxy_loc(2,nvrt,nsa)
 
 !...    Computing Stokes drift horizontal velocities at nodes and pressure term
@@ -9530,8 +9530,7 @@
 
 !...    Compute _bottom_ Stokes drift w-vel. at elements
 !       Used only first 3 nodes of quad
-!Error: can remove vertical index in stokes_wvel_elem
-        stokes_wvel_elem= 0.D0
+        stokes_wvel_elem_bot= 0.D0
         DO ie = 1,nea
           IF(idry_e(ie) == 1) CYCLE
 
@@ -9550,7 +9549,7 @@
               &+stokes_hvel(2,max(kbp(n3),kbe(ie)),n3))/3.D0 !average bottom stokes-y-vel
           dhdx=dp(n1)*dldxy(1,1,ie)+dp(n2)*dldxy(2,1,ie)+dp(n3)*dldxy(3,1,ie) !eframe
           dhdy=dp(n1)*dldxy(1,2,ie)+dp(n2)*dldxy(2,2,ie)+dp(n3)*dldxy(3,2,ie)
-          stokes_wvel_elem(kbe(ie),ie)=-dhdx*ubar-dhdy*vbar
+          stokes_wvel_elem_bot(ie)=-dhdx*ubar-dhdy*vbar
         END DO !nea
 
 !...    Compute _bottom_ Stokes w-vel. at nodes
@@ -9563,7 +9562,7 @@
           DO j = 1,nne(ip)
             ie = indel(j,ip)
             IF(idry_e(ie)==0) THEN
-              stokes_wvel(kbp(ip),ip)=stokes_wvel(kbp(ip),ip)+stokes_wvel_elem(kbe(ie),ie)*area(ie)
+              stokes_wvel(kbp(ip),ip)=stokes_wvel(kbp(ip),ip)+stokes_wvel_elem_bot(ie)*area(ie)
             END IF
             tmp0 = tmp0 + area(ie) !>0
           END DO !j
