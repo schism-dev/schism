@@ -300,7 +300,7 @@
        !BM Wave asymmetry computations
        REAL(rkind), ALLOCATABLE :: U_crest(:),U_trough(:),T_crest(:),& ! (nea)
                                    T_trough(:)
-       REAL(rkind), ALLOCATABLE :: Uorbi_elfrink(:,:) ! (nea,ech_uorb+1)
+       REAL(rkind), ALLOCATABLE :: Uorbi_elfrink(:,:) ! (nea,0:ech_uorb)
 
 
 !--------------------------------------------------------------------!

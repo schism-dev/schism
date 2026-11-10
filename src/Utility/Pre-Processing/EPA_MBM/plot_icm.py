@@ -12,8 +12,8 @@ StartTs=[datenum(1991,1,1),datenum(1991,1,1),]
 xm=None  #time range for plotting
 
 #variables
-mvars=['temp', 'salt',    'chla','DO','TN','TP','NO3',  'NH4', 'PO4', 'DOC','POC','PON','POP','RPOC','LPOC','RPON','LPON','RPOP','LPOP','PB1', 'PB2', 'PB3', 'DON','DOP'] #model variables
-ovars=['WTEMP','SALINITY','CHLA','DO','TN','TP','NO23F','NH4F','PO4F','DOC','PC', 'PN', 'PP', 'PC',  'PC',  'PN',   'PN', 'PP',  'PP',  'CHLA','CHLA','CHLA','DON','DOP'] #observation
+mvars=['temp', 'salt',    'chla','DO','TN','TP','NO3',  'NH4', 'PO4', 'DOC','POC','PON','POP','RPOC','LPOC','RPON','LPON','RPOP','LPOP','PB1', 'PB2', 'PB3', 'DON','DOP','PIP'] #model variables
+ovars=['WTEMP','SALINITY','CHLA','DO','TN','TP','NO23F','NH4F','PO4F','DOC','PC', 'PN', 'PP', 'PC',  'PC',  'PN',   'PN', 'PP',  'PP',  'CHLA','CHLA','CHLA','DON','DOP','PIP'] #observation
 
 #stations
 regions=['channel','shoal','WT','ET','patuxent','potomac','rappahannock','york','james',] #main stations
@@ -121,8 +121,8 @@ if iflags[0]==1:
                          for oti,oyi in zip(ot,oy): fp=(abs(mtime-oti)<=0.5)*(~isnan(myi)); myii=myi[fp]; fmyi.append(myii[argmin(abs(myii-oyi))]) #find best match
                          s=get_stat(array(fmyi),oy); [S.attr(i).append(s.attr(i)) for i in ['R','ME','MAE','RMSD']]; 
                       S.run.append(run); S.region.append(region); S.layer.append(layer); S.station.append(station); S.var.append(mvar)
-           plot(ots,oys,'r^',ms=2); lstr.append('Obs: {}_surface'.format(mvar)) #plot surf. obs
-           plot(otb,oyb,linestyle='None',color='orange',marker='s',ms=2); lstr.append('Obs: {}_bottom'.format(mvar)) #plot bott. obs
+           if 'S' in layers: plot(ots,oys,'r^',ms=2); lstr.append('Obs: {}_surface'.format(mvar)) #plot surf. obs
+           if 'B' in layers: plot(otb,oyb,linestyle='None',color='orange',marker='s',ms=2); lstr.append('Obs: {}_bottom'.format(mvar)) #plot bott. obs
        
            #note
            setp(gca(),xticks=xts,xticklabels=xls,xlim=xm); gca().xaxis.grid('on')
@@ -133,6 +133,7 @@ if iflags[0]==1:
        
        #save fig
        sname=sdir+'/icm_{}_{}'.format(region,mvar)
+       if len(layers)==1: sname=sname+'_'+layers[0]
        #show(block=False); sys.exit()
        #savefig(sname+'.pp')
        savefig(sname,dpi=300); close()

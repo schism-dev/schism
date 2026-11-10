@@ -1,7 +1,7 @@
 module gen_modules_clock
   !combining RT and Lars version
   !Used in USE_MICE
-  use schism_glbl
+  use schism_glbl, only : rkind, dt, start_year, start_month, start_day, start_hour
   use schism_msgp, only : myrank
   implicit none
   save

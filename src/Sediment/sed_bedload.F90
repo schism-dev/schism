@@ -825,7 +825,7 @@
 !--------------------------------------------------------------------
 
       USE sed_mod
-      USE schism_glbl, ONLY : rkind,i34,nea,idry_e,xnd,ynd,area
+      USE schism_glbl, ONLY : rkind,i34,nea,idry_e,xnd,ynd,area,elnode
 
       IMPLICIT NONE
 
@@ -837,8 +837,8 @@
         IF(idry_e(i)==1) CYCLE
         dist_tmp=0.0d0
         DO j=1,i34(i)-1
-          dx=xnd(j+1)-xnd(j)
-          dy=ynd(j+1)-ynd(j)
+          dx=xnd(elnode(j+1,i))-xnd(elnode(j,i))
+          dy=ynd(elnode(j+1,i))-ynd(elnode(j,i))
           dist_tmp=dist_tmp+(sqrt(dx*dx+dy*dy)/i34(i))
         END DO
         FN_r=sqrt(FX_r(i)*FX_r(i) + FY_r(i)*FY_r(i))
@@ -1087,7 +1087,7 @@
 !- Arguments --------------------------------------------------------
       REAL(8), INTENT(IN) :: H,wave_per,w_dir,depth,dhxi,dhyi
       REAL(8), INTENT(OUT) :: Ucrest,Utrough,Tcrest,Ttrough
-      REAL(8), DIMENSION(ech_uorb+1), INTENT(OUT) :: Uorbi
+      REAL(8), DIMENSION(0:ech_uorb), INTENT(OUT) :: Uorbi
 !- Constants --------------------------------------------------------
       REAL(8), PARAMETER :: g = 9.80665d0
       REAL(8), PARAMETER :: a1 = 0.38989d0
@@ -1815,7 +1815,7 @@
 !- Arguments --------------------------------------------------------
       INTEGER, INTENT(IN) :: inea
       REAL(rkind), INTENT(IN) :: wave_per,wave_dir, Uc, Ut
-      REAL(rkind), DIMENSION(ech_uorb+1), INTENT(IN) :: Uorbi
+      REAL(rkind), DIMENSION(0:ech_uorb), INTENT(IN) :: Uorbi
       REAL(rkind), INTENT(OUT) :: Qaccx,Qaccy
 !- Local variables --------------------------------------------------
       INTEGER :: t
@@ -1823,7 +1823,7 @@
       REAL(rkind) :: cff1,cff2,acc3,acc2,w_asym,aspike,Qacc
       REAL(rkind) :: abskb,fw,osmgd,ks,d50,tau_loc,theta_loc,&
                      ratio,dstar,theta_cr
-      REAL(rkind), DIMENSION(ech_uorb) :: acc
+      REAL(rkind), DIMENSION(0:ech_uorb-1) :: acc
 !--------------------------------------------------------------------
 
       d50=bottom(inea,isd50) ! Median grain size (m)

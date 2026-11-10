@@ -88,7 +88,7 @@ module schism_glbl
 
   !Parameters from param.nml
   integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,iwindoff, &
-                  &ibc,ibdef,ihorcon,nstep_wwm,icou_elfe_wwm, &
+                  &ibc,nbdef,ibdef_start,ihorcon,nstep_wwm,icou_elfe_wwm, &
                   &fwvor_advxy_stokes,fwvor_advz_stokes,fwvor_gradpress,fwvor_breaking, &
                   &fwvor_streaming,fwvor_wveg,fwvor_wveg_NL,cur_wwm,wafo_obcramp, &
                   &iwind_form,irec_nu,itur,icompute_cpsi3,iscnd_coeff,ihhat,inu_elev, &
@@ -160,7 +160,7 @@ module schism_glbl
      &noutput,it_main,iths_main,id_out_var(2000),id_out_ww3(100),ncount_2dnode, &
      &ncount_2delem,ncount_2dside,ncount_3dnode,ncount_3delem,ncount_3dside,nsend_varout, &
      &alt1_ncount_3delem
-  integer,save,allocatable :: srqst7(:),ndims_schout(:),nouts_schout(:)
+  integer,save,allocatable :: srqst7(:),ndims_schout(:),nouts_schout(:),id_sta(:)
   real(rkind),save :: time_stamp !simulation time in sec
   !Send var buffers
   real(4),save,allocatable :: varout_3dnode(:,:,:),varout_3delem(:,:,:),varout_3dside(:,:,:)
@@ -177,7 +177,7 @@ module schism_glbl
   character(len= 4),save :: a_4
   integer,save :: ncid_nu(natrm),ncid_tr3D(natrm),ncid_elev2D,ncid_uv3D,irec0_schout, &
  &istack0_schout(2),ncid_source,ncid_schout(8,2),nrec_schout,nstride_schout, &
- &ncid_atmos,ncid_ref_ts
+ &ncid_atmos,ncid_ref_ts,ncid_sta,nsta_dim,nvrt2_dim,time2_dim
         
   ! ADT for global-to-local linked-lists
   type :: llist_type
@@ -519,7 +519,7 @@ module schism_glbl
   real(rkind),save,allocatable :: srad_o(:)
   real(rkind),save,allocatable :: saltide(:)
 
-#ifdef USE_CICE
+#ifdef UFS_CICE
   !(npa). salinity flux due to ice melting/growth [psu/s].:
   real(rkind),save,allocatable :: salinity_flux(:)
   real(rkind),save,allocatable :: sflux_o(:)
@@ -548,7 +548,7 @@ module schism_glbl
   real(rkind), allocatable, save, target :: fluxevp_ocn(:) 
   real(rkind), allocatable, save, target :: sflux_ocn(:)   
   real(rkind), allocatable, save, target :: srad_ocn(:)    
-#endif /*USE_CICE*/
+#endif /*UFS_CICE*/
 
   logical,save,allocatable :: lhas_ice(:)
   logical,save :: lice_free_gb

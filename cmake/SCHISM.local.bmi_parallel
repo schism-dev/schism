@@ -24,7 +24,7 @@ set (TVD_LIM VL CACHE STRING "Flux limiter")
 
 #Turn OLDIO off to use the new scribe based I/O for concurrent mode
 set (OLDIO OFF CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
-set (USE_ATMOS ON CACHE BOOLEAN "Coupling with atmospheric model via ESMF or BMI")
+set (UFS_ATMOS ON CACHE BOOLEAN "Coupling with atmospheric model via ESMF or BMI")
 set (USE_BMI ON CACHE BOOLEAN "Build a library that can be used from BMI, with sources and some b.c. provided by BMI")
 set (BUILD_SHARED_LIBS ON CACHE BOOLEAN "Build SCHISM shared libraries for BMI compliancy")
 set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
@@ -42,7 +42,7 @@ set( USE_PAHM OFF CACHE BOOLEAN "Use PaHM module")
 ##set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
 set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
 ##Coupling to WW3, either via ESMF or hard coupling (in dev)
-set( USE_WW3 OFF CACHE BOOLEAN "Use Wave Watch III")
+set( UFS_WW3 OFF CACHE BOOLEAN "Use Wave Watch III")
 set( USE_ICE OFF CACHE BOOLEAN "Use 1-class ICE module")
 set( USE_MICE OFF CACHE BOOLEAN "Use multi-class ICE module")
 

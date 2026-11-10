@@ -25,9 +25,13 @@ set (TVD_LIM VL CACHE STRING "Flux limiter")
 #Turn OLDIO off to use the new scribe based I/O
 set (OLDIO OFF CACHE BOOLEAN "Old nc output (each rank dumps its own data)")
 
-set (USE_ATMOS OFF CACHE BOOLEAN "Coupling with atmospheric model via ESMF")
+set (UFS_ATMOS ON CACHE BOOLEAN "Coupling with atmospheric model via ESMF/UFS")
+set( UFS_CICE ON CACHE BOOLEAN "Coupled to CICE via ESMF/UFS")
+set( UFS_WW3 OFF CACHE BOOLEAN "Use Wave Watch III via UFS")
+set (UFS_NWM OFF CACHE BOOLEAN "Use NWM data cap under UFS")
 ##At the moment, must compile USE_BMI with NO_PARMETIS and OLDIO turned on
 set (USE_BMI OFF CACHE BOOLEAN "Build a library that can be used from BMI, with sources and some b.c. provided by BMI")
+
 set (PREC_EVAP OFF CACHE BOOLEAN "Include precipitation and evaporation calculation")
 set (USE_BULK_FAIRALL OFF CACHE BOOLEAN "Enable Fairall bulk scheme for air-sea exchange")
 ## GOTM5.2 is installed by default, and has been tested successfully, defined GOTM_BASE to use a non-standard GOTM source 
@@ -41,12 +45,9 @@ set( USE_PAHM OFF CACHE BOOLEAN "Use PaHM module")
 #   Enable/Disable Modules
 #Use SED instead of USE_SED2D
 ##set( USE_SED2D OFF CACHE BOOLEAN "Use 2D sediment module")
-set( USE_WWM OFF CACHE BOOLEAN "Use wind-wave module")
-##Coupling to WW3, either via ESMF or hard coupling (in dev)
-set( USE_WW3 OFF CACHE BOOLEAN "Use Wave Watch III")
+set( USE_WWM ON CACHE BOOLEAN "Use wind-wave module")
 set( USE_ICE OFF CACHE BOOLEAN "Use 1-class ICE module")
 set( USE_MICE OFF CACHE BOOLEAN "Use multi-class ICE module")
-set( USE_CICE OFF CACHE BOOLEAN "Coupled to CICE via ESMF/UFS")
 
 #Tracer models
 set( USE_GEN OFF CACHE BOOLEAN "Use generic tracer module")

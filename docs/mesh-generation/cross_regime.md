@@ -62,7 +62,7 @@ The meshing challenge is particularly acute when one deals with islands sitting 
 </figure>
 
 !!!note "Sub-mesoscale"
-If sub-mesoscale processes are of interest, one may need to reduce time step below 100 sec or apply some special parameterization such as `niter_shap` etc.
+If sub-mesoscale processes are of interest, one may need to reduce time step below 100 sec or apply some special parameterizations in viscosity etc. In practice, when the horizontal resolution is finer than the local depth especially in deep waters, baroclinic modes can only be suppressed by reducing the time step (since SCHISM treats the baroclinic gradient explicitly, it is actually subject to the internal CFL condition, in the sense that if internal CFL>1, the baroclinic modes may be excited). Refer to several SCHISM publications for specific ways in handling this type of situations.
 
 ##References
 Danilov, Sergey & Wang, Qiang. (2015). Resolving eddies by local mesh refinement. Ocean Modelling. 93. 10.1016/j.ocemod.2015.07.006. 

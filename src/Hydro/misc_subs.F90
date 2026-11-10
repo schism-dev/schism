@@ -213,25 +213,25 @@
 
 !     Init time history in/outputs
 !     Station output
-      if(iout_sta/=0.and.myrank==0) then
-        do i=1,nvar_sta+1 !extra output for zcor
-          rewind(250+i)    
-          do it=1,it_now !iths_main
-            if(mod(it,nspool_sta)/=0) cycle
-
-            if(i<=nvar_sta) then 
-              if(iof_sta(i)==1) then !.and.mod(it,nspool_sta)==0) then
-                read(250+i,*)
-                if(iout_sta==2.and.i>4) read(250+i,*)
-              endif 
-            else !zcor: always outputs if iout_sta=2
-              if(iout_sta==2) then
-                read(250+i,*); read(250+i,*)
-              endif
-            endif
-          enddo !it
-        enddo !i
-      endif !myrank
+!      if(iout_sta/=0.and.myrank==0) then
+!        do i=1,nvar_sta+1 !extra output for zcor
+!          rewind(250+i)    
+!          do it=1,it_now !iths_main
+!            if(mod(it,nspool_sta)/=0) cycle
+!
+!            if(i<=nvar_sta) then 
+!              if(iof_sta(i)==1) then !.and.mod(it,nspool_sta)==0) then
+!                read(250+i,*)
+!                if(iout_sta==2.and.i>4) read(250+i,*)
+!              endif 
+!            else !zcor: always outputs if iout_sta=2
+!              if(iout_sta==2) then
+!                read(250+i,*); read(250+i,*)
+!              endif
+!            endif
+!          enddo !it
+!        enddo !i
+!      endif !myrank
 
 !     Rewind flux.out
       if(iflux/=0.and.myrank==0) then
@@ -298,14 +298,14 @@
         wtime1=ninv*wtiminc
         wtime2=(ninv+1)*wtiminc
 
-#ifdef USE_ATMOS
-!         Init
+#ifdef UFS_ATMOS
+!         Init (some are init'ed in _init)
           windx1=0._rkind; windy1=0._rkind; windx2=0._rkind; windy2=0._rkind
           pr1=real(1.e5,rkind); pr2=real(1.e5,rkind)
           airt1=20._rkind; airt2=20._rkind
           shum1=0._rkind; shum2=0._rkind
 
-#else /*not USE_ATMOS*/
+#else /*not UFS_ATMOS*/
         !Read 1st record
         if(myrank==0) then
           j=nf90_open(in_dir(1:len_in_dir)//'atmos.nc',NF90_NOWRITE,ncid_atmos)
@@ -407,7 +407,7 @@
             shum2(nd)=rwild(5,i)
           endif
         enddo !i
-#endif /*USE_ATMOS*/
+#endif /*UFS_ATMOS*/
       endif !nws=4
 
       if(nws==2) then
@@ -740,7 +740,7 @@
       endif !myrank==0
 
 !...  Source/sinks: read by rank 0 first
-#ifdef USE_BMI
+#if defined USE_BMI || defined UFS_NWM
         ! SCHISM BMI will bypass the .th or .nc
         ! source/sinks forcing file dependency and instead
         ! will fill the ath3, th_dt3, and th_time3 variables
@@ -843,7 +843,7 @@
         endif !nsinks>0
       endif !if_source=-1
 
-#endif /*USE_BMI*/
+#endif /*USE_BMI */
 
 !     Bcast
       if(if_source/=0) then
@@ -879,7 +879,7 @@
 
 !$OMP do
       do i=1,npa
-        bdef1(i)=bdef(i)/real(ibdef,rkind)*min0(it_now,ibdef)
+        bdef1(i)=bdef(i)/real(nbdef,rkind)*max(0,min(it_now-ibdef_start,nbdef))
         if(imm==1) then
           !Add conditional to avoid conflict with sediment morph model
           dp(i)=dp00(i)-bdef1(i)
@@ -981,9 +981,9 @@
 
 !...  Initialize heat budget model - this needs to be called after nodalvel as
 !     (uu2,vv2) are needed
-!     For USE_ATMOS, sflux etc are init'ed as 0 in _init
+!     For UFS_ATMOS, sflux etc are init'ed as 0 in _init
       if(ihconsv/=0.and.(nws==2.or.nws==4)) then
-        if(nws==4) then !include USE_ATMOS
+        if(nws==4) then !include UFS_ATMOS
           !surf_fluxes2 assumes all vars in sflu*.nc are available now
           call surf_fluxes2 (wtime1,windx1,windy1,pr1,airt1,shum1, &
      &srad,fluxsu,fluxlu,hradu,hradd,tauxz,tauyz, &
@@ -9232,7 +9232,7 @@
   
       end function signa2
 
-!     This routine is called from ESMF directly to be used for USE_WW3
+!     This routine is called from ESMF directly to be used for UFS_WW3
 !     Compute wave force using Longuet-Higgins Stewart formulation
       subroutine compute_wave_force_lon(RSXX0,RSXY0,RSYY0)
       use schism_glbl, only : rkind,nsa,np,npa,nvrt,rho0,idry,idry_s,dp,dps,hmin_radstress, &

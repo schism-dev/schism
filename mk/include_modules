@@ -18,7 +18,7 @@
  EXEC := $(EXEC)_PETSC
 
 # Coupling with atmospheric model via ESMF
-# USE_ATMOS = yes
+# UFS_ATMOS = yes
 # EXEC := $(EXEC)_ATMOS
 
 # Build a library that can be used from BMI, with sources and some b.c. provided by BMI
@@ -29,6 +29,10 @@
 # Precip/evaporation model
  USE_PREC_EVAP = yes
  EXEC := $(EXEC)_EVAP
+
+#NWM data cap under UFS
+# UFS_NWM = yes
+# EXEC := $(EXEC)_UFS_NWM
 
 # nws=5,6 option using WRF wind (simpler_wind.F90)
 # This option is not officially supported; use at your own risk
@@ -52,8 +56,8 @@
 # USE_WWM = yes
 # EXEC := $(EXEC)_WWM
 
-# Wind wave model WW3
-# USE_WW3 = yes
+# Wind wave model WW3 via UFS
+# UFS_WW3 = yes
 # EXEC := $(EXEC)_WW3
 
 #Parametric wind module

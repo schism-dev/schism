@@ -187,7 +187,7 @@
         IF(i/=0) CALL parallel_abort('Sed: erosion flux at elem')
       ALLOCATE(depflxel(nea,ntr_l),stat=i)
         IF(i/=0) CALL parallel_abort('Sed: deposition flux at elem')
-      ALLOCATE(Uorbi_elfrink(nea,ech_uorb+1),stat=i)
+      ALLOCATE(Uorbi_elfrink(nea,0:ech_uorb),stat=i)
         IF(i/=0) CALL parallel_abort('Sed: Uorbi_elfrink alloc failure')
 
       !--------------------------------------------------------------!

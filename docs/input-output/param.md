@@ -205,8 +205,8 @@ the gravity. If `iloadtide=3`, the scaling is dependent on the local depth _a la
 If `iloadtide=4`, SAL is calculated using spherical harmonics on a global regular 1-degree
 longitude-latitude grid (360 x 181 points, including both poles).
 
-### imm=0, ibdef=10 (int)
-Bed deformation option. Default: `0` (no bed deformation); `1`: with bed deformation (needs `ibdef` (# of steps during which deformation occurs), and `bdef.gr3`); 2: 3D bottom deformation (need to interact with code).
+### imm=0, nbdef=10, ibdef_start=0 (int)
+Bed deformation option. Default: `0` (no bed deformation); `1`: with bed deformation (needs `nbdef` (# of steps during which deformation occurs, starting from `ibdef_start`), `ibdef_start` (step at which deformation begins; default 0), and `bdef.gr3`); 2: 3D bottom deformation (need to interact with code).
 
 ### indvel=0 (int), ihorcon=0 (int), hvis_coef0=0.025 (double), ishapiro=1, niter_shap=1 (int), shapiro0=0.5 (double)
 These parameters (and `inter_mom` below) control the numerical dissipation in momentum solver; see SCHISM paper (Zhang et al. 2016) for details.

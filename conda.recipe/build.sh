@@ -28,7 +28,7 @@ cmake -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_BUILD_TYPE="Release" \
     -DUSE_SED2D=$SED2D \
     -DUSE_MARSH=$MARSH \
     -DUSE_WWM=$WWM \
-    -DUSE_WW3=$WW3 \
+    -DUFS_WW3=$WW3 \
     -DUSE_ICE=$ICE \
     -DUSE_ICM=$ICM \
     -DUSE_GEN=$GEN \

@@ -105,7 +105,7 @@ for fname in p.flag:
     if fname.endswith('_nu.nc'): sns.append(sn[:-6]+'_nudge.gr3'); fns.append(fname[:3]+'_nudge.gr3') #nudge.gr3
     [os.symlink(relpath(s),f) for s, f in zip(sns,fns) if (p.base is not None) and p.flag[fname]==0 and fexist(s) and not fexist(f)]
     if p.flag[fname]==1 and fexist(fname): os.remove(fname) if os.path.isfile(fname) else os.system('rm -rf {}'.format(fname)) #remove file
-if p.base is not None: [copy2(i,os.path.basename(i)) for i in glob(p.base+'/run.schism')+glob(p.base+'/pschism_*')]
+if p.base is not None: [copy2(i,os.path.basename(i)) for i in r_[glob(p.base+'/run.schism'),glob(p.base+'/pschism_*')]]
 
 #add hydro output for ICM offline mode; add istation.in
 if p.flag['ICM'] in [10,20]: fn='hydro_out'; [os.remove(fn) if fexist(fn) else '']; os.symlink(p.hydro_out,fn)
@@ -324,7 +324,7 @@ fname='watertype.gr3'
 if p.flag[fname]!=0:
    print('writing '+fname)
    vi=M.f2(gd.xy,value=M.watertype.clip(1,8) if p.flag[fname]==1 else M.watertype.clip(1,7))
-   gd.save(fname,value=round(vi).astype('int'),outfmt='{:d}')
+   gd.save(fname,value=vi.round().astype('int'),outfmt='{:d}')
 
 fname='diffmin.gr3'
 if p.flag[fname]==1:
@@ -881,6 +881,7 @@ if p.flag[fname]==1 and ('p7' in p.source):
           return P
 
       #get boundary elem: (be, bn, bxy) are boundary elem, side_node,side_xy
+      if not hasattr(gd,'isdel'): gd.compute_side(1)
       fp=pindex(gd.isdel[:,1]==-1); be=gd.isdel[fp,0]; bn=gd.isidenode[fp]; bxy0=gd.xy[bn].mean(axis=1)
       bxy=vstack([r_[gd.xy[bn[i]],ones([1,2])*nan] for i in arange(len(be))])
 

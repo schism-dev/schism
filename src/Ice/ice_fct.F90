@@ -293,8 +293,8 @@
         if(ice_fct_flag(i)==0) ice_tr(m,i)=ice_tr_lo(m,i)
         !Limit to depth
         if(m==1.or.m==3) then
-          !ice_tr(m,i)=min(ice_tr(m,i),max(0.d0,eta2(i)+dp(i)))
-          ice_tr(m,i)=min(ice_tr(m,i),max(0.d0,dp(i)))
+          ice_tr(m,i)=min(ice_tr(m,i),max(0.d0,eta2(i)+dp(i)))
+          !ice_tr(m,i)=min(ice_tr(m,i),max(0.d0,dp(i)))
           if(ice_tr(m,i)>1.d3) then
              write(errmsg,*)'ice_fct(0): ice too thick,',m,iplg(i),idry(i), &
     &ice_tr(m,i),u_ice(i),v_ice(i),dp(i),eta2(i)

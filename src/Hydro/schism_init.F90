@@ -190,7 +190,7 @@
      &nspool,ihfskip,msc2,mdc2,dt,rnday,nbins_veg_vert,nmarsh_types
 
       namelist /OPT/ gen_wsett,flag_fib,ics,rearth_pole,rearth_eq,indvel, &
-     &imm,ibdef,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
+     &imm,nbdef,ibdef_start,ihot,ihydraulics,izonal5,slam0,sfea0,iupwind_mom,ihorcon, &
      &hvis_coef0,ishapiro,shapiro0,niter_shap,ihdif,thetai,drampbc, &
      &dramp,nadv,dtb_min,dtb_max,h0,nchi,dzb_min, &
      &hmin_man,ncor,rlatitude,coricoef,nws,wtiminc,iwind_form, &
@@ -465,7 +465,7 @@
       !Init defaults
       indvel=0; iupwind_mom=0; ihorcon=0; hvis_coef0=0.025_rkind; ishapiro=1; shapiro0=0.5_rkind; niter_shap=1
       gen_wsett=real(0.d0,rkind); flag_fib=1; ics=1; rearth_pole=6378206.4_rkind; rearth_eq=6378206.4_rkind; 
-      imm=0; ibdef=10; ihot=0; ihydraulics=0; izonal5=0; slam0=-124._rkind; sfea0=45._rkind; 
+      imm=0; nbdef=10; ibdef_start=0; ihot=0; ihydraulics=0; izonal5=0; slam0=-124._rkind; sfea0=45._rkind; 
       ihdif=0; thetai=0.6_rkind; drampbc=0.d0
       dramp=1._rkind; nadv=1; dtb_min=10._rkind; dtb_max=30._rkind; h0=0.01_rkind; nchi=0; dzb_min=0.5_rkind 
       hmin_man=1._rkind; ncor=0; rlatitude=46._rkind; coricoef=0._rkind; 
@@ -580,19 +580,16 @@
 !'    imm: 0: without bed deformation; 1: with bed deformation (e.g., tsunami);
 !     2: 3D bed deformation model (needs user coding)
 !     For imm=2, user needs to manually update bottom vel. etc in update_bdef()
-!     (not working yet for ics=2)
-!      call get_param('param.in','imm',1,imm,tmp,stringvalue)
 !     For moving bed, the output is from original bottom to nvrt
       if(imm<0.or.imm>2) then
         write(errmsg,*)'Unknown imm',imm
         call parallel_abort(errmsg)
       endif
-      if(imm==2.and.ics==2) call parallel_abort('imm=ics=2')
-
-!      ibdef=1 !init # of time steps for deformation (deformation rate=0 when it>ibdef)
-!      if(imm==1) then !read in deformation at all nodes
-!        call get_param('param.in','ibdef',1,ibdef,tmp,stringvalue)
-!      endif
+!      if(imm==2.and.ics==2) call parallel_abort('imm=ics=2')
+      if(imm/=0) then
+        if(nbdef<=0) call parallel_abort('INIT: nbdef<=0')
+        if(ibdef_start<0) call parallel_abort('INIT: ibdef_start<0')
+      endif
 
 !     hotstart option
 !      call get_param('param.in','ihot',1,ihot,tmp,stringvalue)
@@ -730,7 +727,7 @@
 !        call get_param('param.in','coriolis',2,itmp,coricoef,stringvalue)
       endif
 
-!     Wind (use nws=4 and USE_ATMOS for coupling directly to atmos model)
+!     Wind (use nws=4 and UFS_ATMOS for coupling directly to atmos model)
       if(nws<-1.or.nws>6.or.nws==3) then
         write(errmsg,*)'Unknown nws',nws
         call parallel_abort(errmsg)
@@ -784,9 +781,8 @@
       if(ihconsv/=0.and.myrank==0) write(16,*)'Turb. Fluxes: Zeng et al.(98)'
 #endif
 
-#ifdef USE_ATMOS
-      if(nws/=4) call parallel_abort('INIT: USE_ATMOS must use nws=4')
-!      if(iwind_form==0) call parallel_abort('INIT: USE_ATMOS must not have iwind_form==0')
+#ifdef UFS_ATMOS
+      if(nws/=4) call parallel_abort('INIT: UFS_ATMOS must use nws=4')
 #endif
 
       if(ihconsv/=0) then
@@ -1148,7 +1144,7 @@
 
 !     Volume and mass sources/sinks option (-1:nc; 1:ASCII)
       if(iabs(if_source)>1) call parallel_abort('INIT: wrong if_source')
-#ifdef USE_BMI
+#if defined USE_BMI || defined UFS_NWM
       if(if_source==0) call parallel_abort('INIT: USE_BMI cannot go with if_source=0')
 #endif
 
@@ -1277,6 +1273,9 @@
 
 !       Dump horizontal grid
         call dump_hgrid
+!       ipgl2/isgl2 are only used in dump_hgrid; iegl2 is still used later
+        if(allocated(ipgl2)) deallocate(ipgl2)
+        if(allocated(isgl2)) deallocate(isgl2)
 
         if(myrank==0) then
           write(16,*)'done domain decomp...'
@@ -1543,7 +1542,7 @@
      &call parallel_abort('INIT: mass correction needs itr_met=3 or 4')
 
 !     Wave model arrays
-#if defined USE_WWM || defined USE_WW3
+#if defined USE_WWM || defined UFS_WW3
       if(iorder==0) then
         allocate(out_wwm(npa,35),out_wwm_windpar(npa,10),   &
                & out_wwm_rol(npa,35),taub_wc(npa), &
@@ -1662,7 +1661,7 @@
 #endif /*USE_WWM*/
 
 !Additional WW3 arrays
-#ifdef  USE_WW3
+#ifdef  UFS_WW3
       if(iorder==0) then
         allocate(wave_hs(npa),wave_dir(npa),wave_tm1(npa),wave_wnm(npa),wave_pres(npa),wave_stokes_x(npa), &
      &wave_stokes_y(npa),wave_ocean_flux_x(npa),wave_ocean_flux_y(npa), &
@@ -1673,7 +1672,7 @@
         wave_stokes_x=0.d0; wave_stokes_y=0.d0; wave_ocean_flux_x=0.d0; wave_ocean_flux_y=0.d0
         wave_flux_friction_x=0.d0; wave_flux_friction_y=0.d0; wave_orbu=0.d0; wave_orbv=0.d0
       endif !iorder=0
-#endif /*USE_WW3*/
+#endif /*UFS_WW3*/
 
 #ifdef USE_TIMOR
 !     Allocate TIMOR arrays
@@ -1717,7 +1716,7 @@
          allocate(sink0(npa),fraction0(npa),kk10(npa),kk20(npa))
 #endif
 
-#ifdef USE_CICE
+#ifdef UFS_CICE
         allocate(aice(npa),tau_oi(2,npa),fresh_wa_flux(npa),salinity_flux(npa),net_heat_flux(npa), &
                srad_o(npa),srad_th_ice(npa),srad_ocn(npa),sflux_ocn(npa),fluxprc_ocn(npa),fluxevp_ocn(npa),stat=istat)
         if(istat/=0) call parallel_abort('INIT: ice frac allocation failure')
@@ -2266,7 +2265,7 @@
 #endif      
 
 !... Read lat/lon for spectral spatial interpolation in WWM or WW3
-#if defined USE_WWM || defined USE_WW3
+#if defined USE_WWM || defined UFS_WW3
       if(myrank==0) then
         inquire(file=in_dir(1:len_in_dir)//'hgrid.ll',exist=lexist)
         if(lexist) then
@@ -3051,6 +3050,7 @@
         call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source
 #else /*USE_BMI*/
+#ifndef UFS_NWM
 !     Read in source/sink info 
       if(if_source==1) then !ASCII
         if(myrank==0) then
@@ -3112,8 +3112,12 @@
         endif !myrank
         call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source
+
+#endif /*not UFS_NWM*/
 #endif /*USE_BMI*/
 
+
+#ifndef UFS_NWM
       if(if_source==-1) then !nc
 #ifdef SH_MEM_COMM
         if(myrank_node==0) then
@@ -3211,6 +3215,7 @@
         call mpi_bcast(ieg_source,max(1,nsources),itype,0,comm,istat)
         call mpi_bcast(ieg_sink,max(1,nsinks),itype,0,comm,istat)
       endif !if_source=-1
+#endif /*not UFS_NWM*/
 !-------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
 !  Initialize model for cold and hot start
@@ -3249,12 +3254,7 @@
         stop
       endif
 
-!     imm: 0: without bed deformation; 1: with bed deformation (e.g., tsunami);
-!     2: 3D bed deformation model (needs user coding)
-!     For imm=2, user needs to manually update bottom vel. etc in update_bdef()
-!     (not working yet for ics=2)
-
-!     Initialize variables used in tsunami model (but bdef[1,2] and ibdef are available for all models)
+!     Initialize variables used in tsunami model (but bdef[1,2] and nbdef are available for all models)
       bdef=0.d0 !total deformation
       if(imm==1) then !read in deformation at all nodes
         if(myrank==0) then
@@ -3608,12 +3608,6 @@
           enddo !i
         endif
       endif !nws/=0
-
-!     Alloc. the large array for nws=4-6 option (may consider changing to unformatted binary read)
-!      if(nws==4) then
-!        allocate(rwild(np_global,3),stat=istat)
-!        if(istat/=0) call parallel_abort('MAIN: failed to alloc. (71)')
-!      endif !nws=4
 
 !     Heat and salt conservation flags
       if(ihconsv/=0) then
@@ -4342,7 +4336,7 @@
      &arco_sta(nout_sta,4),sta_out(nout_sta,nvar_sta),sta_out_gb(nout_sta,nvar_sta), &
      &sta_out3d(nvrt,nout_sta,nvar_sta),sta_out3d_gb(nvrt,nout_sta,nvar_sta), &
      &xsta_bmi(nout_sta),ysta_bmi(nout_sta),zsta_bmi(nout_sta), &
-     &zta_out3d(nvrt,nout_sta),zta_out3d_gb(nvrt,nout_sta),stat=istat)
+     &zta_out3d(nvrt,nout_sta),zta_out3d_gb(nvrt,nout_sta),id_sta(2*ntracers+20),stat=istat)
           if(istat/=0) call parallel_abort('MAIN: sta. allocation failure')
           iep_flag=0
           sta_out=0.0_rkind
@@ -4355,6 +4349,129 @@
             read(32,*)j,xsta(i),ysta(i),zstal(i) !z not used for 2D variables; xsta, ysta in lat/lon if ics=2
           enddo !i
           close(32)
+
+          !Open nc output under rank 0 and dump station location
+          !Var names for restart; gfortran requires same length
+          ar_name(1:15)=(/'stationLocationX','stationLocationY','stationLocationZ', &
+                        &'time_in_sec     ','stationDryFlags ','zcoorinates     ', &
+                        &'elevation       ','airPressure     ','windx           ', &
+                        &'windy           ','temperature     ','salinity        ', &
+                        &'horizontalVelX  ','horizontalVelY  ','verticalVel     '/)
+          icount=15 !ID so far
+          do i=3,ntracers
+            write(fdb,'(i6)')i
+            fdb=adjustl(fdb)
+            lfdb=len_trim(fdb)
+            ar_name(icount+i-2)='tracer_'//fdb(1:lfdb)
+          enddo !i
+          icount=icount+ntracers-2
+          ar_name(icount+1:icount+5)=(/'temp3D          ','salt3D          ', &
+                                      &'uvel3D          ','vvel3D          ', &
+                                      &'wvel3D          '/)
+          icount=icount+5 !so far
+          do i=3,ntracers
+            write(fdb,'(i6)')i
+            fdb=adjustl(fdb)
+            lfdb=len_trim(fdb)
+            ar_name(icount+i-2)='tracer3D_'//fdb(1:lfdb)
+          enddo !i
+          icount=icount+ntracers-2
+          if(icount>2*ntracers+20.or.icount>100) call parallel_abort('INIT: id_sta over')
+          do i=1,icount
+            ar_name(i)=adjustl(ar_name(i))
+          enddo !i
+
+          if(ihot==2) then
+            j=nf90_open(out_dir(1:len_out_dir)//'staout.nc',nf90_write,ncid_sta)
+            do i=1,icount
+              j=nf90_inq_varid(ncid_sta,trim(ar_name(i)),id_sta(i))
+            enddo !i
+          else
+            j=nf90_create(out_dir(1:len_out_dir)//'staout.nc',OR(NF90_NETCDF4,NF90_CLOBBER),ncid_sta)
+            j=nf90_def_dim(ncid_sta,'nStations',nout_sta,nsta_dim)
+            j=nf90_def_dim(ncid_sta,'nVert',nvrt,nvrt2_dim)
+            j=nf90_def_dim(ncid_sta,'time', NF90_UNLIMITED,time2_dim)
+         
+            nwild(1)=nsta_dim
+            j=nf90_def_var(ncid_sta,trim(ar_name(1)),NF90_FLOAT,nwild(1),id_sta(1))
+            j=nf90_put_att(ncid_sta,id_sta(1),'name','X coorinates at each station')
+            j=nf90_put_att(ncid_sta,id_sta(1),'unit','consistent with hgrid.gr3')
+            j=nf90_def_var(ncid_sta,trim(ar_name(2)),NF90_FLOAT,nwild(1),id_sta(2))
+            j=nf90_put_att(ncid_sta,id_sta(2),'name','Y coorinates at each station')
+            j=nf90_put_att(ncid_sta,id_sta(2),'unit','consistent with hgrid.gr3')
+            j=nf90_def_var(ncid_sta,trim(ar_name(3)),NF90_FLOAT,nwild(1),id_sta(3))
+            j=nf90_put_att(ncid_sta,id_sta(3),'name','Z coorinates at each station in meters')
+
+            nwild(1)=time2_dim
+            j=nf90_def_var(ncid_sta,trim(ar_name(4)),NF90_FLOAT,nwild(1:1),id_sta(4))
+            j=nf90_put_att(ncid_sta,nwild(4),'time','time in seconds')
+
+            !Dry flags
+            nwild(1)=nsta_dim; nwild(2)=time2_dim
+            j=nf90_def_var(ncid_sta,trim(ar_name(5)),NF90_INT,nwild(1:2),id_sta(5))
+            j=nf90_put_att(ncid_sta,id_sta(5),'name','Non-zero if dry at station')
+
+            nwild(1)=nvrt2_dim; nwild(2)=nsta_dim; nwild(3)=time2_dim
+            j=nf90_def_var(ncid_sta,trim(ar_name(6)),NF90_FLOAT,nwild(1:3),id_sta(6))
+            j=nf90_put_att(ncid_sta,id_sta(6),'name','Z coorinates for station profiles in m')
+
+            nwild(1)=nsta_dim; nwild(2)=time2_dim
+            j=nf90_def_var(ncid_sta,trim(ar_name(7)),NF90_FLOAT,nwild(1:2),id_sta(7))
+            j=nf90_put_att(ncid_sta,id_sta(7),'name','surface elevation in meters')
+            j=nf90_def_var(ncid_sta,trim(ar_name(8)),NF90_FLOAT,nwild(1:2),id_sta(8))
+            j=nf90_put_att(ncid_sta,id_sta(8),'name','air pressure at MSL in Pa')
+            j=nf90_def_var(ncid_sta,trim(ar_name(9)),NF90_FLOAT,nwild(1:2),id_sta(9))
+            j=nf90_put_att(ncid_sta,id_sta(9),'name','eastward wind speed at 10m above MSL in m/s')
+            j=nf90_def_var(ncid_sta,trim(ar_name(10)),NF90_FLOAT,nwild(1:2),id_sta(10))
+            j=nf90_put_att(ncid_sta,id_sta(10),'name','northward wind speed at 10m above MSL in m/s')
+            j=nf90_def_var(ncid_sta,trim(ar_name(11)),NF90_FLOAT,nwild(1:2),id_sta(11))
+            j=nf90_put_att(ncid_sta,id_sta(11),'name','water temperature in C at station location')
+            j=nf90_def_var(ncid_sta,trim(ar_name(12)),NF90_FLOAT,nwild(1:2),id_sta(12))
+            j=nf90_put_att(ncid_sta,id_sta(12),'name','water salinity at station location')
+            j=nf90_def_var(ncid_sta,trim(ar_name(13)),NF90_FLOAT,nwild(1:2),id_sta(13))
+            j=nf90_put_att(ncid_sta,id_sta(13),'name','water eastward velocity at station location in m/s')
+            j=nf90_def_var(ncid_sta,trim(ar_name(14)),NF90_FLOAT,nwild(1:2),id_sta(14))
+            j=nf90_put_att(ncid_sta,id_sta(14),'name','water northward velocity at station location in m/s')
+            j=nf90_def_var(ncid_sta,trim(ar_name(15)),NF90_FLOAT,nwild(1:2),id_sta(15))
+            j=nf90_put_att(ncid_sta,id_sta(15),'name','water upward velocity at station location in m/s')
+
+            !Other tracers
+            icount=15 !ID so far (reset)
+            do i=3,ntracers
+              j=nf90_def_var(ncid_sta,trim(ar_name(icount+i-2)),NF90_FLOAT,nwild(1:2),id_sta(icount+i-2))
+            enddo !i
+            icount=icount+ntracers-2
+
+            !3D
+            nwild(1)=nvrt2_dim; nwild(2)=nsta_dim; nwild(3)=time2_dim
+            j=nf90_def_var(ncid_sta,trim(ar_name(icount+1)),NF90_FLOAT,nwild(1:3),id_sta(icount+1))
+            j=nf90_put_att(ncid_sta,id_sta(icount+1),'name','profile of water temperature in C at station location')
+            j=nf90_def_var(ncid_sta,trim(ar_name(icount+2)),NF90_FLOAT,nwild(1:3),id_sta(icount+2))
+            j=nf90_put_att(ncid_sta,id_sta(icount+2),'name','profile of water salinity at station location')
+            j=nf90_def_var(ncid_sta,trim(ar_name(icount+3)),NF90_FLOAT,nwild(1:3),id_sta(icount+3))
+            j=nf90_put_att(ncid_sta,id_sta(icount+3),'name','profile of eastward velocity at station location in m/s')
+            j=nf90_def_var(ncid_sta,trim(ar_name(icount+4)),NF90_FLOAT,nwild(1:3),id_sta(icount+4))
+            j=nf90_put_att(ncid_sta,id_sta(icount+4),'name','profile of northward velocity at station location in m/s')
+            j=nf90_def_var(ncid_sta,trim(ar_name(icount+5)),NF90_FLOAT,nwild(1:3),id_sta(icount+5))
+            j=nf90_put_att(ncid_sta,id_sta(icount+5),'name','profile of upward velocity at station location in m/s')
+
+            icount=icount+5 !so far
+            do i=3,ntracers
+              j=nf90_def_var(ncid_sta,trim(ar_name(icount+i-2)),NF90_FLOAT,nwild(1:3),id_sta(icount+i-2))
+            enddo !i
+            icount=icount+ntracers-2
+
+            do i=6,icount
+              j=nf90_def_var_deflate(ncid_sta,id_sta(i),0,1,4)
+            enddo !i
+            j=nf90_enddef(ncid_sta)
+          endif !ihot
+
+          !Output static info
+          j=nf90_put_var(ncid_sta,id_sta(1),real(xsta),(/1/),(/nout_sta/))
+          j=nf90_put_var(ncid_sta,id_sta(2),real(ysta),(/1/),(/nout_sta/))
+          j=nf90_put_var(ncid_sta,id_sta(3),real(zstal),(/1/),(/nout_sta/))
+           
         endif !myrank
         call mpi_bcast(xsta,nout_sta,rtype,0,comm,istat)
         call mpi_bcast(ysta,nout_sta,rtype,0,comm,istat)
@@ -4435,20 +4552,20 @@
         endif
 
 !       Open output file from rank 0
-        if(myrank==0) then
-          do i=1,nvar_sta+1 !add an extra output zcor at the end
-            write(ifile_char,'(i03)')i
-            ifile_char=adjustl(ifile_char)  !place blanks at end
-            ifile_len=len_trim(ifile_char)
-            if(ihot==2) then
-              open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='old')
-            else
-              open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='replace')
-            endif
-          enddo !i
-          write(16,*)'done preparing station outputs'
-          !call flush(16) ! flush "mirror.out"
-        endif
+!        if(myrank==0) then
+!          do i=1,nvar_sta+1 !add an extra output zcor at the end
+!            write(ifile_char,'(i03)')i
+!            ifile_char=adjustl(ifile_char)  !place blanks at end
+!            ifile_len=len_trim(ifile_char)
+!            if(ihot==2) then
+!              open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='old')
+!            else
+!              open(250+i,file=out_dir(1:len_out_dir)//'staout_'//ifile_char(1:ifile_len),status='replace')
+!            endif
+!          enddo !i
+!          write(16,*)'done preparing station outputs'
+!          !call flush(16) ! flush "mirror.out"
+!        endif
       endif !iout_sta
 
 #ifdef USE_HA
@@ -6503,8 +6620,11 @@
 !     end hot start section
       endif !ihot/=0
 
+!     nwild2 (ns_global) is not used after the hot start section
+      deallocate(nwild2)
+
 ! MP from KM
-#if defined USE_WWM || defined USE_WW3
+#if defined USE_WWM || defined UFS_WW3
       ! Computation of the bed slope at nodes
       allocate(tanbeta_x(npa),tanbeta_y(npa),stat=istat)
       call compute_bed_slope !iof(198) = 1
@@ -6609,7 +6729,7 @@
 !     Add module outputs of 2D node below (scalars&vectors)
 #ifdef USE_WWM
       !2D node scalar
-      itmp=0 !counter
+      itmp=0 !counter for iof_wwm
       do i=1,28
         if(i==7.or.i==8) cycle !skip vectors first
 
@@ -7503,7 +7623,7 @@
 #endif
 
 !     Deallocate temp. arrays to release memory
-      deallocate(nwild,nwild2,swild,swild2,swild3,swild4,swild10,buf3,buf4)
+      deallocate(nwild,swild,swild2,swild3,swild4,swild10,buf3,buf4)
       if(allocated(tp_name)) deallocate(tp_name)
 
 #ifdef USE_FIB
