@@ -458,6 +458,15 @@ real (rkind) :: aux                               ! ustar
 #endif /*USE_SPK*/
       endif !iloadtide=4
 
+!$OMP parallel default(shared) private(i,j,ncyc,arg)
+
+!...  Compute new bed deformation
+!$OMP do
+      do i=1,npa
+        bdef2(i)=bdef(i)/real(ibdef,rkind)*real(min0(it,ibdef),rkind)
+      enddo !i
+!$OMP end do
+
 !...  Earth tidal potential and loading tide at nodes: pre-compute to save time
 !... 
 !$OMP do
