@@ -2456,7 +2456,7 @@
         call mpi_bcast(isal_int(0,0),nlat_gs*nlon_gs,itype,0,comm,istat)
         if(istat/=MPI_SUCCESS) call parallel_abort(error=istat)
 
-        isal_lcl=0
+        isal_lcl=-1
         do i=0,nlon_gs-1
           do j=0,nlat_gs-1
             nd=isal_int(j,i)

@@ -430,15 +430,6 @@ real (rkind) :: aux                               ! ustar
         ramp=1.d0
       endif
 
-!$OMP parallel default(shared) private(i,j,ncyc,arg)
-
-!...  Compute new bed deformation
-!$OMP do
-      do i=1,npa
-        bdef2(i)=bdef(i)/real(nbdef,rkind)*real(max(0,min(it-ibdef_start,nbdef)),rkind)
-      enddo !i
-!$OMP end do
-
 !...  SAL from spherical harmonic option
       if(iloadtide==4) then
 #ifdef USE_SPK
@@ -459,11 +450,10 @@ real (rkind) :: aux                               ! ustar
       endif !iloadtide=4
 
 !$OMP parallel default(shared) private(i,j,ncyc,arg)
-
 !...  Compute new bed deformation
 !$OMP do
       do i=1,npa
-        bdef2(i)=bdef(i)/real(ibdef,rkind)*real(min0(it,ibdef),rkind)
+        bdef2(i)=bdef(i)/real(nbdef,rkind)*real(max(0,min(it-ibdef_start,nbdef)),rkind)
       enddo !i
 !$OMP end do
 

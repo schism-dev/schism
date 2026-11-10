@@ -6779,6 +6779,7 @@
 !        enddo !i
   
         !Reduce elevations directly onto the regular SAL grid
+        !Caution: beware implication of conditionals below for nsal_lcl
         avhs_lcl=0.d0
         do i=0,nlon_gs-1
           do j=0,nlat_gs-1
@@ -6793,7 +6794,7 @@
 
         if(myrank==0) then
           !avhs1(i,j) contains the waterlevel on the point with longitude phi(j)=(j-1)*360/nlon
-          !and colatitude theta(i)=(i-1)*180/nlat
+          !and colatitude theta(i)=(i-1)*180/nlat, per definition of isal_lcl
           where(nsal_contrib>0) avhs1=avhs1/real(nsal_contrib,rkind)
 
           !Computation
