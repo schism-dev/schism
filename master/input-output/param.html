@@ -3774,7 +3774,9 @@ and phases (degrees behind GMT). In this option, SAL is
  SAL is applied everywhere and does not share parameters with tidal potential).
 If <code>iloadtide=2</code>, a simple scaling specified by <code>loadtide_coef</code> is used to reduce 
 the gravity. If <code>iloadtide=3</code>, the scaling is dependent on the local depth <em>a la</em> Stepanov &amp; Hughes (2004),
- with a maximum value of <code>loadtide_coef</code>.</p>
+ with a maximum value of <code>loadtide_coef</code>.
+If <code>iloadtide=4</code>, SAL is calculated using spherical harmonics on a global regular 1-degree
+longitude-latitude grid (360 x 181 points, including both poles).</p>
 <h3 id="imm0-nbdef10-ibdef_start0-int">imm=0, nbdef=10, ibdef_start=0 (int)<a class="headerlink" href="#imm0-nbdef10-ibdef_start0-int" title="Permanent link">&para;</a></h3>
 <p>Bed deformation option. Default: <code>0</code> (no bed deformation); <code>1</code>: with bed deformation (needs <code>nbdef</code> (# of steps during which deformation occurs, starting from <code>ibdef_start</code>), <code>ibdef_start</code> (step at which deformation begins; default 0), and <code>bdef.gr3</code>); 2: 3D bottom deformation (need to interact with code).</p>
 <h3 id="indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double">indvel=0 (int), ihorcon=0 (int), hvis_coef0=0.025 (double), ishapiro=1, niter_shap=1 (int), shapiro0=0.5 (double)<a class="headerlink" href="#indvel0-int-ihorcon0-int-hvis_coef00025-double-ishapiro1-niter_shap1-int-shapiro005-double" title="Permanent link">&para;</a></h3>
