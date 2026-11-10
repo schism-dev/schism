@@ -2461,6 +2461,7 @@
           do j=0,nlat_gs-1
             nd=isal_int(j,i)
             if(nd>0) then
+              !>0,<=np not necessary (interface nodes will be counted more than once)
               if(ipgl(nd)%rank==myrank.and.ipgl(nd)%id>0.and.ipgl(nd)%id<=np) then
                 isal_lcl(j,i)=ipgl(nd)%id
               endif
