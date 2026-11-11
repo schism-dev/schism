@@ -841,7 +841,7 @@ subroutine icm_vars_init
   sp(m+1)%p1=>p2c;   sp(m+2)%p1=>KhDO;  sp(m+3)%p=>o2c;     sp(m+4)%p=>o2n;    sp(m+5)%p=>dn2c;     m=m+5
   sp(m+1)%p=>an2c;   sp(m+2)%p=>KPO4p;  sp(m+3)%p=>WRea;    sp(m+4)%p1=>PBmin; sp(m+5)%p1=>dz_flux; m=m+5
   sp(m+1)%p1=>KSR0;  sp(m+2)%p1=>TRSR;  sp(m+3)%p1=>KTRSR;  sp(m+4)%p=>KhDOp;  sp(m+5)%p1=>MTR;     m=m+5
-  sp(m+1)%p1=>wqc0;  sp(m+2)%p=>WDOs;   sp(m+3)%p=>KPO4s;   sp(m+4)%p=>KPO4TSS; m=m+4
+  sp(m+1)%p1=>wqc0;  sp(m+2)%p=>WDOs;   sp(m+3)%p=>KPO4s;   sp(m+4)%p1=>KPO4TSS; m=m+4
 
   !SFM modules
   pname((m+1):(m+79))=&

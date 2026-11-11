@@ -150,7 +150,7 @@ subroutine ecosystem(it)
 #endif
           do i=1,i34(id); btau=btau+rho0*btaun(elnode(i,id))/dble(i34(id)); enddo
         endif
-        rat=1.0/(1.0+KPO4p*DOX(k)*KPO4s*(TSS(k)+KPO4TSS)/((KhDOp+DOX(k)+1.d-8)*(KPO4s+salt(k))))
+        rat=1.0/(1.0+KPO4p*DOX(k)*KPO4s*min(max(TSS(k),KPO4TSS(1)),KPO4TSS(2))/((KhDOp+DOX(k)+1.d-8)*(KPO4s+salt(k))))
         if(iSRM==1) then !phase change between dissolved and particulate PO4
           tPO4=PO4(k)+PIP(k); PO4(k)=rat*tPO4; PIP(k)=(1.0-rat)*tPO4; PO4d(k)=PO4(k); PO4p(k)=0.d0
         else
@@ -439,7 +439,7 @@ subroutine ecosystem(it)
           dwqc(iDON,k)=dwqc(iDON,k)+rKSR(2)*SRPON(k)
           dwqc(iDOP,k)=dwqc(iDOP,k)+rKSR(3)*SRPOP(k)
           dwqc(iSRPOC,k)=-rKSR(1)*SRPOC(k)
-          dwqc(iSRPOC,k)=-rKSR(2)*SRPON(k)
+          dwqc(iSRPON,k)=-rKSR(2)*SRPON(k)
           dwqc(iSRPOP,k)=-rKSR(3)*SRPOP(k)
           do m=1,3
             dwqc(iSRPOC,k)=dwqc(iSRPOC,k)+FCP(m,4)*PR(m,k)+FCM(m,4)*MT(m,k)
