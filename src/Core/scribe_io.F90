@@ -104,6 +104,8 @@
       endif !myrank_scribe
 
       !Get basic info
+      !Note the status of mpi_recv must be of MPI_STATUS_SIZE, which is
+      !different from mpi_irecv!
       call mpi_recv(dt,1,rtype,0,100,comm_schism,rstatus,ierr)
       if(ierr/=MPI_SUCCESS) call parallel_abort('scribe_init: recv error')
       call mpi_recv(nspool,1,itype,0,101,comm_schism,rstatus,ierr)
