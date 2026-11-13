@@ -31,6 +31,7 @@ from ..utils.utils import (
     try_remove,
 )
 from ..utils.provenance import ProvenanceRun
+from ..utils.warning_log import initialize_warning_log
 from ..ops.Prop.gen_tvd_v1 import gen_tvd_prop
 #from ..ops.Prop.gen_tvd import gen_tvd_prop
 from ..ops.Bctides.bctides.bctides import Bctides  # temporary, bctides.py will be merged into pyschism
@@ -94,6 +95,9 @@ def _generate_stofs3d_inputs(
 
     # define and make the model_input_path, the run_dir and the output dir
     model_input_path, run_dir, _ = prep_run_dir(project_dir, runid, scr_dir=scr_dir)
+    warning_log_path = initialize_warning_log(
+        Path(model_input_path) / "warnings.log"
+    )
 
     # make a copy of the hgrid to the model_input_path
     os.system(f'cp {hgrid_path} {model_input_path}/hgrid.gr3')
@@ -352,7 +356,8 @@ def _generate_stofs3d_inputs(
         os.chdir(f'{model_input_path}/{sub_dir}')
 
         assemble_source_sink(config, hgrid, model_input_path=model_input_path,
-                             wdir=f'{model_input_path}/{sub_dir}')
+                             wdir=f'{model_input_path}/{sub_dir}',
+                             warning_log_path=warning_log_path)
 
         os.chdir(run_dir)
         for f in ['source_sink.in', 'source.nc', 'vsource.th', 'msource.th', 'vsink.th']:

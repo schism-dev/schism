@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 import json
-from typing import List, Iterable, Tuple, Optional
+from typing import List, Iterable, Tuple, Optional, Mapping, Any
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -19,6 +19,10 @@ import gsw  # for conductance->salinity conversion if desired
 
 # If you rely on these types elsewhere:
 from schism_py_pre_post.Download.Data import ObsData, Station
+from stofs3d_setup.ops.USGS.ogc.download_policy import (
+    USGS_DOWNLOAD_POLICY,
+    USGS_MAX_MISSING_GAP_DAYS,
+)
 
 
 # -------------------- Configuration --------------------
@@ -47,6 +51,10 @@ class GenericObsData:
     def __init__(self, station_info=None, df=None):
         self.station_info = station_info or {}
         self.df = df  # expects columns: ['date','value', (optional) 'tz_cd']
+
+
+class RequiredStationDownloadError(RuntimeError):
+    """Raised when a required USGS station is missing after retries."""
 
 
 # ----- Flatten to a single DataFrame -----
@@ -546,6 +554,34 @@ def detect_data_gap(df: pd.DataFrame, start, end, *, freq: pd.Timedelta | None =
     return max(max_internal, leading, trailing)
 
 
+def find_data_gaps(
+    index: pd.DatetimeIndex,
+    start,
+    end,
+    max_gap: pd.Timedelta,
+    *,
+    freq: pd.Timedelta = pd.Timedelta(hours=1),
+) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
+    """Find only coverage intervals with missing duration over max_gap."""
+    start = pd.to_datetime(start, utc=True)
+    end = pd.to_datetime(end, utc=True)
+    observations = pd.DatetimeIndex(pd.to_datetime(index, utc=True))
+    observations = observations.unique().sort_values()
+    observations = observations[(observations >= start) & (observations <= end)]
+    if observations.empty:
+        return []
+
+    gaps = []
+    if observations[0] - start > max_gap:
+        gaps.append((start, observations[0]))
+    for left, right in zip(observations[:-1], observations[1:]):
+        if right - left - freq > max_gap:
+            gaps.append((left, right))
+    if end - observations[-1] > max_gap:
+        gaps.append((observations[-1], end))
+    return gaps
+
+
 def add_tzaware_datetime(df: pd.DataFrame) -> pd.DataFrame:
     """
     Convert 'date' + 'tz_cd' columns into a timezone-aware datetime column 'datetime_tz'.
@@ -575,13 +611,66 @@ def download_stations(
     cache_fname: Optional[str] = None,
     datelist: pd.DatetimeIndex = pd.date_range(start='2000-01-01', end='2000-01-02'),
     stations_chunk_size: int = 10,   # download 20 sites per request
-    days_per_chunk: int = 400,
+    days_per_chunk: Optional[int] = None,
+    required_station_ids: Optional[Iterable[str]] = None,
+    optional_station_ids: Optional[Iterable[str]] = None,
+    download_policy: Optional[Mapping[str, Any]] = None,
+    max_missing_gap_days: Optional[float] = None,
+    validation_start=None,
+    validation_end=None,
+    warning_log_path: str | Path | None = None,
+    warning_input_files: Iterable[str] = (),
+    warning_forcing_name: str | None = None,
+    allow_adaptive_retry: bool = True,
+    raise_on_fetch_error: bool = False,
+    validate_coverage: bool = True,
 ) -> List[GenericObsData]:
     """
     Download IV data for many stations efficiently (station_chunk_size sites per API call).
     Uses fetch_iv_rdb() which supports multi-site requests.
     """
     station_ids = _normalize_stations(station_ids)
+    required_station_ids = set(_normalize_stations(required_station_ids or []))
+    optional_station_ids = set(_normalize_stations(optional_station_ids or []))
+    forced_station_ids = required_station_ids | optional_station_ids
+    unknown_forced_stations = forced_station_ids - set(station_ids)
+    if unknown_forced_stations:
+        raise ValueError(
+            "Forced USGS stations must be included in station_ids: "
+            f"{sorted(unknown_forced_stations)}"
+        )
+    overlapping_station_ids = required_station_ids & optional_station_ids
+    if overlapping_station_ids:
+        raise ValueError(
+            "USGS stations cannot be both required and optional: "
+            f"{sorted(overlapping_station_ids)}"
+        )
+    if max_missing_gap_days is None:
+        max_missing_gap_days = (
+            USGS_MAX_MISSING_GAP_DAYS if validate_coverage else None
+        )
+    if max_missing_gap_days is not None and max_missing_gap_days <= 0:
+        raise ValueError("max_missing_gap_days must be positive")
+
+    retry_policy = dict(download_policy or USGS_DOWNLOAD_POLICY)
+    if days_per_chunk is None:
+        days_per_chunk = retry_policy["primary_chunk_days"]
+
+    check_start = pd.to_datetime(
+        datelist[0] if validation_start is None else validation_start,
+        utc=True,
+    )
+    check_end = pd.to_datetime(
+        datelist[-1] if validation_end is None else validation_end,
+        utc=True,
+    )
+    if check_end < check_start:
+        raise ValueError("USGS validation end precedes start")
+    max_missing_gap = (
+        None
+        if max_missing_gap_days is None
+        else pd.Timedelta(days=max_missing_gap_days)
+    )
 
     def _gather_station_info(meta, site):
         """
@@ -612,6 +701,45 @@ def download_stations(
         df = df.dropna(subset=["date", "value"])
         return df
 
+    def _station_failures(records, station_ids_to_check) -> dict[str, str]:
+        records_by_id = {
+            str(record.station_info.get("id")): record
+            for record in records
+        }
+        failures = {}
+        for site in sorted(station_ids_to_check):
+            record = records_by_id.get(site)
+            if record is None or record.df.empty:
+                failures[site] = "no observations returned"
+                continue
+            if max_missing_gap is None:
+                continue
+            data = record.df.copy()
+            data.index = pd.DatetimeIndex(pd.to_datetime(data["date"], utc=True))
+            gap = detect_data_gap(
+                data,
+                start=check_start,
+                end=check_end,
+                freq=pd.Timedelta(hours=1),
+            )
+            if gap > max_missing_gap:
+                failures[site] = (
+                    f"largest missing duration {gap} exceeds "
+                    f"{max_missing_gap}"
+                )
+        return failures
+
+    def _replace_station_record(site, station_info, data):
+        nonlocal total_data
+        total_data = [
+            record
+            for record in total_data
+            if str(record.station_info.get("id")) != site
+        ]
+        total_data.append(
+            GenericObsData(station_info=station_info, df=data)
+        )
+
     if cache_fname is not None and os.path.exists(cache_fname):
         print(f'Loading cached data from {cache_fname} ...')
         if not check_manifest(
@@ -626,14 +754,34 @@ def download_stations(
             if cache_fname.endswith((".parquet", ".pq")):
                 df = load_cache_parquet(cache_fname)
                 total_data = df_to_generic_obs(df)
-                return total_data
+                cache_ids = forced_station_ids | {
+                    str(record.station_info.get("id"))
+                    for record in total_data
+                }
+                cache_failures = _station_failures(total_data, cache_ids)
+                if not cache_failures:
+                    return total_data
+                print(
+                    "Cache does not satisfy forced station checks; "
+                    f"retrying download: {cache_failures}"
+                )
             elif cache_fname.endswith(".csv"):
                 df = pd.read_csv(cache_fname, parse_dates=["date"])
                 # ensure tz-aware UTC
                 if df["date"].dt.tz is None:
                     df["date"] = pd.to_datetime(df["date"], utc=True)
                 total_data = df_to_generic_obs(df)
-                return total_data
+                cache_ids = forced_station_ids | {
+                    str(record.station_info.get("id"))
+                    for record in total_data
+                }
+                cache_failures = _station_failures(total_data, cache_ids)
+                if not cache_failures:
+                    return total_data
+                print(
+                    "Cache does not satisfy forced station checks; "
+                    f"retrying download: {cache_failures}"
+                )
 
     print(f'Downloading data for {len(station_ids)} stations ...')
 
@@ -647,9 +795,9 @@ def download_stations(
     meta = meta.set_index("site_no") if not meta.empty else pd.DataFrame()
 
     total_data: List[GenericObsData] = []
+    failed_request_station_ids: set[str] = set()
 
     # Go through one chunk of stations at a time
-    missing_stations = set()
     for k, group in enumerate(chunks(station_ids, stations_chunk_size)):
         print(f"\nProcessing station group {k+1}: "
               f"{len(group) * (k) + 1} - {len(group) * (k+1)} of {len(station_ids)} ...")
@@ -666,36 +814,142 @@ def download_stations(
                 total_data.append(GenericObsData(station_info=station_info, df=df))
         except Exception as e:
             print(f"Error in multi-station fetch for group {k+1}: {e}")
+            if raise_on_fetch_error:
+                raise
+            failed_request_station_ids.update(group)
             continue
 
-    missing_stations = set(station_ids) - set([data.station_info['id'] for data in total_data])
+    if allow_adaptive_retry:
+        from stofs3d_setup.ops.USGS.ogc.series import (
+            download_usgs_series,
+        )
 
-    n_fallbacks_success = 0
-    n_missing = len(missing_stations)
-    for k, site in enumerate(missing_stations.copy()):
-        print(f"\nStation {site} ({k+1} of {n_missing}) missing from multi-station fetch, "
-              "attempting single-station fallback ...")
-        try:
-            df_single = fetch_iv_rdb(session, [site], param_id, start, end, days_per_chunk=10, timeout=(5, 180))
-            if not df_single.empty:
-                df = _standardize_df(df_single)
-                station_info = _gather_station_info(meta, site)
-                total_data.append(GenericObsData(station_info=station_info, df=df))
+        records_by_id = {
+            str(record.station_info.get("id")): record for record in total_data
+        }
+        adaptive_windows: dict[str, list[tuple[pd.Timestamp, pd.Timestamp]]] = {
+            site: [(check_start, check_end)]
+            for site in failed_request_station_ids
+        }
+        for site, record in records_by_id.items():
+            data = record.df.copy()
+            data.index = pd.DatetimeIndex(pd.to_datetime(data["date"], utc=True))
+            gaps = [] if max_missing_gap is None else find_data_gaps(
+                data.index,
+                check_start,
+                check_end,
+                max_missing_gap,
+            )
+            if gaps:
+                adaptive_windows[site] = gaps
 
-                n_fallbacks_success += 1
-                missing_stations.remove(site)
+        for site, windows in sorted(adaptive_windows.items()):
+            if cache_fname is None:
+                raise ValueError(
+                    "cache_fname is required for adaptive USGS retries"
+                )
+            pieces = []
+            for window_start, window_end in windows:
+                print(
+                    f"Retrying USGS station {site}/{param_id} over "
+                    f"{window_start:%Y-%m-%d} to {window_end:%Y-%m-%d} "
+                    "with adaptive date windows."
+                )
+                try:
+                    series = download_usgs_series(
+                        station_id=site,
+                        parameter_id=str(param_id),
+                        start_time=window_start,
+                        end_time=window_end,
+                        usgs_cache_folder=Path(cache_fname).parent,
+                        policy=retry_policy,
+                    )
+                except Exception as exc:
+                    print(f"Adaptive USGS retry failed for {site}: {exc}")
+                    continue
+                if series is not None and not series.empty:
+                    pieces.append(series)
 
-                print(f"{site} succeeded in single-station fetch.")
-            else:
-                print(f"Warning: Station {site} returned no data in single-station fetch.\n")
-        except Exception as e:
-            print(f"Error in single-station fetch for station {site}: {e}\n")
-            continue
-        print(f"successful fallbacks: ({n_fallbacks_success} out of {n_missing}).\n")
+            if not pieces:
+                continue
+
+            previous = records_by_id.get(site)
+            if previous is not None:
+                previous_series = pd.Series(
+                    pd.to_numeric(previous.df["value"], errors="coerce").to_numpy(),
+                    index=pd.DatetimeIndex(
+                        pd.to_datetime(previous.df["date"], utc=True)
+                    ),
+                ).dropna()
+                pieces.insert(0, previous_series)
+            combined = pd.concat(pieces).sort_index()
+            combined = combined[~combined.index.duplicated(keep="last")]
+            station_info = (
+                previous.station_info.copy()
+                if previous is not None
+                else {"id": site, "name": None, "lon": None, "lat": None}
+            )
+            _replace_station_record(
+                site,
+                station_info,
+                pd.DataFrame(
+                    {"date": combined.index, "value": combined.to_numpy()}
+                ),
+            )
 
     print(f'Number of stations with available data: {len(total_data)}')
-    failed_stations = set(station_ids) - set([data.station_info['id'] for data in total_data])
-    print(f'\n{len(failed_stations)} failed stations: {sorted(failed_stations)}')
+    failed_stations = set(station_ids) - {
+        str(data.station_info["id"]) for data in total_data
+    }
+    print(f'\n{len(failed_stations)} stations without data: {sorted(failed_stations)}')
+
+    records_by_id = {
+        str(record.station_info.get("id")): record for record in total_data
+    }
+    final_failures = _station_failures(
+        total_data,
+        forced_station_ids | set(records_by_id),
+    )
+    required_failures = {
+        site: reason
+        for site, reason in final_failures.items()
+        if site in required_station_ids
+    }
+    if required_failures:
+        raise RequiredStationDownloadError(
+            f"Required manually linked USGS station(s) failed validation "
+            f"for parameter {param_id} after adaptive retries: "
+            f"{required_failures}"
+        )
+
+    optional_failures = {
+        site: reason
+        for site, reason in final_failures.items()
+        if site in optional_station_ids
+    }
+    if optional_failures:
+        from stofs3d_setup.utils.warning_log import append_input_warning
+
+        forcing_name = warning_forcing_name or f"USGS parameter {param_id}"
+        for site, reason in sorted(optional_failures.items()):
+            message = (
+                f"Forced USGS {forcing_name} replacement for station {site} "
+                f"was not applied: download/coverage validation failed after "
+                f"adaptive retries ({reason})."
+            )
+            append_input_warning(
+                warning_log_path,
+                message=message,
+                input_files=warning_input_files,
+            )
+
+    unusable_station_ids = set(final_failures) - set(required_station_ids)
+    if unusable_station_ids:
+        total_data = [
+            record
+            for record in total_data
+            if str(record.station_info.get("id")) not in unusable_station_ids
+        ]
 
     # Optional cache
     if cache_fname is not None:
