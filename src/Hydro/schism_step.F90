@@ -1208,9 +1208,8 @@ real (rkind) :: aux                               ! ustar
         if(lhas_ice(i)) then
           tau(:,i)=tau_oi(:,i)*rampwind !m^2/s/s
           !Update fluxes
-          !Error: temp fix to exclude evap
-          !fluxprc(i)=fresh_wa_flux(i)  !*rho0 !kg/s/m/m
-          fluxprc(i)=max(0.d0,fresh_wa_flux(i)) !kg/s/m/m
+          fluxprc(i)=fresh_wa_flux(i)  !*rho0 !kg/s/m/m
+          !fluxprc(i)=max(0.d0,fresh_wa_flux(i)) !kg/s/m/m
           fluxevp(i)=0.d0 !net evap-precp already in fluxprc
           sflux(i)=net_heat_flux(i) !W/m/m
           !From Sergey D.: accounting for penetrative solar complicates single-class ice model
