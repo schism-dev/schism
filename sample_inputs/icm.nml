@@ -247,7 +247,7 @@ KhCOD=  1.5                       !COD half saturation for COD oxidation (mg[O2]
 !nutrient limitation & salinity stress
 KhN  = 0.01   0.01   0.01         !nitrogen half saturation (mg/L)
 KhP  = 0.001  0.001  0.001        !phosphorus half saturation (mg/L)
-KhSal= 1e6    1e6    0.1          !salinity when PB growth is halved (PSU); (1e6: no salinity stress)
+KhSal= 0.0    0.0    0.1          !salinity when growth is halved (PSU); (>0: salinity stress; <0: freshwater stress; =0: skip)
 
 !conversion coeffiecients
 c2chl= 0.059 0.059 0.059          !carbon to chlorophyll ratio (g[C]/mg[Chl])

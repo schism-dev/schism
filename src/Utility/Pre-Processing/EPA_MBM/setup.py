@@ -108,7 +108,7 @@ for fname in p.flag:
 if p.base is not None: [copy2(i,os.path.basename(i)) for i in r_[glob(p.base+'/run.schism'),glob(p.base+'/pschism_*')]]
 
 #add hydro output for ICM offline mode; add istation.in
-if p.flag['ICM'] in [10,20]: fn='hydro_out'; [os.remove(fn) if fexist(fn) else '']; os.symlink(p.hydro_out,fn)
+if p.flag['ICM'] in [10,20]: fn='hydro_out'; [os.remove(fn) if fexist(fn) else '']; os.symlink(relpath(p.hydro_out),fn)
 if p.flag['ICM']!=0: schism_bpfile(*M.station_xyz.T,M.station_name).save('istation.in')
 
 #create outputs directory

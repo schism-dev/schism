@@ -232,7 +232,8 @@ subroutine ecosystem(it)
           fN(i,k)=DIN(k)/(DIN(k)+KhN(i))   !nitrogen
           fP(i,k)=PO4d(k)/(PO4d(k)+KhP(i)) !phosphorus
           if(iSilica==1.and.KhS(i)>1.d-10) fS(i,k)=SAd(k)/(SAd(k)+KhS(i)) !silica
-          if(KhSal(i)<100.d0) fST(i,k)=KhSal(i)*KhSal(i)/(KhSal(i)*KhSal(i)+salt(k)*salt(k)) !salinity
+          if(KhSal(i)>0.d0) fST(i,k)=KhSal(i)*KhSal(i)/(KhSal(i)*KhSal(i)+salt(k)*salt(k)) !salinity toxicity
+          if(KhSal(i)<0.d0) fST(i,k)=salt(k)*salt(k)/(KhSal(i)*KhSal(i)+salt(k)*salt(k)) !freshwater toxicity
           if(iPh==1.and.ppatch(id)/=0) fC(i,k)=TIC(k)**2.d0/(TIC(k)**2.d0+25.d0) !CO2
 
           !light factor
