@@ -217,7 +217,7 @@
      &rinflation_icm,iprecip_off_bnd,model_type_pahm,istemp,relax_2_airt, &
      &veg_vert_z,veg_vert_scale_cd,veg_vert_scale_N,veg_vert_scale_D,veg_cw, &
      &RADFLAG,niter_hdif,watertype_rr,watertype_d1,watertype_d2,veg_di0,veg_h0,veg_nv0,veg_cd0, &
-     &drown_marsh,create_marsh_min,create_marsh_max,age_marsh_min,nf_offset
+     &drown_marsh,create_marsh_min,create_marsh_max,age_marsh_min
 
      namelist /SCHOUT/nc_out,iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco,iof_icm_core, &
      &iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm, &
@@ -536,7 +536,6 @@
       iof_icm_marsh=0; iof_icm_sfm=0; iof_icm_ba=0; iof_icm_clam=0; iof_cos=0; iof_fib=0; iof_sed2d=0
       iof_ice=0; iof_mice=0; iof_ana=0; iof_marsh=0; nhot=0; nhot_write=8640; iout_sta=0; nspool_sta=10; iof_ugrid=0
       chunk_size_vrt=-1 !default: whole-volume chunk (>0: # of layers per chunk)
-      nf_offset=nhot_write
 
       read(15,nml=OPT)
       read(15,nml=SCHOUT)
@@ -2497,10 +2496,6 @@
         if(abs(start_hour)>1.d-4.or.abs(utc_start)>1.d-4) &
      &call parallel_abort('Dynamic NF need start_hour=0')
         start_hour=0.d0; utc_start=0.d0 !reset
-        if(mod(nhot_write,nf_offset)/=0.and.mod(nf_offset,nhot_write)/=0) then
-          write(errmsg,*) 'INIT: check nhot_write,nf_offset,',nhot_write,nf_offset
-          call parallel_abort(errmsg)
-        endif
 
         !Init module to get cname,tspeed,pcst
         call tidalfactor(0.,0.,start_day,start_month,start_year)

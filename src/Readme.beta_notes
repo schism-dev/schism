@@ -9,7 +9,7 @@ This beta notes are divided into 5 part:
 
 Github versions:
 
-- `` : added nf_offset used with nf_flag=1 in bctides.in. Changed format of bctides.in: first line is a flag (0 or 1), and if '1', no need to specify some constants 
+- `9a53ad68` (17 Nov 2026) : changed format of bctides.in: first line is a flag (0 or 1), and if '1', no need to specify some constants 
 - `e49b8e04` (7 Nov 2026): (1) changed unit of fresh_wa_flux in USE_ICE to kg/s/m/m to be consistent with other ice models; (2) USE_WW3, USE_ATMOS, USE_CICE =>UFS_WW3, UFS_ATMOS, UFS_CICE (also updated SCHISM cap)
 - `449df95b` (4 Nov 2026): removed and renamed ibdef as nbdef; added ibdef_start;
 - `a3e58bff` (19 Oct 2026): code now directly output staout.nc;
