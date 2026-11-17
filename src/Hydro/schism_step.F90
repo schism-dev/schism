@@ -24,6 +24,8 @@
       use schism_io
       use netcdf
       use misc_modules
+      !double: tspeed; int: ncnst; char*8: cname; single: nodfac,grterm,pcst
+      use nodalfactor, only: tidalfactor,ncnst,cname,nodfac,grterm,pcst,tspeed=>speed
 
 #ifdef USE_PAHM
       use PaHM_Global, only: modelType
@@ -126,7 +128,7 @@
                  &MBEDP_dim,Nbed_dim,SED_ntr_dim,ice_ntr_dim,ICM_ntr_dim,ndelay_dim, &
                  &irec2(2),istack(2),var1d_dim(1),var2d_dim(2),var3d_dim(3),iscribe_2d, &
                  &ised_out_sofar,nums_dim(20),names_dim(20),nschout,ndim_schout,dimid_schout(5), &
-                 &dim_schout(5),nout_schout
+                 &dim_schout(5),nout_schout,jd_start_day
 
 !      integer :: nstp,nnew !Tsinghua group !1120:close
       real(rkind) :: cwtmp,cwtmp2,cwtmp3,wtmp1,wtmp2,time,ramp,rampbc,rampwind,rampwafo,dzdx,dzdy, &
@@ -170,6 +172,8 @@
                      &i34inv,av_cff1,av_cff2,av_cff3,av_cff2_chi,av_cff3_chi, &
                      &veg_cfk,veg_cfpsi,veg_h_sd,veg_alpha_sd,veg_alpha_sd_bot,veg_nv_sd,veg_c,beta_bar, &
                      &bigfa1,bigfa2,vnf,grav3,tf,maxpice, z0_donelan,start_t0,start_t1
+
+
 !Tsinghua group: 0821...
       real(rkind) :: dtrdz,apTpxy_up,apTpxy_do,epsffs,epsfbot !8022 +epsffs,epsfbot
 !0821...
@@ -186,6 +190,7 @@ real (rkind) :: aux                               ! ustar
       integer :: lfgb       ! Length of processor specific global output file name
       real(4) :: floatout
       real(8) :: dbleout2(1)
+      real(4) :: days_offset
 
 
 !     Inter-subdomain backtracking
@@ -448,6 +453,47 @@ real (rkind) :: aux                               ! ustar
         call selfattraction
 #endif /*USE_SPK*/
       endif !iloadtide=4
+
+!...  Update nodal factor/arguments for tidal potential and bnd forcing
+      if(nf_flag==1) then
+!        !Init interval to 90 days' worth of time steps (multiple of or divisible by hotstart)
+!        nf_offset=90.d0*86400.d0/dt
+!        itmp=nf_offset/nhot_write
+!        if(itmp==0) then !nhot_write too large; make sure nhot_write is multiple of nf_offset
+!          if(mod(nhot_write,ihfskip)/=0) call parallel_abort('STEP: mod(nhot_write,ihfskip)/=0')
+!          nf_offset=ihfskip
+!        else
+!          nf_offset=itmp*nhot_write
+!        endif !itmp
+
+!        jj=it_main/nf_offset
+!        !Stride in days; throw away decimals (days)
+!        days_offset=int(nf_offset*dt/86400.d0)
+!        !Compute calendar date for start day
+!        call true_julian_day(start_year,start_month,start_day,jd_start_day) !JD for time origin
+!        mm=jd_start_day+jj*days_offset !new JD (int)
+!        call calendar_date(mm,itmp1,itmp2,itmpf) !JD,yy,mm,dd
+
+        !1st 2 arg's must be real*4. # days,bhr,iday,imo,iyr
+        floatout=int(time_stamp/86400.d0+1.d0) !throw away decimals (days); >=1
+        call tidalfactor(floatout,0.,start_day,start_month,start_year)
+
+        do i=1,ntip
+          j=itip_db(i) !indx in DB (nodalfactor.F90)
+          tnf(i)=nodfac(j)
+          tear(i)=grterm(j)*pi/180.d0
+          if(myrank==0.and.it==iths_main+1) write(16,*)'Tidal pot:',i,real(tnf(i)),real(grterm(j))
+        enddo !i
+
+        do i=1,nbfr
+          if(trim(adjustl(bc_cname(i))).eq."Z0") cycle !ff,face not changing
+
+          j=itif_db(i)
+          ff(i)=nodfac(j)
+          face(i)=grterm(j)*pi/180.d0
+          if(myrank==0.and.it==iths_main+1) write(16,*)'Tidal freq:',i,real(ff(i)),real(grterm(j))
+        enddo !i
+      endif !nf_flag=1
 
 !$OMP parallel default(shared) private(i,j,ncyc,arg)
 !...  Compute new bed deformation
@@ -1816,8 +1862,8 @@ real (rkind) :: aux                               ! ustar
 !     air T may be used also.
 !     Other tracers: 0 (otherwise additional nutrients from rain will fall onto
 !     water) 
+      vsource=0.d0 !init; dimension [m^3/s]; includes sinks as well
 #ifndef UFS_NWM
-      vsource=0 !init; dimension [m^3/s]; includes sinks as well
       if(if_source/=0) then
         !init all first; dimension same as concentration (psu etc)
         msource=0.d0 

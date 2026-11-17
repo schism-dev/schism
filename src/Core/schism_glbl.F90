@@ -98,7 +98,8 @@ module schism_glbl
                   &nstep_ice,niter_shap,iunder_deep,flag_fib,ielm_transport,max_subcyc, &
                   &itransport_only,iloadtide,nc_out,nu_sum_mult,iprecip_off_bnd, &
                   &iof_ugrid,model_type_pahm,iof_icm_sav,iof_icm_marsh,iof_icm_sfm,iof_icm_ba,&
-                  &iof_icm_clam,nbins_veg_vert,niter_hdif,nmarsh_types,istemp,chunk_size_vrt
+                  &iof_icm_clam,nbins_veg_vert,niter_hdif,nmarsh_types,istemp,chunk_size_vrt, &
+                  &nf_offset
   integer,save :: ntrs(natrm),nnu_pts(natrm),mnu_pts,lev_tr_source(natrm)
   integer,save,dimension(:),allocatable :: iof_hydro,iof_wwm,iof_gen,iof_age,iof_sed,iof_eco, &
      &iof_icm,iof_icm_core,iof_icm_silica,iof_icm_zb,iof_icm_ph,iof_icm_srm,iof_cos,iof_fib, &
@@ -153,8 +154,10 @@ module schism_glbl
   integer,save        :: start_day   = -9999
   real(rkind),save :: start_hour  = -9999._rkind
   real(rkind),save :: utc_start   = -9999._rkind
+  integer,save        :: nf_flag !static/dynamic nodal factor
 
   character(len=12),save :: ifile_char
+  character(len=6),save,allocatable :: bc_cname(:)
 !  character(len=48),save,dimension(mnout) :: outfile !,variable_nm,variable_dim
   integer,save :: ihfskip,nrec,nspool,ifile,ifile_len, &
      &noutput,it_main,iths_main,id_out_var(2000),id_out_ww3(100),ncount_2dnode, &
@@ -225,6 +228,7 @@ module schism_glbl
   real(rkind),save,allocatable :: cs(:) ! function in S-coordinate
   real(rkind),save,allocatable :: dcs(:) ! derivative of cs()
   real(rkind),save,allocatable :: sigma_lcl(:,:) !localized sigma; ivcor=1
+  integer,save,allocatable :: itip_db(:),itif_db(:) 
 
   ! Element geometry data
   integer,save :: ne_global    ! Global number of elements

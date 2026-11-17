@@ -1,4 +1,4 @@
-!user comments here
+0 !0: static nodal factors; 1: dynamic nodal factors (see bctides.in.1)
 8 40. !# of tidal potential and cut-off depths
 O1
 1 0.100514 6.759775e-05  1.11198 127.15503  !species specific constants

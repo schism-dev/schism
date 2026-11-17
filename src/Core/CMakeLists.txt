@@ -146,6 +146,7 @@ add_library(core ${local_extra_code}
                  scribe_io.F90
 		 misc_modules.F90
                  hydraulic_structures.F90
+		 nodalfactor.F90
                  ${core_extra_src}
                  ${versionfile}
            )

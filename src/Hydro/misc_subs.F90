@@ -74,6 +74,8 @@
 ! subroutine savensend3D_scribe
 ! subroutine alt1_savensend3D_scribe
 ! subroutine signa2
+! subroutine true_julian_day
+! subroutine calendar_date
 ! subroutine compute_wave_force_lon (called from ESMF directly for WW3)
 ! subroutine get_WW3_arrays and other routines (called from ESMF directly for WW3
 !            for 3D vortex coupling)
@@ -9232,6 +9234,94 @@
       signa2=((x1-x3)*(y2-y3)-(x2-x3)*(y1-y3))/2._rkind
   
       end function signa2
+
+!===============================================================================
+      !IROUTINE:  Convert a calendar date to true Julian day
+      !From GOTM
+      subroutine true_julian_day(yyyy,mm,dd,julian)
+      ! !DESCRIPTION:
+      !  Converts a calendar date to a Julian day.
+      !  Based on a similar routine in \emph{Numerical Recipes}.
+      !
+      ! !USES:
+      IMPLICIT NONE
+      !
+      ! !INPUT PARAMETERS:
+      integer, intent(in) :: yyyy,mm,dd
+  
+      ! !OUTPUT PARAMETERS:
+      integer, intent(out) :: julian
+   
+      ! !REVISION HISTORY:
+      !  Original author(s): Karsten Bolding & Hans Burchard
+      !LOCAL VARIABLES:
+      integer, PARAMETER        :: IGREG=15+31*(10+12*1582)
+      integer                   :: ja,jy,jm
+
+      jy = yyyy
+      if(jy .lt. 0) jy = jy+1
+      if (mm .gt. 2) then
+         jm = mm+1
+      else
+         jy = jy-1
+         jm = mm+13
+      end if
+      julian = int(floor(365.25*jy)+floor(30.6001*jm)+dd+1720995)
+      if (dd+31*(mm+12*yyyy) .ge. IGREG) then
+         ja = int(0.01*jy)
+         julian = julian+2-ja+int(0.25*ja)
+      end if
+   
+      end subroutine true_julian_day
+
+!===============================================================================
+      !IROUTINE:  Convert true Julian day (from true_julian_day) to calendar date
+      !From GOTM
+      subroutine calendar_date(julian,yyyy,mm,dd)
+   
+      ! !DESCRIPTION:
+      !  Converts a Julian day to a calendar date --- year, month and day.
+      !  Based on a similar routine in \emph{Numerical Recipes}.
+   
+      !USES:
+      IMPLICIT NONE
+   
+      !INPUT PARAMETERS:
+      integer, intent(in) :: julian
+   
+      !OUTPUT PARAMETERS:
+      integer, intent(out) :: yyyy,mm,dd
+   
+      !REVISION HISTORY:
+      !  Original author(s): Karsten Bolding & Hans Burchard
+   
+   
+      !LOCAL VARIABLES:
+      integer, parameter        :: IGREG=2299161
+      integer                   :: ja,jb,jc,jd,je
+      REAL*8                      :: x
+   
+      if(julian .ge. IGREG ) then
+        x = ((julian-1867216)-0.25)/36524.25
+        ja = julian+1+int(x)-int(0.25*x)
+      else
+         ja = julian
+      endif
+   
+      jb = ja+1524
+      jc = int(6680 + ((jb-2439870)-122.1)/365.25)
+      jd = int(365*jc+(0.25*jc))
+      je = int((jb-jd)/30.6001)
+   
+      dd = jb-jd-int(30.6001*je)
+      mm = je-1
+      if (mm .gt. 12) mm = mm-12
+      yyyy = jc - 4715
+      if (mm .gt. 2) yyyy = yyyy-1
+      if (yyyy .le. 0) yyyy = yyyy-1
+   
+      end subroutine calendar_date
+!===============================================================================
 
 !     This routine is called from ESMF directly to be used for UFS_WW3
 !     Compute wave force using Longuet-Higgins Stewart formulation
