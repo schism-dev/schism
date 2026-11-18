@@ -1,0 +1,19 @@
+# Explicit NWM feature-to-USGS station links for soft-link corrections.
+# Keep station IDs quoted so leading zeros are preserved.
+flow_adjustment:
+  19406836: {station_id: '07381490', download_requirement: required}  # Atchafalaya River at Simmesport, LA
+  15708755: {station_id: '02489500', download_requirement: required}  # Pearl River at Bogalusa, LA
+  18928090: {station_id: '07375175', download_requirement: optional}  # Bogue Falaya River at Boston St, Covington, LA
+  19269176: {station_id: '07374000', download_requirement: required}  # Mississippi River at Baton Rouge, LA
+  9643251: {station_id: '02172035', download_requirement: required}   # Turkey Creek
+  16665157: {station_id: '02244040', download_requirement: required}  # Buffalo Bluff (existing HJ feature link)
+  16665419: {station_id: '02244440', download_requirement: required}  # Dunns Creek
+  2590217: {station_id: '01463500', download_requirement: required}   # Delaware
+  6186156: {station_id: '01358000', download_requirement: required}   # Hudson River
+
+# Explicit NWM feature-to-USGS links for automatic source-temperature search.
+temperature_search_additions:
+  16665157: {station_id: '02244040', download_requirement: required}  # Buffalo Bluff
+  16665419: {station_id: '02244440', download_requirement: optional}  # Dunns Creek
+  2590217: {station_id: '01463500', download_requirement: required}   # Delaware
+  6186156: {station_id: '01359139', download_requirement: required}   # Hudson River at Albany, NY

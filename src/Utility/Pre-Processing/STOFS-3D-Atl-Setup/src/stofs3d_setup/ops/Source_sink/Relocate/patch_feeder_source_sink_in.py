@@ -1,6 +1,4 @@
-"""
-Patch the source_sink.in to fix a few mislocated sources due to isolated feeder channels.
-"""
+"""Patch source_sink.in for sources mislocated by isolated feeder channels."""
 
 import os
 from pylib_experimental.schism_file import SourceSinkIn

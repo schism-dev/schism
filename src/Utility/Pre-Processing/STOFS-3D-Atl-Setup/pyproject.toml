@@ -10,6 +10,7 @@ requires-python = ">=3.10"
 dependencies = [
     "pydantic>=2",
     "pyyaml>=6",
+    "pyarrow>=10",
     "fiona",
     "geopandas>=0.14",
     "gsw",
@@ -23,9 +24,17 @@ dependencies = [
 stofs3d-setup = "stofs3d_setup.cli:app"
 stofs3d-hgrid-preproc = "stofs3d_setup.ops.Grid.hgrid_preproc.cli:main"
 stofs3d-reg2gpkg = "stofs3d_setup.utils.reg2gpkg:main"
+stofs3d-usgs-cache = "stofs3d_setup.ops.USGS.ogc.store_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
 "stofs3d_setup.ops.Bathy_edit.Regional_tweaks" = ["*.gpkg"]
+"stofs3d_setup.ops.Source_sink" = [
+    "Patch_artificial_island/*.yml",
+    "Replace_with_USGS/*.yml",
+    "Spatial_corrections/*.yml",
+    "Spatial_corrections/*.rgn",
+]
+"stofs3d_setup.ops.USGS.ogc" = ["*.yml"]

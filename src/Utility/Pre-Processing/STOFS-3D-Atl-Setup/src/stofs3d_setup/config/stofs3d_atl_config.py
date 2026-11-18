@@ -7,7 +7,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 import numpy as np
 
 from ..ops.Source_sink.Relocate import relocate_source_feeder as rsf
@@ -86,6 +86,14 @@ class ConfigStofs3dAtlantic(BaseModel):
     reuse_source_json: bool = False
     replace_nwm_with_usgs: bool = False
     usgs_cache_folder: Optional[Path] = None
+    replace_source_temperature_with_usgs: bool = False
+    source_temperature_pooling: Literal[
+        "first_usable", "discharge_weighted"
+    ] = "first_usable"
+    hard_reset_sources_with_usgs: bool = False
+    zero_configured_source_regions: bool = False
+    hard_reset_sources_with_usgs_info: Optional[Path] = None
+    zero_source_region_info: Optional[Path] = None
     source_ele_replace_dict: Dict[int, int] = None  # temporary fix for isolated feeder channels
     constant_sink_shapefile: Optional[Path] = None
     exclude_shapefile: Optional[Path] = None
@@ -321,20 +329,22 @@ class ConfigStofs3dAtlantic(BaseModel):
     @classmethod
     def v7p4(cls):
         '''Factory method to create a configuration for STOFS3D-v7.4 3D setup'''
+        artificial_island_info = (
+            STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
+            'Patch_artificial_island' / 'artificial_island_source_sink.yml'
+        )
         return cls(
             ocean_bnd_ids=[0, 1],
             elev2d_uniform_shift=-0.42,  # add a uniform shift to elev2D
             nudging_zone_width=7.3,  # default nudging zone
             shapiro_zone_width=11.5,  # default shapiro zone
             shapiro_tilt=3.5,  # default abrupt transition in the shapiro zone
-            feeder_info_file=(
-                '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32/Feeder/'
-                'feeder_heads_bases.xy'
-            ),
+            feeder_info_file=None, # '/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32/Feeder/feeder_heads_bases.xy',
             hgrid_without_feeders=None,  # feeders are removed in v7.4, set this to None and the main hgrid will be used.
-            relocate_source=True,
-            mandatory_sources_coor=rsf.v19p2_for_sms_v32c_mandatory_sources_coor,
+            relocate_source=False,
+            mandatory_sources_coor=None, # rsf.v19p2_for_sms_v32c_mandatory_sources_coor,
             nwm_cache_folder=None,
+            replace_nwm_with_usgs=False,
             source_ele_replace_dict={},
             constant_sink_shapefile=(
                 STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
@@ -344,11 +354,10 @@ class ConfigStofs3dAtlantic(BaseModel):
                 STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
                 'Constant_sinks' / 'exclude_constant_sink_at_savannah_charleston.shp'
             ),
-            #artificial_island_source_sink_info= None,
-            artificial_island_source_sink_info=(
-                STOFS3D_SETUP_PACKAGE_DIR / 'ops' / 'Source_sink' /
-                'Patch_artificial_island' / 'artificial_island_source_sink.yml'
-            ),
+            replace_source_temperature_with_usgs=True,
+            source_temperature_pooling="first_usable",
+            zero_configured_source_regions=True,
+            artificial_island_source_sink_info=artificial_island_info,
             bc_flags=[
                 [5, 5, 4, 4],  # Atlantic Ocean
                 [5, 5, 4, 4],  # Gulf of St. Lawrence
