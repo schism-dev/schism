@@ -2283,30 +2283,23 @@
           data_name = 'time'
           iret = nf90_inq_varid(ncid, data_name, time_id)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(2)')
-          !call check_err(iret)
 
 !   get the time dimension id
-!          iret = nf_inq_vardimid (ncid, time_id, time_dim)
           iret = nf90_inquire_variable(ncid,time_id,dimids=time_dim)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(3)')
-          !call check_err(iret)
           
 !   determine number of times stored in the time dimension
-!          iret = nf_inq_dimlen(ncid, time_dim, num_file_times)
           iret =nf90_inquire_dimension(ncid,time_dim(1),len=num_file_times)
           if (num_file_times .gt. max_file_times) then
             call halt_error ('sflux:num_file_times .gt. max_file_times!')
           endif
           if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(4)')
-          !call check_err(iret)
 
 !          write(16,*)'reading time dim:',time_id,time_dim,num_file_times
 
 !   read the time vector for this file
-!          iret = nf_get_var_real(ncid, time_id, file_times_tmp)
           iret=nf90_get_var(ncid,time_id,file_times_tmp,(/1/),(/num_file_times/))
           if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(5)')
-!          call check_err(iret)
 
 !   convert from file real type to data real type
           do i_time = 1, num_file_times
@@ -2318,7 +2311,6 @@
           attr_name = 'base_date'
 
 !   get size of base_date (make sure it is at least 3)
-!          iret = nf_inq_attlen (ncid, time_id, attr_name, n_base_date)
           iret = nf90_inquire_attribute(ncid, time_id, attr_name, len=n_base_date)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(6)')
           if (n_base_date .lt. 3) then
@@ -2331,7 +2323,6 @@
        &                        allocate_stat)
 
 !   read base_date
-!          iret = nf_get_att_int(ncid, time_id, attr_name, base_date)
           iret = nf90_get_att(ncid, time_id, attr_name, base_date)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(7)')
 
@@ -2346,7 +2337,6 @@
 !   close the netCDF file
           iret = nf90_close(ncid)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_file_times(8)')
-!          call check_err(iret)
         endif !myrank
         call mpi_bcast(num_file_times,1,itype,0,comm,istat)
         call mpi_bcast(file_times,max_file_times,rtype,0,comm,istat)
@@ -2401,34 +2391,25 @@
           if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(1)')
 
 !   get the variable ID for the test variable
-          !iret = nf_inq_varid(ncid, test_variable, test_var_id)
           iret = nf90_inq_varid(ncid, test_variable, test_var_id)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(2)')
-!          call check_err(iret)
 
 !   get the dimension IDs for the test variable
-!          iret = nf_inq_vardimid (ncid, test_var_id, dim_ids)
           iret=nf90_inquire_variable(ncid,test_var_id,dimids=dim_ids(1:2))
           if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(3)')
-!          call check_err(iret)
           
 !   determine number of points in the nx and ny dimensions
           nx_dim = dim_ids(1)
-          !iret = nf_inq_dimlen(ncid, nx_dim, nx)
           iret = nf90_inquire_dimension(ncid,nx_dim,len=nx)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(4)')
-!          call check_err(iret)
 
           ny_dim = dim_ids(2)
-          !iret = nf_inq_dimlen(ncid, ny_dim, ny)
           iret = nf90_inquire_dimension(ncid,ny_dim,len=ny)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(5)')
-!          call check_err(iret)
 
 !   close the netCDF file
           iret = nf90_close(ncid)
           if(iret.ne.NF90_NOERR) call parallel_abort('get_dims(6)')
-!          call check_err(iret)
         endif !myrank
         call mpi_bcast(nx,1,itype,0,comm,istat)
         call mpi_bcast(ny,1,itype,0,comm,istat)
@@ -2473,16 +2454,13 @@
 ! get the variable id for this variable
           iret = nf90_inq_varid(ncid, data_name, var_id)
           if(iret.ne.NF90_NOERR) call parallel_abort('read_coord(2)')
-!          call check_err(iret)
 
 ! read the coordinate data
           iret = nf90_get_var(ncid,var_id,coord_tmp)
           if(iret.ne.NF90_NOERR) call parallel_abort('read_coord(3)')
-!          call check_err(iret)
 ! close the netCDF file
           iret = nf90_close(ncid)
           if(iret.ne.NF90_NOERR) call parallel_abort('read_coord(4)')
-!          call check_err(iret)
         endif
 ! Distribute data
         call mpi_bcast(coord_tmp,nx*ny,mpi_real,0,comm,iret)
@@ -2542,7 +2520,6 @@
 ! close the netCDF file
           iret = nf90_close(ncid)
           if(iret.ne.NF90_NOERR) call parallel_abort('read_data(4)')
-!          call check_err(iret)
         endif
 ! distribute data
         call mpi_bcast(data_tmp,nx*ny,mpi_real,0,comm,iret)

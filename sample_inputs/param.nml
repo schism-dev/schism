@@ -91,7 +91,7 @@
   iloadtide = 0
   loadtide_coef = 0.1 !only used if iloadtide=2,3 (for '3', the default should be 0.12)
 
-! Starting time
+! Starting time. If nf_flag=1 in bctides.in, make sure start_hour=utc_start=0
   start_year = 2000 !int
   start_month = 1 !int
   start_day = 1 !int

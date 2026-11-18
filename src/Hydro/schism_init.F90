@@ -2511,7 +2511,6 @@
         if(.not.allocated(tp_name)) allocate(tp_name(ntip),stat=istat)
         if(istat/=0) call parallel_abort('INIT: allocation failure for tp_name')
         if(iorder==0) then
-!         allocate(tp_name(ntip),tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip),stat=istat)
           allocate(tamp(ntip),tnf(ntip),tfreq(ntip),jspc(ntip),tear(ntip), &
      &itip_db(ntip),stat=istat)
           if(istat/=0) call parallel_abort('INIT: allocation failure for tamp etc')
