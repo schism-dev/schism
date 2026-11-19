@@ -475,7 +475,8 @@ real (rkind) :: aux                               ! ustar
 !        call calendar_date(mm,itmp1,itmp2,itmpf) !JD,yy,mm,dd
 
         !1st 2 arg's must be real*4. # days,bhr,iday,imo,iyr
-        floatout=int(time_stamp/86400.d0+1.d0) !throw away decimals (days); >=1
+        !Time length=2*current so as to center around the current step
+        floatout=int(time_stamp/43200.d0+1.d0) !throw away decimals (days); >=1
         call tidalfactor(floatout,0.,start_day,start_month,start_year)
 
         do i=1,ntip

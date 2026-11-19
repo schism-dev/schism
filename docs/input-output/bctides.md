@@ -9,20 +9,28 @@ Please refer to sample [bctides.in](https://github.com/schism-dev/schism/blob/ma
 Following is a psudo code to explain the structure of `bctides.in` for different types of boundary conditions listed above. Spaces between lines are added for clarity.
 
 ```fortran
-<you notes> !Not used in code; write your own comments
+nf_flag !Magic flag to indicate 2 options: 0: old format (with static nodal factors); 1: dynamic nodal factors calculated by the code. For the latter option, you do not need to specify nodal factor or arguments.
 
 ntip tip_dp !# of constituents used in earth tidal potential; cut-off depth for applying tidal potential (i.e., it is not calculated when depth < tip_dp).
 
 for k=1, ntip
     talpha(k) !tidal constituent name
-    jspc(k), tamp(k), tfreq(k), tnf(k), tear(k) !tidal species # (0: declinational; 1: diurnal; 2: semi-diurnal), amplitude constants, angular frequency, nodal factor, earth equilibrium argument (in degrees);
+    if(nf_flag==0) 
+      jspc(k), tamp(k), tfreq(k), tnf(k), tear(k) !tidal species # (0: declinational; 1: diurnal; 2: semi-diurnal), amplitude constants, angular frequency, nodal factor, earth equilibrium argument (in degrees);
+    else !dynamic nodal factor
+      tamp(k)
+    endif
 end for
 
 nbfr !total # of tidal boundary forcing frequencies
 
 for k=1, nbfr
     alpha(k) !tidal constituent name
-    amig(k), ff(k), face(k) !angular frequency (rad/s), nodal factor, earth equilibrium argument (in degrees) for constituent
+    if(nf_flag==0)
+      amig(k), ff(k), face(k) !angular frequency (rad/s), nodal factor, earth equilibrium argument (in degrees) for constituent
+    else !dynamic nodal factor
+      !no need to specify anything here
+    endif
 end for
 
 nope !# of open boundary segments
